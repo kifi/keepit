@@ -4,12 +4,13 @@ import com.google.inject.Inject
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.common.performance._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model._
@@ -142,15 +143,16 @@ class HelpRankCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = timing(s"getHelpRankInfo(${uriIds.size})") {
     val uriIdSet = uriIds.toSet
     if (uriIdSet.size != uriIds.length) {
       log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
     }
     val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
       val discMap = keepDiscoveryRepo.getDiscoveryCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap(sz=${discMap.size}):$discMap")
       val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
-      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
+      log.info(s"[getHelpRankInfo] rkMap(sz=${rkMap.size}):$rkMap")
       (discMap, rkMap)
     }
     uriIds.toSeq.map { uriId =>

@@ -10,6 +10,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import org.joda.time.DateTime
+import com.keepit.common.performance._
 
 import scala.slick.jdbc.SetParameter
 import scala.slick.jdbc.StaticQuery.interpolation
@@ -75,7 +76,7 @@ class KeepDiscoveryRepoImpl @Inject() (
     sql"select count(distinct (hit_uuid)) from keep_click where uri_id=$uriId and created_at >= $since".as[Int].first
   }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = {
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getDiscoveryCountsByURIs(${uriIds.size})") {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriDiscoveryCountCache.bulkGetOrElse(uriIds.map(UriDiscoveryCountKey(_)).toSet) { keys =>
