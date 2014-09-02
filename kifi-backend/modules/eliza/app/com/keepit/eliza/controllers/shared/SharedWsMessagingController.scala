@@ -257,7 +257,7 @@ class SharedWsMessagingController @Inject() (
 
   private def needsPageImages(socket: SocketInfo): Boolean = {
     socket.kifiVersion match {
-      case Some(KifiExtVersion(major, minor, patch, build)) => major >= 3 && minor >= 2
+      case Some(ver: KifiExtVersion) => ver >= KifiExtVersion(3, 2)
       case _ => false
     }
   }
