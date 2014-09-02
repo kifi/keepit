@@ -35,12 +35,6 @@ class PublicFeedGenerationCommander @Inject() (
   private def specialCurators(): Future[Seq[Id[User]]] =
     experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
-  def getPublicFeeds(howManyMax: Int): Future[Seq[PublicFeed]] = {
-    db.readOnlyReplicaAsync { implicit session =>
-      publicFeedRepo.getByTopMasterScore(howManyMax)
-    }
-  }
-
   private def computePublicMasterScore(scores: PublicUriScores): Float = {
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
