@@ -2,15 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/recommendation', {
-      templateUrl: 'recos/recosView.tpl.html'
-    });
-  }
-])
-
 .controller('RecosCtrl', [
   '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'recoService', 'tagService',
   function ($scope, $rootScope, $analytics, $timeout, $window, recoService, tagService) {
@@ -22,7 +13,7 @@ angular.module('kifi')
     $scope.getMore = function (recency) {
       $scope.loading = true;
       $scope.recos = [];
-     
+
       recoService.getMore(recency).then(function (recos) {
         $scope.loading = false;
 

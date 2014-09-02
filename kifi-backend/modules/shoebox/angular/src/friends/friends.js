@@ -2,19 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/friends', {
-      templateUrl: 'friends/friends.tpl.html'
-    }).when('/friends/requests', {
-      redirectTo: '/friends'
-    }).when('/friends/requests/:network', {
-      redirectTo: '/friends'
-    });
-  }
-])
-
 .controller('FriendsCtrl', [
   '$scope', '$window', 'friendService', 'socialService',
   function ($scope, $window, friendService, socialService) {
