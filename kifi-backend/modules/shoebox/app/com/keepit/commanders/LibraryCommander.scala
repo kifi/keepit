@@ -37,16 +37,17 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def createFullLibraryInfo(library: Library, pageKeeps: Int, pageSizeKeeps: Int, pageUsers: Int, pageSizeUsers: Int): FullLibraryInfo = {
+  def createFullLibraryInfo(library: Library): FullLibraryInfo = {
 
     val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
-      val collabs = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, pageSizeUsers, pageUsers * pageSizeUsers, Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)).map(m => basicUserRepo.load(m.userId))
-      val follows = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, pageSizeUsers, pageUsers * pageSizeUsers, Set(LibraryAccess.READ_ONLY)).map(m => basicUserRepo.load(m.userId))
+      val (firstFollows, firstCollabs) = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 10, 0, Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE, LibraryAccess.READ_ONLY)).partition(u => u.access == LibraryAccess.READ_ONLY)
+      val collabs = firstCollabs.map(m => basicUserRepo.load(m.userId))
+      val follows = firstFollows.map(m => basicUserRepo.load(m.userId))
       val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
 
-      val keeps = keepRepo.getByLibrary(library.id.get, pageSizeKeeps, pageKeeps * pageSizeKeeps).map(KeepInfo.fromKeep)
+      val keeps = keepRepo.getByLibrary(library.id.get, 10, 0).map(KeepInfo.fromKeep)
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
       (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }

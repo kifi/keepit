@@ -247,14 +247,14 @@ POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsC
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 
 
-GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug:String, pageKeeps: Int ?= 0, pageUsers: Int ?= 0, auth:Option[String] ?= None)
+GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug:String, auth:Option[String] ?= None)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
-GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], pageKeeps: Int ?= 0, pageUsers: Int ?= 0, auth:Option[String] ?= None)
+GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], auth:Option[String] ?= None)
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
@@ -262,6 +262,7 @@ POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0, auth:Option[String] ?= None)
+GET     /site/libraries/:id/collabs @com.keepit.controllers.website.LibraryController.getCollaborators(id: PublicId[Library], count: Int, offset: Int ?= 0, auth: Option[String] ?= None)
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
