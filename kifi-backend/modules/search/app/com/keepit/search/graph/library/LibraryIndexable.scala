@@ -6,10 +6,10 @@ import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.LangDetector
 
 object LibraryFields {
-  val nameField = "n"
-  val nameStemmedField = "ns"
-  val descriptionField = "d"
-  val descriptionStemmedField = "ds"
+  val nameField = "t"
+  val nameStemmedField = "ts"
+  val descriptionField = "c"
+  val descriptionStemmedField = "cs"
   val visibilityField = "v"
   val ownerField = "o"
   val usersField = "u"
