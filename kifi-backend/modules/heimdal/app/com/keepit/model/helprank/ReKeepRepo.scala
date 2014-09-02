@@ -1,5 +1,7 @@
 package com.keepit.model.helprank
 
+import java.sql.SQLException
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -119,13 +121,31 @@ class ReKeepRepoImpl @Inject() (
     sql"select count(distinct (src_user_id)) from rekeep where uri_id=$uriId".as[Int].first
   }
 
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int] = timing(s"getReKeepCountsByURIs(${uriIds.size})") {
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getReKeepCountsByURIs(sz=${uriIds.size})") {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriReKeepCountCache.bulkGetOrElse(uriIds.map(UriReKeepCountKey(_)).toSet) { keys =>
+        val buf = collection.mutable.ArrayBuilder.make[(Id[NormalizedURI], Int)]
         val missing = keys.map(_.uriId)
+        missing.grouped(20).foreach { ids =>
+          val params = Seq.fill(ids.size)("?").mkString(",")
+          val stmt = session.getPreparedStatement(s"select uri_id, count(distinct (src_user_id)) from rekeep where uri_id in ($params) group by uri_id;")
+          ids.zipWithIndex.foreach {
+            case (uriId, idx) =>
+              stmt.setLong(idx + 1, uriId.id)
+          }
+          val res = timing(s"getReKeepCountsByURIs(sz=${ids.size};ids=$ids)") { stmt.execute() }
+          if (!res) throw new SQLException(s"[getReKeepCountsByURIs] ($stmt) failed to execute")
+          val rs = stmt.getResultSet()
+          while (rs.next()) {
+            val uriId = Id[NormalizedURI](rs.getLong(1))
+            val count = rs.getInt(2)
+            buf += (uriId -> count)
+          }
+        }
+        val resMap = buf.result.toMap
         missing.map { uriId =>
-          UriReKeepCountKey(uriId) -> getReKeepCountByURI(uriId)
+          UriReKeepCountKey(uriId) -> resMap.getOrElse(uriId, 0)
         }.toMap
       }
       valueMap.map { case (k, v) => (k.uriId -> v) }
