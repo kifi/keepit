@@ -157,11 +157,11 @@ class KifiSearch(
     val visibility = h.visibility
     if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
-      val r = getKeepRecord(h.altId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
+      val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
       KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
     } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
       // has a library id
-      val r = getKeepRecord(h.altId, h.id).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
+      val r = getKeepRecord(h.libId, h.id).getOrElse(throw new Exception(s"missing keep record: library id = ${h.libId}"))
       KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
       // only a primary id (uri id)

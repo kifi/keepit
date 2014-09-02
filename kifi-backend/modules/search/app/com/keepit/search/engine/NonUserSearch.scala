@@ -76,7 +76,7 @@ class NonUserSearch(
   }
 
   private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
-    val recOpt = if (h.altId >= 0) getKeepRecord(h.altId) else getKeepRecord(libId.id, h.id)
+    val recOpt = if (h.keepId >= 0) getKeepRecord(h.keepId) else getKeepRecord(libId.id, h.id)
     recOpt match {
       case Some(r) =>
         KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
