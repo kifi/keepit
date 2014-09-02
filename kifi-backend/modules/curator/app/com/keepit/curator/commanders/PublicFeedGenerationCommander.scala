@@ -44,7 +44,8 @@ class PublicFeedGenerationCommander @Inject() (
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
