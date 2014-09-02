@@ -200,7 +200,7 @@ class KeepInterner @Inject() (
           visibility = library.visibility,
           libraryId = Some(library.id.get)
         ) |> { keep =>
-            if (!bookmark.isActive) {
+            if (wasInactiveKeep) {
               keep.copy(url = url, createdAt = clock.now)
             } else keep
           } |> { keep =>
