@@ -30,12 +30,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val (main, secret) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
-        )), user.id.get, KeepSource.email, true)
+        )), user.id.get, secret, KeepSource.email)
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1

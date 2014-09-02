@@ -230,10 +230,3 @@ object KeepSource {
   }
 }
 
-object KeepFactory extends Logging {
-
-  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, visibility: LibraryVisibility, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, visibility = visibility, libraryId = libraryId)
-  }
-
-}

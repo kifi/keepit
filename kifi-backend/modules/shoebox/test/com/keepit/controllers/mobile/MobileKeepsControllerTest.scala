@@ -625,7 +625,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
             KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.keepMultiple().url
         path === "/m/1/keeps/add"
@@ -672,7 +672,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
             KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeeps().url
         path === "/m/2/keeps/add"
@@ -717,7 +717,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
             KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val addPath = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeeps().url
         addPath === "/m/2/keeps/add"
@@ -774,7 +774,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
             KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
         val keepJson = Json.obj(

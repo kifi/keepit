@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
+import com.keepit.commanders.{ LibraryCommander, RawBookmarkRepresentation, KeepInterner }
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -47,6 +47,7 @@ class MailToKeepActor @Inject() (
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
+    libraryCommander: LibraryCommander,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends FortyTwoActor(airbrake) with Logging {
 
@@ -104,18 +105,31 @@ class MailToKeepActor @Inject() (
                       "<p>We couldn't find any URLs in your message. Try making sure your URL format is valid.</p>"
                 )
               case (Some(user), uris) =>
+                val library = {
+                  val (main, secret) = db.readWrite { implicit session =>
+                    libraryCommander.getMainAndSecretLibrariesForUser(user.id.get)
+                  }
+                  if (keepType == KeepType.Private) {
+                    secret
+                  } else {
+                    main
+                  }
+                }
+                val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), isPrivate = None))
                 for (uri <- uris) {
                   implicit val context = HeimdalContext.empty
-                  val (bookmarks, _) = bookmarkInterner.internRawBookmarks(
-                    Seq(RawBookmarkRepresentation(url = uri.toString, isPrivate = (keepType == KeepType.Private))),
-                    user.id.get, KeepSource.email, mutatePrivacy = true)
-                  val bookmark = bookmarks.head
-                  log.info(s"created bookmark from email with id ${bookmark.id.get}")
+                  val (bookmarks, _) = bookmarkInterner.internRawBookmarks(bms, user.id.get, library, KeepSource.email)
+                  val bmText = bookmarks.map { bm =>
+                    log.info(s"created bookmark from email with id ${bm.id.get}")
+                    s"<p>${bm.url}</p>"
+                  }
+
                   sendReply(
                     message = message,
                     htmlBody =
                       s"<p>Hi ${user.firstName},</p>" +
-                        s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
+                        s"<p>Congratulations! We added ${bookmarks.length} ${keepType.name} keeps:</p>" +
+                        bmText +
                         "<p>Sincerely,<br>The Kifi team</p>"
                   )
                 }
