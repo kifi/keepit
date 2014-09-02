@@ -32,7 +32,7 @@ class LibraryController @Inject() (
       case Left(LibraryFail(message)) =>
         BadRequest(Json.obj("error" -> message))
       case Right(lib) =>
-        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib, 0, 0, 0, 0)))
+        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib, 0, 10, 0, 10)))
     }
   }
 
