@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ Model, Id, ModelWithState, State, States }
-import com.keepit.model.{ NormalizedURI, User, Keep }
+import com.keepit.model.{ Library, NormalizedURI, User, Keep }
 import com.keepit.common.time._
 
 import org.joda.time.DateTime
@@ -13,6 +13,7 @@ case class CuratorKeepInfo(
   uriId: Id[NormalizedURI],
   userId: Id[User],
   keepId: Id[Keep],
+  libraryId: Option[Id[Library]],
   state: State[CuratorKeepInfo], //library: Id[Library]
   discoverable: Boolean)
     extends Model[CuratorKeepInfo] with ModelWithState[CuratorKeepInfo] {
