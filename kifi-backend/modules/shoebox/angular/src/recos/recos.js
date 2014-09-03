@@ -3,8 +3,19 @@
 angular.module('kifi')
 
 .controller('RecosCtrl', [
-  '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'keepActionService', 'keepService', 'recoActionService', 'recoDecoratorService', 'tagService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService, recoActionService, recoDecoratorService, tagService) {
+  '$scope',
+  '$rootScope',
+  '$analytics',
+  '$timeout',
+  '$window',
+  'keepActionService',
+  'keepService',
+  'recoActionService',
+  'recoDecoratorService',
+  'tagService',
+  'undoService',
+  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService,
+    recoActionService, recoDecoratorService, tagService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = [];
@@ -33,10 +44,21 @@ angular.module('kifi')
 
     $scope.trash = function (reco) {
       recoActionService.trash(reco.recoKeep);
-      _.pull($scope.recos, reco);
+      
+      var trashedRecoIndex = _.findIndex($scope.recos, reco);
+      var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
 
+      // If the user has trashed all the recommendations, reload a new set of
+      // recommendations.
       if ($scope.recos.length === 0) {
         $scope.getMore();
+      } 
+      // If the user has recommendations remaining on the page, present her
+      // with the option to undo the trashing of the recommendation.
+      else {
+        undoService.add('Recommendation removed.', function () {
+          $scope.recos.splice(trashedRecoIndex, 0, trashedReco);
+        });
       }
     };
 
