@@ -82,7 +82,7 @@ class ExtSearchController @Inject() (
 
   private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
 
-  def langDetect(query: String) = JsonAction.authenticatedParseJsonAsync { request =>
+  def langDetect(query: String) = JsonAction.authenticatedAsync { request =>
     val startTime = System.currentTimeMillis()
     val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
     searchCommander.langDetect(query, acceptLangs).map { lang =>
