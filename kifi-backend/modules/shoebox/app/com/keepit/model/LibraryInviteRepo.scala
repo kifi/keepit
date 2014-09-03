@@ -31,7 +31,7 @@ class LibraryInviteRepoImpl @Inject() (
 
   class LibraryInviteTable(tag: Tag) extends RepoTable[LibraryInvite](db, tag, "library_invite") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def ownerId = column[Id[User]]("owner_id", O.Nullable)
+    def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
