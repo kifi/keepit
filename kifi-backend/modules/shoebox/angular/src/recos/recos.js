@@ -12,11 +12,11 @@ angular.module('kifi')
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
-    $scope.getMore = function (recency) {
+    $scope.getMore = function (opt_recency) {
       $scope.recos = [];
       $scope.loading = true;
      
-      recoActionService.getMore(recency).then(function (rawRecos) {
+      recoActionService.getMore(opt_recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
             $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
@@ -34,6 +34,10 @@ angular.module('kifi')
     $scope.trash = function (reco) {
       recoActionService.trash(reco.recoKeep);
       _.pull($scope.recos, reco);
+
+      if ($scope.recos.length === 0) {
+        $scope.getMore();
+      }
     };
 
     $scope.keepReco = function (reco, isPrivate) {
