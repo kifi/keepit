@@ -679,6 +679,7 @@ GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.c
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
+GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
