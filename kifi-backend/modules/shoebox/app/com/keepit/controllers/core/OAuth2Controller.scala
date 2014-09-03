@@ -279,7 +279,7 @@ class OAuth2Controller @Inject() (
     refreshContactsHelper(abookId, provider)
   }
 
-  private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+  private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
     val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")

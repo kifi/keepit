@@ -45,7 +45,7 @@ class ShoeboxActionAuthenticator @Inject() (
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = userExperimentCommander.getExperimentsByUser(userId)
 
-  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[Result]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
     val socialUser = request.user
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
@@ -72,9 +72,9 @@ class ShoeboxActionAuthenticator @Inject() (
     apiClient: Boolean,
     allowPending: Boolean,
     bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
-    onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request =>
+    onAuthenticated: AuthenticatedRequest[T] => Future[Result],
+    onSocialAuthenticated: SecuredRequest[T] => Future[Result],
+    onUnauthenticated: Request[T] => Future[Result]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request =>
     val result = request.user match {
       case Some(identity) =>
         val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
@@ -109,7 +109,7 @@ class ShoeboxActionAuthenticator @Inject() (
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 
-  private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Future[Result], userId: Id[User], identity: Identity,
     experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
     newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnlyMaster(implicit s => userRepo.get(userId))

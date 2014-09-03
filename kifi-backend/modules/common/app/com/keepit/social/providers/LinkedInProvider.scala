@@ -7,6 +7,7 @@ import play.api.libs.ws.{ Response, WS }
 import play.api.{ Logger, Application }
 import securesocial.core.{ OAuth2Info, IdentityId, AuthenticationException, SocialUser }
 import play.api.libs.json.JsArray
+import play.api.Play.current
 
 /**
  * A LinkedIn Provider (OAuth2)

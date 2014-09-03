@@ -29,7 +29,7 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.mvc.{ AnyContent, SimpleResult }
+import play.api.mvc.{ AnyContent, Result }
 
 import views.html
 import com.keepit.typeahead.TypeaheadHit
@@ -208,7 +208,7 @@ class AdminUserController @Inject() (
     } getOrElse Promise.successful(NotFound).future
   }
 
-  private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+  private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
     db.readOnlyReplica { implicit session =>
       Try(userRepo.get(userId))
     } map { user =>
@@ -216,7 +216,7 @@ class AdminUserController @Inject() (
     } getOrElse Promise.successful(NotFound).future
   }
 
-  private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+  private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
@@ -248,7 +248,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): SimpleResult = {
+  private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Result = {
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }

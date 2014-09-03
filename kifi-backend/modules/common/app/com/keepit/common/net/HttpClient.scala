@@ -25,6 +25,7 @@ import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
 import java.util.Random
 import com.keepit.common.util.TrackingId
+import play.api.Play.current
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n", " ")}]") {
