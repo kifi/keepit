@@ -388,7 +388,7 @@ class TypeaheadCommander @Inject() (
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
 sealed trait ContactSearchResult {}
-@json case class UserContactResult(name: String, id: ExternalId[User], image: Option[String]) extends ContactSearchResult
+@json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String]) extends ContactSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
 
 sealed abstract class ContactType(val value: String)
