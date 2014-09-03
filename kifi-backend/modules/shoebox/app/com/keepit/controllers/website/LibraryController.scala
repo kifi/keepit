@@ -33,8 +33,8 @@ class LibraryController @Inject() (
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) =>
         BadRequest(Json.obj("error" -> message))
-      case Right(lib) =>
-        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib)))
+      case Right(newLibrary) =>
+        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(newLibrary)))
     }
   }
 
@@ -87,9 +87,9 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-        if (canView(request.userId, lib, authToken)) {
+        if (canView(request.userId, lib, authToken))
           Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
-        } else
+        else
           BadRequest(Json.obj("error" -> "invalid access"))
     }
   }
@@ -110,9 +110,9 @@ class LibraryController @Inject() (
           libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) match {
             case None => BadRequest(Json.obj("error" -> "no library found"))
             case Some(lib) =>
-              if (canView(request.userId, lib, authToken)) {
+              if (canView(request.userId, lib, authToken))
                 Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
-              } else
+              else
                 BadRequest(Json.obj("error" -> "invalid access"))
           }
         }

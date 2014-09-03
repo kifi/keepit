@@ -168,7 +168,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryCommander" should {
-
     "create libraries, memberships & invites" in {
       withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
