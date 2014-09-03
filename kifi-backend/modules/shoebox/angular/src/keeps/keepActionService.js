@@ -45,14 +45,14 @@ angular.module('kifi')
       });
     }
 
-    function keepPublic (keep) {
-      return keepMany([keep], false).then(function (keeps) {
+    function keepOne (keep, isPrivate) {
+      return keepMany([keep], isPrivate).then(function (keeps) {
         return keeps[0];
       });
     }
 
     var api = {
-      keepPublic: keepPublic
+      keepOne: keepOne
     };
 
     return api;

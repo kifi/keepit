@@ -497,7 +497,8 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
-        keepPublic: '&'
+        keepPublic: '&',
+        keepPrivate: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -607,10 +608,6 @@ angular.module('kifi')
 
         scope.unkeep = function () {
           keepService.unkeep([scope.keep]);
-        };
-
-        scope.keepPrivate = function () {
-          keepService.keep([scope.keep], true);
         };
 
         scope.getSingleSelectedKeep = function () {
