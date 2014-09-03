@@ -29,7 +29,7 @@
     <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)"></span>
-        <div kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
+        <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
         <span>{{reco.recoData.type | titlecase}} {{reco.recoData.kind | titlecase}}</span>
       </header>
 
