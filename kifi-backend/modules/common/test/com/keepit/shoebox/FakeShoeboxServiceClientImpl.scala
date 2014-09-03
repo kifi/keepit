@@ -453,11 +453,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(collections)
   }
 
-  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Keep]] = {
-    val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
-    Future.successful(bookmarks)
-  }
-
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
     val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
     Future.successful(bookmarks map { b => KeepUriAndTime(b.uriId, b.createdAt) })
@@ -611,8 +606,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(uri.contains("isSensitive"))
   }
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
-
-  def getVerifiedAddressOwners(emailAddresses: Seq[EmailAddress]): Future[Map[EmailAddress, Id[User]]] = Future.successful(Map.empty)
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 

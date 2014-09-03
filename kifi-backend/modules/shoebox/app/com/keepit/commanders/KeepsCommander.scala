@@ -556,7 +556,7 @@ class KeepsCommander @Inject() (
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
-    val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
+    val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
     val collection = db.readOnlyReplica { implicit s =>
       collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     }

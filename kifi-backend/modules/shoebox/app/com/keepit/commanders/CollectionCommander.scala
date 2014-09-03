@@ -22,7 +22,7 @@ object BasicCollection {
   implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val format = Json.format[BasicCollection]
   def fromCollection(c: CollectionSummary, keeps: Option[Int] = None): BasicCollection =
-    BasicCollection(Some(c.externalId), c.name, keeps)
+    BasicCollection(Some(c.externalId), c.name.tag, keeps)
 }
 
 case class BasicCollectionByIdKey(id: Id[Collection]) extends Key[BasicCollection] {
@@ -143,8 +143,8 @@ class CollectionCommander @Inject() (
 
   def saveCollection(userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
     val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
-      val name = basicCollection.name.trim.replaceAll("""\s+""", " ")
-      if (name.length <= Collection.MaxNameLength) {
+      val name = Hashtag(basicCollection.name.trim.replaceAll("""\s+""", " "))
+      if (name.tag.length <= Collection.MaxNameLength) {
         db.readWrite { implicit s =>
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
