@@ -18,6 +18,7 @@ class LibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
+  libraryInviteRepo: LibraryInviteRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
@@ -76,6 +77,7 @@ class LibraryController @Inject() (
   private def canView(userId: Id[User], lib: Library, authToken: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
+        libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get).nonEmpty ||
         (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get)
     }
   }
