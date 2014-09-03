@@ -10,7 +10,9 @@ import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.SearchCommander
 import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{ JsNumber, JsString, JsObject }
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
@@ -79,6 +81,17 @@ class ExtSearchController @Inject() (
   }
 
   private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
+
+  def langDetect(query: String) = JsonAction.authenticatedParseJsonAsync { request =>
+    val startTime = System.currentTimeMillis()
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
+    searchCommander.langDetect(query, acceptLangs).map { lang =>
+      Ok(JsObject(List(
+        "elapsedMillis" -> JsNumber(System.currentTimeMillis() - startTime),
+        "lang" -> JsString(lang.lang)
+      )))
+    }
+  }
 
   //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
