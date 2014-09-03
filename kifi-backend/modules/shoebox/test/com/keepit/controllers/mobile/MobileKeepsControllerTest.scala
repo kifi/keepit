@@ -311,7 +311,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
             "collections":[],
             "tags":[],
-            "siteName":"Amazon"},
+            "summary":{},
+            "siteName":"Amazon",
+            "libraryId":"lzmfsKLJyou6"},
           {
             "id":"${bookmark1.externalId.toString}",
             "title":"G1",
@@ -322,7 +324,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "keepers":[],
             "collections":[],
             "tags":[],
-            "siteName":"Google"}
+            "summary":{},
+            "siteName":"Google",
+            "libraryId":"lzmfsKLJyou6"}
         ]}
       """)
       Json.parse(contentAsString(result)) must equalTo(expected)
@@ -378,9 +382,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
+                      "summary":{},
                       "siteName":"kifi.com",
                       "clickCount":1,
-                      "rekeepCount":1
+                      "rekeepCount":1,
+                      "libraryId":"l7jlKlnA36Su"
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -391,8 +397,10 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "keepers":[],
                       "collections":[],
                       "tags":[],
+                      "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1
+                      "clickCount":1,
+                      "libraryId":"l7jlKlnA36Su"
                     }
                   ],
                   "helprank":"click"
@@ -445,8 +453,10 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
                       "collections":[],
                       "tags":[],
+                      "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1
+                      "clickCount":1,
+                      "libraryId":"l7jlKlnA36Su"
                     }
                   ],
                   "helprank":"click"
@@ -532,7 +542,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
               "keepers":[],
               "collections":[],
               "tags":[],
-              "siteName":"Amazon"
+              "summary":{},
+              "siteName":"Amazon",
+              "libraryId":"lzmfsKLJyou6"
             }
           ]
         }
