@@ -24,13 +24,13 @@ case class AugmentedItem(
   moreKeeps: Seq[(Option[Id[Library]], Option[Id[User]])],
   moreTags: Seq[Hashtag])
 
-case class RestrictedKeepInfo(keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Seq[Hashtag])
+case class RestrictedKeepInfo(keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = new Format[RestrictedKeepInfo] {
     def reads(json: JsValue) = json.validate[Seq[JsValue]].map {
       case Seq(keptIn, keptBy, tags) =>
-        RestrictedKeepInfo(keptIn.as[Option[Id[Library]]], keptBy.as[Option[Id[User]]], tags.as[Seq[Hashtag]])
+        RestrictedKeepInfo(keptIn.as[Option[Id[Library]]], keptBy.as[Option[Id[User]]], tags.as[Set[Hashtag]])
     }
     def writes(keep: RestrictedKeepInfo) = Json.arr(keep.keptIn, keep.keptBy, keep.tags)
   }
