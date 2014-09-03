@@ -9,6 +9,7 @@ import play.api.i18n.Messages
 import securesocial.core.SecuredRequest
 
 import play.api.mvc.Result
+import play.api.http.Status.{ NO_CONTENT, RESET_CONTENT }
 import com.keepit.common.logging.Logging
 
 trait ActionsBuilder { self: Controller =>
@@ -64,7 +65,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     def authenticatedAsync[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: (AuthenticatedRequest[T] => Boolean) = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[Result]): Action[T] = {
       contentTypeOpt match {
         case Some(contentType) =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))))
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(as(contentType))))
         case None =>
           ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction)
       }
@@ -106,7 +107,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     def async[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: AuthenticatedRequest[T] => Boolean = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[Result], unauthenticatedAction: Request[T] => Future[Result]): Action[T] = {
       contentTypeOpt match {
         case Some(contentType) =>
-          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))), onSocialAuthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))))
+          ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(as(contentType))), onSocialAuthenticated = unauthenticatedAction.andThen(_.map(as(contentType))))
         case None =>
           ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction, onUnauthenticated = unauthenticatedAction, onSocialAuthenticated = unauthenticatedAction)
       }
@@ -138,6 +139,15 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
 
     def parseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] = {
       apply(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction, unauthenticatedAction)
+    }
+  }
+
+  private def as(contentType: String)(result: SimpleResult): SimpleResult = {
+    result.header.status match {
+      case NO_CONTENT | RESET_CONTENT =>
+        result
+      case _ =>
+        result.as(contentType)
     }
   }
 }

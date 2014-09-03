@@ -51,6 +51,14 @@ object EmailAddress {
       Failure(new IllegalArgumentException(s"Invalid email address: $address"))
     }
   }
+
+  // might also consider these indicators in the future:
+  // support feedback comment notification tickets? bugs? buganizer system nobody lists? announce(ments?)?
+  // discuss help careers jobs reports? bounces? updates?
+  private val botEmailAddressRe = """(?:\+[^@]|\d{10}|\b(?i)(?:(?:no)?reply|(?:un)?subscribe)\b)""".r
+  def isLikelyHuman(email: EmailAddress): Boolean = {
+    botEmailAddressRe.findFirstIn(email.address).isEmpty
+  }
 }
 
 object SystemEmailAddress {

@@ -47,7 +47,12 @@ object MaxWithTieBreakerExpr {
   class MaxWithTieBreakerExpr(index: Int, tieBreakerMultiplier: Float) extends ScoreExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       val scoreMax = ctx.scoreMax(index)
-      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier / ctx.norm
+      val scoreSum = ctx.scoreSum(index)
+      if (scoreMax == scoreSum) {
+        scoreMax
+      } else {
+        scoreMax + (1.0f - (scoreMax / scoreSum)) * tieBreakerMultiplier
+      }
     }
     override def isLeafExpr: Boolean = true
     override def toString(): String = s"MaxWithTieBreaker($index, $tieBreakerMultiplier)"

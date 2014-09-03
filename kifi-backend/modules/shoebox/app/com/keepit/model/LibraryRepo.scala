@@ -15,8 +15,10 @@ import scala.slick.jdbc.StaticQuery
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
-  def getByNameAndUser(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
+  def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
 }
 
 @Singleton
@@ -39,9 +41,10 @@ class LibraryRepoImpl @Inject() (
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
+    def universalLink = column[Option[String]]("universal_link", O.Nullable)
     def memberCount = column[Int]("member_count", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, memberCount) <> ((Library.apply _).tupled, Library.unapply)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -82,8 +85,14 @@ class LibraryRepoImpl @Inject() (
 
   private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String], excludeState: Option[State[Library]]) =
     Compiled { (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
-  def getByNameAndUser(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+  def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
     getByNameAndUserCompiled(userId, name, excludeState).firstOption
+  }
+
+  private def getBySlugAndUserCompiled(userId: Column[Id[User]], slug: Column[LibrarySlug], excludeState: Option[State[Library]]) =
+    Compiled { (for (b <- rows if b.slug === slug && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
+  def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    getBySlugAndUserCompiled(userId, slug, excludeState).firstOption
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
@@ -92,6 +101,13 @@ class LibraryRepoImpl @Inject() (
       lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lm.access, lib)
     q.list
+  }
+
+  private def getOptCompiled(ownerId: Column[Id[User]], slug: Column[LibrarySlug]) = Compiled {
+    (for (r <- rows if r.ownerId === ownerId && r.slug === slug) yield r)
+  }
+  def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
+    getOptCompiled(ownerId, slug).firstOption
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

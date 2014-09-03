@@ -11,7 +11,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
-import com.keepit.common._
+import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.common.logging.{ Logging, AccessLogTimer, AccessLog }

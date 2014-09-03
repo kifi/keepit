@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keepWhoText', ['kifi.profileService'])
+angular.module('kifi')
 
 .directive('kfKeepWhoText', [
   'profileService',

@@ -9,7 +9,8 @@ import com.kifi.macros.json
     recencyScore: Option[Float] = None,
     priorScore: Option[Float] = None,
     rekeepScore: Option[Float] = None,
-    discoveryScore: Option[Float] = None) {
+    discoveryScore: Option[Float] = None,
+    curationScore: Option[Float] = None) {
 
   def isEmpty = recencyScore.isEmpty &&
     overallInterestScore.isEmpty &&
@@ -18,7 +19,8 @@ import com.kifi.macros.json
     popularityScore.isEmpty &&
     recentInterestScore.isEmpty &&
     rekeepScore.isEmpty &&
-    discoveryScore.isEmpty
+    discoveryScore.isEmpty &&
+    curationScore.isEmpty
 
-  override def toString = s"UriRecommendationScores(socialScore:$socialScore, popularityScore:$popularityScore, overallInterestScore:$overallInterestScore, overallInterestScore:$overallInterestScore, recentInterestScore:$recentInterestScore, recencyScore:$recencyScore, priorScore:$priorScore, rekeepScore:$rekeepScore, discoveryScore:$discoveryScore)"
+  override def toString = s"UriRecommendationScores(socialScore:$socialScore, popularityScore:$popularityScore, overallInterestScore:$overallInterestScore, overallInterestScore:$overallInterestScore, recentInterestScore:$recentInterestScore, recencyScore:$recencyScore, priorScore:$priorScore, rekeepScore:$rekeepScore, discoveryScore:$discoveryScore, curationScore:$curationScore)"
 }

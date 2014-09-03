@@ -13,14 +13,14 @@ object EngagementEmailTypes {
 }
 
 class EngagementEmailActor @Inject() (
-    engagementFeedSender: EngagementFeedEmailSender,
+    engagementFeedSender: FeedDigestEmailSender,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   import EngagementEmailTypes._
 
   def receive(): PartialFunction[Any, Unit] = {
     case FEED => {
-      log.info("calling EngagementFeedEmailSender.send() from " + getClass.getName)
+      log.info("calling FeedDigestEmailSender.send() from " + getClass.getName)
       engagementFeedSender.send()
     }
   }

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.addKeep', [])
+angular.module('kifi')
 
 .directive('kfAddKeep', [
   '$document', '$rootScope', '$location', 'keyIndices', 'keepService',
@@ -64,7 +64,7 @@ angular.module('kifi.addKeep', [])
               e.preventDefault();
               scope.togglePrivate();
             }
-          }); 
+          });
         });
 
         scope.$on('$destroy', function () {

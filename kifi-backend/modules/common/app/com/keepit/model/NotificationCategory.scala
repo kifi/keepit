@@ -38,6 +38,8 @@ object NotificationCategory {
     val CONTACT_JOINED = NotificationCategory("contact_joined")
     val CONNECTION_MADE = NotificationCategory("connection_made")
 
+    val LIBRARY_INVITATION = NotificationCategory("library_invitation")
+
     val DIGEST = NotificationCategory("digest")
 
     val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,

@@ -5,19 +5,22 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
-  def getWithLibraryIdandUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+  def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+  def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)]
 }
 
 @Singleton
 class LibraryInviteRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val libraryRepo: LibraryRepoImpl,
   val inviteIdCache: LibraryInviteIdCache)
     extends DbRepo[LibraryInvite] with DbRepoWithDelete[LibraryInvite] with LibraryInviteRepo with Logging {
 
@@ -31,7 +34,9 @@ class LibraryInviteRepoImpl @Inject() (
     def ownerId = column[Id[User]]("owner_id", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
-    def * = (id.?, libraryId, ownerId, userId, access, createdAt, updatedAt, state) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def emailAddress = column[EmailAddress]("email_address", O.Nullable)
+    def authToken = column[String]("auth_token", O.NotNull)
+    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
@@ -50,7 +55,7 @@ class LibraryInviteRepoImpl @Inject() (
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
   }
-  def getWithLibraryIdandUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
+  def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
   }
 
@@ -58,6 +63,14 @@ class LibraryInviteRepoImpl @Inject() (
     libInv.id.map { id =>
       inviteIdCache.remove(LibraryInviteIdKey(id))
     }
+  }
+
+  def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)] = {
+    val q = for {
+      li <- rows if li.userId === userId && !li.state.inSet(excludeStates)
+      lib <- libraryRepo.rows if lib.id === li.libraryId && lib.state === LibraryStates.ACTIVE
+    } yield (li, lib)
+    q.list
   }
 
   override def invalidateCache(libInv: LibraryInvite)(implicit session: RSession): Unit = {

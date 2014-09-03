@@ -13,7 +13,7 @@ import com.keepit.scraper.{ Signature, HttpRedirect, ScrapeRequest }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsString, JsArray, Json }
 import play.api.libs.json.Json.JsValueWrapper
-import com.keepit.common._
+import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.me', [])
+angular.module('kifi')
 
 .service('me', function () {
   return {

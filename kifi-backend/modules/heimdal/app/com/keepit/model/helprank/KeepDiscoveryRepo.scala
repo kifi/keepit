@@ -1,5 +1,7 @@
 package com.keepit.model.helprank
 
+import java.sql.{ SQLException, Timestamp }
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -8,7 +10,9 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import org.joda.time.DateTime
+import com.keepit.common.performance._
 
+import scala.slick.jdbc.SetParameter
 import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[KeepDiscoveryRepoImpl])
@@ -28,7 +32,8 @@ trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
 @Singleton
 class KeepDiscoveryRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[KeepDiscovery] with KeepDiscoveryRepo {
+    val clock: Clock,
+    uriDiscoveryCountCache: UriDiscoveryCountCache) extends DbRepo[KeepDiscovery] with KeepDiscoveryRepo {
 
   import db.Driver.simple._
 
@@ -46,8 +51,10 @@ class KeepDiscoveryRepoImpl @Inject() (
   def table(tag: Tag) = new KeepDiscoveriesTable(tag)
   initTable()
 
-  override def deleteCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: KeepDiscovery)(implicit session: RSession): Unit = {
+    uriDiscoveryCountCache.remove(UriDiscoveryCountKey(model.uriId))
+  }
+  override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = deleteCache(model)
 
   def getDiscoveriesByUUID(uuid: ExternalId[ArticleSearchResult])(implicit r: RSession): Seq[KeepDiscovery] = {
     (for (r <- rows if (r.hitUUID === uuid && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list()
@@ -66,14 +73,38 @@ class KeepDiscoveryRepoImpl @Inject() (
   }
 
   def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime)(implicit r: RSession): Int = {
-    val q = (for (r <- rows if (r.uriId === uriId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r)
-      .groupBy(_.hitUUID)
-      .map { case (uuid, kc) => (uuid, kc.length) }
-    q.length.run
+    sql"select count(distinct (hit_uuid)) from keep_click where uri_id=$uriId and created_at >= $since".as[Int].first
   }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = { // todo(ray): optimize
-    uriIds.map { uriId => uriId -> getDiscoveryCountByURI(uriId, since) }.toMap
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getDiscoveryCountsByURIs(sz=${uriIds.size})") {
+    if (uriIds.isEmpty) Map.empty
+    else {
+      val valueMap = uriDiscoveryCountCache.bulkGetOrElse(uriIds.map(UriDiscoveryCountKey(_)).toSet) { keys =>
+        val buf = collection.mutable.ArrayBuilder.make[(Id[NormalizedURI], Int)]
+        val missing = keys.map(_.uriId)
+        missing.grouped(20).foreach { ids =>
+          val params = Seq.fill(ids.size)("?").mkString(",")
+          val stmt = session.getPreparedStatement(s"select uri_id, count(distinct (hit_uuid)) from keep_click where uri_id in ($params) group by uri_id;")
+          ids.zipWithIndex.foreach {
+            case (uriId, idx) =>
+              stmt.setLong(idx + 1, uriId.id)
+          }
+          val res = timing(s"getDiscoveryCountsByURIs(sz=${ids.size};ids=$ids)") { stmt.execute() }
+          if (!res) throw new SQLException(s"[getDiscoveryCountsByURIs] ($stmt) failed to execute")
+          val rs = stmt.getResultSet()
+          while (rs.next()) {
+            val uriId = Id[NormalizedURI](rs.getLong(1))
+            val count = rs.getInt(2)
+            buf += (uriId -> count)
+          }
+        }
+        val resMap = buf.result.toMap
+        missing.map { uriId =>
+          UriDiscoveryCountKey(uriId) -> resMap.getOrElse(uriId, 0)
+        }.toMap
+      }
+      valueMap.map { case (k, v) => (k.uriId -> v) }
+    }
   }
 
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {

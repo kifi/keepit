@@ -12,7 +12,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 
 import play.api.Play.current
 import play.api.{ Application, Play }

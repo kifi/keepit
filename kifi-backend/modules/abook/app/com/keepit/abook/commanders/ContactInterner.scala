@@ -76,8 +76,8 @@ class ContactInterner @Inject() (
         preferredContact.email
     }.toSeq
     val emailAccountsByLowerCasedAddress = emailAccountRepo.internByAddresses(uniqueEmailAddresses: _*).map {
-      emailAccount => emailAccount.address.address.toLowerCase() -> emailAccount
-    }.toMap
+      case (emailAddress, emailAccount) => emailAddress.address.toLowerCase() -> emailAccount
+    }
     val newEContacts = toBeInsertedByLowerCasedAddress.map {
       case (lowerCasedAddress, contacts) =>
         val emailAccount = emailAccountsByLowerCasedAddress(lowerCasedAddress)

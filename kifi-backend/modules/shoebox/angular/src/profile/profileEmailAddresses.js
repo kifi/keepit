@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileEmailAddresses', ['util', 'kifi.profileService'])
+angular.module('kifi')
 
 .directive('kfProfileEmailAddresses', [
   '$document', 'keyIndices', 'profileService',
@@ -57,7 +57,7 @@ angular.module('kifi.profileEmailAddresses', ['util', 'kifi.profileService'])
         scope.confirmDeleteEmail = function () {
           profileService.deleteEmailAccount(scope.emailToBeDeleted);
         };
-        
+
         scope.makePrimary = function (email) {
           profileService.makePrimary(email);
         };

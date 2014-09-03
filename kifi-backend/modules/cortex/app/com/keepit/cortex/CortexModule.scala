@@ -3,6 +3,7 @@ package com.keepit.cortex
 import com.keepit.common.cache.CacheModule
 import com.keepit.cortex.nlp.NLPModule
 import com.keepit.cortex.store.{ CommitInfoStoreModule, CortexCommonStoreModule, FeatureStoreModule, StatModelStoreModule }
+import com.keepit.curator.ProdCuratorServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
@@ -13,7 +14,7 @@ import com.keepit.common.service.ServiceType
 
 case class CortexServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.CORTEX
-  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.HEIMDAL :: Nil
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.HEIMDAL :: ServiceType.CURATOR :: Nil
 }
 
 abstract class CortexModule(
@@ -27,6 +28,7 @@ abstract class CortexModule(
     val dataIngestionModule: CortexDataIngestionModule,
     val nlpModule: NLPModule) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val curatorServiceClientModule = ProdCuratorServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val cortexSlickModule = CortexSlickModule()
   val serviceTypeModule = CortexServiceTypeModule()

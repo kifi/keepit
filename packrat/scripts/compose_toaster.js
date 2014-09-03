@@ -59,7 +59,7 @@ var toaster = (function () {
     log('[toaster:show]');
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
-      draftPlaceholder: 'Type a message…',
+      draftPlaceholder: 'Write something…',
       draftDefault: 'Check this out.'
     }, {
       compose: 'compose'
@@ -127,11 +127,12 @@ var toaster = (function () {
   }
 
   function onOthersClick(e) {
-    if (e.which !== 1) return;
-    hide();
-    var data = $(this).data();
-    var threadId = data.id;
-    pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
+    var data = $.data(this);
+    if (e.which === 1 && data.count) {
+      hide();
+      var threadId = data.id;
+      pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
+    }
   }
 
   function idOf(o) {

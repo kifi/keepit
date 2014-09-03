@@ -2,7 +2,7 @@ package com.keepit.test
 
 import java.io.File
 
-import com.google.inject.Module
+import com.google.inject.{ Injector, Module }
 import com.google.inject.util.Modules
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
@@ -12,7 +12,9 @@ import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -73,6 +75,10 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeCryptoModule(),
     FakeActorSystemModule(),
     FakeActionAuthenticatorModule(),
-    FakeKeepImportsModule()
+    FakeKeepImportsModule(),
+    FakeMailModule(),
+    FakeShoeboxStoreModule()
   )
+
+  def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]
 }

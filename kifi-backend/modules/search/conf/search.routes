@@ -2,6 +2,7 @@
 # Search Extension API
 ##########################################
 GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /search2       @com.keepit.controllers.ext.ExtSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, debug: Option[String])
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
 GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
@@ -25,6 +26,7 @@ GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMess
 # Search Website API
 ##########################################
 GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String], withUriSummary: Boolean ?= false)
+GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], withUriSummary: Boolean ?= false)
 GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
@@ -35,8 +37,9 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 ##########################################
 
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
+POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
-POST        /internal/search/dist/feeds           @com.keepit.controllers.search.SearchController.distFeeds()
+POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
@@ -76,17 +79,9 @@ POST        /internal/search/searchConfig/:id/set        @com.keepit.controllers
 GET         /internal/search/searchConfig/:id/reset        @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 GET         /internal/search/defaultSearchConfig/defaultSearchConfig        @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
-GET         /internal/search/semanticVector/leaveOneOut        @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
-GET         /internal/search/semanticVector/allSubsets        @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
-GET         /internal/search/semanticVector/similarity        @com.keepit.controllers.search.SemanticVectorController.similarity(query1: String, query2: String, stem: Boolean)
-GET         /internal/search/semanticVector/semanticLoss        @com.keepit.controllers.search.SemanticVectorController.semanticLoss(queryText: String)
-POST        /internal/search/semanticVector/visualize        @com.keepit.controllers.search.SemanticVectorController.visualizeSemanticVector
-
 GET         /internal/search/cache/warmResultClick        @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 
 GET         /internal/search/spell/suggest        @com.keepit.controllers.search.SpellCorrectorController.correct(input: String, enableBoost: Boolean)
-
-GET         /internal/search/feed        @com.keepit.controllers.search.FeedController.getFeeds(userId: Id[User], limit: Int)
 
 GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
 

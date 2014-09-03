@@ -13,72 +13,15 @@ angular.module('kifi', [
   'nodraginput',
   'jun.smartScroll',
   'angularMoment',
-  'kifi.home',
-  'kifi.search',
-  'kifi.tagKeeps',
-  'kifi.keepView',
-  'kifi.helprank',
-  'kifi.profile',
-  'kifi.friends',
-  'kifi.friendService',
-  'kifi.friends.friendCard',
-  'kifi.friends.friendRequestCard',
-  'kifi.friends.rightColFriendsView',
-  'kifi.friends.seeMutualFriends',
-  'kifi.social',
-  'kifi.social.networksNeedAttention',
-  'kifi.socialService',
-  'kifi.invite',
-  'kifi.invite.connectionCard',
-  'kifi.invite.wtiService',
-  'kifi.savePymkService',
-  'kifi.focus',
-  'kifi.youtube',
-  'kifi.templates',
-  'kifi.profileService',
-  'kifi.tags',
-  'kifi.keeps',
-  'kifi.keep',
-  'kifi.addKeep',
-  'kifi.recos',
-  'kifi.recoService',
-  'kifi.tagList',
-  'kifi.layout.header',
-  'kifi.layout.main',
-  'kifi.layout.nav',
-  'kifi.layout.rightCol',
-  'kifi.undo',
-  'kifi.installService',
-  'kifi.dragService',
   'jun.facebook',
   'ui.slider',
   'angulartics',
-  'kifi.mixpanel',
-  'kifi.alertBanner',
-  'kifi.minVersion',
-  'kifi.sticky',
-  'kifi.delighted',
-  'kifi.userService'
+  'kifi.templates'
 ])
 
 // fix for when ng-view is inside of ng-include:
 // http://stackoverflow.com/questions/16674279/how-to-nest-ng-view-inside-ng-include
 .run(['$route', angular.noop])
-
-.config([
-  '$routeProvider', '$locationProvider', '$httpProvider',
-  function ($routeProvider, $locationProvider, $httpProvider) {
-    $locationProvider
-      .html5Mode(true)
-      .hashPrefix('!');
-
-    $routeProvider.otherwise({
-      redirectTo: '/'
-    });
-
-    $httpProvider.defaults.withCredentials = true;
-  }
-])
 
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
@@ -170,7 +113,7 @@ angular.module('kifi', [
     if (typeof state.friend === 'string' && state.friend.match(/^[a-f0-9-]{36}$/)) {
       // naively assumes that state.friend is a valid externalId and the user
       // will see the contact jointed banner
-      attributes.events.user_viewed_page.subtype = 'contactJoined';
+      attributes.events.user_viewed_page.subtype = state.subtype || 'contactJoined';
     }
 
     return attributes;
@@ -178,8 +121,9 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$window', '$rootScope', 'friendService', '$timeout',
-  function (profileService, $window, $rootScope, friendService, $timeout) {
+  'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  function (profileService, $window, $rootScope, friendService, $timeout, $log) {
+    $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
       profileService.fetchPrefs();
       friendService.getRequests();

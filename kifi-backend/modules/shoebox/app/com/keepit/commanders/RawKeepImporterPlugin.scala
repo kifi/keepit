@@ -1,6 +1,10 @@
 package com.keepit.commanders
 
+import java.util.concurrent.{ Callable, TimeUnit }
+
+import com.google.common.cache.{ Cache, CacheBuilder }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.scraper.ScrapeScheduler
@@ -38,6 +42,7 @@ private class RawKeepImporterActor @Inject() (
     collectionRepo: CollectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     bookmarksCommanderProvider: Provider[KeepsCommander],
+    libraryCommanderProvider: Provider[LibraryCommander],
     searchClient: SearchServiceClient,
     clock: Clock) extends FortyTwoActor(airbrake) with Logging {
 
@@ -58,30 +63,32 @@ private class RawKeepImporterActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  def fetchActiveBatch() = {
+  private def fetchActiveBatch() = {
     db.readWrite { implicit session =>
       rawKeepRepo.getUnprocessedAndMarkAsImporting(batchSize)
     }
   }
 
-  def fetchOldBatch() = {
+  private def fetchOldBatch() = {
     db.readOnlyReplica { implicit session =>
       rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(20))
     }
   }
 
-  def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
+  private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId)).map {
-      case ((userId, importIdOpt, source, installationId), rawKeepGroup) =>
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate)).map { // todo: use libraries!
+      case ((userId, importIdOpt, source, installationId, isPrivate), rawKeepGroup) =>
+
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
         val rawBookmarks = rawKeepGroup.map { rk =>
-          val canonical = rk.originalJson.map(json => (json \ Normalization.CANONICAL.scheme).asOpt[String]).flatten
-          val openGraph = rk.originalJson.map(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String]).flatten
-          RawBookmarkRepresentation(title = rk.title, url = rk.url, isPrivate = rk.isPrivate, canonical = canonical, openGraph = openGraph)
+          val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
+          val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
+          RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None)
         }
-        val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, source, mutatePrivacy = true)(context)
+        val library = db.readWrite(getLibFromPrivacy(isPrivate, userId)(_))
+        val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
         val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
         val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
@@ -101,7 +108,7 @@ private class RawKeepImporterActor @Inject() (
               "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
             }
             val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-            bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, false)(context)
+            bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, updateUriGraph = false)(context)
           }
 
           /* The strategy here is to go through all the keeps, grabbing their tags, and generating a list
@@ -168,7 +175,7 @@ private class RawKeepImporterActor @Inject() (
     }
   }
 
-  def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
+  private def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
     Try {
       db.readOnlyMaster { implicit session =>
         userValueRepo.getValueStringOpt(userId, UserValueName.bookmarkImportContextName(importId))
@@ -176,6 +183,16 @@ private class RawKeepImporterActor @Inject() (
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
       }.flatten
     }.toOption.flatten
+  }
+
+  // Until we can refactor this intern API to use libraries instead of privacy, we need to look up the library.
+  // This should be removed as soon as we can. - Andrew
+  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
+  private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
+    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
+      def call() = libraryCommanderProvider.get.getMainAndSecretLibrariesForUser(userId)
+    })
+    if (isPrivate) secret else main
   }
 
 }

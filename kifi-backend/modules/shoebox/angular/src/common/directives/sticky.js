@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.sticky', ['kifi.sticky'])
+angular.module('kifi')
 
 .directive('kfSticky', [
   '$window',

@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.curator.CuratorServiceClient
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.{ Try }
@@ -101,6 +102,7 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
+    curator: CuratorServiceClient,
     authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
 
   def merge = AdminHtmlAction.authenticated { implicit request =>
@@ -880,6 +882,11 @@ class AdminUserController @Inject() (
       (owner, libs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
+  def sendEmail(toUserId: Id[User], code: String) = AdminHtmlAction.authenticated { implicit request =>
+    curator.triggerEmailToUser(code, toUserId)
+    NoContent
   }
 
 }

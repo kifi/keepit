@@ -1,5 +1,7 @@
 package com.keepit.scraper.extractor
 
+import com.keepit.common.net.URI
+
 import scala.collection.JavaConversions._
 
 import com.keepit.common.logging.Logging
@@ -9,14 +11,14 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.util.regex.Pattern
 
-abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
+abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extractor with Logging {
   protected var doc: Document = null
 
   def parse(doc: Document): String
 
   def process(input: HttpInputStream) {
     try {
-      doc = Jsoup.parse(input, null, url) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
+      doc = Jsoup.parse(input, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
       case e: Throwable => log.error("Jsoup extraction failed: ", e)
     }

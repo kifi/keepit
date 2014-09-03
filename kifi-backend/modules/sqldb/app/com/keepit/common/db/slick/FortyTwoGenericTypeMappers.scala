@@ -161,4 +161,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def getExtIdResult[M <: Model[M]] = getResultFromMapper[ExternalId[M]]
   implicit def getOptExtIdResult[M <: Model[M]] = getResultOptionFromMapper[ExternalId[M]]
   implicit val getEmailAddressResult = getResultFromMapper[EmailAddress]
+  implicit val getLibraryVisiblityResult = getResultFromMapper[LibraryVisibility]
+  implicit val getOptLibraryVisiblityResult = getResultOptionFromMapper[LibraryVisibility]
 }

@@ -13,6 +13,8 @@ import scala.concurrent.duration._
 class CuratorTasksPlugin @Inject() (
     ingestionCommander: SeedIngestionCommander,
     generationCommander: RecommendationGenerationCommander,
+    feedCommander: PublicFeedGenerationCommander,
+    cleanupCommander: RecommendationCleanupCommander,
     system: ActorSystem,
     emailActor: ActorInstance[EngagementEmailActor],
     quartz: ActorInstance[QuartzActor],
@@ -25,6 +27,15 @@ class CuratorTasksPlugin @Inject() (
     }
     scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
       generationCommander.precomputeRecommendations()
+    }
+    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
+      feedCommander.precomputePublicFeeds()
+    }
+    scheduleTaskOnLeader(system, 1 hours, 5 hours) {
+      cleanupCommander.cleanupLowMasterScoreRecos()
+    }
+    scheduleTaskOnLeader(system, 1 hours, 10 hours) {
+      cleanupCommander.cleanupLowMasterScoreFeeds()
     }
 
     scheduleRecommendationEmail()

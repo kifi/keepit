@@ -18,6 +18,7 @@ import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, Cach
 import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.store.S3Bucket
 import com.keepit.abook.model.{ EContactRepo, EContact }
+import com.keepit.common.mail.EmailAddress
 
 class EContactTypeahead @Inject() (
     db: Database,
@@ -76,7 +77,7 @@ class EContactTypeahead @Inject() (
 
   protected def getAllInfosForUser(id: Id[User]): Future[Seq[EContact]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      econtactRepo.getByUserId(id).filter(EContactTypeahead.isLikelyHuman)
+      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email))
     }
   }
 
@@ -86,16 +87,6 @@ class EContactTypeahead @Inject() (
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
       }
     }
-  }
-}
-
-object EContactTypeahead {
-  // might also consider these indicators in the future:
-  // support feedback comment notification tickets? bugs? buganizer system nobody lists? announce(ments?)?
-  // discuss help careers jobs reports? bounces? updates?
-  val botEmailAddressRe = """(?:\+[^@]|\d{10}|\b(?i)(?:(?:no)?reply|(?:un)?subscribe)\b)""".r
-  protected[typeahead] def isLikelyHuman(contact: EContact): Boolean = {
-    botEmailAddressRe.findFirstIn(contact.email.address).isEmpty
   }
 }
 

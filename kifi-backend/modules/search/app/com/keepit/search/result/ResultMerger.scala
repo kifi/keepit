@@ -102,13 +102,10 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       queue.foreach { h => hits.insert(h) }
     }
 
-    var onlyContainsOthersHits = false
-
     if (hits.size < maxHits && othersHits.size > 0) {
       val othersThreshold = othersHighScore * tailCutting
       val othersNorm = max(highScore, othersHighScore)
       val queue = createQueue(maxHits - hits.size)
-      if (hits.size == 0) onlyContainsOthersHits = true
       othersHits.toRankedIterator.forall {
         case (hit, rank) =>
           val scoring = hit.scoring

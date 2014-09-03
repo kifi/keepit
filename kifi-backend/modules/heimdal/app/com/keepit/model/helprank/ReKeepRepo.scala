@@ -1,10 +1,13 @@
 package com.keepit.model.helprank
 
+import java.sql.SQLException
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+import com.keepit.common.performance._
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -32,7 +35,10 @@ trait ReKeepRepo extends Repo[ReKeep] {
 }
 
 @Singleton
-class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ReKeep] with ReKeepRepo {
+class ReKeepRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val uriReKeepCountCache: UriReKeepCountCache) extends DbRepo[ReKeep] with ReKeepRepo {
 
   import db.Driver.simple._
 
@@ -50,8 +56,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   def table(tag: Tag) = new ReKeepsTable(tag)
   initTable()
 
-  def deleteCache(model: ReKeep)(implicit session: RSession): Unit = {}
-  def invalidateCache(model: ReKeep)(implicit session: RSession): Unit = {}
+  def deleteCache(model: ReKeep)(implicit session: RSession): Unit = {
+    uriReKeepCountCache.remove(UriReKeepCountKey(model.uriId))
+  }
+  def invalidateCache(model: ReKeep)(implicit session: RSession): Unit = deleteCache(model)
 
   def getReKeep(keeperId: Id[User], uriId: Id[NormalizedURI], rekeeperId: Id[User])(implicit r: RSession): Option[ReKeep] = {
     (for (r <- rows if (r.keeperId === keeperId && r.uriId === uriId && r.srcUserId === rekeeperId)) yield r).firstOption()
@@ -110,14 +118,38 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getReKeepCountByURI(uriId: Id[NormalizedURI])(implicit r: RSession): Int = {
-    val q = (for (r <- rows if (r.uriId === uriId && r.state === ReKeepStates.ACTIVE)) yield r)
-      .groupBy(_.srcKeepId)
-      .map { case (srcKeepId, rk) => (srcKeepId, rk.length) }
-    q.length.run
+    sql"select count(distinct (src_user_id)) from rekeep where uri_id=$uriId".as[Int].first
   }
 
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int] = { // todo(ray): optimize
-    uriIds.map { uriId => uriId -> getReKeepCountByURI(uriId) } toMap
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getReKeepCountsByURIs(sz=${uriIds.size})") {
+    if (uriIds.isEmpty) Map.empty
+    else {
+      val valueMap = uriReKeepCountCache.bulkGetOrElse(uriIds.map(UriReKeepCountKey(_)).toSet) { keys =>
+        val buf = collection.mutable.ArrayBuilder.make[(Id[NormalizedURI], Int)]
+        val missing = keys.map(_.uriId)
+        missing.grouped(20).foreach { ids =>
+          val params = Seq.fill(ids.size)("?").mkString(",")
+          val stmt = session.getPreparedStatement(s"select uri_id, count(distinct (src_user_id)) from rekeep where uri_id in ($params) group by uri_id;")
+          ids.zipWithIndex.foreach {
+            case (uriId, idx) =>
+              stmt.setLong(idx + 1, uriId.id)
+          }
+          val res = timing(s"getReKeepCountsByURIs(sz=${ids.size};ids=$ids)") { stmt.execute() }
+          if (!res) throw new SQLException(s"[getReKeepCountsByURIs] ($stmt) failed to execute")
+          val rs = stmt.getResultSet()
+          while (rs.next()) {
+            val uriId = Id[NormalizedURI](rs.getLong(1))
+            val count = rs.getInt(2)
+            buf += (uriId -> count)
+          }
+        }
+        val resMap = buf.result.toMap
+        missing.map { uriId =>
+          UriReKeepCountKey(uriId) -> resMap.getOrElse(uriId, 0)
+        }.toMap
+      }
+      valueMap.map { case (k, v) => (k.uriId -> v) }
+    }
   }
 
   def getAllReKeepCountsByUser()(implicit r: RSession): Map[Id[User], Int] = {

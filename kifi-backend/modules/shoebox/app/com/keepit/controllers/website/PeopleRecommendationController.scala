@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.commanders.PeopleRecommendationCommander
 import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
@@ -19,28 +20,27 @@ class PeopleRecommendationController @Inject() (
     basicUserRepo: BasicUserRepo,
     userRepo: UserRepo,
     db: Database,
+    peopleRecoCommander: PeopleRecommendationCommander,
     socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriendRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, page, pageSize).map { recommendedUsers =>
-      val friends = db.readOnlyReplica { implicit session =>
-        (recommendedUsers.toSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
-      }
-      val mutualFriends = recommendedUsers.map { recommendedUserId => recommendedUserId -> (friends(request.userId) intersect friends(recommendedUserId)) }.toMap
-      val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
-        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-        val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
-        val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
-        (basicUsers, mutualFriendConnectionCounts)
-      }
-      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
-        val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-          BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+  def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
+    peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
+      case None => Ok(Json.obj("users" -> JsArray()))
+      case Some(recoData) => {
+        val recommendedUsers = recoData.recommendedUsers
+        val basicUsers = recoData.basicUsers
+        val mutualFriends = recoData.mutualFriends
+        val mutualFriendConnectionCounts = recoData.mutualFriendConnectionCounts
+
+        val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
+          val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
+            BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+          })
+          BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
         })
-        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
-      })
-      val json = Json.obj("users" -> recommendedUsersArray)
-      Ok(json)
+        val json = Json.obj("users" -> recommendedUsersArray)
+        Ok(json)
+      }
     }
   }
 
@@ -51,11 +51,11 @@ class PeopleRecommendationController @Inject() (
     }
   }
 
-  def getInviteRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
+  def getInviteRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
     val relevantNetworks = db.readOnlyReplica { implicit session =>
       socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
     }
-    abookServiceClient.getInviteRecommendations(request.userId, page, pageSize, relevantNetworks).map { inviteRecommendations =>
+    abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks).map { inviteRecommendations =>
       Ok(Json.toJson(inviteRecommendations))
     }
   }

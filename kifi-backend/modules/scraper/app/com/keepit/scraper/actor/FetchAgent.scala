@@ -26,7 +26,7 @@ class FetchAgent @Inject() (
   implicit val fj = ExecutionContext.fj
 
   val name = self.path.name
-  log.info(s"[FetchAgent($name)] created! parent=${context.parent} props=${context.props} context=${context}")
+  log.info(s"[FetchAgent($name)] created! parent=${context.parent} props=${context.props} context=$context")
 
   def receive: Receive = {
     case FetchJob(submitTS, Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType])) =>
@@ -34,14 +34,15 @@ class FetchAgent @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
   private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]) = {
+    val uri = URI.parse(url).get
     val extractor = extractorProviderTypeOpt match {
-      case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(url, ScraperConfig.maxContentChars)
-      case _ => extractorFactory(url)
+      case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(uri, ScraperConfig.maxContentChars)
+      case _ => extractorFactory(uri)
     }
-    if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
-    httpFetcher.get(url, proxy = proxyOpt)(input => extractor.process(input)) map { fetchStatus =>
+    if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
+    httpFetcher.get(uri, proxy = proxyOpt)(input => extractor.process(input)) map { fetchStatus =>
       fetchStatus.statusCode match {
-        case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl) =>
+        case HttpStatus.SC_OK if !helper.syncIsUnscrapableP(uri, fetchStatus.destinationUrl) =>
           Some(extractor.basicArticle(fetchStatus.destinationUrl getOrElse url))
         case _ => None
       }

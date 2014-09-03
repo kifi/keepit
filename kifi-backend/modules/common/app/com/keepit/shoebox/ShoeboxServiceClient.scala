@@ -21,7 +21,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 import play.api.libs.json.Json._
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
@@ -109,6 +109,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
+  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -689,5 +690,15 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = {
     call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
+  }
+
+  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {
+    val json = Json.obj("action" -> action) ++ (src match {
+      case Left(id) =>
+        Json.obj("user" -> id)
+      case Right(email) =>
+        Json.obj("email" -> email)
+    })
+    call(Shoebox.internal.addInteraction(userId), body = json)
   }
 }

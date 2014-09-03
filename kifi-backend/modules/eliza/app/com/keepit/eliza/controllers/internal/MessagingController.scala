@@ -34,7 +34,7 @@ import play.api.libs.json.JsArray
 import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.heimdal.HeimdalContext
 import scala.util.{ Failure, Success, Try }
 import play.api.libs.json.JsArray
@@ -136,6 +136,13 @@ class MessagingController @Inject() (
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     Ok(Json.toJson(messagingCommander.keepAttribution(userId, uriId)))
+  }
+
+  def checkUrisDiscussed(userId: Id[User]) = Action.async(parse.json) { request =>
+    val uriIds = request.body.as[Seq[Id[NormalizedURI]]]
+    messagingCommander.checkUrisDiscussed(userId, uriIds).map { res =>
+      Ok(Json.toJson(res))
+    }
   }
 
 }

@@ -1,9 +1,12 @@
 package com.keepit.commanders
 
-import com.google.inject.Inject
+import java.util.concurrent.{ Callable, TimeUnit }
 
-import com.keepit.common.KestrelCombinator
-import com.keepit.common.crypto.PublicId
+import com.google.common.cache.{ CacheBuilder, Cache }
+import com.google.inject.{ Singleton, Inject }
+
+import com.keepit.common.core._
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
@@ -11,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -70,7 +74,7 @@ object KeepInfo {
     KeepInfo(
       Some(info.bookmark.externalId),
       info.bookmark.title,
-      (if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
+      if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url,
       info.bookmark.isPrivate,
       Some(info.bookmark.createdAt),
       Some(info.others),
@@ -81,12 +85,12 @@ object KeepInfo {
       info.siteName,
       info.clickCount,
       info.rekeepCount,
-      None // todo(andrew): Add library external id
+      info.libraryId
     )
   }
 
-  def fromBookmark(bookmark: Keep): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = None) // todo(andrew): Add library external id
+  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
   }
 }
 
@@ -102,17 +106,17 @@ case class FullKeepInfo(
   rekeepCount: Option[Int] = None,
   libraryId: Option[PublicId[Library]] = None)
 
-case class KeepInfosWithCollection(
-  collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
+case class RawBookmarksWithCollection(
+  collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
 
-object KeepInfosWithCollection {
+object RawBookmarksWithCollection {
   implicit val reads = (
     (__ \ 'collectionId).read(ExternalId.format[Collection])
     .map[Option[Either[ExternalId[Collection], String]]](c => Some(Left(c)))
     orElse (__ \ 'collectionName).readNullable[String]
     .map(_.map[Either[ExternalId[Collection], String]](Right(_))) and
-    (__ \ 'keeps).read[Seq[KeepInfo]]
-  )(KeepInfosWithCollection.apply _)
+    (__ \ 'keeps).read[Seq[RawBookmarkRepresentation]]
+  )(RawBookmarksWithCollection.apply _)
 }
 
 case class BulkKeepSelection(
@@ -127,6 +131,7 @@ object BulkKeepSelection {
   )(BulkKeepSelection.apply _, unlift(BulkKeepSelection.unapply))
 }
 
+@Singleton
 class KeepsCommander @Inject() (
     db: Database,
     keepInterner: KeepInterner,
@@ -137,19 +142,21 @@ class KeepsCommander @Inject() (
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
-    keepDiscoveriesRepo: KeepDiscoveryRepo,
-    rekeepRepo: ReKeepRepo,
-    kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
+    heimdalClient: HeimdalServiceClient,
     eliza: ElizaServiceClient,
     localUserExperimentCommander: LocalUserExperimentCommander,
     airbrake: AirbrakeNotifier,
     uriSummaryCommander: URISummaryCommander,
     collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
-    clock: Clock) extends Logging {
+    curator: CuratorServiceClient,
+    clock: Clock,
+    libraryCommander: LibraryCommander,
+    libraryRepo: LibraryRepo,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getKeeps(
     beforeOpt: Option[ExternalId[Keep]],
@@ -157,7 +164,7 @@ class KeepsCommander @Inject() (
     collectionId: Option[ExternalId[Collection]],
     helprankOpt: Option[String],
     count: Int,
-    userId: Id[User]): (Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int]) = {
+    userId: Id[User]): Future[(Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int])] = {
 
     @inline def filter(counts: Seq[(Id[NormalizedURI], Int)])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
       val uriIds = counts.map(_._1)
@@ -181,31 +188,44 @@ class KeepsCommander @Inject() (
 
     db.readOnlyReplica { implicit ro =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id) }).flatten
-      val keeps = collectionOpt match {
+      val keepsF = collectionOpt match {
         case Some(collection) =>
-          keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
+          Future.successful(keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count))
         case None =>
-          helprankOpt match {
-            case Some(selector) =>
-              val keepIds = selector.trim match {
-                case "rekeep" => {
-                  filter(rekeepRepo.getUriReKeepsWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
-                }
-                case _ => {
-                  filter(keepDiscoveriesRepo.getUriDiscoveriesWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
-                } // click
-              }
+          helprankOpt map { selector =>
+            val keepIdsF = selector.trim match {
+              case "rekeep" => heimdalClient.getUriReKeepsWithCountsByKeeper(userId) map { counts => counts.map(c => c.uriId -> c.count) }
+              case _ => heimdalClient.getUriDiscoveriesWithCountsByKeeper(userId) map { counts => counts.map(c => c.uriId -> c.count) }
+            }
+            keepIdsF map { counts =>
+              val keepIds = filter(counts)
               val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
               log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")
               km.valuesIterator.toList
-            case _ => keepRepo.getByUser(userId, beforeOpt, afterOpt, count)
-          }
+            }
+          } getOrElse Future.successful(keepRepo.getByUser(userId, beforeOpt, afterOpt, count))
       }
-      val (clkCount, rkCount) = helprankOpt match {
-        case None => (Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int])
-        case Some(s) => (keepDiscoveriesRepo.getDiscoveryCountsByKeepIds(userId, keeps.map(_.id.get).toSet), rekeepRepo.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet))
+      keepsF flatMap { keeps =>
+        val countsF = helprankOpt match {
+          case None =>
+            Future.successful((Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int]))
+          case Some(_) =>
+            val discCountsF = heimdalClient.getDiscoveryCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
+            val rekeepCountsF = heimdalClient.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
+            for {
+              discCounts <- discCountsF
+              rekeepCounts <- rekeepCountsF
+            } yield {
+              val discMap = discCounts.map { c => c.keepId -> c.count }.toMap
+              val rkMap = rekeepCounts.map { c => c.keepId -> c.count }.toMap
+              (discMap, rkMap)
+            }
+        }
+        countsF map {
+          case (disCount, rkCount) =>
+            (keeps, collectionOpt, disCount, rkCount)
+        }
       }
-      (keeps, collectionOpt, clkCount, rkCount)
     }
   }
 
@@ -221,31 +241,33 @@ class KeepsCommander @Inject() (
     count: Int,
     userId: Id[User],
     withPageInfo: Boolean): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    val (keeps, collectionOpt, clkCounts, rkCounts) = getKeeps(before, after, collectionId, helprankOpt, count, userId)
-    val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
-    val pageInfosFuture = Future.sequence(keeps.map { keep =>
-      if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
-    })
+    getKeeps(before, after, collectionId, helprankOpt, count, userId) flatMap {
+      case (keeps, collectionOpt, clkCounts, rkCounts) =>
+        val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+        val pageInfosFuture = Future.sequence(keeps.map { keep =>
+          if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
+        })
 
-    val colls = db.readOnlyMaster { implicit s =>
-      keeps.map { keep =>
-        keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-      }
-    }.map(collectionCommander.getBasicCollections)
+        val colls = db.readOnlyMaster { implicit s =>
+          keeps.map { keep =>
+            keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          }
+        }.map(collectionCommander.getBasicCollections)
 
-    for {
-      sharingInfos <- sharingInfosFuture
-      pageInfos <- pageInfosFuture
-    } yield {
-      val idToBasicUser = db.readOnlyMaster { implicit s =>
-        basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
-      }
-      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
-        case ((keep, colls), sharingInfos, pageInfos) =>
-          val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-          FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
-      }
-      (collectionOpt.map { c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
+        for {
+          sharingInfos <- sharingInfosFuture
+          pageInfos <- pageInfosFuture
+        } yield {
+          val idToBasicUser = db.readOnlyMaster { implicit s =>
+            basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
+          }
+          val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
+            case ((keep, colls), sharingInfos, pageInfos) =>
+              val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+              FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
+          }
+          (collectionOpt.map { c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
+        }
     }
   }
 
@@ -304,23 +326,29 @@ class KeepsCommander @Inject() (
     (individualKeeps ++ collectionKeeps).filter(filter).groupBy(_.id.get).values.flatten.toSeq
   }
 
-  def keepOne(keepJson: JsObject, userId: Id[User], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
-    log.info(s"[keep] $keepJson")
-    val rawBookmark = rawBookmarkFactory.toRawBookmark(keepJson)
-    keepInterner.internRawBookmark(rawBookmark, userId, source, mutatePrivacy = true, installationId) match {
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+    log.info(s"[keep] $rawBookmark")
+    val library = db.readOnlyReplica { implicit session =>
+      libraryRepo.get(libraryId)
+    }
+    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId) match {
       case Failure(e) =>
         throw e
       case Success(keep) =>
         SafeFuture {
           searchClient.updateURIGraph()
+          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
         }
-        KeepInfo.fromBookmark(keep)
+        KeepInfo.fromKeep(keep)
     }
   }
 
-  def keepMultiple(keepInfosWithCollection: KeepInfosWithCollection, userId: Id[User], source: KeepSource, separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
-    val KeepInfosWithCollection(collection, keepInfos) = keepInfosWithCollection
-    val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarkFactory.toRawBookmark(keepInfos), userId, source, mutatePrivacy = true)
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
+
+    val library = db.readOnlyReplica { implicit session => // change to readOnlyReplica when we can be 100% sure every user has libraries
+      libraryRepo.get(libraryId)
+    }
+    val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
     val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
@@ -331,16 +359,17 @@ class KeepsCommander @Inject() (
     }
     SafeFuture {
       searchClient.updateURIGraph()
+      keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
     } else {
       (newKeeps ++ existingKeeps, None)
     }
-    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromBookmark)))
+    (returnedKeeps.map(KeepInfo.fromKeep), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromKeep)))
   }
 
-  def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+  def unkeepMultiple(keepInfos: Seq[RawBookmarkRepresentation], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
     val deactivatedBookmarks = db.readWrite { implicit s =>
       val bms = keepInfos.map { ki =>
         normalizedURIInterner.getByUri(ki.url).flatMap { uri =>
@@ -359,7 +388,7 @@ class KeepsCommander @Inject() (
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
-    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromBookmark
+    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
@@ -397,7 +426,7 @@ class KeepsCommander @Inject() (
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
-    keeps map KeepInfo.fromBookmark
+    keeps map KeepInfo.fromKeep
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -443,7 +472,17 @@ class KeepsCommander @Inject() (
   private def updateKeepWithSession(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val updatedPrivacy = isPrivate getOrElse keep.isPrivate
     val updatedTitle = title orElse keep.title
-    keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle))
+
+    val (mainLib, secretLib) = libraryCommander.getMainAndSecretLibrariesForUser(keep.userId)
+    def getLibFromPrivacy(isPrivate: Boolean) = {
+      if (isPrivate) Some(secretLib.id.get) else Some(mainLib.id.get)
+    }
+    if (isPrivate.isDefined && isPrivate.get != keep.isPrivate) {
+      keepRepo.save(keep.copy(visibility = Keep.isPrivateToVisibility(isPrivate.get), libraryId = getLibFromPrivacy(isPrivate.get)).withTitle(updatedTitle))
+    } else {
+      keepRepo.save(keep.withTitle(updatedTitle))
+    }
+
   }
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
@@ -503,9 +542,12 @@ class KeepsCommander @Inject() (
     } tap { _ => searchClient.updateURIGraph() }
   }
 
-  def tagUrl(tag: Collection, json: JsValue, userId: Id[User], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmarks(json), userId, source, mutatePrivacy = false, installationId = kifiInstallationId)
-    addToCollection(tag.id.get, bookmarks)
+  def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
+    val library = db.readOnlyReplica { implicit session =>
+      libraryRepo.get(libraryId)
+    }
+    val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmark, userId, library, source, installationId = kifiInstallationId)
+    addToCollection(tag.id.get, bookmarks) // why doesn't this update search?
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
@@ -561,32 +603,33 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(
-      rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
-      userId,
-      mutatePrivacy = true,
-      installationId = None,
-      source = KeepSource.default
-    )
+  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
 
-    val keepsByUrl = bookmarks.map(keep => keep.url -> keep).toMap
+    val library = db.readOnlyReplica { implicit session =>
+      libraryRepo.get(libraryId)
+    }
+    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
+      case Failure(e) => Left(e.getMessage)
+      case Success(keep) =>
+        val tags = db.readWrite { implicit s =>
+          val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
+          val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+          val tagsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
+          val tagsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
 
-    val keepsByTagName = keepsWithTags.flatMap {
-      case (keepInfo, tags) =>
-        tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))
-    }.groupBy(_._1).mapValues(_.map(_._2))
-
-    val keepsByTag = keepsByTagName.map {
-      case (tagName, keeps) =>
-        val tag = getOrCreateTag(userId, tagName)
-        addToCollection(tag.id.get, keeps, updateUriGraph = false)
-        tag -> keeps
-    }.toMap
-
-    searchClient.updateURIGraph()
-
-    keepsByTag
+          tagsToAdd.map { tagId =>
+            keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
+              case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
+              case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
+            }
+          }
+          tagsToRemove.map { tagId =>
+            keepToCollectionRepo.remove(keep.id.get, tagId)
+          }
+          keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
+        }
+        Right((KeepInfo.fromKeep(keep), tags))
+    }
   }
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
@@ -596,22 +639,6 @@ class KeepsCommander @Inject() (
         case (keep, i) =>
           keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
       }
-    }
-  }
-
-  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
-    val uriIdSet = uriIds.toSet
-    if (uriIdSet.size != uriIds.length) {
-      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
-    }
-    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
-      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIdSet)
-      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
-      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
-      (discMap, rkMap)
-    }
-    uriIds.toSeq.map { uriId =>
-      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
     }
   }
 
@@ -641,4 +668,19 @@ class KeepsCommander @Inject() (
     }
     before + keepExports.map(createExport).mkString("\n") + after
   }
+
+  // Until we can refactor all clients to use libraries instead of privacy, we need to look up the library.
+  // This should be removed as soon as we can. - Andrew
+  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
+  private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
+    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
+      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+    })
+    if (isPrivate) {
+      secret
+    } else {
+      main
+    }
+  }
+
 }

@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
 import com.keepit.common.social.FakeShoeboxAppSecureSocialModule
@@ -38,7 +39,8 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule())
+    FakeScraperServiceClientModule(),
+    FakeCuratorServiceClientModule())
 
   "AdminAuthController" should {
     "impersonate" in {

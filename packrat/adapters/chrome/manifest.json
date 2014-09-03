@@ -27,8 +27,8 @@
       "rwsocket.js",
       "socket_commander.js",
       "threadlist.js",
-      "main.js",
       "lzstring.min.js",
+      "main.js",
       "scorefilter.js",
       "friend_search_cache.js"
     ]

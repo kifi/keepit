@@ -7,7 +7,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.db.{ Id, SequenceNumber }
-import com.keepit.model.{ User, Keep, KeepSource, NormalizedURI, URL, KeepStates, SystemValueRepo, Name }
+import com.keepit.model._
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
 import com.keepit.common.cache.FakeCacheModule
@@ -56,14 +56,14 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         shoebox.saveBookmarks(user1Keeps(4).copy(
           userId = user2,
-          isPrivate = false))
+          visibility = LibraryVisibility.DISCOVERABLE))
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
         seedItems(4).discoverable === true
 
         shoebox.saveBookmarks(user1Keeps(4).copy(
-          isPrivate = true))
+          visibility = LibraryVisibility.SECRET))
         shoebox.saveBookmarks(Keep(
           uriId = Id[NormalizedURI](5),
           urlId = Id[URL](5),
@@ -71,7 +71,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           userId = user1,
           state = KeepStates.ACTIVE,
           source = KeepSource.keeper,
-          isPrivate = true,
+          visibility = LibraryVisibility.SECRET,
           libraryId = None))
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
@@ -79,7 +79,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         seedItems(4).discoverable === false
 
         shoebox.saveBookmarks(user1Keeps(4).copy(
-          isPrivate = false,
+          visibility = LibraryVisibility.DISCOVERABLE,
           state = KeepStates.INACTIVE))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
@@ -102,7 +102,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           userId = user1,
           state = KeepStates.INACTIVE,
           source = KeepSource.keeper,
-          isPrivate = false,
+          visibility = LibraryVisibility.DISCOVERABLE,
           libraryId = None))
 
         val keep2 = shoebox.saveBookmarks(Keep(
@@ -112,7 +112,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           userId = user2,
           state = KeepStates.ACTIVE,
           source = KeepSource.keeper,
-          isPrivate = false,
+          visibility = LibraryVisibility.DISCOVERABLE,
           libraryId = None))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
@@ -130,7 +130,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         shoebox.saveBookmarks(keep1(0).copy(
           state = KeepStates.ACTIVE,
-          isPrivate = true))
+          visibility = LibraryVisibility.SECRET))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
@@ -139,7 +139,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         shoebox.saveBookmarks(keep1(0).copy(
           state = KeepStates.ACTIVE,
-          isPrivate = false))
+          visibility = LibraryVisibility.DISCOVERABLE))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
@@ -256,8 +256,8 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
 
-        val user1SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
-        val user2SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user2, 20), Duration(10, "seconds"))
+        val user1SeedItems = Await.result(commander.getDiscoverableBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
+        val user2SeedItems = Await.result(commander.getDiscoverableBySeqNumAndUser(SequenceNumber.ZERO, user2, 20), Duration(10, "seconds"))
 
         user1SeedItems.length === 6
         user2SeedItems.length === 6

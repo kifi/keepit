@@ -11,6 +11,7 @@ trait LocalAlignment {
   def begin(): Unit
   def end(): Unit
   def update(id: Int, position: Int, weight: Float = 1.0f): Unit
+  def single(id: Int, weight: Float = 1.0f): Float
   def score: Float
   def maxScore: Float
 }
@@ -71,7 +72,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
     var i = 0
     while (i < numTerms) {
       val runLen = if (termIds(i) == termId) prevRun + 1.0f else 0.0f
-      val localScore = max(ls(i) - (getGapPenalty(dist)), 0.0f)
+      val localScore = ls(i) - getGapPenalty(dist)
       prevRun = rl(i) // store the run length of previous round
       rl(i) = runLen
       ls(i) = if (localScore < runLen) runLen else localScore
@@ -83,6 +84,8 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   }
 
   def end(): Unit = {}
+
+  def single(termId: Int, weight: Float = 1.0f) = weight
 
   def score: Float = alignmentScore
 }
@@ -96,7 +99,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   private[this] val ids = new Array[Int](bufSize)
   private[this] val matching = new Array[Boolean](bufSize)
   private[this] var state: State[Match] = phraseMatcher.initialState
-  private[this] var matchedPhrases = Set.empty[PhraseMatch]
+  private[this] var matchedPhrases = Set.empty[Match]
   private[this] var dictSize = phraseMatcher.size
 
   private[this] def flush(): Unit = {
@@ -115,16 +118,16 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     adjustment = 0
     lastId = -1
     state = phraseMatcher.initialState
-    matchedPhrases = Set.empty[PhraseMatch]
+    matchedPhrases = Set.empty[Match]
     localAlignment.begin()
   }
 
-  def update(id: Int, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
+  def update(termId: Int, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
     if (rawPos == bufferedPos) {
-      if (id == lastId) return // dedup
+      if (termId == lastId) return // dedup
       adjustment += 1
     }
-    lastId = id
+    lastId = termId
     val pos = rawPos + adjustment
     if (pos - bufferedPos > 1) { // found a gap, flush buffer
       flush()
@@ -134,10 +137,10 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
       processOnePosition()
     }
     bufferedPos = pos
-    ids(pos % bufSize) = id
+    ids(pos % bufSize) = termId
     matching(pos % bufSize) = false
 
-    state = phraseMatcher.next(id, state)
+    state = phraseMatcher.next(termId, state)
     state.check(pos, onMatch = {
       case (curPos, aMatch) =>
         var i = curPos - min(bufSize, aMatch.len)
@@ -149,16 +152,19 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
             matching(i % bufSize) = true
           }
         }
-        aMatch match {
-          case phraseMatch: PhraseMatch => matchedPhrases += phraseMatch
-          case _ => None
-        }
+        if (aMatch.len > 1) matchedPhrases += aMatch
     })
   }
 
   def end(): Unit = {
     flush() // flush remaining ids in the buffer
     localAlignment.end()
+  }
+
+  def single(termId: Int, weight: Float = 1.0f) = {
+    state = phraseMatcher.initialState
+    state = phraseMatcher.next(termId, state)
+    localAlignment.single(termId, if (state.matched) 1.0f else nonPhraseWeight)
   }
 
   def score: Float = {

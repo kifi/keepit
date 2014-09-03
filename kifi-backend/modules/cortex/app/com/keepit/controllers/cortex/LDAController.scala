@@ -1,6 +1,7 @@
 package com.keepit.controllers.cortex
 
 import com.google.inject.Inject
+import com.keepit.common.logging.Logging
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
@@ -16,7 +17,7 @@ import com.keepit.common.db.Id
 class LDAController @Inject() (
   lda: LDACommander,
   infoCommander: LDAInfoCommander)
-    extends CortexServiceController {
+    extends CortexServiceController with Logging {
 
   def numOfTopics() = Action { request =>
     Ok(JsNumber(lda.numOfTopics))
@@ -76,9 +77,13 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-    val scores1 = lda.batchUserURIsInterests(userId, uriIds)
-    val scores2 = lda.batchGaussianUserURIsInterests(userId, uriIds)
-    val scores = (scores1 zip scores2).map { case (s1, s2) => LDAUserURIInterestScores(s2.global, s1.recency) }
+
+    val t1 = System.currentTimeMillis
+
+    val scores = lda.batchUserURIsInterests(userId, uriIds)
+
+    val t2 = System.currentTimeMillis
+    log.info(s"batch uris scoring for user = ${userId}, num of uris: ${uriIds.size}, took ${t2 - t1} milli seconds")
     Ok(Json.toJson(scores))
   }
 
@@ -90,8 +95,8 @@ class LDAController @Inject() (
   }
 
   def sampleURIs(topicId: Int) = Action { request =>
-    val uris = lda.sampleURIs(topicId)
-    Ok(Json.toJson(uris))
+    val (uris, scores) = lda.sampleURIs(topicId).unzip
+    Ok(Json.obj("uris" -> uris, "scores" -> scores))
   }
 
   def getSimilarUsers(userId: Id[User], topK: Int) = Action { request =>
@@ -119,6 +124,21 @@ class LDAController @Inject() (
     val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
     val res = lda.getTopicNames(uriIds)
     Ok(Json.toJson(res))
+  }
+
+  def explainFeed() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userId = (js \ "user").as[Id[User]]
+    val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val t1 = System.currentTimeMillis
+    val explain = lda.explainFeed(userId, uris)
+    val t2 = System.currentTimeMillis
+    log.info(s"batch explain feeds for user = ${userId}, num of uris: ${uris.size}, took ${t2 - t1} milli seconds")
+    Ok(Json.toJson(explain))
+  }
+
+  def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
   }
 
 }

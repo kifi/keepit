@@ -116,7 +116,7 @@ td.old-version {
         <td>@adminHelper.dateTimeDisplay(version._2)</td>
         <td>@version._3</td>
         <td>
-        @if(version._1.build == 0) {
+        @if(version._1.build <= 0) {
           @if(details.killed.contains(version._1)) {
             <span class="nuked">☠</span> <a class="unnuke" href="javascript:">resurrect</span>
           } else {

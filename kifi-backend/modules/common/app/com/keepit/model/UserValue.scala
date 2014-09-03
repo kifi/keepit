@@ -65,6 +65,7 @@ object UserValueName {
   val ONBOARDING_SEEN = UserValueName("onboarding_seen")
   val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
   val NON_USER_KIND = UserValueName("nonUserKind")
+  val RECENT_INTERACTION = UserValueName("recent_interaction")
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -138,4 +139,5 @@ object UserValues {
   val lastActive = UserValueDateTimeHandler(UserValueName.LAST_ACTIVE, START_OF_TIME)
 
   val tagOrdering = UserValueJsValueHandler(UserValueName.USER_COLLECTION_ORDERING, JsArray())
+  val recentInteractions = UserValueJsValueHandler(UserValueName.RECENT_INTERACTION, JsArray())
 }

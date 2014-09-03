@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.focus', [])
+angular.module('kifi')
 
 .directive('focusWhen', [
   '$timeout',

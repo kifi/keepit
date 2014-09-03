@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.social', ['kifi.socialService'])
+angular.module('kifi')
 
 .directive('kfSocialConnectNetworks', [
   'socialService',

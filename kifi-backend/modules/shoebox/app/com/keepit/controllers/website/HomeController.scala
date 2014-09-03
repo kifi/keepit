@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 
 import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
 import com.keepit.common.db.ExternalId
@@ -54,7 +54,8 @@ class HomeController @Inject() (
   heimdalServiceClient: HeimdalServiceClient,
   userExperimentCommander: LocalUserExperimentCommander,
   curatorServiceClient: CuratorServiceClient,
-  applicationConfig: FortyTwoConfig)
+  applicationConfig: FortyTwoConfig,
+  siteRouter: KifiSiteRouter)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -115,12 +116,13 @@ class HomeController @Inject() (
   }
 
   def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
-  private def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
+  def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
     context += ("type", "landing")
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    Redirect("https://itunes.apple.com/app/id740232575")
+    val uriNoProto = request.uri.replaceFirst("^https?:", "")
+    Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))
@@ -193,7 +195,7 @@ class HomeController @Inject() (
 
   def kifeeeed = HtmlAction.authenticated { request =>
     if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
-      homeAuthed(request)
+      siteRouter.routeRequest(request)
     } else {
       Redirect("/")
     }
@@ -230,15 +232,9 @@ class HomeController @Inject() (
   def homeWithParam(id: String) = home
 
   def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   }, unauthenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeNotAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   })
 
   def kifiSiteRedirect(path: String) = Action {

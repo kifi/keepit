@@ -19,6 +19,10 @@ case class UserLDAInterests(
     userTopicMean: Option[UserTopicMean],
     numOfRecentEvidence: Int,
     userRecentTopicMean: Option[UserTopicMean],
+    overallSnapshotAt: Option[DateTime],
+    overallSnapshot: Option[UserTopicMean], // snapshots are used to detect major interest change (to notify Curator)
+    recencySnapshotAt: Option[DateTime],
+    recencySnapshot: Option[UserTopicMean],
     state: State[UserLDAInterests] = UserLDAInterestsStates.ACTIVE) extends ModelWithState[UserLDAInterests] {
   def withId(id: Id[UserLDAInterests]): UserLDAInterests = copy(id = Some(id))
   def withUpdateTime(time: DateTime): UserLDAInterests = copy(updatedAt = time)

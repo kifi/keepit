@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
+angular.module('kifi')
 
 .controller('TagsCtrl', [
   '$scope', '$timeout', 'tagService',
@@ -138,7 +138,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
             break;
           case KEY_ESC:
             setTimeout(function () {
-              element.find('.kf-tag-filter-input').blur(); // 
+              element.find('.kf-tag-filter-input').blur(); //
             });
             break;
           case KEY_DEL:

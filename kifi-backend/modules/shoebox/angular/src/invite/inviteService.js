@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.inviteService', [
-  'util',
-  'kifi.clutch',
-  'angulartics'
-])
+angular.module('kifi')
 
 .factory('inviteService', [
   '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
@@ -185,7 +181,7 @@ angular.module('kifi.inviteService', [
           return res.data;
         });
       }
-      
+
     };
 
     return api;

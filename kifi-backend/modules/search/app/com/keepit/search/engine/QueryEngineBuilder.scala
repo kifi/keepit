@@ -1,36 +1,43 @@
 package com.keepit.search.engine
 
 import com.keepit.search.engine.query._
-import com.keepit.search.engine.result.ResultCollector
+import com.keepit.search.query.FixedScoreQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngineBuilder(baseQuery: Query) {
+object QueryEngineBuilder {
+  val tieBreakerMultiplier = 1.0f
+}
 
-  private[this] val _tieBreakerMultiplier = 0.5f
+class QueryEngineBuilder(coreQuery: Query) {
 
+  private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] var _exprIndex: Int = 0
-  private[this] val _base = buildExpr(baseQuery)
+  private[this] val _core = buildExpr(coreQuery)
 
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _boosters = (booster, boostStrength) :: _boosters
     this
   }
 
-  def build(): QueryEngine = {
-    val (query, expr) = _boosters.foldLeft(_base) {
-      case ((query, expr), (booster, boostStrength)) =>
-        val boosterExpr = MaxExpr(_exprIndex)
-        _exprIndex += 1
-        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength))
-    }
-    new QueryEngine(expr, query, _exprIndex)
+  def addFilterQuery(filter: Query): QueryEngineBuilder = {
+    addBoosterQuery(new FixedScoreQuery(filter), 1.0f)
   }
 
-  private[this] def buildExpr(query: Query): (Query, ScoreExpr) = {
+  def build(): QueryEngine = {
+    val (query, expr, coreSize) = _boosters.foldLeft(_core) {
+      case ((query, expr, coreSize), (booster, boostStrength)) =>
+        val boosterExpr = MaxExpr(_exprIndex)
+        _exprIndex += 1
+        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), coreSize)
+    }
+    new QueryEngine(expr, query, _exprIndex, coreSize)
+  }
+
+  private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int) = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -59,13 +66,13 @@ class QueryEngineBuilder(baseQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (baseQuery, expr)
+        (coreQuery, expr, _exprIndex)
 
       case textQuery: KTextQuery =>
-        (baseQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier))
+        (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
 
       case q =>
-        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier))
+        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
     }
   }
 }

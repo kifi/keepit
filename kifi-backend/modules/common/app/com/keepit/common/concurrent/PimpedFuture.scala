@@ -1,5 +1,7 @@
 package com.keepit.common.concurrent
 
+import com.keepit.common.logging.Logging
+
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future, Await, Promise }
 
 import java.util.concurrent.{ Executor }
@@ -60,16 +62,46 @@ object FutureHelpers {
   }
 
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
+    foldLeftWhile(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
-  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
-    if (items.isEmpty) { promisedResult.success(accumulator) }
-    else fMap(accumulator, items.head).onComplete {
-      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
-      case Failure(ex) => promisedResult.failure(ex)
+  private val noopChunkCB: Int => Unit = _ => Unit
+
+  // sequential execute in chunks + callback (optional)
+  def chunkySequentialExec[I, T](items: Iterable[I], chunkSize: Int = 10, chunkCB: Int => Unit = noopChunkCB)(f: I => Future[T])(implicit ec: ScalaExecutionContext) = {
+    chunkyExec(items.grouped(chunkSize).zipWithIndex, chunkSize)(f, if (chunkCB == noopChunkCB) None else Some(chunkCB))
+  }
+
+  private def chunkyExec[I, T](iter: Iterator[(Iterable[I], Int)], chunkSize: Int, promised: Promise[Unit] = Promise[Unit]())(f: I => Future[T], chunkCB: Option[Int => Unit] = None)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    if (iter.isEmpty) promised.success(())
+    else {
+      val items = iter.next
+      sequentialExec(items._1)(f) onComplete {
+        case Success(_) =>
+          chunkCB.foreach { _.apply(items._2) }
+          chunkyExec(iter, chunkSize, promised)(f, chunkCB)
+        case Failure(t) => promised.failure(t)
+      }
     }
-    promisedResult.future
+    promised.future
+  }
+
+  def foldLeft[I, T](items: Iterable[I])(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+    foldLeftWhile(items)(accumulator)(fMap)
+  }
+
+  private def foldLeftWhile[I, T](items: Iterable[I], promised: Promise[T] = Promise[T]())(acc: T)(fMap: (T, I) => Future[T], pred: Option[(T, I) => Boolean] = None)(implicit ec: ScalaExecutionContext): Future[T] = {
+    if (items.isEmpty) { promised.success(acc) }
+    else {
+      val item = items.head
+      if (pred.forall(p => p(acc, item))) {
+        fMap(acc, item).onComplete {
+          case Success(updatedAcc) => foldLeftWhile(items.tail, promised)(updatedAcc)(fMap, pred)
+          case Failure(ex) => promised.failure(ex)
+        }
+      } else promised.success(acc)
+    }
+    promised.future
   }
 
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
@@ -86,6 +118,37 @@ object FutureHelpers {
       case Failure(ex) => p.failure(ex)
     }
     p.future
+  }
+
+  // somewhat specialized (short-circuitry); pure side-effects
+  def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise())(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    futures.headOption match {
+      case None => promised.success()
+      case Some(f) => f.onComplete {
+        case Success(res) =>
+          if (predicate(res)) processWhile(futures.tail, predicate, promised)
+          else promised.success()
+        case Failure(t) => promised.failure(t)
+      }
+    }
+    promised.future
+  }
+
+  private val identityFuture = (x: Any) => Future.successful(x)
+
+  // lazily transform an input Seq and filter by a supplied predicate
+  // useful when a transform op involves an expensive Future and you need to limit the # of futures
+  // that are spawned until you have enough
+  def findMatching[A, B](in: Seq[A], n: Int, predicate: B => Boolean, transform: A => Future[B] = identityFuture,
+    seed: Seq[B] = Seq.empty)(implicit ec: ScalaExecutionContext): Future[Seq[B]] = {
+    if (seed.length >= n) Future.successful(seed)
+    else in.headOption match {
+      case Some(head) =>
+        transform(head).flatMap { s =>
+          findMatching[A, B](in.tail, n, predicate, transform, if (predicate(s)) seed :+ s else seed)
+        }
+      case None => Future.successful(seed)
+    }
   }
 
 }

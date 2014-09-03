@@ -7,13 +7,14 @@ import com.keepit.model._
 
 class LibraryInfoRepo @Inject() (libraryInfoRepo: LibraryInfoRepo,
     userRepo: UserRepo,
+    keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryInfoCache: LibraryInfoIdCache,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
   def load(libraryId: Id[Library])(implicit session: RSession): LibraryInfo = libraryInfoCache.getOrElse(LibraryInfoIdKey(libraryId)) {
     val targetLib = libraryRepo.get(libraryId)
-    LibraryInfo.fromLibraryAndOwner(targetLib, userRepo.get(targetLib.ownerId))
+    LibraryInfo.fromLibraryAndOwner(targetLib, userRepo.get(targetLib.ownerId), keepRepo.getCountByLibrary(targetLib.id.get))
   }
 
   def loadAll(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], LibraryInfo] = {

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileChangePassword', ['util', 'kifi.profileService'])
+angular.module('kifi')
 
 .directive('kfProfileChangePassword', [
   'profileService', 'keyIndices',

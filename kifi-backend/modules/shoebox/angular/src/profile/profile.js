@@ -1,28 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', [
-  'kifi',
-  'ngRoute',
-  'util',
-  'kifi.profileService',
-  'kifi.profileInput',
-  'kifi.routeService',
-  'kifi.profileEmailAddresses',
-  'kifi.profileChangePassword',
-  'kifi.profileImage',
-  'jun.facebook',
-  'angulartics'
-])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/profile', {
-      templateUrl: 'profile/profile.tpl.html',
-      controller: 'ProfileCtrl'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('ProfileCtrl', [
   '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
@@ -49,6 +27,14 @@ angular.module('kifi.profile', [
       $scope.emailInput.value = val || '';
     });
 
+    $scope.name = {};
+    $scope.$watch('me.firstName', function (val) {
+      $scope.name.firstName = val;
+    });
+    $scope.$watch('me.lastName', function (val) {
+      $scope.name.lastName = val;
+    });
+
     $scope.addEmailInput = {};
 
     $scope.logout = function () {
@@ -61,15 +47,19 @@ angular.module('kifi.profile', [
       });
     };
 
+    $scope.validateName = function (name) {
+      return profileService.validateNameFormat(name);
+    };
+
+    $scope.saveName = function (name) {
+      profileService.setNewName(name);
+    };
+
     $scope.validateEmail = function (value) {
       return profileService.validateEmailFormat(value);
     };
 
     $scope.saveEmail = function (email) {
-      if ($scope.me && $scope.me.primaryEmail.address === email) {
-        return profileService.successInputActionResult();
-      }
-
       return getEmailInfo(email).then(function (result) {
         return checkCandidateEmailSuccess(email, result.data);
       }, function (result) {

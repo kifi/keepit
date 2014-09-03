@@ -77,11 +77,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KifiHitCache(stats, accessLog, (outerRepo, 1 hour))
-
-  @Singleton
-  @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
 
@@ -302,18 +297,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
+  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
 }

@@ -10,6 +10,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, HeimdalQueueDevModule }
 import com.keepit.model.{ KeepSource, RawKeepFactory, UrlPatternRuleModule, User }
@@ -44,7 +45,8 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    AbuseControlModule()
+    AbuseControlModule(),
+    FakeCuratorServiceClientModule()
   )
 
   "RawKeepImporter" should {
@@ -54,6 +56,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json))

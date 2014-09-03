@@ -7,6 +7,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.result.KifiShardResult
 import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
@@ -117,7 +118,7 @@ case class FixedResultIndexModule() extends IndexModule {
 
 class FixedResultSearchCommander extends SearchCommander {
   private val results: Map[String, DecoratedResult] = Map(
-    ("test" -> DecoratedResult(
+    "test" -> DecoratedResult(
       ExternalId[ArticleSearchResult]("21eb7aa7-97ba-466f-a357-c3511e4c8b29"), // uuid
       Seq[DetailedSearchHit]( // hits
         DetailedSearchHit(
@@ -158,7 +159,7 @@ class FixedResultSearchCommander extends SearchCommander {
       true, //show
       Some(Id[SearchConfigExperiment](10)), //searchExperimentId
       Seq.empty[JsObject] // experts
-    ))
+    )
   )
 
   def search(
@@ -171,10 +172,6 @@ class FixedResultSearchCommander extends SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None,
     withUriSummary: Boolean = false): DecoratedResult = {
     results(query)
@@ -191,11 +188,34 @@ class FixedResultSearchCommander extends SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    start: Option[String],
-    end: Option[String],
-    tz: Option[String],
-    coll: Option[String],
     debug: Option[String]): PartialSearchResult = ???
+
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None) = ???
+
+  def distSearch2(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    debug: Option[String]): KifiShardResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
 

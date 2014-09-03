@@ -8,6 +8,7 @@
 // @require scripts/html/keeper/message_email_tooltip.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/lib/jquery.timeago.js
+// @require scripts/lib/jquery-canscroll.js
 // @require scripts/formatting.js
 // @require scripts/look.js
 // @require scripts/render.js
@@ -75,7 +76,7 @@ panes.thread = function () {
 
   function renderBlank($paneBox, $tall, $who, threadId) {
     $(render('html/keeper/messages', {
-      draftPlaceholder: 'Type a message…'
+      draftPlaceholder: 'Write something…'
     }, {
       compose: 'compose'
     }))
@@ -99,8 +100,10 @@ panes.thread = function () {
     var heighter = maintainHeight($scroll[0], $holder[0], $tall[0], [$who[0], compose.form()]);
 
     $scroll.antiscroll({x: false});
-    var scroller = $scroll.data('antiscroll');
-    $(window).on('resize.thread', scroller.refresh.bind(scroller));
+    $(window).off('resize.thread').on('resize.thread', function () {
+      $scroll.data('antiscroll').refresh();
+      $holder.canScroll();
+    });
 
     $paneBox
     .on('kifi:removing', onRemoving.bind(null, compose))
@@ -132,7 +135,7 @@ panes.thread = function () {
       var atBottom = scrolledToBottom($holder[0]);
       insertChronologically(renderMessage(message), message.createdAt);
       if (atBottom) {
-        $holder.scrollToBottom();
+        scrollToBottomResiliently();
       }
       emitRendered(threadId, message);
     }
@@ -148,11 +151,12 @@ panes.thread = function () {
           insertChronologically(renderMessage(m), m.createdAt);
         });
         if (atBottom) {
-          $holder.scrollToBottom();
+          scrollToBottomResiliently();
         }
       }
     } else {
-      $holder.append(messages.map(renderMessage))[0].scrollTop = 9999;
+      $holder.append(messages.map(renderMessage));
+      scrollToBottomResiliently(true);
     }
     emitRendered(threadId, messages[messages.length - 1]);
   }
@@ -200,7 +204,8 @@ panes.thread = function () {
       displayedSource: browserName
     }))
     .data('text', text);
-    $holder.append($m).scrollToBottom();
+    $holder.append($m);
+    scrollToBottomResiliently();
 
     transmitReply($m, text, threadId);
 
@@ -221,7 +226,6 @@ panes.thread = function () {
     }
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
-    m.isLoggedInUser = m.sender && m.sender.id === me.id;
     formatParticipant(m.sender);
     if (m.source && m.source !== "server") {
       m.displayedSource = m.source;
@@ -284,5 +288,25 @@ panes.thread = function () {
 
   function emitRendered(threadId, m) {
     api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
+  }
+
+  function scrollToBottomResiliently(instantly) {
+    log('[thread.scrollToBottomResiliently]', instantly || '');
+    var $img = $holder.find('img').on('load', scrollToBottom);
+    $holder.find('.kifi-messages-sent-inner').on('scroll', function onScroll() {
+      $(this).off('scroll', onScroll);
+      $img.off('load', scrollToBottom);
+    });
+    scrollToBottom();
+    function scrollToBottom() {
+      if (instantly) {
+        $holder[0].scrollTop = 99999;
+        $holder.canScroll();
+      } else {
+        $holder.scrollToBottom(function () {
+          $holder.canScroll();
+        });
+      }
+    }
   }
 }();

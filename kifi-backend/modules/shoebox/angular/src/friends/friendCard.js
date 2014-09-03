@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.friendCard', [])
+angular.module('kifi')
 
 
 .directive('kfFriendCard', [

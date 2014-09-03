@@ -6,23 +6,23 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.article.ArticleIndexer
+import com.keepit.search.engine.SearchFactory
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
+import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
+import com.keepit.search.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
-import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
-import akka.actor.ActorSystem
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
@@ -60,6 +60,12 @@ trait SearchTestHelper { self: SearchTestInjector =>
     }
     val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
+    val keepIndexers = activeShards.local.map { shard =>
+      val keepIndexer = new KeepIndexer(new VolatileIndexDirectory, shard, inject[AirbrakeNotifier])
+      (shard -> keepIndexer)
+    }
+    val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
+
     val uriGraphIndexers = activeShards.local.map { shard =>
       val bookmarkStore = new BookmarkStore(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectory, bookmarkStore, inject[AirbrakeNotifier])
@@ -79,6 +85,9 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val searchFriendIndexer = new SearchFriendIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
 
+    val libraryIndexer = new LibraryIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
+    val phraseDetector = new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier]))
+
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
 
@@ -88,7 +97,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       userGraphsSearcherFactory,
       shardedUriGraphIndexer,
       shardedCollectionIndexer,
-      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])), inject[MonitoredAwait]),
+      phraseDetector,
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],
@@ -96,7 +105,22 @@ trait SearchTestHelper { self: SearchTestInjector =>
       inject[MonitoredAwait],
       clock,
       fortyTwoServices)
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory)
+
+    val searchFactory = new SearchFactory(
+      shardedArticleIndexer,
+      shardedKeepIndexer,
+      libraryIndexer,
+      userGraphsSearcherFactory,
+      phraseDetector,
+      resultClickTracker,
+      inject[ClickHistoryTracker],
+      inject[SearchConfigManager],
+      mainSearcherFactory,
+      inject[MonitoredAwait],
+      clock,
+      fortyTwoServices)
+
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
@@ -176,7 +200,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
     "recencyBoost" -> "0",
     "newContentBoost" -> "0",
     "proximityBoost" -> "0",
-    "semanticBoost" -> "0",
     "percentMatch" -> "0",
     "tailCutting" -> "0",
     "dampingByRank" -> "false")

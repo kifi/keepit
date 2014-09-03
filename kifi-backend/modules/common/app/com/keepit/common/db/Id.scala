@@ -14,8 +14,33 @@ object Id {
   ScalaMessagePack.messagePack.register(classOf[Id[Any]], new MsgPackIdTemplate[Any]())
   ScalaMessagePack.messagePack.register(classOf[Option[Id[Any]]], new MsgPackOptIdTemplate[Any]())
 
+  implicit def ord[T]: Ordering[Id[T]] = new Ordering[Id[T]] {
+    override def compare(x: Id[T], y: Id[T]): Int = x.id compare y.id
+  }
+
   implicit def format[T]: Format[Id[T]] =
     Format(__.read[Long].map(Id(_)), new Writes[Id[T]] { def writes(o: Id[T]) = JsNumber(o.id) })
+
+  implicit def mapOfIdToObjectFormat[S, T](implicit t: Format[T]): Format[Map[Id[S], T]] = new Format[Map[Id[S], T]] {
+    def reads(json: JsValue): JsResult[Map[Id[S], T]] = {
+      val jsObj = json.as[JsObject]
+      JsSuccess {
+        jsObj.keys.map { idStr =>
+          val userId = Id[S](idStr.toLong)
+          val jsResult = Json.fromJson[T](jsObj \ idStr)
+          (userId, jsResult.get)
+        }.toMap
+      }
+    }
+
+    def writes(idToObjectMap: Map[Id[S], T]): JsValue =
+      JsObject {
+        idToObjectMap.map { pair =>
+          val (modelId, model) = pair
+          (modelId.id.toString, Json.toJson[T](model))
+        }.toSeq
+      }
+  }
 
   implicit def queryStringBinder[T](implicit longBinder: QueryStringBindable[Long]): QueryStringBindable[Id[T]] = new QueryStringBindable[Id[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Id[T]]] = {

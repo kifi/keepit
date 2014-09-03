@@ -1,24 +1,25 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
-import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
-import org.joda.time.DateTimeZone
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class SendgridCommander @Inject() (
     db: Database,
-    clock: Clock,
     systemAdminMailSender: SystemAdminMailSender,
     heimdalClient: HeimdalServiceClient,
     emailAddressRepo: UserEmailAddressRepo,
     electronicMailRepo: ElectronicMailRepo,
     emailOptOutRepo: EmailOptOutRepo,
+    recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
 
   import SendgridEventTypes._
@@ -93,7 +94,12 @@ class SendgridCommander @Inject() (
 
     eventName.filter(alertEvents contains _).foreach(_ => emailAlert(event, emailOpt))
     eventName.filter(unsubscribeEvents contains _).foreach(_ => handleUnsubscribeEvent(event, emailOpt))
-    eventName.filter(CLICK == _).foreach(_ => handleClickEvent(event, emailOpt))
+
+    eventName.filter(CLICK == _).foreach { _ =>
+      emailOpt.foreach { email =>
+        verifyEmailAddress(event, email)
+      }
+    }
 
     sendHeimdalEvent(event, emailOpt)
   }
@@ -106,10 +112,9 @@ class SendgridCommander @Inject() (
     case _ => "External Page"
   }
 
-  private def handleClickEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
+  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit =
     db.readWrite { implicit rw =>
       for {
-        email <- emailOpt
         userEmail <- email.to.headOption
         emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
         if !emailAddr.verified
@@ -117,7 +122,7 @@ class SendgridCommander @Inject() (
         log.info(s"verifying email(${userEmail}) from SendGrid event(${event})")
 
         emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED,
-          verifiedAt = Some(clock.now()(DateTimeZone.UTC))))
+          verifiedAt = Some(currentDateTime)))
       }
     }
 

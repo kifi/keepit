@@ -25,6 +25,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
+          firstTopicScore = Some(0.5f),
           sparseFeature = Some(SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f))),
           feature = Some(LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f))),
           version = ModelVersion[DenseLDA](1),
@@ -60,6 +61,8 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](2)) === None
           uriTopicRepo.getFeature(Id[NormalizedURI](3), ModelVersion[DenseLDA](1)) === None
+
+          uriTopicRepo.getFirstTopicAndScore(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)) === Some((LDATopic(2), 0.5f))
 
         }
       }
@@ -132,7 +135,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         uriId = Id[NormalizedURI](1),
         isPrivate = false,
         state = State[CortexKeep]("active"),
-        source = KeepSource.bookmarkImport,
+        source = KeepSource.keeper,
         seq = SequenceNumber[CortexKeep](1L)
       ),
         CortexKeep(
@@ -140,12 +143,12 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           createdAt = currentDateTime,
           updatedAt = currentDateTime,
           keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
-          keepId = Id[Keep](2),
+          keepId = Id[Keep](20),
           userId = Id[User](1),
           uriId = Id[NormalizedURI](2),
           isPrivate = false,
           state = State[CortexKeep]("active"),
-          source = KeepSource.bookmarkImport,
+          source = KeepSource.keeper,
           seq = SequenceNumber[CortexKeep](2L)
         ),
 
@@ -159,7 +162,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriId = Id[NormalizedURI](3),
           isPrivate = false,
           state = State[CortexKeep]("inactive"),
-          source = KeepSource.bookmarkImport,
+          source = KeepSource.keeper,
           seq = SequenceNumber[CortexKeep](3L)
         )
       )
@@ -196,7 +199,29 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), after = Some(new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))).toList === List((LDATopic(2), 1))
         topicRepo.countUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0) === 2
         topicRepo.getUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0).map { _.value }.flatten === List(1f, 0f, 0.5f, 0.5f)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, feat) => feat.value }.flatten === List(0.5f, 0.5f)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, feat) => keepId.id } === List(20)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, feat) => feat.value }.flatten === List(0.5f, 0.5f, 1f, 0f)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, feat) => keepId.id } === List(20, 1)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 500, limit = 2).map { case (keepId, feat) => feat.value }.flatten === List()
 
+        var oldTime = new DateTime(2000, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        var newTime = new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        var res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(1), 1), (LDATopic(2), 1)) // minNum = 2, so take both
+
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 1, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(2), 1)) // minNum = 1, so drop old one
+
+        oldTime = newTime
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(2), 1)) // old one is too old
+
+        oldTime = new DateTime(2048, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        newTime = new DateTime(3000, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.size === 0 // nothing is new enough
       }
     }
   }
@@ -214,6 +239,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
             firstTopic = Some(LDATopic(2)),
             secondTopic = Some(LDATopic(1)),
             thirdTopic = None,
+            firstTopicScore = Some(0.5f),
             sparseFeature = Some(SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f))),
             feature = Some(LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f))),
             version = ModelVersion[DenseLDA](1),
@@ -221,10 +247,10 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
             state = URILDATopicStates.ACTIVE))
         }
 
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 2).map { _.id } === List(5, 4)
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 5).map { _.id } === List(5, 4, 3, 2, 1)
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(100), ModelVersion[DenseLDA](1), 2).map { _.id } === List()
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](100), 2).map { _.id } === List()
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 2).map { case (id, score) => (id.id, score) } === List((5, 0.5f), (4, 0.5f))
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 5).map { case (id, _) => id.id } === List(5, 4, 3, 2, 1)
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(100), ModelVersion[DenseLDA](1), 2).map { case (id, _) => id.id } === List()
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](100), 2).map { case (id, _) => id.id } === List()
       }
 
     }
@@ -246,6 +272,30 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
         uriTopicRepo.getTopicCounts(ModelVersion[DenseLDA](1)).sortBy(_._1) === (1 to 5).map { i => (i, 1) }.toList
 
+      }
+    }
+  }
+
+  "query multiple uri features at once" in {
+    withDb() { implicit injector =>
+      val uriTopicRepo = inject[URILDATopicRepo]
+      db.readWrite { implicit s =>
+        (1 to 5).map { i =>
+          uriTopicRepo.save(URILDATopic(
+            uriId = Id[NormalizedURI](i),
+            numOfWords = 100,
+            firstTopic = Some(LDATopic(i)),
+            version = ModelVersion[DenseLDA](1),
+            uriSeq = SequenceNumber[NormalizedURI](i),
+            state = if (i % 2 == 1) URILDATopicStates.ACTIVE else URILDATopicStates.INACTIVE))
+        }
+      }
+
+      val ids = (1 to 5) map { Id[NormalizedURI](_) }
+      db.readOnlyMaster { implicit s =>
+        uriTopicRepo.all.size === 5
+        val feats = uriTopicRepo.getActiveByURIs(ids, ModelVersion[DenseLDA](1))
+        feats.flatMap { x => x.map { _.uriId.id } }.toArray.sortBy(x => x).toList === List(1, 3, 5)
       }
     }
   }

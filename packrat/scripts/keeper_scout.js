@@ -60,6 +60,7 @@ var tile = tile || function() {  // idempotent for Chrome
       }
       tags = o.tags || [];
       window.addEventListener('resize', onResize);
+      onResize.bound = true;
       api.require(['styles/insulate.css', 'styles/keeper/tile.css'], function() {
         if (!o.hide) {
           tile.style.display = '';
@@ -248,7 +249,10 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function cleanUpDom(leaveTileInDoc) {
-    window.removeEventListener("resize", onResize);
+    if (onResize.bound) {  // crbug.com/405705
+      window.removeEventListener('resize', onResize);
+      onResize.bound = false;
+    }
     if (tile) {
       if (leaveTileInDoc) {
         tile.style.display = 'none';

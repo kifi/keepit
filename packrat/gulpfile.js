@@ -26,7 +26,7 @@ var outDir = 'out';
 var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'];
 var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
-var resourceFiles = ['icons/**', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
+var resourceFiles = ['icons/*.png', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
 var backgroundScripts = [
   'main.js',
@@ -67,6 +67,10 @@ var jeditor = (function () {
   }
 })();
 
+function removeMostJsComments(code) {
+  return code.toString().replace(/^([^'"\/]*)\s*\/\/.*$/mg, '$1');
+}
+
 var chromeInjectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js', '!**/iframes/**'], map(function (code, filename) {
@@ -92,15 +96,18 @@ gulp.task('copy', function () {
       }
       path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
     }))
+    .pipe(map(removeMostJsComments))
     .pipe(chromeInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
     .pipe(cache('firefox-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir));
 
   var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -124,6 +131,7 @@ gulp.task('copy', function () {
 
   var background = gulp.src(scripts)
     .pipe(cache('background'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -276,9 +284,8 @@ gulp.task('meta', function () {
         }
       }
     }
-    var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
     return JSON.stringify([
-      contentScriptsString,
+      ' [\n  ' + contentScriptItems.join(',\n  ') + ']',
       JSON.stringify(styleDeps, undefined, 2),
       JSON.stringify(scriptDeps, undefined, 2)
     ]);
@@ -297,7 +304,7 @@ gulp.task('meta', function () {
       return 'meta = {\n  contentScripts:' + data[0] +
         ',\n  styleDeps: ' + data[1] +
         ',\n  scriptDeps: ' + data[2] +
-        '};';
+        "};\nif (/^Mac/.test(navigator.platform)) {\n  meta.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/chrome'));
 
@@ -307,7 +314,7 @@ gulp.task('meta', function () {
       return 'exports.contentScripts =' + data[0] +
         ';\nexports.styleDeps = ' + data[1] +
         ';\nexports.scriptDeps = ' + data[2] +
-        ';';
+        ";\nconst {Ci, Cc} = require('chrome');\nif (/^Mac/.test(Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -344,9 +351,20 @@ gulp.task('config', ['copy'], function () {
 gulp.task('build', ['scripts', 'styles', 'meta', 'config']);
 
 gulp.task('config-package-chrome', ['config'], function () {
-  gulp.src(outDir + '/chrome/manifest.json', {base: './'})
+  return gulp.src(outDir + '/chrome/manifest.json', {base: './'})
     .pipe(map(function (code) {
       return code.toString().replace(/(http|ws):\/\/dev\.ezkeep\.com:\d+\s*/g, '');
+    }))
+    .pipe(gulp.dest('.'));
+});
+
+gulp.task('config-package-chrome-dev', ['config-package-chrome'], function () {
+  return gulp.src(outDir + '/chrome/manifest.json', {base: './'})
+    .pipe(jeditor(function (json) {
+      json.name += ' Dev';
+      json.short_name += ' Dev';
+      json.update_url = 'https://www.kifi.com/extensions/chrome/kifi-dev.xml';
+      return json;
     }))
     .pipe(gulp.dest('.'));
 });
@@ -356,6 +374,14 @@ gulp.task('zip-chrome', ['build', 'config-package-chrome'], function () {
     .pipe(zip('kifi.zip'))
     .pipe(gulp.dest(outDir));
 });
+
+gulp.task('crx-chrome-dev', ['build', 'config-package-chrome-dev'], shell.task([[
+  'cp icons/dev/* out/chrome/icons/',
+  '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome' +
+  ' --pack-extension=out/chrome --pack-extension-key=kifi-dev.pem > /dev/null',
+  'mv out/chrome.crx out/kifi-dev.crx',
+  'echo $\'<?xml version="1.0" encoding="UTF-8"?>\\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\\n  <app appid="ddepcfcogoamilbllhdmlojoefkjdofi">\\n    <updatecheck codebase="https://www.kifi.com/extensions/chrome/kifi-dev.crx" version="\'$(grep \'"version"\' out/chrome/manifest.json | cut -d\\" -f4)$\'" />\\n  </app>\\n</gupdate>\' > out/kifi-dev.xml'
+].join(' && ')]));
 
 gulp.task('xpi-firefox', ['build'], shell.task([
   // TODO: verify cfx version before using it
@@ -372,7 +398,7 @@ gulp.task('xpi-firefox', ['build'], shell.task([
   cd - > /dev/null'
 ]));
 
-gulp.task('watch', function() {
+gulp.task('watch', function () {
   livereload.listen();
   gulp.watch(
     [].concat(
@@ -393,6 +419,11 @@ gulp.task('watch', function() {
 gulp.task('package', function () {
   isRelease = true;
   runSequence('clean', ['zip-chrome', 'xpi-firefox']);
+});
+
+gulp.task('package-dev', function () {
+  isRelease = true;
+  runSequence('clean', 'crx-chrome-dev');
 });
 
 gulp.task('default', function () {

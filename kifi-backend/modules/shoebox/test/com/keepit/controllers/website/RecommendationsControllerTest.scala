@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -54,23 +54,23 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
     }
 
     "update uri recommendation feedback" in {
-      withInjector(modules: _*) { implicit injector =>
-        val userId = Id[User](42)
+      withDb(modules: _*) { implicit injector =>
         val url = "id1"
-        val route = com.keepit.controllers.website.routes.RecommendationsController.updateUriRecommendationFeedback(userId, url).url
-        route === "/site/recos/feedback?userId=42&url=id1"
+        val route = com.keepit.controllers.website.routes.RecommendationsController.
+          updateUriRecommendationFeedback(ExternalId[NormalizedURI]("58328718-0222-47bf-9b12-d2d781cb8b0c")).url
+        route === "/site/recos/feedback?id=58328718-0222-47bf-9b12-d2d781cb8b0c"
 
-        val payload = Json.obj(
-          "seen" -> true,
-          "clicked" -> true
-        )
+        val input = Json.parse(
+          s"""{"clicked": true}""".stripMargin)
 
-        val request = FakeRequest("POST", route).withBody(payload)
+        val request = FakeRequest("POST", route).withBody(input)
 
         val controller = inject[RecommendationsController]
-        val result: Future[Result] = controller.updateUriRecommendationFeedback(userId, url)(request)
+        val result: Future[Result] = controller.
+          updateUriRecommendationFeedback(ExternalId[NormalizedURI]("58328718-0222-47bf-9b12-d2d781cb8b0c"))(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
+
       }
     }
   }

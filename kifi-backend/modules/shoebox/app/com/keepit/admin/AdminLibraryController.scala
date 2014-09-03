@@ -68,23 +68,25 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.library(library, owner, keepCount, contributors, followers))
   }
 
-  def libraryKeepsView(libraryId: Id[Library], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+  def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
     }
 
+    val pageSize = 50
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keeps = keepRepo.getByLibrary(libraryId).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+      val keepCount = keepRepo.getCountByLibrary(libraryId)
+      val keeps = keepRepo.getByLibrary(libraryId, pageSize, page * pageSize).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
         (keep, normalizedURIRepo.get(keep.uriId), userRepo.get(keep.userId), tagNames)
       }
-      (lib, owner, keeps.length, keepInfos)
+      (lib, owner, keepCount, keepInfos)
     }
-    Ok(html.admin.libraryKeeps(library, owner, totalKeepCount, keepInfos))
+    Ok(html.admin.libraryKeeps(library, owner, totalKeepCount, keepInfos, page, pageSize))
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
@@ -157,6 +159,40 @@ class AdminLibraryController @Inject() (
     }
     log.info("updating changed users")
     Redirect(request.request.referer)
+  }
+
+  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
+    val PAGE_SIZE = 200
+    for (page <- startPage to endPage) {
+      db.readWrite { implicit session =>
+        val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
+        keeps.groupBy(_.userId).foreach {
+          case (userId, keepsAllFromOneUser) =>
+            val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+            keepsAllFromOneUser.map { keep =>
+              if (keep.isPrivate && (keep.visibility != secret.visibility || keep.libraryId != Some(secret.id.get))) {
+                log.info(s"[lib-migrate:priv] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
+                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(secret.id.get), visibility = secret.visibility))
+                }
+              } else if (!keep.isPrivate && (keep.visibility != main.visibility || keep.libraryId != Some(main.id.get))) {
+                log.info(s"[lib-migrate:publ] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
+                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
+                }
+              } else if (keep.isPrivate != keep.isPrivate) {
+                log.info(s"[lib-migrate:erro] something wrong ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+              } else {
+                log.info(s"[lib-migrate:okay] It's good ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+              }
+            }
+            log.info(s"[lib-migrate] Updated batch of ${keepsAllFromOneUser.length} keeps for userId $userId")
+        }
+      }
+    }
+
+    Ok
+
   }
 
 }

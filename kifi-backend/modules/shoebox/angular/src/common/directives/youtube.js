@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.youtube', [])
+angular.module('kifi')
 
 .directive('kfYoutube', [
 
