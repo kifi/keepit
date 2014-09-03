@@ -23,7 +23,7 @@ class UserInteractionCommander @Inject() (
     }
 
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
-    val newInteractions = newJson ++ interactions.take(UserInteraction.maximumInteractions - 1)
+    val newInteractions = newJson.reverse ++ interactions.take(UserInteraction.maximumInteractions - 1)
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
     }
