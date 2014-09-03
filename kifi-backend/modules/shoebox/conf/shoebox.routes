@@ -190,7 +190,6 @@ GET     /                           @com.keepit.controllers.website.KifiSiteRout
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
-GET     /kifeeeed-mail/:code        @com.keepit.controllers.website.HomeController.kifeeeedEmail(code: String)
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
