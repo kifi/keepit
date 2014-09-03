@@ -41,7 +41,6 @@ class CollectionCommander @Inject() (
     collectionRepo: CollectionRepo,
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
-    keepToCollectionRepo: KeepToCollectionRepo,
     keptAnalytics: KeepingAnalytics,
     basicCollectionCache: BasicCollectionByIdCache,
     clock: Clock) extends Logging {
