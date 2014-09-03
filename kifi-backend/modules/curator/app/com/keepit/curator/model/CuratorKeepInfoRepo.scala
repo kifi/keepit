@@ -2,7 +2,7 @@ package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, KeepStates, User, NormalizedURI, Keep }
+import com.keepit.model.{ Library, User, NormalizedURI, Keep }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RSession }
 

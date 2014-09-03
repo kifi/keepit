@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{Library, NormalizedURI, User}
 import com.kifi.macros.json
 
 import org.joda.time.DateTime
@@ -21,6 +21,7 @@ case class SeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
+  libraries: Seq[Id[Library]],
   discoverable: Boolean)
 
 case class PublicSeedItem(
@@ -73,7 +74,8 @@ case class SeedItemWithMultiplier(
     priorScore: Option[Float] = None,
     timesKept: Int,
     lastSeen: DateTime,
-    keepers: Keepers) {
+    keepers: Keepers,
+    libraries: Seq[Id[Library]]) {
   def makePublicSeedItemWithMultiplier = PublicSeedItemWithMultiplier(multiplier, uriId, timesKept, lastSeen, keepers)
 }
 
