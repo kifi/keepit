@@ -4,6 +4,7 @@ import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.cache.{ CuratorCacheModule, EhCacheCacheModule, MemcachedCacheModule }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ProdDiscoveryModule
+import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -21,4 +22,5 @@ case class CuratorProdModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
+  val elizaServiceClientModule = ProdElizaServiceClientModule()
 }

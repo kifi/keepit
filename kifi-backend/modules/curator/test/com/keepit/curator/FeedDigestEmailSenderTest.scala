@@ -7,6 +7,7 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.model.{ SocialUserInfo, User }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -30,6 +31,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeCacheModule(),
+    FakeElizaServiceClientModule(),
     FakeABookServiceClientModule())
 
   "FeedDigestEmailSender" should {
