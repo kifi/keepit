@@ -419,14 +419,13 @@ class ShoeboxController @Inject() (
   }
 
   def addInteractions(userId: Id[User]) = Action(parse.tolerantJson) { request =>
-    val json = request.body.as[Seq[JsValue]]
-    json.map { j =>
+    val interactions = request.body.as[Seq[JsValue]].map { j =>
+      val interaction = UserInteraction.getAction((j \ "action").as[String])
       val recipient = (j \ "user").asOpt[Id[User]] match {
-        case Some(id) => UserRecipient(id)
-        case None => EmailRecipient((j \ "email").as[EmailAddress])
+        case Some(id) => (UserRecipient(id), interaction)
+        case None => (EmailRecipient((j \ "email").as[EmailAddress]), interaction)
       }
-      val interaction = (j \ "action").as[String]
-      userInteractionCommander.addInteraction(userId, recipient, UserInteraction.getAction(interaction))
+      userInteractionCommander.addInteractions(userId, interactions)
     }
     Ok
   }

@@ -693,10 +693,9 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit = {
-
     val jsonActions = actions.collect {
-      case (Left(id), action) => Json.obj("user" -> id)
-      case (Right(email), action) => Json.obj("email" -> email)
+      case (Left(id), action) => Json.obj("user" -> id, "action" -> action)
+      case (Right(email), action) => Json.obj("email" -> email, "action" -> action)
     }
     call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
   }
