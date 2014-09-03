@@ -620,7 +620,7 @@ angular.module('kifi')
 
         scope.clickKeep = function (keep) {
           if (keep.keepType === 'reco') {
-            recoActionService.click(keep);
+            recoActionService.trackClick(keep);
           }
         };
 

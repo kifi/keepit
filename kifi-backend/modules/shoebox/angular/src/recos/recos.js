@@ -37,8 +37,8 @@ angular.module('kifi')
     };
 
     $scope.keepReco = function (reco, isPrivate) {
-      recoActionService.keep(reco.recoKeep);
-      
+      recoActionService.trackKeep(reco.recoKeep);
+
       keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keptKeep) {
         reco.recoKeep.id = keptKeep.id;
         reco.recoKeep.isPrivate = keptKeep.isPrivate;
