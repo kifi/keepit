@@ -102,10 +102,6 @@ angular.module('kifi')
       $scope.initialCardClosed = true;
     };
 
-    $scope.$watch(tagService.getTotalKeepCount, function (val) {
-      $scope.numKeptItems = val;
-    });
-
     recoActionService.get().then(function (rawRecos) {
       if (rawRecos.length > 0) {
         rawRecos.forEach(function (rawReco) {
