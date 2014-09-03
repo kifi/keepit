@@ -5,7 +5,7 @@ import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheS
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument

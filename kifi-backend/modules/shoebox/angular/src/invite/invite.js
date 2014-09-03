@@ -1,28 +1,6 @@
 'use strict';
 
-angular.module('kifi.invite', [
-  'kifi',
-  'util',
-  'kifi.profileService',
-  'kifi.routeService',
-  'jun.facebook',
-  'kifi.inviteService',
-  'kifi.userService',
-  'kifi.keepWhoService',
-  'kifi.social',
-  'kifi.modal'
-])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/invite', {
-      templateUrl: 'invite/invite.tpl.html'
-    }).when('/friends/invite', {
-      redirectTo: '/invite'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('InviteCtrl', [
   '$scope', '$rootScope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
@@ -262,10 +240,18 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics',
-  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics) {
+  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics', 'analyticsState',
+  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics, analyticsState) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
+      function closeBanner() {
+        if (injectedState && injectedState.state) {
+          delete injectedState.state.friend;
+        }
+        scope.hidden = true;
+      }
+
+      var eventSubtype = analyticsState.events.user_viewed_page.subtype || 'contactJoined';
       userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
@@ -279,27 +265,31 @@ angular.module('kifi.invite', [
           networkType: 'fortytwo'
         };
 
+        if (eventSubtype === 'contactJoined') {
+          scope.friendRequestBannerHeader = 'Send a friend request to your email contact that just joined';
+        } else {
+          scope.friendRequestBannerHeader = 'Send a friend request to ' + user.firstName;
+        }
+
         scope.onAfterInvite = function () {
           $analytics.eventTrack('user_clicked_page', {
             type: 'addFriends',
-            subtype: 'contactJoined',
+            subtype: eventSubtype,
             action: 'addFriend'
           });
 
-          $timeout(function () {
-            scope.hidden = true;
-          }, 3000);
+          $timeout(closeBanner, 3000);
         };
       });
 
       scope.close = function () {
         $analytics.eventTrack('user_clicked_page', {
           type: 'addFriends',
-          subtype: 'contactJoined',
+          subtype: eventSubtype,
           action: 'close'
         });
 
-        scope.hidden = true;
+        closeBanner();
       };
     }
 
@@ -310,6 +300,7 @@ angular.module('kifi.invite', [
         return;
       }
 
+      scope.friendRequestBannerHeader = 'Send a friend request';
       scope.showFriendRequestBanner = true;
       setupShowFriendRequestBanner(scope, externalId);
     }

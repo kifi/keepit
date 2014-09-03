@@ -57,6 +57,14 @@
         </td>
       </tr>
       <tr>
+        <th>Send email</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.sendEmail(user.id.get, "feed")" class="form-inline send-email" method="POST">
+            <input type="submit" value="Send Feed Digest">
+          </form>
+        </td>
+      </tr>
+      <tr>
         <th>Allowed Invites</th>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.setInvitesCount(user.id.get)" class="form-inline" method="POST">
@@ -124,7 +132,7 @@
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.userLibrariesView(user.id.get)">User Libraries</a>
     </p>
 
-      <h2>@fortyTwoConnections.size FortyTwo Users</h2>
+      <h2>@fortyTwoConnections.size Kifi Users</h2>
       <div class="scrollArea">
         <ol>
         @for(u <- fortyTwoConnections) {
@@ -229,6 +237,25 @@
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(user.id.get)"
     }
     $(function() {
+      $('.send-email').submit(function () {
+        var form = this;
+        if (form.sent) return false;
+        form.sent = true;
+        var input =  $(form).find('input:submit').get(0);
+        if (typeof input.origVal === 'undefined') input.origVal = input.value;
+        input.disabled = 'disabled';
+        input.value = input.origVal.replace('Send', 'Sending');
+        $.post(form.action, $(form).serialize(), function () {
+          input.value = input.origVal.replace('Send', 'Sent');
+          setTimeout(function () {
+            input.value = input.origVal.replace('Send', 'Resend');
+            form.sent = false;
+            input.removeAttribute('disabled');
+          }, 10000);
+        });
+        return false;
+      });
+
       $("#state").change(function() {
         var $td = $(this).closest("td");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);

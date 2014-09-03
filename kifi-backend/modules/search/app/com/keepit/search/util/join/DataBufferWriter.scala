@@ -69,15 +69,26 @@ class DataBufferWriter {
 
   // Tagged Float
   def putTaggedFloat(tag: Byte, value: Float): DataBufferWriter = {
-    putTaggedFloatBits(DataBuffer.taggedFloatBits(tag, value))
-  }
-
-  def putTaggedFloatBits(bits: Int): DataBufferWriter = {
     if (_current + 2 > _endoff) throw new DataBufferException("buffer overrun")
 
+    val bits = DataBuffer.taggedFloatBits(tag, value)
     _page(_current) = (bits >>> 16).toShort
     _page(_current + 1) = bits.toShort
     _current += 2
+    this
+  }
+
+  def putTaggedFloatBits(bitsArray: Array[Int], size: Int): DataBufferWriter = {
+    if (_current + (2 * size) > _endoff) throw new DataBufferException("buffer overrun")
+
+    var i = 0
+    while (i < size) {
+      val bits = bitsArray(i)
+      _page(_current) = (bits >>> 16).toShort
+      _page(_current + 1) = bits.toShort
+      _current += 2
+      i += 1
+    }
     this
   }
 }

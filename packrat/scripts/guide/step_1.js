@@ -13,9 +13,10 @@ guide.step1 = guide.step1 || function () {
     },
     {
       substep: true,
-      lit: '.kifi-keep-card',
-      pad: [10, 20, 60, 60],
-      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10}},
+      afterTransition: '.kifi-keep-card',
+      lit: {bottom: 8, right: 7, width: 155, height: 49},
+      pad: [10, 20, 50, 20],
+      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10, sel: '.kifi-keep-card'}},
       allow: {type: 'click', target: '.kifi-keep-btn', proceed: true}
     },
     {
@@ -29,7 +30,7 @@ guide.step1 = guide.step1 || function () {
       substep: true,
       lit: '.kifi-tagbox',
       pad: [0, 10, 20],
-      arrow: {dx: 100, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-input-box'}},
+      arrow: {dx: 100, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-input'}},
       allow: [
         {type: /^key/, target: '.kifi-tagbox-input', unless: function (e) {return e.keyCode === 27}},  // esc
         {type: /^(?:mouse|click$)/, target: '.kifi-tagbox-suggestion,.kifi-tagbox-new'}

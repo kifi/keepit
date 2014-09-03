@@ -5,7 +5,7 @@
 
 'use strict';
 
-angular.module('kifi.dragService', [])
+angular.module('kifi')
 
 .factory('dragService', [
   '$document',

@@ -20,7 +20,7 @@ class KWrapperQuery(private val subQuery: Query) extends Query with Logging {
 
   override def extractTerms(out: JSet[Term]): Unit = subQuery.extractTerms(out)
 
-  override def toString(s: String) = s"KWrapperQuery(${subQuery.toString(s)})"
+  override def toString(s: String) = subQuery.toString(s)
 
   override def equals(obj: Any): Boolean = obj match {
     case query: KWrapperQuery => (subQuery.equals(query.subQuery))
@@ -39,21 +39,7 @@ class KWrapperWeight(query: KWrapperQuery, subWeight: Weight) extends Weight wit
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = subWeight.normalize(norm, topLevelBoost)
 
-  override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
-    val expl = new ComplexExplanation()
-    var scr = 0.0f
-
-    val e = subWeight.explain(context, doc)
-    if (e.isMatch()) {
-      expl.addDetail(e)
-      scr = e.getValue()
-    }
-    expl.setMatch(scr > 0.0f)
-    expl.setValue(scr)
-
-    expl.setDescription(s"KBooleanQuery, sum of:")
-    expl
-  }
+  override def explain(context: AtomicReaderContext, doc: Int): Explanation = subWeight.explain(context, doc)
 
   def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
     out += ((this, 1.0f))

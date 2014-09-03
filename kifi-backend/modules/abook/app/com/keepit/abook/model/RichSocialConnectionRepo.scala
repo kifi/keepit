@@ -9,7 +9,7 @@ import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import scala.slick.jdbc.StaticQuery.interpolation
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[RichSocialConnectionRepoImpl])

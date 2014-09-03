@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.social.networksNeedAttention', [])
+angular.module('kifi')
 
 
 .directive('kfNetworksNeedAttention', ['socialService', '$rootScope',

@@ -14,25 +14,18 @@ import scala.concurrent.Future
 import scala.collection.mutable.ListBuffer
 import com.keepit.abook.model.EmailAccountInfo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-case class SociallyRelatedPeople(
-  users: RelatedEntities[User, User],
-  facebookAccounts: RelatedEntities[User, SocialUserInfo],
-  linkedInAccounts: RelatedEntities[User, SocialUserInfo],
-  emailAccounts: RelatedEntities[User, EmailAccountInfo])
+import com.keepit.abook.ABookServiceClient
 
 class SocialWanderingCommander @Inject() (
     graph: GraphManager,
-    relatedUsersCache: SociallyRelatedUsersCache,
-    relatedFacebookAccountsCache: SociallyRelatedFacebookAccountsCache,
-    relatedLinkedInAccountsCache: SociallyRelatedLinkedInAccountsCache,
-    relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache,
+    relatedEntitiesCache: SociallyRelatedEntitiesCache,
+    abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
-  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedPeople](1 minute)
+  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedEntities](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def refresh(id: Id[User]): Future[SociallyRelatedPeople] = consolidate(id) { userId =>
+  def refresh(id: Id[User]): Future[SociallyRelatedEntities] = consolidate(id) { userId =>
     lock.withLockFuture {
       getIrrelevantVertices(userId).map { irrelevantVertices =>
         val journal = wander(userId, irrelevantVertices)
@@ -67,7 +60,7 @@ class SocialWanderingCommander @Inject() (
       case _ => // ignore
     }
 
-    SociallyRelatedPeople(
+    SociallyRelatedEntities(
       users = RelatedEntities.top(userId, relatedUsers, limit),
       facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
       linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
@@ -75,12 +68,9 @@ class SocialWanderingCommander @Inject() (
     )
   }
 
-  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedPeople): Unit = {
+  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedEntities): Unit = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    relatedUsersCache.set(SociallyRelatedUsersCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople.users)
-    relatedFacebookAccountsCache.set(SociallyRelatedFacebookAccountsCacheKey(sociallyRelatedPeople.facebookAccounts.id), sociallyRelatedPeople.facebookAccounts)
-    relatedLinkedInAccountsCache.set(SociallyRelatedLinkedInAccountsCacheKey(sociallyRelatedPeople.linkedInAccounts.id), sociallyRelatedPeople.linkedInAccounts)
-    relatedEmailAccountsCache.set(SociallyRelatedEmailAccountsCacheKey(sociallyRelatedPeople.emailAccounts.id), sociallyRelatedPeople.emailAccounts)
+    relatedEntitiesCache.set(SociallyRelatedEntitiesCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople)
   }
 
   private def wander(userId: Id[User], irrelevantVertices: Set[VertexId]): TeleportationJournal = {
@@ -89,7 +79,7 @@ class SocialWanderingCommander @Inject() (
     val teleporter = UniformTeleporter(Set(userVertexId)) { Function.const(SocialWanderlust.restartProbability) }
     val resolver = {
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
-        case (source, destination, edge) => !(irrelevantVertices.contains(destination.id) || journal.getLastVisited().exists(_ == destination.id))
+        case (source, destination, edge) => !(irrelevantVertices.contains(destination.id))
       }
       RestrictedDestinationResolver(Some(SocialWanderlust.subgraph), mayTraverse, Function.const(1))
     }
@@ -103,7 +93,14 @@ class SocialWanderingCommander @Inject() (
     journal
   }
 
-  private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = Future.successful(Set.empty)
+  private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = {
+    abook.getIrrelevantPeople(userId).map { irrelevantPeople =>
+      irrelevantPeople.irrelevantUsers.map(VertexId(_)) ++
+        irrelevantPeople.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
+        irrelevantPeople.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++
+        irrelevantPeople.irrelevantEmailAccounts.map(VertexId(_))
+    }
+  }
 }
 
 object SocialWanderlust {

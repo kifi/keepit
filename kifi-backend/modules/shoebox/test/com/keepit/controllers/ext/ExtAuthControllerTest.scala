@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import play.api.libs.json._
@@ -42,7 +43,8 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule()
+    FakeScraperServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   "ExtAuthController" should {

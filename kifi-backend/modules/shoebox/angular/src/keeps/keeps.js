@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keeps', ['kifi.profileService', 'kifi.keepService'])
+angular.module('kifi')
 
 .controller('KeepsCtrl', [
   '$scope', 'profileService', 'keepService', 'tagService',

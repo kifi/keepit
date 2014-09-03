@@ -8,6 +8,7 @@ object AhoCorasick {
 
   trait State[D] {
     def check(position: Int, onMatch: (Int, D) => Unit): Unit
+    def matched: Boolean
     def reset(): State[D]
   }
 
@@ -53,6 +54,8 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
         if (failState != null) failState.check(position, onMatch)
       }
     }
+
+    def matched: Boolean = hasMatch
 
     def reset(): State[D] = _root
   }

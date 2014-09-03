@@ -11,6 +11,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
+      agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
@@ -21,6 +24,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === true
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
+      agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
@@ -31,16 +37,33 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === true
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
+      agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
-    "parse browser versions iphone app" in {
+    "parse browser versions iPhone app" in {
       val str = "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"
       val agent = UserAgent.fromString(str)
-      agent === UserAgent(str, "iKeefee", "iOS", "iPhone", "kifi iphone app", "1.0")
+      agent === UserAgent(str, "iKeefee", "iOS", "iPhone", UserAgent.KifiIphoneAppTypeName, "1.0")
       agent.isMobile === true
       agent.isKifiIphoneApp === true
+      agent.isKifiAndroidApp === false
       agent.isIphone === true
+      agent.isAndroid === false
+      agent.screenCanFitWebApp === false
+      agent.isOldIE === false
+    }
+    "parse browser versions Android app" in {
+      val str = "??? Android ???" // TODO: insert actual Android app user agent string
+      val agent = UserAgent.fromString(str)
+      agent === UserAgent(str, "", "Android", "Android", "", "")
+      agent.isMobile === true
+      agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === true
+      agent.isIphone === false
+      agent.isAndroid === true
       agent.screenCanFitWebApp === false
       agent.isOldIE === false
     }
@@ -53,6 +76,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === true
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
+      agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
@@ -63,7 +89,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === true
     }
@@ -74,7 +102,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === true
     }
@@ -85,7 +115,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
@@ -96,7 +128,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === true
       agent.isOldIE === false
     }
@@ -107,7 +141,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === true
+      agent.isAndroid === false
       agent.screenCanFitWebApp === false
       agent.isOldIE === false
     }
@@ -118,7 +154,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === true
+      agent.isAndroid === false
       agent.screenCanFitWebApp === false
       agent.isOldIE === false
     }
@@ -129,7 +167,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
       agent.isIphone === false
+      agent.isAndroid === false
       agent.screenCanFitWebApp === false // TODO: make true
       agent.isOldIE === false
     }
@@ -140,7 +180,9 @@ class UserAgentTest extends Specification {
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === true // TODO: make false
       agent.isIphone === false
+      agent.isAndroid === true
       agent.screenCanFitWebApp === false // TODO: make true
       agent.isOldIE === false
     }

@@ -1,6 +1,7 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.scraper.HttpInputStream
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
@@ -15,7 +16,7 @@ import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 import org.apache.tika.io.{ TikaInputStream, TemporaryResources }
 
-abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
+abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
   protected val output = new WriteOutContentHandler(maxContentChars)
 

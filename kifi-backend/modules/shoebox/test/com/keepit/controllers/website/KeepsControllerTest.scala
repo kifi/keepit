@@ -8,10 +8,12 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, KifiHitContext, SanitizedKifiHit }
+import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search._
@@ -26,7 +28,7 @@ import play.api.test._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class KeepsControllerTest extends Specification with ShoeboxTestInjector {
+class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -38,7 +40,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
     FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
-    FakeCortexServiceClientModule()
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
@@ -84,6 +87,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
+          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+          inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
+
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
@@ -94,11 +100,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, user2, bookmark1, bookmark2, bookmark3)
         }
@@ -174,6 +183,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
+          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+          inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
+
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
@@ -184,11 +196,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
           val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+            uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, bookmark1, bookmark2, bookmark3)
         }
@@ -234,88 +249,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
     "allKeeps with helprank" in {
       withDb(controllerTestModules: _*) { implicit injector =>
 
-        val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-        val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-        val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-        val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-        val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-        val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
         implicit val context = HeimdalContext.empty
-        val userRepo = inject[UserRepo]
-        val uriRepo = inject[NormalizedURIRepo]
-        val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keepDiscoveryRepo = inject[KeepDiscoveryRepo]
-        val rekeepRepo = inject[ReKeepRepo]
-        val userExpRepo = inject[UserExperimentRepo]
-        val keeper = KeepSource.keeper
-        val initLoad = KeepSource.bookmarkImport
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-          val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-          val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
-          val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
+        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
 
-          (u1, u2, u3, u4)
-        }
-        val bookmarkInterner = inject[KeepInterner]
-        val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
-        val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
-        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
-        val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
-
-        val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
-        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
-        keeps1.size === 2
-        keeps2.size === 3
-        keeps1(1).uriId === keeps2(0).uriId
-
-        val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
-          val origin = "https://www.google.com"
-          val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
-          // u2 -> 42 (u1)
-          kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
-
-          val ts = currentDateTime
-          val uuid = ExternalId[ArticleSearchResult]()
-          val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-          val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
-          // u3 -> kifi (u1, u2) [rekeep]
-          kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
-
-          (kc0, kc1, kc2)
-        }
-
-        val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
-
-        val kc3 = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
-          val origin = "https://www.google.com"
-          val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
-          // u4 -> kifi (u3) [rekeep]
-          kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
-          kc3
-        }
-
-        val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
-
-        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-          val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
-          val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
-          val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
-          val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
-          (keeps, clickCount, rekeepCount, clicks, rekeeps)
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByUser(u1.id.get, None, None, 100)
         }
         keeps.size === keeps1.size
-        clickCount === 2
-        rekeepCount === 1
-        clicks.keySet.size === 2
-        rekeeps.keySet.size === 1
 
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).toString
         path === "/site/keeps/all?helprank=click"
@@ -375,88 +319,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
     "allKeeps with helprank & before" in {
       withDb(controllerTestModules: _*) { implicit injector =>
 
-        val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-        val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-        val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-        val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-        val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-        val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
         implicit val context = HeimdalContext.empty
-        val userRepo = inject[UserRepo]
-        val uriRepo = inject[NormalizedURIRepo]
-        val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
-        val keepDiscoveryRepo = inject[KeepDiscoveryRepo]
-        val rekeepRepo = inject[ReKeepRepo]
-        val userExpRepo = inject[UserExperimentRepo]
-        val keeper = KeepSource.keeper
-        val initLoad = KeepSource.bookmarkImport
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-          val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-          val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
-          val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
+        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
 
-          (u1, u2, u3, u4)
-        }
-        val bookmarkInterner = inject[KeepInterner]
-        val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
-        val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
-        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
-        val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
-
-        val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
-        val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
-        keeps1.size === 2
-        keeps2.size === 3
-        keeps1(1).uriId === keeps2(0).uriId
-
-        val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
-          val origin = "https://www.google.com"
-          val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
-          // u2 -> 42 (u1)
-          kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
-
-          val ts = currentDateTime
-          val uuid = ExternalId[ArticleSearchResult]()
-          val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-          val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
-          // u3 -> kifi (u1, u2) [rekeep]
-          kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
-
-          (kc0, kc1, kc2)
-        }
-
-        val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
-
-        val kc3 = db.readWrite { implicit rw =>
-          val kifiHitCache = inject[KifiHitCache]
-          val origin = "https://www.google.com"
-          val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
-          // u4 -> kifi (u3) [rekeep]
-          kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
-          kc3
-        }
-
-        val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
-
-        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-          val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
-          val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
-          val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
-          val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
-          (keeps, clickCount, rekeepCount, clicks, rekeeps)
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByUser(u1.id.get, None, None, 100)
         }
         keeps.size === keeps1.size
-        clickCount === 2
-        rekeepCount === 1
-        clicks.keySet.size === 2
-        rekeeps.keySet.size === 1
 
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
         path === s"/site/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
@@ -464,7 +337,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-        val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(u1)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
@@ -508,6 +380,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
             Nil
           (user, collections)
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val path = com.keepit.controllers.website.routes.KeepsController.allCollections().toString
         path === "/site/collections/all"
@@ -536,12 +409,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val path = com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString
         path === "/site/keeps/add"
@@ -567,9 +441,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected = Json.parse(s"""
           {
-            "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
-                     {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true},
-                     {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false}],
+            "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
+                     {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
+                     {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"l7jlKlnA36Su"}],
             "failures":[],
             "addedToCollection":3
           }
@@ -583,15 +457,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
         path === "/site/collections/create"
 
         val json = Json.obj("name" -> JsString("my tag"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -614,14 +489,15 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
 
         val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(400)
       }
     }
@@ -631,12 +507,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
         val keepJson = Json.obj(
@@ -674,8 +551,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val expected = Json.parse(s"""
           {
             "removedKeeps":[
-              {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
-              {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true}
+              {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
+              {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
             ],
             "errors":[]
           }
@@ -691,13 +568,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
 
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
@@ -731,8 +609,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected = Json.parse(s"""
           {"removedKeeps":[
-            {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false},
-            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true}
+            {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
+            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
           ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
@@ -743,6 +621,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
           val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark"))
+          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
           val tagA = Collection(userId = user1.id.get, name = "tagA")
           val tagB = Collection(userId = user1.id.get, name = "tagB")
@@ -826,4 +705,5 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
   }
+
 }

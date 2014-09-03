@@ -26,6 +26,7 @@ class GraphController @Inject() (
     graphManager: GraphManager,
     wanderingCommander: WanderingCommander,
     socialWanderingCommander: SocialWanderingCommander,
+    feedExplanationCommander: FeedExplanationCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = Action.async(parse.json) { request =>
@@ -75,20 +76,8 @@ class GraphController @Inject() (
     }
   }
 
-  def getSociallyRelatedUsers(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.users)) }
-  }
-
-  def getSociallyRelatedFacebookAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.facebookAccounts)) }
-  }
-
-  def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.linkedInAccounts)) }
-  }
-
-  def getSociallyRelatedEmailAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.emailAccounts)) }
+  def getSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational
@@ -132,4 +121,12 @@ class GraphController @Inject() (
     forbiddenCollisions
   }
 
+  def explainFeed() = Action.async(parse.json) { request =>
+    val js = request.body
+    val userId = (js \ "user").as[Id[User]]
+    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    feedExplanationCommander.explain(userId, uriIds).map { explain =>
+      Ok(Json.toJson(explain))
+    }
+  }
 }

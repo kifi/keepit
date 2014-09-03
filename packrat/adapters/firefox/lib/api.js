@@ -2,11 +2,6 @@
 /*jshint globalstrict:true */
 'use strict';
 
-function dispatch() {
-  var args = arguments;
-  this.forEach(function(f) {f.apply(null, args)});
-}
-
 function merge(o1, o2) {
   for (let k in o2) {
     o1[k] = o2[k];
@@ -84,7 +79,7 @@ exports.icon = {
     }
   }};
 var onIconClick = errors.wrap(function onIconClick(win) {
-  dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
+  exports.icon.on.click.dispatch(pages[win.tabs.activeTab.id]);
 });
 
 var addon;
@@ -500,7 +495,7 @@ tabs
         page = createPage(tab);
       }
       if (tab.window === windows.activeWindow && httpRe.test(page.url)) {
-        dispatch.call(exports.tabs.on.focus, page);
+        exports.tabs.on.focus.dispatch(page);
       }
     }
   }
@@ -510,7 +505,7 @@ tabs
   if (tab.window === windows.activeWindow) {
     var page = pages[tab.id];
     if (page && httpRe.test(page.url)) {
-      dispatch.call(exports.tabs.on.blur, page);
+      exports.tabs.on.blur.dispatch(page);
     }
   }
 }))
@@ -537,7 +532,7 @@ windows
     log('[windows:activate]', e);
   }
   if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
-    dispatch.call(exports.tabs.on.focus, page);
+    exports.tabs.on.focus.dispatch(page);
   }
 }))
 .on('deactivate', errors.wrap(function onWindowDeactivate(win) {
@@ -549,7 +544,7 @@ windows
     log('[windows:deactivate]', e);
   }
   if (tabId && (page = pages[tabId]) && httpRe.test(page.url)) {
-    dispatch.call(exports.tabs.on.blur, page);
+    exports.tabs.on.blur.dispatch(page);
   }
 }));
 
@@ -573,7 +568,9 @@ errors.wrap(function initTabsAndPages() {
 
 // before search
 
-require('./location').onFocus(errors.wrap(dispatch.bind(exports.on.beforeSearch)));
+require('./location').onFocus(errors.wrap(function (whence) {
+  exports.on.beforeSearch.dispatch(whence);
+}));
 
 // navigation handling
 
@@ -596,19 +593,19 @@ require('./location').onChange(errors.wrap(function onLocationChange(tabId, newP
       }
       if (query) {
         let channel = match[2];
-        dispatch.call(exports.on.search, query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');
+        exports.on.search.dispatch(query, channel === 'fflb' ? 'a' : channel === 'sb' ? 's' : 'n');
       }
     }
     if (httpRe.test(page.url)) {
-      dispatch.call(exports.tabs.on.loading, page);
+      exports.tabs.on.loading.dispatch(page);
     }
   } else {
     let page = pages[tabId];
     if (page && page.url !== tab.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != tab.url.match(stripHashRe)[0]) {
-        dispatch.call(exports.tabs.on.unload, page, true);
+        exports.tabs.on.unload.dispatch(page, true);
         page.url = tab.url;
-        dispatch.call(exports.tabs.on.loading, page);
+        exports.tabs.on.loading.dispatch(page);
       } else {
         page.url = tab.url;
       }
@@ -637,7 +634,7 @@ function onPageHide(tabId) {
   if (page) {
     delete pages[tabId];
     if (httpRe.test(page.url)) {
-      dispatch.call(exports.tabs.on.unload, page);
+      exports.tabs.on.unload.dispatch(page);
     }
   }
 }

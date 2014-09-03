@@ -37,4 +37,15 @@ class MatrixUtilsTest extends Specification {
     val expect = 5.5
     (abs(dist - expect) < 1e-4) === true
   }
+
+  "KL_divergence works" in {
+    var qs = Array(0.5, 0.5)
+    var ps = Array(0.5, 0.5)
+    var kl = MatrixUtils.KL_divergence(qs, ps)
+    abs(kl) should be < 1e-4
+
+    qs = Array(0.8, 0.2)
+    kl = MatrixUtils.KL_divergence(qs, ps)
+    abs(kl - 0.27807) should be < 1e-4
+  }
 }

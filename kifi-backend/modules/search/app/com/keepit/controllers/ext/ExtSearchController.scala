@@ -1,20 +1,22 @@
 package com.keepit.controllers.ext
 
-import play.api.libs.json._
 import com.google.inject.Inject
+import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
+import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.result.DecoratedResult
-import com.keepit.search.result.KifiSearchResult
-import com.keepit.search.result.ResultUtil
-import com.keepit.search.util.IdFilterCompressor
+import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.SearchCommander
+import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.iteratee.Enumerator
+import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
-    searchCommander: SearchCommander) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+    shoeboxClient: ShoeboxServiceClient,
+    searchCommander: SearchCommander) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -35,31 +37,53 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, debugOpt, withUriSummary)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt, withUriSummary)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
+
+  def search2(
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+
+    val userId = request.userId
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
+
+    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
+
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
+
+    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+
+    var decorationFutures: List[Future[String]] = Nil
+
+    // TODO: augmentation
+    // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
+
+    if (withUriSummary) {
+      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+    }
+
+    val decorationEnumerator = reactiveEnumerator(decorationFutures)
+
+    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
+
+    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+  private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
 
   //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
-  }
-
-  private def toKifiSearchResultV1(decoratedResult: DecoratedResult): JsObject = {
-    KifiSearchResult.v1(
-      decoratedResult.uuid,
-      decoratedResult.query,
-      ResultUtil.toKifiSearchHits(decoratedResult.hits),
-      decoratedResult.myTotal,
-      decoratedResult.friendsTotal,
-      decoratedResult.othersTotal,
-      decoratedResult.mayHaveMoreHits,
-      decoratedResult.show,
-      decoratedResult.searchExperimentId,
-      IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
   }
 }
 

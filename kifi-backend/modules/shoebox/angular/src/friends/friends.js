@@ -1,25 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends', [
-  'util',
-  'kifi.social',
-  'kifi.profileService',
-  'kifi.routeService',
-  'kifi.invite'
-])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/friends', {
-      templateUrl: 'friends/friends.tpl.html'
-    }).when('/friends/requests', {
-      redirectTo: '/friends'
-    }).when('/friends/requests/:network', {
-      redirectTo: '/friends'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('FriendsCtrl', [
   '$scope', '$window', 'friendService', 'socialService',

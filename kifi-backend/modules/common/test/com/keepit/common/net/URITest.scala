@@ -12,8 +12,8 @@ class URITest extends Specification {
     }
 
     "bad fragment" in {
-      URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1#s125818997465306 ").isFailure === true
-      URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1s125818997465306 ").isFailure === false
+      URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1#s125818997465306").get.toString() ===
+        "http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1%23s125818997465306"
     }
 
     "parse URLs" in {

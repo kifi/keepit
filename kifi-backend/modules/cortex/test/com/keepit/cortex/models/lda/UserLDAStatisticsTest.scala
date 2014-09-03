@@ -17,8 +17,10 @@ class UserLDAStatisticsTest extends Specification with CortexTestInjector with L
         val repo = inject[UserLDAInterestsRepo]
 
         db.readWrite { implicit s =>
-          repo.save(UserLDAInterests(userId = Id[User](1), version = ModelVersion[DenseLDA](1), numOfEvidence = 200, userTopicMean = Some(UserTopicMean(Array(0.5f, 0.5f))), numOfRecentEvidence = 0, userRecentTopicMean = None))
-          repo.save(UserLDAInterests(userId = Id[User](2), version = ModelVersion[DenseLDA](1), numOfEvidence = 200, userTopicMean = Some(UserTopicMean(Array(0f, 1f))), numOfRecentEvidence = 0, userRecentTopicMean = None))
+          repo.save(UserLDAInterests(userId = Id[User](1), version = ModelVersion[DenseLDA](1), numOfEvidence = 200, userTopicMean = Some(UserTopicMean(Array(0.5f, 0.5f))),
+            numOfRecentEvidence = 0, userRecentTopicMean = None, overallSnapshot = None, recencySnapshot = None, overallSnapshotAt = None, recencySnapshotAt = None))
+          repo.save(UserLDAInterests(userId = Id[User](2), version = ModelVersion[DenseLDA](1), numOfEvidence = 200, userTopicMean = Some(UserTopicMean(Array(0f, 1f))),
+            numOfRecentEvidence = 0, userRecentTopicMean = None, overallSnapshot = None, recencySnapshot = None, overallSnapshotAt = None, recencySnapshotAt = None))
         }
 
         val cache = inject[UserLDAStatisticsCache]

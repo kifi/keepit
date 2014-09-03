@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.savePymkService', [])
+angular.module('kifi')
 
 .factory('savePymkService', [function () {
   var savedPersonYouMayKnow = null;

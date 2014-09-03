@@ -4,7 +4,7 @@ import com.keepit.cortex.dbmodel.LDAInfo
 
 import scala.concurrent.Future
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
+import com.keepit.model.{ Keep, User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda._
@@ -40,10 +40,11 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
     Future.successful((0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None)))
   }
   override def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = ???
-  override def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = ???
+  override def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = ???
   override def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = ???
   override def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = ???
   override def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = Future.successful(Seq.fill(uris.length)(None))
+  override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = Future.successful(Seq.fill(uriIds.length)(Seq()))
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???
 }

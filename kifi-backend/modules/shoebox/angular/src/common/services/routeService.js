@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.routeService', [])
+angular.module('kifi')
 
 .factory('routeService', [
   '$location', 'env',
@@ -39,7 +39,7 @@ angular.module('kifi.routeService', [])
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
-      logout: 'https://www.kifi.com/logout',
+      logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
@@ -64,8 +64,8 @@ angular.module('kifi.routeService', [])
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
-      peopleYouMayKnow: function (page, pageSize) {
-        return route('/user/friends/recommended') + '?page=' + page + '&pageSize=' + pageSize;
+      peopleYouMayKnow: function (offset, limit) {
+        return route('/user/friends/recommended') + '?offset=' + offset + '&limit=' + limit;
       },
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
@@ -85,10 +85,31 @@ angular.module('kifi.routeService', [])
       adHocRecos: function (howMany) {
         return route('/recos/adHoc?n=' + howMany);
       },
+      recos: function (opts) {
+        return route('/recos/top?more=' + opts.more + '&recency=' + opts.recency);
+      },
+      recosPublic: function () {
+        return route('/recos/public');
+      },
+      recoFeedback: function (urlId) {
+        return route('/recos/feedback?id=' + urlId);
+      },
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
-      }
+      },
+
+      ////////////////////////////
+      // Libraries              //
+      ////////////////////////////
+      getLibrarySummaries: route('/libraries'),
+      getLibraryByUserSlug: function (username, slug) {
+        return route('/users/' + username + '/libraries/' + slug);
+      },
+      getLibraryById: function (libraryId) {
+        return route('/libraries/' + libraryId);
+      },
+      createLibrary: route('/libraries/add')
     };
   }
 ]);

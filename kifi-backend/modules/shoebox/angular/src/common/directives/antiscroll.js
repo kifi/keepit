@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('antiscroll', ['kifi.scrollbar'])
+angular.module('antiscroll', ['kifi'])
 
 .directive('antiscroll', [
   '$timeout', 'scrollbar',

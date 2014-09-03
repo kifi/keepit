@@ -2,16 +2,21 @@ package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.db.Id
-import com.keepit.model.{ KeepStates, User, NormalizedURI, Keep }
+import com.keepit.model.{ Library, KeepStates, User, NormalizedURI, Keep }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RSession }
+
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.google.common.cache.{ CacheBuilder, Cache }
+
+import java.util.concurrent.{ TimeUnit, Callable }
 
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]]
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
+  def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])]
 }
 
 @Singleton
@@ -27,8 +32,9 @@ class CuratorKeepInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
+    def libraryId = column[Id[Library]]("library_id", O.Nullable)
     def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, libraryId.?, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
   }
 
   def table(tag: Tag) = new CuratorKeepInfoTable(tag)
@@ -41,12 +47,23 @@ class CuratorKeepInfoRepoImpl @Inject() (
     (for (row <- rows if row.keepId === keepId) yield row).firstOption
   }
 
+  private val keeperByUriIdCache: Cache[Id[NormalizedURI], Seq[Id[User]]] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(1000).maximumSize(10000).expireAfterWrite(60, TimeUnit.SECONDS).build()
+
+  def getKeepersByUriIdCompiled(uriId: Column[Id[NormalizedURI]]) =
+    Compiled { (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId) }
+
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]] = {
-    (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId).list
+    keeperByUriIdCache.get(uriId, new Callable[Seq[Id[User]]] {
+      def call() = getKeepersByUriIdCompiled(uriId).list
+    })
   }
 
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE && row.discoverable) yield row.id).firstOption.isDefined
+  }
+
+  def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])] = {
+    (for (r <- rows if r.userId === userId && r.state === CuratorKeepInfoStates.ACTIVE) yield (r.uriId, r.keepId)).list
   }
 
 }

@@ -8,7 +8,7 @@ import play.api.libs.json.JsArray
 
 import com.google.inject.Inject
 import scala.concurrent.Future
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 
 class ExtMessageSearchController @Inject() (
     commander: MessageSearchCommander,

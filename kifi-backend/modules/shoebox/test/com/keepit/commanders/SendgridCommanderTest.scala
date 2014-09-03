@@ -1,17 +1,24 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Injector, Inject }
+import com.google.inject.{ Injector }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailRepo, EmailAddress }
+import com.keepit.common.store.{ FakeShoeboxStoreModule, FakeS3ImageStore }
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.{ FakeCuratorServiceClientImpl, CuratorServiceClient, FakeCuratorServiceClientModule }
 import com.keepit.model._
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import views.html.admin.user
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
-  def setup(db: Database)(implicit injector: Injector) = {
+  def setup(db: Database)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
     val emailAddrRepo = inject[UserEmailAddressRepo]
     val userRepo = inject[UserRepo]
     val emailRepo = inject[ElectronicMailRepo]
@@ -46,7 +53,13 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     )
 
   var modules = Seq(
-    FakeShoeboxServiceModule()
+    FakeShoeboxServiceModule(),
+    FakeCuratorServiceClientModule(),
+    FakeSearchServiceClientModule(),
+    FakeCortexServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeShoeboxStoreModule()
   )
 
   "SendgridCommander" should {

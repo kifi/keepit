@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileService', [
-  'kifi.routeService',
-  'angulartics',
-  'kifi.clutch'
-])
+angular.module('kifi')
 
 .factory('profileService', [
   '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch',
@@ -54,6 +50,13 @@ angular.module('kifi.profileService', [
           'path': $location.path()
         });
         return updateMe(res.data);
+      });
+    }
+
+    function setNewName(name) {
+      return postMe({
+        firstName: name.firstName,
+        lastName: name.lastName
       });
     }
 
@@ -158,6 +161,14 @@ angular.module('kifi.profileService', [
       return successInputActionResult();
     }
 
+    function validateNameFormat(name) {
+      if (!name) {
+        return failureInputActionResult('This field is required');
+      }
+
+      return successInputActionResult();
+    }
+
     function failureInputActionResult(errorHeader, errorBody) {
       return {
         isSuccess: false,
@@ -238,6 +249,7 @@ angular.module('kifi.profileService', [
       logout: logout,
       fetchPrefs: fetchPrefs,
       prefs: prefs,
+      setNewName: setNewName,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
@@ -245,6 +257,7 @@ angular.module('kifi.profileService', [
       addEmailAccount: addEmailAccount,
       deleteEmailAccount: deleteEmailAccount,
       validateEmailFormat: validateEmailFormat,
+      validateNameFormat: validateNameFormat,
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,

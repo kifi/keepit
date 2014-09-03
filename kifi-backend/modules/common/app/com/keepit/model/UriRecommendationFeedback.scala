@@ -1,10 +1,14 @@
 package com.keepit.model
 
+import com.keepit.curator.model.RecommendationClientType
 import com.kifi.macros.json
 
 @json case class UriRecommendationFeedback(
-    seen: Option[Boolean],
-    clicked: Option[Boolean],
-    kept: Option[Boolean]) {
-  override def toString = s"UriRecommendationFeedback(seen:$seen, clicked:$clicked, kept:$kept)"
+    clicked: Option[Boolean] = None,
+    kept: Option[Boolean] = None,
+    trashed: Option[Boolean] = None,
+    vote: Option[Boolean] = None,
+    comment: Option[String] = None,
+    clientType: Option[RecommendationClientType] = None) {
+  override def toString = s"UriRecommendationFeedback(clicked:$clicked, kept:$kept, trashed:$trashed, vote:$vote, comment:$comment, clientType:$clientType)"
 }

@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.healthcheck.AirbrakeNotifier
 

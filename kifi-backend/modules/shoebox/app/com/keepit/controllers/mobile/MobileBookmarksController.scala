@@ -29,6 +29,8 @@ class MobileBookmarksController @Inject() (
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   normalizedURIInterner: NormalizedURIInterner,
+  libraryCommander: LibraryCommander,
+  rawBookmarkFactory: RawBookmarkFactory,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -58,10 +60,19 @@ class MobileBookmarksController @Inject() (
 
   @deprecated(message = "use addKeeps instead", since = "2014-03-28")
   def keepMultiple() = JsonAction.authenticatedParseJson { request =>
-    val fromJson = request.body.as[KeepInfosWithCollection]
+    val fromJson = request.body.as[RawBookmarksWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson, request.userId, source)
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
+          if (priv) secret.id.get else main.id.get
+        }.getOrElse(main.id.get)
+      }
+    }
+    fromJson.keeps.headOption
+    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
     Ok(Json.obj(
       "keeps" -> keeps,
       "addedToCollection" -> addedToCollection
@@ -69,20 +80,52 @@ class MobileBookmarksController @Inject() (
   }
 
   def addKeeps() = JsonAction.authenticatedParseJson { request =>
-    val fromJson = request.body.as[KeepInfosWithCollection]
+    val fromJson = request.body.as[RawBookmarksWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson, request.userId, source)
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
+          if (priv) secret.id.get else main.id.get
+        }.getOrElse(main.id.get)
+      }
+    }
+    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
     Ok(Json.obj(
       "keepCount" -> keeps.size,
       "addedToCollection" -> addedToCollection
     ))
   }
 
+  def addKeepWithTags() = JsonAction.authenticatedParseJson { request =>
+    val json = request.body
+    val rawBookmark = (json \ "keep").as[RawBookmarkRepresentation]
+    val collectionNames = (json \ "tagNames").as[Seq[String]]
+    val source = KeepSource.mobile
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        rawBookmark.isPrivate.map { priv =>
+          if (priv) secret.id.get else main.id.get
+        }.getOrElse(main.id.get)
+      }
+    }
+    keepsCommander.keepWithSelectedTags(request.userId, rawBookmark, libraryId, source, collectionNames) match {
+      case Left(msg) => BadRequest(msg)
+      case Right((keepInfo, tags)) =>
+        Ok(Json.obj(
+          "keep" -> Json.toJson(keepInfo),
+          "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
+        ))
+    }
+  }
+
   def unkeepMultiple() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
-      Ok(Json.obj("removedKeeps" -> keepsCommander.unkeepMultiple(keepInfos, request.userId)))
+    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { rawBookmarks =>
+      Ok(Json.obj("removedKeeps" -> keepsCommander.unkeepMultiple(rawBookmarks, request.userId)))
     } getOrElse {
       BadRequest(Json.obj("error" -> "parse_error"))
     }
@@ -114,7 +157,7 @@ class MobileBookmarksController @Inject() (
 
   def saveCollection() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    collectionCommander.saveCollection("", request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
+    collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
     }
@@ -123,7 +166,16 @@ class MobileBookmarksController @Inject() (
   def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     db.readOnlyMaster { implicit s => collectionRepo.getOpt(id) } map { tag =>
-      keepsCommander.tagUrl(tag, request.body, request.userId, KeepSource.mobile, request.kifiInstallationId)
+      val rawBookmarks = rawBookmarkFactory.toRawBookmarks(request.body)
+      val libraryId = {
+        db.readWrite { implicit session =>
+          val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+          rawBookmarks.headOption.flatMap(_.isPrivate).map { priv =>
+            if (priv) secret.id.get else main.id.get
+          }.getOrElse(main.id.get)
+        }
+      }
+      keepsCommander.tagUrl(tag, rawBookmarks, request.userId, libraryId, KeepSource.mobile, request.kifiInstallationId)
       Ok(Json.toJson(SendableTag from tag.summary))
     } getOrElse {
       BadRequest(Json.obj("error" -> "noSuchTag"))

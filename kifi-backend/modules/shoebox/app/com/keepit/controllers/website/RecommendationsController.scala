@@ -2,12 +2,12 @@ package com.keepit.controllers.website
 
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.commanders.{ RecommendationsCommander, LocalUserExperimentCommander }
-import com.keepit.common.db.Id
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.model._
-import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.curator.model.RecommendationClientType
+import com.keepit.model.{ NormalizedURI, UriRecommendationScores, ExperimentType, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.Json
 import scala.concurrent.Future
 import com.google.inject.Inject
 
@@ -26,13 +26,21 @@ class RecommendationsController @Inject() (
     }
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], url: String) = JsonAction.authenticatedParseJsonAsync { request =>
-    val feedback = request.body.as[UriRecommendationFeedback]
-    commander.updateUriRecommendationFeedback(userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  def topRecos(more: Boolean, recencyWeight: Float) = JsonAction.authenticatedAsync { request =>
+    commander.topRecos(request.userId, RecommendationClientType.Site, more, recencyWeight).map { recos =>
+      Ok(Json.toJson(recos))
+    }
   }
 
-  def updateUriRecommendationUserInteraction(userId: Id[User], url: String) = JsonAction.authenticatedParseJsonAsync { request =>
-    val vote = request.body.as[UriRecommendationUserInteraction]
-    commander.updateUriRecommendationUserInteraction(userId, url, vote).map(fkis => Ok(Json.toJson(fkis)))
+  def topPublicRecos() = JsonAction.authenticatedAsync { request =>
+    commander.topPublicRecos().map { recos =>
+      Ok(Json.toJson(recos))
+    }
   }
+
+  def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
+    val feedback = request.body.as[UriRecommendationFeedback]
+    commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  }
+
 }

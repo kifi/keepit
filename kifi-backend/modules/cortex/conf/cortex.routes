@@ -32,5 +32,7 @@ GET     /internal/cortex/lda/dumpScaledUserInterest                             
 GET     /internal/cortex/lda/userSimilarity                                         @com.keepit.controllers.cortex.LDAController.userSimilarity(userId1: Id[User], userId2: Id[User])
 GET     /internal/cortex/lda/unamedTopics                                           @com.keepit.controllers.cortex.LDAController.unamedTopics(limit: Int)
 POST    /internal/cortex/lda/getTopicNames                                          @com.keepit.controllers.cortex.LDAController.getTopicNames
+POST    /internal/cortex/lda/explainFeed                                            @com.keepit.controllers.cortex.LDAController.explainFeed
+GET     /internal/cortex/lda/uriKLDivergence                                        @com.keepit.controllers.cortex.LDAController.uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI])
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

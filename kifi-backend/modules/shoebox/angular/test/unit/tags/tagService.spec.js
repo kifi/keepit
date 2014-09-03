@@ -5,7 +5,7 @@ describe('kifi.tagService', function () {
   var tagService,
     $httpBackend;
 
-  beforeEach(module('kifi', 'kifi.tagService'));
+  beforeEach(module('kifi'));
 
   beforeEach(inject(function (_tagService_, _$httpBackend_) {
     tagService = _tagService_;

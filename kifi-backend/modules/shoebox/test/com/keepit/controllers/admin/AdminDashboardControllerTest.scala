@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
@@ -40,7 +41,8 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule()
+    FakeScraperServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   "AdminDashboardController" should {

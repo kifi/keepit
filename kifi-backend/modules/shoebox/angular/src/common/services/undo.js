@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.undo', [])
+angular.module('kifi')
 
 .factory('undoService', [
   '$timeout',

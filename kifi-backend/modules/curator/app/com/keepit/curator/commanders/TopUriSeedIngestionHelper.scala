@@ -43,6 +43,7 @@ class TopUriSeedIngestionHelper @Inject() (
         rawSeedsRepo.getFirstByUriId(uriScore.uriId) match {
           case Some(anotherRawSeedItem) => rawSeedsRepo.save(RawSeedItem(
             uriId = uriScore.uriId,
+            url = anotherRawSeedItem.url,
             userId = Some(userId),
             firstKept = anotherRawSeedItem.firstKept,
             lastKept = anotherRawSeedItem.lastKept,

@@ -4,10 +4,11 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.model._
-import com.keepit.serializer.TraversableFormat
+import com.keepit.search.engine.result.KifiShardHit
 import com.keepit.search.ArticleSearchResult
 import com.keepit.search.Scoring
 import com.keepit.search.SearchConfigExperiment
+import com.keepit.serializer.TraversableFormat
 import com.keepit.social.BasicUser
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
@@ -51,6 +52,58 @@ object KifiSearchResult extends Logging {
         log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context][experts=$experts]", e)
         throw e
     }
+  }
+
+  def v2(
+    uuid: ExternalId[ArticleSearchResult],
+    query: String,
+    hits: Seq[KifiShardHit],
+    myTotal: Int,
+    friendsTotal: Int,
+    mayHaveMoreHits: Boolean,
+    show: Boolean,
+    experimentId: Option[Id[SearchConfigExperiment]],
+    context: String): KifiSearchResult = {
+    try {
+      new KifiSearchResult(JsObject(List(
+        "uuid" -> JsString(uuid.toString),
+        "query" -> JsString(query),
+        "hits" -> toKifiSearchHitsV2(hits),
+        "myTotal" -> JsNumber(myTotal),
+        "friendsTotal" -> JsNumber(friendsTotal),
+        "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
+        "show" -> JsBoolean(show),
+        "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+      )))
+    } catch {
+      case e: Throwable =>
+        log.error(s"can't serialize KifiPlainResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context]", e)
+        throw e
+    }
+  }
+
+  def toKifiSearchHitsV2(hits: Seq[KifiShardHit]): JsArray = {
+    val v2Hits = hits.map { h =>
+      val json = JsObject(List(
+        "title" -> h.titleJson,
+        "url" -> h.urlJson
+      ))
+      h.keepIdJson match {
+        case v: JsString => json + ("keepId" -> v)
+        case _ => json
+      }
+    }
+    JsArray(v2Hits)
+  }
+
+  def uriSummaryInfoV2(uriSummaries: Seq[Option[URISummary]]): JsObject = {
+    val v2Infos = uriSummaries.map {
+      case Some(uriSummary) => JsObject(List("uriSummary" -> Json.toJson(uriSummary)))
+      case None => JsObject(List())
+    }
+    JsObject(List(
+      "hits" -> JsArray(v2Infos)
+    ))
   }
 }
 
@@ -133,12 +186,10 @@ object PartialSearchResult extends Logging {
   lazy val empty = {
     new PartialSearchResult(JsObject(List(
       "hits" -> JsArray(),
-      "mayHaveMore" -> JsBoolean(false),
       "myTotal" -> JsNumber(0),
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
-      "firendsStats" -> Json.toJson(FriendStats.empty),
-      "tags" -> JsArray(),
+      "friendsStats" -> Json.toJson(FriendStats.empty),
       "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))

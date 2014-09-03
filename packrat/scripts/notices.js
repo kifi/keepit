@@ -6,6 +6,7 @@
 // @require scripts/html/keeper/notice_triggered.js
 // @require scripts/html/keeper/notice_message.js
 // @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery-canscroll.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
@@ -71,6 +72,7 @@ panes.notices = function () {
     },
     unread_thread_count: function (n) {
       $unreadCount.text(n || '');
+      positionTabUnderlineImmediately($unreadCount.parent().siblings('.kifi-notices-filter').addBack().not('[href]'));
     }
   };
 
@@ -78,7 +80,9 @@ panes.notices = function () {
   return {
     render: function ($paneBox, locator) {
       var kind = locator.substr(10) || 'page';
-      $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
+      var $tab = $paneBox.find('.kifi-notices-filter-' + kind);
+      positionTabUnderlineImmediately($tab);
+      $tab.removeAttr('href');
       $unreadCount = $paneBox.find('.kifi-notices-unread-count');
       $pageCount = $paneBox.find('.kifi-notices-page-count');
       $list = $(renderListHolder(kind))
@@ -106,6 +110,13 @@ panes.notices = function () {
       }
     }};
 
+  function positionTabUnderlineImmediately($a) {
+    $a.prevAll('.kifi-notices-filter-line')
+      .css({left: $a[0].offsetLeft, width: $a[0].offsetWidth, transition: 'none'})
+      .layout()
+      .css('transition', '');
+  }
+
   function renderListHolder(kind) {
     var params = {kind: kind};
     params[kind] = true;
@@ -116,14 +127,18 @@ panes.notices = function () {
     renderIntoList(o);
     $list
       .removeClass('kifi-loading')
-      .preventAncestorScroll();
+      .preventAncestorScroll()
+      .canScroll();
 
     var $box = $list.closest('.kifi-notices-box');
     $box.antiscroll({x: false});
-    var scroller = $box.data('antiscroll');
-    $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
+    $(window).off('resize.notices').on('resize.notices', function () {
+      $box.data('antiscroll').refresh();
+      $list.canScroll();
+    });
 
     $list
+    .on('mouseenter mouseleave', '.kifi-notice', onMouseEnterLeaveNotice)
     .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
     .on('click', '.kifi-notice-state', onClickState)
     .on('click', '.kifi-notice', onClickNotice)
@@ -132,8 +147,10 @@ panes.notices = function () {
   }
 
   function renderIntoList(o) {
-    $list.append(o.threads.map(renderOne).join(''));
-    $list.find('time').timeago();
+    var $th = $(o.threads.map(renderOne).join(''))
+      .appendTo($list);
+    $th.find('time').timeago();
+    measure($th);
     $list.data('showingOldest', !!o.includesOldest);
     $list[o.includesOldest ? 'off' : 'on']('scroll', onScroll);
     if (!o.includesOldest && $list[0].scrollHeight <= $list[0].clientHeight) {
@@ -143,6 +160,7 @@ panes.notices = function () {
 
   function onSubTabClick(e) {
     if (e.which !== 1) return;
+    $(this).prevAll('.kifi-notices-filter-line').css({left: this.offsetLeft, width: this.offsetWidth});
     var $aNew = $(this).removeAttr('href');
     var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
     var back = $aNew.index() < $aOld.index();
@@ -188,7 +206,7 @@ panes.notices = function () {
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
-      var nPicsMax = notice.isSent ? 4 : 3;
+      var nPicsMax = 3;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
         notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
         participants.slice(0, nPicsMax);
@@ -224,7 +242,14 @@ panes.notices = function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      if (notice.author.id === me.id) {
+        if (notice.isSelf) {
+          notice.multiple = notice.messages > 1;
+        }
+        notice.authorShortName = 'Me';
+      } else if (nParticipants > 2) {
+        notice.authorShortName = notice.author.firstName;
+      }
       notice.picturedParticipants.map(formatParticipant);
       return render('html/keeper/notice_message', notice);
     case 'triggered':
@@ -250,6 +275,7 @@ panes.notices = function () {
     if ($th.parent()[0] !== $list[0]) {
       $th.appendTo($list);
     }
+    measure($th);
   }
 
   function markOneRead(timeStr, threadId, id) {
@@ -279,7 +305,7 @@ panes.notices = function () {
   function onMenuBtnMouseDown(e) {
     e.preventDefault();
     var $a = $(this).addClass('kifi-active');
-    var $menu = $a.next('.kifi-notices-menu').fadeIn(50);
+    var $menu = $a.next('.kifi-notices-menu').addClass('kifi-visible');
     var $items = $menu.find('.kifi-notices-menu-item')
       .on('mouseenter', enterItem)
       .on('mouseleave', leaveItem)
@@ -308,9 +334,10 @@ panes.notices = function () {
       $items.off('mouseenter', enterItem)
             .off('mouseleave', leaveItem)
             .off('mouseup', hide);
-      $menu.fadeOut(50, function () {
-        $menu.find('.kifi-hover').removeClass('kifi-hover');
-      });
+      $menu.on('transitionend', function end() {
+        $menu.off('transitionend', end)
+          .find('.kifi-hover').removeClass('kifi-hover');
+      }).removeClass('kifi-visible');
     }
   }
 
@@ -330,8 +357,24 @@ panes.notices = function () {
     // not updating DOM until response received due to bulk nature of action
   }
 
+  function onMouseEnterLeaveNotice(e) {
+    updateNoticeBackground(this, e.type === 'mouseenter' && !this.classList.contains('kifi-hover-suppressed'));
+  }
+
   function onMouseOverOrOutState(e) {
-    $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', e.type === 'mouseover');
+    var suppressed = e.type === 'mouseover';
+    var noticeEl = $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', suppressed)[0];
+    updateNoticeBackground(noticeEl, !suppressed && noticeEl.contains(e.relatedTarget));
+  }
+
+  function updateNoticeBackground(el, hover) {
+    var oldValue = el.style['backgroundImage'];
+    var newValue = hover ?
+      oldValue.replace(/(rgba?)\( ?254, ?254, ?254/g, '$1(248,250,253') :
+      oldValue.replace(/(rgba?)\( ?248, ?250, ?253/g, '$1(254,254,254');
+    if (newValue !== oldValue) {
+      el.style.backgroundImage = newValue;
+    }
   }
 
   function onClickState(e) {
@@ -395,9 +438,10 @@ panes.notices = function () {
   function gotOlderThreads(whenRequested, o) {
     if ($list && $list.data('pendingOlderReqTime') === whenRequested) {
       $list.data('pendingOlderReqTime', 0);
-      $(o.threads.map(renderOne).join(''))
+      var $th = $(o.threads.map(renderOne).join(''))
         .find('time').timeago().end()
         .appendTo($list);
+      measure($th);
       if (o.includesOldest) {
         $list.data('showingOldest', true).off('scroll', onScroll);
       } else if ($list[0].scrollHeight <= $list[0].clientHeight) {
@@ -409,7 +453,7 @@ panes.notices = function () {
   function onHoverfuState(configureHover) {
     var html = $(this).is('.kifi-notice-visited *') ? 'Mark as unread' : 'Mark as read';
     configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: html}), {
-      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'},
+      position: {my: 'left-13 bottom-5', at: 'center top', of: this, collision: 'none'},
       click: 'hide'
     });
   }
@@ -465,5 +509,16 @@ panes.notices = function () {
   function locToKind(locator) {
     return /^\/messages(?:$|:)/.test(locator) ? locator.substr(10) || 'page' : null;
   }
-}();
 
+  function measure($th) {
+    $th = $th.filter('.kifi-notice-unmeasured');
+    // important for performance: measuring all before writing any
+    var lines = $th.find('.kifi-notice-blurb').map(function (i, el) {
+      return el.scrollHeight / parseInt(window.getComputedStyle(el).lineHeight);
+    });
+    $th.each(function (i, el) {
+      el.classList.add('kifi-notice-lines-' + Math.max(1, Math.min(3, Math.floor(lines[i]))));
+      el.classList.remove('kifi-notice-unmeasured');
+    });
+  }
+}();

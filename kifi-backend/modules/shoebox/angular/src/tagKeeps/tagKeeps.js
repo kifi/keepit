@@ -1,17 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/tag/:tagId', {
-      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
-      controller: 'TagKeepsCtrl'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('TagKeepsCtrl', [
   '$scope', 'keepService', 'tagService', '$routeParams', '$window',

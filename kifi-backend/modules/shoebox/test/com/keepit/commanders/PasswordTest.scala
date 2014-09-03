@@ -13,6 +13,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.core.AuthController
 import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
@@ -50,7 +51,8 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    KeepImportsModule()
+    KeepImportsModule(),
+    FakeCuratorServiceClientModule()
   )
 
   val oldPwd1 = "1234567"

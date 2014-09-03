@@ -17,7 +17,7 @@ import play.api.libs.json.{ JsValue, JsNull }
 import scala.slick.jdbc.StaticQuery
 
 object UserThreadRepo {
-  type RawNotification = (JsValue, Boolean) // lastNotification, unread
+  type RawNotification = (JsValue, Boolean, Option[Id[NormalizedURI]]) // lastNotification, unread, uriId
 }
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
@@ -92,6 +92,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
+
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
 
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread]
 
@@ -201,7 +203,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification = {
-    (for (row <- rows if row.user === userId && row.threadId === threadId) yield (row.lastNotification, row.unread)).first
+    (for (row <- rows if row.user === userId && row.threadId === threadId) yield (row.lastNotification, row.unread, row.uriId.?)).first
   }
 
   def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
@@ -211,7 +213,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -223,7 +225,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -235,7 +237,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -248,7 +250,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -260,7 +262,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -273,7 +275,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -285,7 +287,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -298,7 +300,7 @@ class UserThreadRepoImpl @Inject() (
         row.lastNotification.isNotNull
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
-      .take(howMany).map(row => (row.lastNotification, row.unread))
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId.?))
       .list
   }
 
@@ -392,6 +394,11 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.uriId === uriId) yield row.id).firstOption.isDefined
   }
 
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
+    val uriSet = (for (row <- rows if row.user === userId) yield row.uriId).list.toSet
+    uriIds.map(uriId => uriSet.contains(uriId))
+  }
+
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
     (for (row <- rows if row.threadId === threadId) yield row).list
   }
@@ -409,6 +416,6 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId && row.threadId === threadId &&
         row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
         row.lastNotification.isNotNull
-    ) yield (row.lastNotification, row.unread)).firstOption
+    ) yield (row.lastNotification, row.unread, row.uriId.?)).firstOption
   }
 }

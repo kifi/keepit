@@ -208,5 +208,6 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
 
       }
     }
+
   }
 }

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.layout.rightCol', ['kifi.modal'])
+angular.module('kifi')
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
@@ -138,14 +138,14 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
           'path': $location.path()
         });
       }
-      delete $window.document.documentElement.dataset.guide;
+      $window.document.documentElement.removeAttribute('data-guide');
     };
-    if ('guide' in $window.document.documentElement.dataset) {
+    if ($window.document.documentElement.getAttribute('data-guide')) {
       $scope.triggerGuide();
     }
 
     $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');

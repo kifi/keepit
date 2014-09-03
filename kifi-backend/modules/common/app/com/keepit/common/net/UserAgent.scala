@@ -12,9 +12,10 @@ case class UserAgent(
     typeName: String,
     version: String) {
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
-  lazy val isKifiAndroidApp: Boolean = typeName == UserAgent.KifiAndroidAppTypeName
+  lazy val isKifiAndroidApp: Boolean = operatingSystemFamily == "Android" // TODO: use a custom User-Agent header in our Android app
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
-  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp
+  lazy val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
+  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
   lazy val screenCanFitWebApp: Boolean = !isMobile // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
@@ -23,7 +24,6 @@ case class UserAgent(
 object UserAgent extends Logging {
 
   val KifiIphoneAppTypeName = "kifi iphone app"
-  val KifiAndroidAppTypeName = "kifi android app"
 
   private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   private val TabletIndicators = Set("iPad", "Tablet")
@@ -31,14 +31,14 @@ object UserAgent extends Logging {
 
   private val MAX_USER_AGENT_LENGTH = 512
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
-  lazy val iPhonePattern = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
+  lazy val iosAppRe = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
 
   private def normalize(str: String): String = if (str == "unknown") "" else str
   private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
 
   def fromString(userAgent: String): UserAgent = {
     userAgent match {
-      case iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
+      case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
       case _ =>
         val agent: SFUserAgent = parser.parse(userAgent)

@@ -164,7 +164,12 @@ trait QueryExpansion extends QueryParser {
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
       query match {
         case Some(query) =>
-          clauses += new BooleanClause(query, spec.occur)
+          val occur = query match {
+            case q: SiteQuery => if (spec.occur == SHOULD) MUST else spec.occur
+            case q: MediaQuery => if (spec.occur == SHOULD) MUST else spec.occur
+            case _ => spec.occur
+          }
+          clauses += new BooleanClause(query, occur)
           query match {
             case textQuery: TextQuery => queries += ((spec, textQuery))
             case _ => queries += ((spec, null))

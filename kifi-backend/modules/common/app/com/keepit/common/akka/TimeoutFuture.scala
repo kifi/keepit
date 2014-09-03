@@ -5,7 +5,7 @@ import java.util.concurrent.{ TimeoutException, TimeUnit }
 import scala.concurrent.{ Future, ExecutionContext, Promise }
 import scala.concurrent.duration.Duration
 import org.jboss.netty.util.Timeout
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 
 object TimeoutFuture {
   val timer = new HashedWheelTimer(10, TimeUnit.MILLISECONDS)

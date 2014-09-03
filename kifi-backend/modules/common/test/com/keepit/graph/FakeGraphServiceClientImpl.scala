@@ -10,7 +10,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.wander.{ Collisions, Wanderlust }
-import com.keepit.graph.model.{ RelatedEntities, ConnectedUserScore, ConnectedUriScore, GraphKinds }
+import com.keepit.graph.model._
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.abook.model.EmailAccountInfo
 
@@ -42,8 +42,10 @@ class FakeGraphServiceClientImpl(
 
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = Future.successful(Seq.empty)
   def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
+  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = Future.successful(None)
   def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)
   def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)
   def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]] = Future.successful(None)
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = Future.successful(Seq.fill(uriIds.size)(GraphFeedExplanation(Map(), Map())))
 }

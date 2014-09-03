@@ -1,5 +1,10 @@
 keepBorderRadius = 3px
 
+.kf-my-keeps
+  .kf-keep
+  .kf-keep-selection-tools
+    margin-top: 10px
+    
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
@@ -7,7 +12,6 @@ keepBorderRadius = 3px
   border: defaultBorder
   background-color: white
   border-radius: keepBorderRadius
-  margin-top: 10px
 
 .kf-keep-selection-tools-body
   padding: 0 0 7px 27px
@@ -124,7 +128,7 @@ keepBorderRadius = 3px
   padding: 0 20px 5px
 
 .kf-keep-contents
-  padding: 25px 0 10px
+  padding: 20px 0 10px
   overflow: hidden
 
 .kf-keep-who
@@ -163,14 +167,17 @@ keepBorderRadius = 3px
 
 .kf-keep-subtitle-element
   display: inline-block
-  margin-right: 10px
+  margin-right: 13px
 
 .kf-keep-time
 .kf-keep-read-time
+  font-family: "Georgia", Arial, sans-serif
   font-size: 13px
   color: #99a3b3
-  font-family: "Georgia", Arial, sans-serif
   white-space: nowrap
+
+.kf-keep-read-time
+  margin-left: -3px
 
 .kf-keep-edit-tools
   display: none
@@ -299,6 +306,12 @@ keepBorderRadius = 3px
 
   .kf-keep.example &
     color: #c6cbd3
+
+  &::after
+    position: absolute
+    top: 2px
+    padding-left: 5px
+    content: '|'
 
 // tag
 .kf-keep-tags

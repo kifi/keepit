@@ -2,7 +2,6 @@ package com.keepit.search.index
 
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
-import com.keepit.search.semantic.SemanticVectorBuilder
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute
@@ -112,7 +111,7 @@ trait Indexable[T, S] extends Logging {
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
   def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
 
-  def buildLongValueField[V](field: String, v: Long): Field = new NumericDocValuesField(field, v)
+  def buildLongValueField(field: String, v: Long): Field = new NumericDocValuesField(field, v)
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)
@@ -140,10 +139,6 @@ trait Indexable[T, S] extends Logging {
 
   def buildIteratorField[A](fieldName: String, iterator: Iterator[A], fieldType: FieldType = textFieldTypeNoNorm)(toToken: (A => String)) = {
     new Field(fieldName, new IteratorTokenStream(iterator, toToken), fieldType)
-  }
-
-  def buildSemanticVectorField(fieldName: String, svBuilder: SemanticVectorBuilder) = {
-    new Field(fieldName, svBuilder.tokenStream, semanticVectorFieldType)
   }
 
   def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {

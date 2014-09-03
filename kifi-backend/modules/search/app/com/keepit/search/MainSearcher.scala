@@ -11,7 +11,6 @@ import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.query.parser.MainQueryParser
-import com.keepit.search.semantic.SemanticVector
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -59,12 +58,10 @@ class MainSearcher(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
-  private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
   // debug flags
   private[this] var noBookmarkCheck = false
@@ -85,44 +82,36 @@ class MainSearcher(
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
-  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
-    if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet).size.toFloat else sharingUsers.size.toFloat
-  }
+  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet): Float = sharingUsers.size.toFloat
 
   @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
-    val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
+    val users = sharingUsers.destIdSet
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  private def getNonPersonalizedQueryContextVector(parser: MainQueryParser): SemanticVector = {
-    val newSearcher = articleSearcher.withSemanticContext
-    parser.svTerms.foreach { t => newSearcher.addContextTerm(t) }
-    newSearcher.getContextVector
-  }
-
-  def getPersonalizedSearcher(query: Query, nonPersonalizedContextVector: Option[Future[SemanticVector]]) = {
+  def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher, nonPersonalizedContextVector, useNonPersonalizedContextVector)
+    val searcher = new PersonalizedSearcher(indexReader, collectionSearcher)
+    searcher.setSimilarity(articleSearcher.getSimilarity())
+    searcher
   }
 
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
+  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
     parsedQuery = parser.parsedQuery
-    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future { getNonPersonalizedQueryContextVector(parser) }) else None
 
     timeLogs.queryParsing = parser.totalParseTime
 
-    val personalizedSearcher = parsedQuery.map { articleQuery =>
+    parsedQuery.map { articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
-      personalizedSearcher.setSimilarity(similarity)
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
@@ -158,20 +147,19 @@ class MainSearcher(
         }
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
-      personalizedSearcher
     }
-    (myHits, friendsHits, othersHits, personalizedSearcher)
+    (myHits, friendsHits, othersHits)
   }
 
   def search(): PartialSearchResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val (myHits, friendsHits, othersHits) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
 
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
     val friendsUriEdgeAccessors = socialGraphInfo.friendsUriEdgeAccessors
-    val relevantFriendEdgeSet = socialGraphInfo.relevantFriendEdgeSet
+    val friendEdgeSet = socialGraphInfo.friendEdgeSet
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -189,7 +177,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
+    val friendStats = FriendStats(friendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
     val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
@@ -199,7 +187,7 @@ class MainSearcher(
         case (hit, rank) =>
 
           val h = hit.hit
-          val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+          val sharingUsers = findSharingUsers(h.id, friendEdgeSet)
           val sharingUserSize = sharingUsers.size.toFloat
 
           if (numCollectStats > 0 && sharingUserSize > 0.0f) {
@@ -238,7 +226,7 @@ class MainSearcher(
       friendsHits.toRankedIterator.forall {
         case (hit, rank) =>
           val h = hit.hit
-          val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+          val sharingUsers = findSharingUsers(h.id, friendEdgeSet)
           val sharingUserSize = sharingUsers.size.toFloat
 
           var recencyScoreVal = 0.0f
@@ -278,7 +266,7 @@ class MainSearcher(
         if (rank == 0) {
           // this may be the first hit from others. (re)compute the threshold and the norm.
           othersThreshold = hit.score * tailCutting
-          othersNorm = max(highScore, othersHighScore)
+          othersNorm = max(highScore, hit.score)
         }
         val h = hit.hit
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
@@ -318,7 +306,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach { h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser, personalizedSearcher)
+    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser)
 
     val shardHits = toDetailedSearchHits(hitList)
 
@@ -330,7 +318,7 @@ class MainSearcher(
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
-  private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
+  private[this] def toDetailedSearchHits(hitList: Seq[Hit[MutableArticleHit]]): Seq[DetailedSearchHit] = {
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
 
     hitList.map { hit =>
@@ -374,13 +362,13 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser, personalizedSearcher: Option[PersonalizedSearcher]) = {
+  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser) = {
     def classify(scoring: Scoring, hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
         (if (hit.isMyBookmark) scoring.recencyScore / 5.0f else 0.0f) + scoring.textScore > minScore
     }
 
-    if (filter.isDefault && isInitialSearch && personalizedSearcher.isDefined) {
+    if (filter.isDefault && isInitialSearch) {
       // simple classifier
       val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
       (show, -1f)
@@ -405,11 +393,8 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future { getNonPersonalizedQueryContextVector(parser) }) else None
-
     parser.parsedQuery.map { query =>
-      var personalizedSearcher = getPersonalizedSearcher(query, nonPersonalizedContextVector)
-      personalizedSearcher.setSimilarity(similarity)
+      var personalizedSearcher = getPersonalizedSearcher(query)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }

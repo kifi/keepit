@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.alertBanner', [])
+angular.module('kifi')
 
 
 .directive('kfAlertBanner', [

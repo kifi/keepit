@@ -1,20 +1,6 @@
 'use strict';
 
-angular.module('kifi.search', [
-  'util',
-  'kifi.keepService'
-])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/find', {
-      templateUrl: 'search/search.tpl.html',
-      controller: 'SearchCtrl'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('SearchCtrl', [
   '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log',

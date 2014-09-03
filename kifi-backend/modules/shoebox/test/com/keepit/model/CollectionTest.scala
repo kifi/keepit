@@ -37,9 +37,11 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       val hover = KeepSource.keeper
 
       val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-        urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))
+        urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
       val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-        urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), libraryId = Some(lib1.id.get)))
+        urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1))
       val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Apparel", createdAt = t1))

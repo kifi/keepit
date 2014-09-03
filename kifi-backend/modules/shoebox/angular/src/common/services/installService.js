@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.installService', [])
+angular.module('kifi')
 
 .factory('installService', ['$window', '$log', '$rootScope', '$timeout',
   function ($window, $log, $rootScope, $timeout) {

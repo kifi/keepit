@@ -6,9 +6,10 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{ GetResult, StaticQuery }
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.WhoKeptMyKeeps
+import com.keepit.common.core._
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
@@ -43,8 +44,10 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
-  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
+  // Do not use:
+  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
 }
 
 @Singleton
@@ -73,9 +76,10 @@ class KeepRepoImpl @Inject() (
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
+    def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -84,8 +88,29 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
-  private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep(id = r.<<[Option[Id[Keep]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Keep]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], isPrimary = (r.<<[Option[Boolean]]).exists(b => b), urlId = r.<<[Id[URL]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Keep]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Keep]], libraryId = r.<<[Option[Id[Library]]])
+  private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
+    var privateFlag: Boolean = false
+
+    Keep.applyFromDbRow(
+      id = r.<<[Option[Id[Keep]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      externalId = r.<<[ExternalId[Keep]],
+      title = r.<<[Option[String]],
+      uriId = r.<<[Id[NormalizedURI]],
+      isPrimary = r.<<[Option[Boolean]],
+      urlId = r.<<[Id[URL]],
+      url = r.<<[String],
+      bookmarkPath = r.<<[Option[String]],
+      isPrivate = { privateFlag = r.<<[Boolean]; privateFlag }, // todo(andrew): wowza, clean up when done with libraries
+      userId = r.<<[Id[User]],
+      state = r.<<[State[Keep]],
+      source = r.<<[KeepSource],
+      kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]],
+      seq = r.<<[SequenceNumber[Keep]],
+      libraryId = r.<<[Option[Id[Library]]],
+      visibility = Some(r.<<[Option[LibraryVisibility]].getOrElse(Keep.isPrivateToVisibility(privateFlag)))
+    )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 
@@ -95,6 +120,17 @@ class KeepRepoImpl @Inject() (
 
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel.clean())
+  }
+
+  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep = {
+    val target = getCompiled(model.id.get)
+    val count = target.update(model)
+    invalidateCache(model)
+    if (count != 1) {
+      deleteCache(model)
+      throw new IllegalStateException(s"Updating $count models of [${model.toString}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    }
+    model
   }
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
@@ -350,11 +386,9 @@ class KeepRepoImpl @Inject() (
     sql_query.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }
 
-  private def getByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
-  }
-  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    getByLibraryCompiled(libraryId, excludeState).list
+  // Make compiled in Slick 2.1
+  def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.id desc).drop(offset).take(count).list
   }
 
   private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {

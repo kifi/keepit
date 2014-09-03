@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }

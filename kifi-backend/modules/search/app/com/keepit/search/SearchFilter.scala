@@ -1,109 +1,60 @@
 package com.keepit.search
 
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
-import com.keepit.common.time._
-import com.keepit.model.User
-import com.keepit.model.Collection
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.model.Library
 import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
-import scala.concurrent.duration._
-import scala.concurrent.Future
 
-abstract class SearchFilter(
-    context: Option[String],
-    val timeRange: Option[SearchFilter.TimeRange]) {
+abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[String]) {
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-  lazy val collections: Option[Seq[Id[Collection]]] = None
 
   def includeMine: Boolean
-  def includeShared: Boolean
   def includeFriends: Boolean
   def includeOthers: Boolean
   def isDefault = false
-  def isCustom = false
-  def filterFriends(f: Set[Id[User]]) = f
 }
 
 object SearchFilter {
 
-  case class TimeRange(start: Long, end: Long)
+  def default(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-  private def timeRange(startTime: Option[String], endTime: Option[String], tz: Option[String]): Option[TimeRange] = {
-    if (startTime.isDefined || endTime.isDefined) {
-      val startMillis = startTime.map { t => parseStandardTime(t + " 00:00:00.000 " + tz.getOrElse("+0000")).getMillis }.getOrElse(0L)
-      val endMillis = endTime.map { t => parseStandardTime(t + " 23:59:59.999 " + tz.getOrElse("+0000")).getMillis }.getOrElse(Long.MaxValue)
-      Some(TimeRange(startMillis, endMillis))
-    } else {
-      None
-    }
-  }
-
-  def default(context: Option[String] = None) = new SearchFilter(context, None) {
-    def includeMine = true
-    def includeShared = true
-    def includeFriends = true
-    def includeOthers = true
-    override def isDefault = true
-  }
-
-  def all(context: Option[String] = None,
-    startTime: Option[String] = None,
-    endTime: Option[String] = None,
-    tz: Option[String] = None) = {
-    val excludeOthers = (startTime.isDefined || endTime.isDefined)
-    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(libId, context) {
       def includeMine = true
-      def includeShared = true
       def includeFriends = true
-      def includeOthers = !excludeOthers
-      override def isDefault = false
+      def includeOthers = true
+      override def isDefault = true
     }
   }
 
-  def mine(context: Option[String] = None,
-    collectionsFuture: Option[Future[Seq[Id[Collection]]]] = None,
-    startTime: Option[String] = None,
-    endTime: Option[String] = None,
-    tz: Option[String] = None,
-    monitoredAwait: MonitoredAwait) = {
-    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
+  def all(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-      override lazy val collections = collectionsFuture.map { monitoredAwait.result(_, 5 seconds, "getting collections") }
-
+    new SearchFilter(libId, context) {
       def includeMine = true
-      def includeShared = true
+      def includeFriends = true
+      def includeOthers = false
+    }
+  }
+
+  def mine(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
+
+    new SearchFilter(libId, context) {
+      def includeMine = true
       def includeFriends = false
       def includeOthers = false
     }
   }
-  def friends(context: Option[String] = None,
-    startTime: Option[String] = None,
-    endTime: Option[String] = None,
-    tz: Option[String] = None) = {
-    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
+
+  def friends(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
+
+    new SearchFilter(libId, context) {
       def includeMine = false
-      def includeShared = false
       def includeFriends = true
       def includeOthers = false
-    }
-  }
-  def custom(context: Option[String] = None,
-    usersFuture: Future[Seq[Id[User]]],
-    startTime: Option[String] = None,
-    endTime: Option[String] = None,
-    tz: Option[String] = None,
-    monitoredAwait: MonitoredAwait) = {
-    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
-
-      private[this] lazy val users = monitoredAwait.result(usersFuture, 5 seconds, "getting users").toSet
-
-      def includeMine = false
-      def includeShared = true
-      def includeFriends = true
-      def includeOthers = false
-      override def isCustom = true
-      override def filterFriends(f: Set[Id[User]]) = (users intersect f)
     }
   }
 }

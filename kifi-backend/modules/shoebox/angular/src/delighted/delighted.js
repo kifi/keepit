@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.delighted', [])
+angular.module('kifi')
 
 .directive('kfDelightedSurvey', [
   '$timeout', '$analytics', 'profileService',
@@ -18,7 +18,7 @@ angular.module('kifi.delighted', [])
         function analyticsStageName() {
           return {score: 'npsScore', comment: 'npsComment', end: 'npsThanks'}[scope.surveyStage];
         }
-        
+
         scope.surveyStage = 'score';
         $analytics.eventTrack('user_viewed_notification', {
           'source': 'site',

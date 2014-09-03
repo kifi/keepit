@@ -11,7 +11,7 @@ import reactivemongo.bson.BSONDocument
 import com.keepit.heimdal._
 
 import scala.concurrent.duration.Duration
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait SystemEventLoggingRepo extends EventRepo[SystemEvent]

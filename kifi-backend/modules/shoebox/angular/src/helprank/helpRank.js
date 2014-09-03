@@ -1,17 +1,6 @@
 'use strict';
 
-angular.module('kifi.helprank', ['util', 'kifi.keepService'])
-
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/helprank/:helprank', {
-      templateUrl: 'helprank/helprank.tpl.html',
-      controller: 'HelpRankCtrl'
-    });
-  }
-])
+angular.module('kifi')
 
 .controller('HelpRankCtrl', [
   '$scope', 'keepService', '$routeParams',

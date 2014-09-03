@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 
 import scala.concurrent.duration._
@@ -154,25 +155,19 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 5 hours))
 
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
 
-  @Provides @Singleton
-  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+  @Singleton
+  @Provides
+  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForUserIdCache(stats, accessLog, (outerRepo, 30 days))
 
-  @Provides @Singleton
-  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

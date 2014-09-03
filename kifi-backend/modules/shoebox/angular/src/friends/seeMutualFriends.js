@@ -1,11 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.seeMutualFriends', [
-  'kifi',
-  'kifi.friendService',
-  'kifi.inviteService',
-  'kifi.savePymkService'
-])
+angular.module('kifi')
 
 .directive('kfSeeMutualFriends', [
   '$rootScope',

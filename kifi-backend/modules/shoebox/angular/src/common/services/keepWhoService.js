@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keepWhoService', [])
+angular.module('kifi')
 
 .factory('keepWhoService', [
   function () {
