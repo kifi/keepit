@@ -3,8 +3,19 @@
 angular.module('kifi')
 
 .controller('RecosCtrl', [
-  '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'keepActionService', 'keepService', 'recoActionService', 'recoDecoratorService', 'tagService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService, recoActionService, recoDecoratorService, tagService) {
+  '$scope',
+  '$rootScope',
+  '$analytics',
+  '$timeout',
+  '$window',
+  'keepActionService',
+  'keepService',
+  'recoActionService',
+  'recoDecoratorService',
+  'tagService',
+  'undoService',
+  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService,
+    recoActionService, recoDecoratorService, tagService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = [];
@@ -12,11 +23,11 @@ angular.module('kifi')
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
-    $scope.getMore = function (recency) {
+    $scope.getMore = function (opt_recency) {
       $scope.recos = [];
       $scope.loading = true;
      
-      recoActionService.getMore(recency).then(function (rawRecos) {
+      recoActionService.getMore(opt_recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
             $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
@@ -33,13 +44,25 @@ angular.module('kifi')
 
     $scope.trash = function (reco) {
       recoActionService.trash(reco.recoKeep);
-      _.pull($scope.recos, reco);
+      
+      var trashedRecoIndex = _.findIndex($scope.recos, reco);
+      var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
+
+      // If the user has trashed all the recommendations, reload a new set of
+      // recommendations.
+      if ($scope.recos.length === 0) {
+        $scope.getMore();
+      }
+
+      undoService.add('Recommendation removed.', function () {
+        $scope.recos.splice(trashedRecoIndex, 0, trashedReco);
+      });
     };
 
-    $scope.keepReco = function (reco) {
-      recoActionService.keep(reco.recoKeep);
+    $scope.keepReco = function (reco, isPrivate) {
+      recoActionService.trackKeep(reco.recoKeep);
 
-      keepActionService.keepPublic(reco.recoKeep).then(function (keptKeep) {
+      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keptKeep) {
         reco.recoKeep.id = keptKeep.id;
         reco.recoKeep.isPrivate = keptKeep.isPrivate;
 
@@ -78,10 +101,6 @@ angular.module('kifi')
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
     };
-
-    $scope.$watch(tagService.getTotalKeepCount, function (val) {
-      $scope.numKeptItems = val;
-    });
 
     recoActionService.get().then(function (rawRecos) {
       if (rawRecos.length > 0) {
@@ -147,8 +166,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['recoActionService',
-  function (recoActionService) {
+.directive('kfRecoDropdownMenu', ['$document', 'keyIndices', 'recoActionService',
+  function ($document, keyIndices, recoActionService) {
     return {
       restrict: 'A',
       replace: true,
@@ -158,25 +177,50 @@ angular.module('kifi')
       },
       templateUrl: 'recos/recoDropdownMenu.tpl.html',
       link: function (scope, element/*, attrs*/) {
-        var dropdownArrow= element.find('.kf-reco-dropdown-menu-down');
+        var dropdownArrow = element.find('.kf-reco-dropdown-menu-down');
         var dropdownMenu = element.find('.kf-dropdown-menu');
+        var show = false;
+
+        // Clicking outside the dropdown menu will close the menu.
+        function onMouseDown(event) {
+          if ((dropdownMenu.find(event.target).length === 0) &&
+              (!event.target.classList.contains('kf-reco-dropdown-menu-down'))) {
+            hideMenu();
+          }
+        }
+
+        function showMenu() {
+          show = true;
+          dropdownMenu.show();
+          $document.on('mousedown', onMouseDown);
+        }
+
+        function hideMenu() {
+          show = false;
+          dropdownMenu.hide();
+          $document.off('mousedown', onMouseDown);
+        }
 
         dropdownArrow.on('click', function () {
-          dropdownMenu.toggle();
+          if (show) {
+            hideMenu();
+          } else {
+            showMenu();
+          }
         });
 
         scope.upVote = function (reco) {
-          dropdownMenu.hide();
+          hideMenu();
           recoActionService.vote(reco.recoKeep, true);
         };
 
         scope.downVote = function (reco) {
-          dropdownMenu.hide();
+          hideMenu();
           recoActionService.vote(reco.recoKeep, false);
         };
 
         scope.showModal = function () {
-          dropdownMenu.hide();
+          hideMenu();
           scope.showImprovementModal();
         };
       }

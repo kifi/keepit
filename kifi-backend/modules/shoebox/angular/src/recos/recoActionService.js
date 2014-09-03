@@ -69,11 +69,11 @@ angular.module('kifi')
         $http.post(routeService.recoFeedback(keep.urlId), { vote: vote });
       },
 
-      keep: function (keep) {
+      trackKeep: function (keep) {
         $http.post(routeService.recoFeedback(keep.urlId), { kept: true });
       },
 
-      click: function (keep) {
+      trackClick: function (keep) {
         $http.post(routeService.recoFeedback(keep.urlId), { clicked: true });
       },
 
