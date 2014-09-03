@@ -12,7 +12,7 @@ import com.keepit.common.strings._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.serializer.BinaryFormat
+import com.keepit.serializer.{ TupleFormat, BinaryFormat }
 import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
 import scala.Some
@@ -23,6 +23,13 @@ case class Hashtag(tag: String) extends AnyVal {
 
 object Hashtag {
   implicit val format: Format[Hashtag] = Format(__.read[String].map(Hashtag(_)), new Writes[Hashtag] { def writes(o: Hashtag) = JsString(o.tag) })
+  implicit def hashtagMapFormat[T](implicit tFormat: Format[T]) = {
+    implicit val tupleFormat = TupleFormat.tuple2Format[Hashtag, T]
+    new Format[Map[Hashtag, T]] {
+      def reads(json: JsValue) = json.validate[Seq[(Hashtag, T)]].map(_.toMap)
+      def writes(itemMap: Map[Hashtag, T]) = Json.toJson(itemMap.toSeq)
+    }
+  }
 }
 
 case class Collection(

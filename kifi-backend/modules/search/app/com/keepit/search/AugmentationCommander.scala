@@ -1,8 +1,7 @@
 package com.keepit.search
 
-import com.keepit.model.{ Library, NormalizedURI, User }
+import com.keepit.model.{ Hashtag, Library, NormalizedURI, User }
 import com.keepit.common.db.Id
-import com.keepit.search.Item.{ Tag }
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -76,7 +75,7 @@ class AugmentationCommanderImpl @Inject() (
       }
     }
 
-    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Tag]) {
+    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
       case ((moreKeeps, moreTags), RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
     }
 
@@ -138,7 +137,7 @@ class AugmentationCommanderImpl @Inject() (
         val libraryId = libraryIdDocValues.get(docId)
         val userId = userIdDocValues.get(docId)
         val visibility = visibilityDocValues.get(docId)
-        val tags: Seq[String] = ??? //todo(Léo): implement
+        val tags: Seq[Hashtag] = ??? //todo(Léo): implement
 
         if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
           val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
@@ -161,7 +160,7 @@ class AugmentationCommanderImpl @Inject() (
   private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): ContextualAugmentationScores = {
     val libraryScores = MutableMap[Id[Library], Float]() withDefaultValue 0f
     val userScores = MutableMap[Id[User], Float]() withDefaultValue 0f
-    val tagScores = MutableMap[Tag, Float]() withDefaultValue 0f
+    val tagScores = MutableMap[Hashtag, Float]() withDefaultValue 0f
 
     weigthedAugmentationInfos.foreach {
       case (info, weight) =>
