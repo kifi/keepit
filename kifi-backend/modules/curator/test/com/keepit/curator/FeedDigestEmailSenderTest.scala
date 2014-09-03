@@ -124,10 +124,13 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         // - lycos does not pass the image width requirement
         // - excite has been sent already
         sumU43.feed.size === 2
-        shoebox.sentMail.size === 2
+
+        // 2 sent to users
+        // 2 copied to QA
+        shoebox.sentMail.size === 4
 
         val (mail42, mail43) = {
-          val (xs, ys) = shoebox.sentMail.partition(_.senderUserId.get == Id[User](42))
+          val (xs, ys) = shoebox.sentMail.filter(_.senderUserId.isDefined).partition(_.senderUserId.get == Id[User](42))
           (xs.head, ys.head)
         }
 
