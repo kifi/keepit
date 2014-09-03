@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-// .config([
-//   '$routeProvider',
-//   function ($routeProvider) {
-//     $routeProvider
-//     .when('/:username/:librarySlug', {
-//       templateUrl: 'libraries/library.tpl.html',
-//       controller: 'LibraryCtrl'
-//     });
-//   }
-// ])
-
 .controller('LibraryCtrl', [
   '$scope', 'keepService', '$routeParams', 'libraryService',
   function ($scope, keepService, $routeParams, libraryService) {
@@ -27,10 +16,6 @@ angular.module('kifi')
       $scope.library = library;
       $scope.keeps = library.keeps || [];
     });
-
-    $scope.getSingleSelectedKeep = function () {
-      return [];
-    };
 
     $scope.hasMore = function () {
       return false; // todo

@@ -459,14 +459,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
         path === "/site/collections/create"
 
         val json = Json.obj("name" -> JsString("my tag"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -491,13 +491,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
 
         val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(400)
       }
     }

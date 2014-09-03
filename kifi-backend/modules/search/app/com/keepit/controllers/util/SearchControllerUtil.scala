@@ -2,7 +2,7 @@ package com.keepit.controllers.util
 
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.result.{ ResultUtil, DecoratedResult, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
@@ -12,6 +12,10 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
 
 import scala.concurrent.Future
+
+object SearchControllerUtil {
+  val nonUser = Id[User](-1L)
+}
 
 trait SearchControllerUtil {
 

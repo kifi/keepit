@@ -647,5 +647,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
 
-  def addInteraction(usedId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {}
+  def addInteractions(usedId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]) = {}
 }

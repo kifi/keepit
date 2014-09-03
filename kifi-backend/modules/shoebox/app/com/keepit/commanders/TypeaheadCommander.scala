@@ -356,7 +356,7 @@ class TypeaheadCommander @Inject() (
         interaction.recipient match {
           case UserRecipient(id) =>
             val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
-            UserContactResult(name = user.fullName, id = user.externalId, image = user.pictureName.map(_ + ".jpg"))
+            UserContactResult(name = user.fullName, id = user.externalId, pictureName = user.pictureName.map(_ + ".jpg"))
           case EmailRecipient(email) =>
             EmailContactResult(name = None, email = email)
         }
@@ -369,7 +369,7 @@ class TypeaheadCommander @Inject() (
             case e: RichContact =>
               Some(EmailContactResult(name = e.name, email = e.email))
             case u: User =>
-              Some(UserContactResult(name = u.fullName, id = u.externalId, image = u.pictureName.map(_ + ".jpg")))
+              Some(UserContactResult(name = u.fullName, id = u.externalId, pictureName = u.pictureName.map(_ + ".jpg")))
             case _ =>
               airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
               None
@@ -388,7 +388,7 @@ class TypeaheadCommander @Inject() (
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
 sealed trait ContactSearchResult {}
-@json case class UserContactResult(name: String, id: ExternalId[User], image: Option[String]) extends ContactSearchResult
+@json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String]) extends ContactSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
 
 sealed abstract class ContactType(val value: String)

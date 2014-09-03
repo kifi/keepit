@@ -8,6 +8,7 @@ import com.keepit.curator.commanders.{ SeedIngestionCommander, RecommendationGen
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 
 import com.keepit.curator.model._
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ User, NormalizedURI }
@@ -25,6 +26,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
+    FakeElizaServiceClientModule(),
     FakeHealthcheckModule())
 
   private def setup()(implicit injector: Injector) = {

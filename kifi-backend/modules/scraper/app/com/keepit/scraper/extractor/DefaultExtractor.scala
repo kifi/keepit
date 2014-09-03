@@ -120,11 +120,12 @@ class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metad
   }
 
   // link tag
-  private def startLink(uri: String, localName: String, qName: String, atts: Attributes) = {
+  private def startLink(uri: String, localName: String, qName: String, atts: Attributes): Unit = {
     super.startElement(uri, localName, qName, atts)
     val rel = atts.getValue("rel")
     val href = atts.getValue("href")
-    links.addBinding(rel, href)
+
+    if (rel != null && href != null) links.addBinding(rel, href)
   }
 
   // option tag
