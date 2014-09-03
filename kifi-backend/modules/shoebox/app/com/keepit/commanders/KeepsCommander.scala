@@ -517,7 +517,10 @@ class KeepsCommander @Inject() (
       }
       val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
-      tagged.foreach(ktc => keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt))
+      tagged.foreach { ktc =>
+        keepRepo.save(keepsById(ktc.keepId)) // notify keep index
+        keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt)
+      }
       tagged
     }
     if (updateUriGraph) {
@@ -533,11 +536,13 @@ class KeepsCommander @Inject() (
         case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
       }
-
       collectionRepo.collectionChanged(collection.id.get)
 
       val removedAt = currentDateTime
-      removed.foreach(ktc => keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt))
+      removed.foreach { ktc =>
+        keepRepo.save(keepsById(ktc.keepId)) // notify keep index
+        keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
+      }
       removed.toSet
     } tap { _ => searchClient.updateURIGraph() }
   }
@@ -551,7 +556,7 @@ class KeepsCommander @Inject() (
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
-    val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
+    val normalizedName = Hashtag(name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength))
     val collection = db.readOnlyReplica { implicit s =>
       collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     }
@@ -571,12 +576,14 @@ class KeepsCommander @Inject() (
       } {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get)
+        keepRepo.save(keep) // notify keep index
         keptAnalytics.untaggedPage(collection, keep, context)
       }
     }
     searchClient.updateURIGraph()
   }
 
+  //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
   def clearTags(url: String, userId: Id[User]): Unit = {
     db.readWrite { implicit s =>
       for {
@@ -585,6 +592,7 @@ class KeepsCommander @Inject() (
         ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        keepRepo.save(keep) // notify keep index
         collectionRepo.collectionChanged(ktc.collectionId)
       }
     }
@@ -603,6 +611,7 @@ class KeepsCommander @Inject() (
     }
   }
 
+  //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
   def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
 
     val library = db.readOnlyReplica { implicit session =>
@@ -622,23 +631,16 @@ class KeepsCommander @Inject() (
               case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
               case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
             }
+            collectionRepo.collectionChanged(tagId, true)
           }
           tagsToRemove.map { tagId =>
             keepToCollectionRepo.remove(keep.id.get, tagId)
+            collectionRepo.collectionChanged(tagId, false)
           }
+          keepRepo.save(keep) // notify keep index
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         Right((KeepInfo.fromKeep(keep), tags))
-    }
-  }
-
-  def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
-    db.readWrite { implicit session =>
-      val origin = keepRepo.oldestKeep(userId).map(_.createdAt) getOrElse currentDateTime
-      keeps.zipWithIndex.foreach {
-        case (keep, i) =>
-          keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
-      }
     }
   }
 

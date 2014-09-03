@@ -58,7 +58,7 @@ class CollectionNameIndexer(
       override val id: Id[User],
       override val sequenceNumber: SequenceNumber[Collection],
       override val isDeleted: Boolean,
-      val collections: Seq[(Id[Collection], String)]) extends Indexable[User, Collection] with LineFieldBuilder {
+      val collections: Seq[(Id[Collection], Hashtag)]) extends Indexable[User, Collection] with LineFieldBuilder {
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -85,11 +85,11 @@ class CollectionNameIndexer(
       doc
     }
 
-    private def buildNameList(collections: Seq[(Id[Collection], String)], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildNameList(collections: Seq[(Id[Collection], Hashtag)], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
       var lineNo = 0
       var names = new ArrayBuffer[(Int, String, Lang)]
       collections.foreach { c =>
-        val name = c._2
+        val name = c._2.tag
         val lang = LangDetector.detect(name, preferedLang)
         names += ((lineNo, name, lang))
         lineNo += 1

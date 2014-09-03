@@ -151,8 +151,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
-      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
-      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
+      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
+      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
 
       keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
@@ -704,12 +704,12 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = None))
 
-          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
 
-          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "Murica"))
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("Murica")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
@@ -724,8 +724,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val libraryCommander = inject[LibraryCommander]
-        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "Canada").isLeft === true
-        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "USA") //move keeps with "USA" to library "USA"
+        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("Canada")).isLeft === true
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("USA")) //move keeps with "USA" to library "USA"
         res1.isRight === true
         res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
@@ -733,7 +733,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.count === 9
         }
 
-        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, "Murica") //move keeps with "Murica" to library "Murica"
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
         res2.isRight === true
         res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
         db.readOnlyMaster { implicit s =>

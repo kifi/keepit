@@ -4,7 +4,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
-import com.keepit.model.{ NormalizedURI, User, Collection }
+import com.keepit.model.{ Hashtag, NormalizedURI, User, Collection }
 import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
@@ -57,13 +57,13 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
     searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).map { ExternalId[Collection](_) }
   }
 
-  def getName(id: Id[Collection]): String = getName(id.id)
+  def getName(id: Id[Collection]): Hashtag = Hashtag(getName(id.id))
 
   def getName(id: Long): String = {
     searcher.getDecodedDocValue[String](nameField, id)(fromByteArray).getOrElse("")
   }
 
-  def getCollections(userId: Id[User]): Seq[(Id[Collection], String)] = {
+  def getCollections(userId: Id[User]): Seq[(Id[Collection], Hashtag)] = {
     getUserToCollectionEdgeSet(userId).destIdSet.iterator.map { id => (id, getName(id)) }.toSeq
   }
 }

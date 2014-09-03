@@ -72,9 +72,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
-        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction2"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
           Nil
         keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
         collectionRepo.collectionChanged(collections(0).id.get, true)
@@ -138,9 +138,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, visibility = Keep.isPrivateToVisibility(false), libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
-        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction2"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
           Nil
 
         (user1, bookmark1, bookmark2, collections)
@@ -193,9 +193,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         uriRepo.count === 0
 
-        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-          collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+        val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction2"))) ::
+          collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
           Nil
 
         (user1, collections)
@@ -564,7 +564,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         collections.size === 1
         collections.head
       }
-      collection.name === "my tag"
+      collection.name.tag === "my tag"
 
       val expected = Json.parse(s"""{"id":"${collection.externalId}","name":"my tag"}""")
       Json.parse(contentAsString(result)) must equalTo(expected)
@@ -579,9 +579,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction1")) ::
-            collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction2")) ::
-            collectionRepo.save(Collection(userId = user.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
+            collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
+            collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
             Nil
           (user, collections)
         }

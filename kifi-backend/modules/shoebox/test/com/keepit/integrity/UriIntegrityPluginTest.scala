@@ -168,8 +168,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover,
               visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-            val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
-            val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))
+            val c0 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("google")))
+            val c1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("googleBetter")))
 
             keepToCollectionRepo.save(KeepToCollection(keepId = bm0.id.get, collectionId = c0.id.get))
             keepToCollectionRepo.save(KeepToCollection(keepId = bm0better.id.get, collectionId = c0.id.get))
