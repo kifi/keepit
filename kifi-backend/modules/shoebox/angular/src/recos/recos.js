@@ -52,14 +52,11 @@ angular.module('kifi')
       // recommendations.
       if ($scope.recos.length === 0) {
         $scope.getMore();
-      } 
-      // If the user has recommendations remaining on the page, present her
-      // with the option to undo the trashing of the recommendation.
-      else {
-        undoService.add('Recommendation removed.', function () {
-          $scope.recos.splice(trashedRecoIndex, 0, trashedReco);
-        });
       }
+
+      undoService.add('Recommendation removed.', function () {
+        $scope.recos.splice(trashedRecoIndex, 0, trashedReco);
+      });
     };
 
     $scope.keepReco = function (reco, isPrivate) {
