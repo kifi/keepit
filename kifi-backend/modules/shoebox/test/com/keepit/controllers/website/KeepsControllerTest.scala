@@ -410,10 +410,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val (user) = db.readWrite { implicit session =>
           val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
-          val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = "tagA", createdAt = t1))
-          val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = "tagB", createdAt = t1))
-          val tagC = collectionRepo.save(Collection(userId = user1.id.get, name = "tagC", createdAt = t1.plusMinutes(1)))
-          val tagD = collectionRepo.save(Collection(userId = user1.id.get, name = "tagD", createdAt = t1.plusMinutes(2)))
+          val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
+          val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
+          val tagC = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagC"), createdAt = t1.plusMinutes(1)))
+          val tagD = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagD"), createdAt = t1.plusMinutes(2)))
 
           uriRepo.count === 0
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
