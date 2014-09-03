@@ -632,16 +632,6 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
-    db.readWrite { implicit session =>
-      val origin = keepRepo.oldestKeep(userId).map(_.createdAt) getOrElse currentDateTime
-      keeps.zipWithIndex.foreach {
-        case (keep, i) =>
-          keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
-      }
-    }
-  }
-
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
     // HTML format that follows Delicious exports
     val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
