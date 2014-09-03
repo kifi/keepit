@@ -222,12 +222,14 @@ class FeedDigestEmailSenderImpl @Inject() (
 
     val qaHtmlBody: LargeString = views.html.email.feedDigest(qaEmailData, qaCtx).body
     val qaTextBody: Option[LargeString] = Some(views.html.email.feedDigestText(qaEmailData, qaCtx).body)
-    val qaEmail = email.copy(
-      to = Seq(SystemEmailAddress.FEED_QA),
+    val qaEmail = ElectronicMail(
       category = NotificationCategory.User.DIGEST_QA,
+      subject = email.subject,
       htmlBody = qaHtmlBody,
       textBody = qaTextBody,
-      senderUserId = None
+      to = Seq(SystemEmailAddress.FEED_QA),
+      from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi")
     )
 
     val sendMailF = shoebox.sendMail(qaEmail)
