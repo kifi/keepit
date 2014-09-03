@@ -175,7 +175,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
     val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
       val ownerId = library.ownerId

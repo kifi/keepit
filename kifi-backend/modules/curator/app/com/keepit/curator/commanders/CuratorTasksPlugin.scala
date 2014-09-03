@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.time._
 import email.{ EngagementEmailTypes, EngagementEmailActor }
 import us.theatr.akka.quartz.QuartzActor
 
@@ -42,8 +43,14 @@ class CuratorTasksPlugin @Inject() (
   }
 
   private def scheduleRecommendationEmail(): Unit = {
+    // computes UTC hour for current 9am ET (EDT or EST)
+    val nowET = currentDateTime(zones.ET)
+    val offsetMillisToUtc = zones.ET.getOffset(nowET)
+    val offsetHoursToUtc = offsetMillisToUtc / 1000 / 60 / 60
+    val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
+
     // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
-    val cronTime = "0 0 14 * * ?" // 2pm UTC == 7am PDT
+    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 3" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
     cronTaskOnLeader(quartz, emailActor.ref, cronTime, EngagementEmailTypes.FEED)
   }
 }

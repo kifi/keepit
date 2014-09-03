@@ -105,6 +105,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
@@ -143,6 +144,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val extraLongTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
@@ -614,7 +616,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
       r.json.as[URISummary]
     }
   }
@@ -671,6 +673,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
     call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[LibraryAndMemberships]]
+    }
+  }
+
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
+    call(Shoebox.internal.getKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[KeepAndTags]]
     }
   }
 

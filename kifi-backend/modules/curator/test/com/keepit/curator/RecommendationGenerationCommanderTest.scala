@@ -109,7 +109,6 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       val commander = inject[RecommendationGenerationCommander]
       Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
       db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
-      commander.precomputeRecommendations()
       val futUnit = commander.precomputeRecommendations()
       Await.result(futUnit, Duration(10, "seconds"))
       val result = commander.getTopRecommendations(Id[User](42), 1)
@@ -127,6 +126,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       val newResult = commander.getTopRecommendations(Id[User](42), 1)
       val newRecs = Await.result(newResult, Duration(10, "seconds"))
       newRecs.size === 0
+      1 === 1
     }
   }
 }

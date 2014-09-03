@@ -19,6 +19,7 @@ class ShoeboxDataPipeController @Inject() (
     userRepo: UserRepo,
     normUriRepo: NormalizedURIRepo,
     collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     keepRepo: KeepRepo,
     changedUriRepo: ChangedURIRepo,
     phraseRepo: PhraseRepo,
@@ -150,5 +151,16 @@ class ShoeboxDataPipeController @Inject() (
       }
     }
     Ok(Json.toJson(librariesWithMembersChanged))
+  }
+
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
+    val keepAndTagsChanged = db.readOnlyReplica(2) { implicit session =>
+      val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
+      val collectionIdsByKeepIds = changedKeeps.map { keep => (keep.id.get -> keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet) }.toMap
+      val uniqueCollectionIds = collectionIdsByKeepIds.values.flatten.toSet
+      val tagsByCollectionIds = uniqueCollectionIds.map { collectionId => (collectionId -> collectionRepo.get(collectionId).name) }.toMap
+      changedKeeps.map { keep => KeepAndTags(keep, collectionIdsByKeepIds(keep.id.get).map(tagsByCollectionIds(_))) }
+    }
+    Ok(Json.toJson(keepAndTagsChanged))
   }
 }

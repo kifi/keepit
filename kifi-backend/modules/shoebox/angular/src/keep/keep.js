@@ -491,12 +491,14 @@ angular.module('kifi')
 
 // This directive is for recos only right now, and copies a lot of code from kfKeep (above).
 // TODO: consolidate/modularize the two directives so we are DRY.
-.directive('kfKeepContent', ['$document', '$rootScope', 'keepService', 'recoService',
-  function ($document, $rootScope, keepService, recoService) {
+.directive('kfKeepContent', ['$document', '$rootScope', 'keepActionService', 'keepService', 'recoActionService',
+  function ($document, $rootScope, keepActionService, keepService, recoActionService) {
     return {
       restrict: 'A',
       scope: {
-        keep: '='
+        keep: '=',
+        keepPublic: '&',
+        keepPrivate: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -608,18 +610,6 @@ angular.module('kifi')
           keepService.unkeep([scope.keep]);
         };
 
-        scope.keepPublic = function (keep) {
-          if (keep.keepType === 'reco') {
-            recoService.keep(keep);
-          }
-
-          keepService.keep([scope.keep], false);
-        };
-
-        scope.keepPrivate = function () {
-          keepService.keep([scope.keep], true);
-        };
-
         scope.getSingleSelectedKeep = function () {
           if (scope.keep) {
             return [scope.keep];
@@ -630,7 +620,7 @@ angular.module('kifi')
 
         scope.clickKeep = function (keep) {
           if (keep.keepType === 'reco') {
-            recoService.click(keep);
+            recoActionService.trackClick(keep);
           }
         };
 
