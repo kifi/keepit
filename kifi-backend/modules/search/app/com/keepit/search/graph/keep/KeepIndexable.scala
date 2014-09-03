@@ -21,12 +21,15 @@ object KeepFields {
   val siteField = "site"
   val homePageField = "home_page"
   val createdAtField = "createdAt"
+  val tagsField = "h"
+  val tagsStemmedField = "hs"
+  val tagsKeywordField = "tag"
   val recordField = "rec"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-case class KeepIndexable(keep: Keep, tags: Seq[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive || !shard.contains(keep.uriId)
@@ -55,8 +58,16 @@ case class KeepIndexable(keep: Keep, tags: Seq[Hashtag], shard: Shard[Normalized
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
-    doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep)))
+    doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep, tags)))
     buildLongValueField(createdAtField, keep.createdAt.getMillis)
+
+    tags.foreach { tag =>
+      val tagLang = LangDetector.detect(tag.tag)
+      doc.add(buildTextField(tagsField, tag.tag, DefaultAnalyzer.getAnalyzer(tagLang)))
+      doc.add(buildTextField(tagsStemmedField, tag.tag, DefaultAnalyzer.getAnalyzerWithStemmer(tagLang)))
+      doc.add(buildKeywordField(tagsKeywordField, tag.tag.toLowerCase))
+    }
+
     doc
   }
 }
