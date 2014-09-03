@@ -72,6 +72,40 @@ class WebsiteSearchController @Inject() (
     Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
+  def nonUserSearch(
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    withUriSummary: Boolean = false) = JsonAction.authenticated { request => // new request type? > Andrew
+
+    import SearchControllerUtil._
+
+    val userId = request.userId
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
+
+    val plainResultFuture = searchCommander.search2(nonUser, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None)
+
+    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+
+    var decorationFutures: List[Future[String]] = Nil
+
+    // TODO: augmentation
+    // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
+
+    if (withUriSummary) {
+      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+    }
+
+    val decorationEnumerator = reactiveEnumerator(decorationFutures)
+
+    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
+
+    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
   //external (from the website)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)

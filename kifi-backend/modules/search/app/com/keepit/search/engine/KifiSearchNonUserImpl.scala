@@ -1,18 +1,17 @@
 package com.keepit.search.engine
 
-import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
-import com.keepit.search.engine.result.{ KifiResultCollector, NonUserKifiResultCollector, KifiShardResult, KifiShardHit }
+import com.keepit.search.engine.result.{ KifiResultCollector, KifiNonUserResultCollector, KifiShardResult, KifiShardHit }
 import org.apache.lucene.search._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Future, Promise }
 
-class NonUserSearch(
+class KifiSearchNonUserImpl(
     libId: Id[Library],
     numHitsToReturn: Int,
     filter: SearchFilter,
@@ -23,7 +22,7 @@ class NonUserSearch(
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends KifiSearchUtil(articleSearcher, keepSearcher) with Logging {
+    timeLogs: SearchTimeLogs) extends KifiSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val idFilter = filter.idFilter
@@ -31,7 +30,7 @@ class NonUserSearch(
   // get config params
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): HitQueue = {
+  def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): HitQueue = {
 
     val engine = engineBuilder.build()
 
@@ -41,15 +40,15 @@ class NonUserSearch(
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     engine.execute(articleScoreSource)
 
-    val collector = new NonUserKifiResultCollector(maxTextHitsPerCategory, percentMatch)
+    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch)
     engine.join(collector)
 
     collector.getResults()
   }
 
-  def search(): KifiShardResult = {
+  def execute(): KifiShardResult = {
     val now = currentDateTime
-    val textHits = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
 
@@ -75,7 +74,7 @@ class NonUserSearch(
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
   }
 
-  private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
+  override def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
     val recOpt = if (h.keepId >= 0) getKeepRecord(h.keepId) else getKeepRecord(libId.id, h.id)
     recOpt match {
       case Some(r) =>
@@ -86,15 +85,7 @@ class NonUserSearch(
     }
   }
 
-  @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
-
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     throw new UnsupportedOperationException("explanation is not supported yet")
-  }
-
-  def timing(): Unit = {
-    SafeFuture {
-      timeLogs.send()
-    }
   }
 }

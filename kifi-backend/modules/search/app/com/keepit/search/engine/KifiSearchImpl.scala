@@ -1,25 +1,22 @@
 package com.keepit.search.engine
 
-import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.{ KifiShardResult, KifiShardHit, KifiResultCollector }
+import com.keepit.search.engine.result.{ KifiShardResult, KifiResultCollector }
 import com.keepit.search.engine.result.KifiResultCollector._
-import com.keepit.search.graph.keep.KeepFields
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 
-class KifiSearch(
+class KifiSearchImpl(
     userId: Id[User],
     numHitsToReturn: Int,
     filter: SearchFilter,
@@ -32,7 +29,7 @@ class KifiSearch(
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends KifiSearchUtil(articleSearcher, keepSearcher) with Logging {
+    timeLogs: SearchTimeLogs) extends KifiSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val idFilter = filter.idFilter
@@ -48,7 +45,7 @@ class KifiSearch(
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
+  def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
 
@@ -68,9 +65,9 @@ class KifiSearch(
     collector.getResults()
   }
 
-  def search(): KifiShardResult = {
+  def execute(): KifiShardResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
 
@@ -153,36 +150,7 @@ class KifiSearch(
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
-  private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
-    val visibility = h.visibility
-    if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
-      // has a keep id
-      val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
-    } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
-      // has a library id
-      val r = getKeepRecord(h.libId, h.id).getOrElse(throw new Exception(s"missing keep record: library id = ${h.libId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
-    } else {
-      // only a primary id (uri id)
-      val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url, null)
-    }
-  }
-
-  @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
-
-  @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
-
-  @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
-
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     throw new UnsupportedOperationException("explanation is not supported yet")
-  }
-
-  def timing(): Unit = {
-    SafeFuture {
-      timeLogs.send()
-    }
   }
 }
