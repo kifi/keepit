@@ -34,12 +34,13 @@ class HelpRankController @Inject() (
     }
   }
 
-  def getHelpRankInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def getHelpRankInfo() = Action.async(parse.tolerantJson) { request =>
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
-    val infos = helprankCommander.getHelpRankInfo(uriIds)
-    if (uriIds.length != infos.length) // debug
-      log.warn(s"[getHelpRankInfo] (mismatch) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} res(len=${infos.length}):${infos.mkString(",")}")
-    Ok(Json.toJson(infos))
+    helprankCommander.getHelpRankInfo(uriIds) map { infos =>
+      if (uriIds.length != infos.length) // debug
+        log.warn(s"[getHelpRankInfo] (mismatch) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} res(len=${infos.length}):${infos.mkString(",")}")
+      Ok(Json.toJson(infos))
+    }
   }
 
   def getKeepAttributionInfo(userId: Id[User]) = Action { request =>

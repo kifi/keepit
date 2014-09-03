@@ -576,7 +576,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val keepsInIronMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
           keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
         }
@@ -591,9 +591,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
           keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Freedom", "Reddit")
         }
 
         // Ironman copies duplicates from Murica to Freedom
@@ -603,7 +603,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 9
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
         }
       }
     }
@@ -658,12 +658,12 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Reddit", "Freedom")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
         }
 
         // move duplicates (Reddit) IronMurica -> Freedom
-        val move6 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica2.slice(0, 2))
+        val move6 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica2.slice(1, 3))
         move6.size === 1
         move6.head._2 === LibraryError.AlreadyExistsInDest
 

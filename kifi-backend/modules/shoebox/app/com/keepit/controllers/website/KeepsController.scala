@@ -6,7 +6,7 @@ import com.google.inject.Inject
 
 import com.keepit.heimdal._
 import com.keepit.commanders._
-import com.keepit.commanders.KeepInfosWithCollection._
+import com.keepit.commanders.RawBookmarksWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.common.db.slick.Database
@@ -41,6 +41,7 @@ class KeepsController @Inject() (
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  libraryCommander: LibraryCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -182,10 +183,20 @@ class KeepsController @Inject() (
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticatedParseJson { request =>
     try {
-      Json.fromJson[KeepInfosWithCollection](request.body).asOpt map { fromJson =>
+      Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, separateExisting)
+
+        val library = {
+          val (main, secret) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
+          if (fromJson.keeps.headOption.flatMap(_.isPrivate).getOrElse(false)) {
+            secret
+          } else {
+            main
+          }
+        }
+
+        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson.keeps, library.id.get, request.userId, source, fromJson.collection, separateExisting)
         log.info(s"kept ${keeps.size} keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
@@ -204,7 +215,7 @@ class KeepsController @Inject() (
   }
 
   def unkeepMultiple() = JsonAction.authenticated { request =>
-    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { keepInfos =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
       Ok(Json.obj(

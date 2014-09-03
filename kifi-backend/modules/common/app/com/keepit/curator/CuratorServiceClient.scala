@@ -56,7 +56,9 @@ class CuratorServiceClientImpl(
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
-    call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
+    val json = Json.toJson(feedback)
+    log.info(s"updateUriRecommendationFeedback uriId=$uriId for user $userId; body = $feedback") // todo(josh) remove this; logging is temporary
+    call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = json, callTimeouts = longTimeout).map(response =>
       response.json.as[Boolean]
     )
   }

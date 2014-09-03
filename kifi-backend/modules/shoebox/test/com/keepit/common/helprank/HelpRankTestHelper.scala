@@ -35,18 +35,18 @@ trait HelpRankTestHelper { self: TestInjector =>
       (u1, u2, u3, u4)
     }
 
-    inject[LibraryCommander].internSystemGeneratedLibraries(u1.id.get)
-    inject[LibraryCommander].internSystemGeneratedLibraries(u2.id.get)
-    inject[LibraryCommander].internSystemGeneratedLibraries(u3.id.get)
-    inject[LibraryCommander].internSystemGeneratedLibraries(u4.id.get)
+    val (u1m, u1s) = inject[LibraryCommander].internSystemGeneratedLibraries(u1.id.get)
+    val (u2m, u2s) = inject[LibraryCommander].internSystemGeneratedLibraries(u2.id.get)
+    val (u3m, u3s) = inject[LibraryCommander].internSystemGeneratedLibraries(u3.id.get)
+    val (u4m, u4s) = inject[LibraryCommander].internSystemGeneratedLibraries(u4.id.get)
 
     val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
     val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
     val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
     val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
 
-    val (keeps1, _) = keepInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
-    val (keeps2, _) = keepInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
+    val (keeps1, _) = keepInterner.internRawBookmarks(raw1, u1.id.get, u1m, KeepSource.email)
+    val (keeps2, _) = keepInterner.internRawBookmarks(raw2, u2.id.get, u2m, KeepSource.default)
 
     val kdCounter = new FakeIdCounter[KeepDiscovery]
     val kc0 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
@@ -59,7 +59,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     // u3 -> kifi (u1, u2)
     heimdal.save(kc0, kc1, kc2)
 
-    val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
+    val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, u3m, KeepSource.default)
     val kc3 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
     // u4 -> kifi (u3) [rekeep]
     heimdal.save(kc3)
@@ -69,7 +69,7 @@ trait HelpRankTestHelper { self: TestInjector =>
     val rk2 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
     heimdal.save(rk1, rk2)
 
-    val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
+    val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, u4m, KeepSource.default)
     val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
     heimdal.save(rk3)
     (u1, u2, keeps1)
