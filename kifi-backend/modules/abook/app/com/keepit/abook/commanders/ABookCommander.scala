@@ -24,6 +24,7 @@ import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.abook.model.{ RichContact, EContactRepo, EContact }
 import com.keepit.abook.controllers.{ ABookOwnerInfo, GmailABookOwnerInfo }
 import com.keepit.abook.{ ABookImporterPlugin, ABookInfoRepo }
+import com.keepit.common.core._
 
 class ABookCommander @Inject() (
     db: Database,
@@ -55,18 +56,17 @@ class ABookCommander @Inject() (
     Failure(new IllegalStateException(s))
   }
 
-  val USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+  val OPENID_CONNECT_URL = "https://www.googleapis.com/plus/v1/people/me/openIdConnect"
   def getGmailOwnerInfo(userId: Id[User], accessToken: String): Future[GmailABookOwnerInfo] = {
     implicit val prefix = LogPrefix(s"getGmailOwnerInfo($userId)")
-
     for {
-      resp <- WS.url(USER_INFO_URL).withQueryString(("access_token", accessToken)).get
+      resp <- WS.url(OPENID_CONNECT_URL).withQueryString(("access_token", accessToken)).get
     } yield {
-      log.infoP(s"userinfo response=${resp.body}")
+      log.infoP(s"openIdConnect response=${resp.body}")
       resp.status match {
         case Status.OK => resp.json.asOpt[GmailABookOwnerInfo] match {
-          case Some(info) => info
-          case None => throw new IllegalStateException(s"$prefix cannot parse userinfo response: ${resp.body}")
+          case Some(info) => info tap { res => log.infoP(s"ownerInfo=$info") }
+          case None => throw new IllegalStateException(s"$prefix cannot parse openIdConnect response: ${resp.body}")
         }
         case _ => throw new IllegalStateException(s"$prefix failed to obtain info about user/owner")
       }
