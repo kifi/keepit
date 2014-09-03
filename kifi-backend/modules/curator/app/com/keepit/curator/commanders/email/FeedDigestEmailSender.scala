@@ -24,7 +24,7 @@ import helpers.Context
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import concurrent.Future
-import scala.util.Random
+import scala.util.{ Success, Random, Failure }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -144,6 +144,8 @@ class FeedDigestEmailSenderImpl @Inject() (
     val friendRecoF = getFriendRecommendationsForUser(userId)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
+    // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
+
     val digestRecoMailF = for {
       recos <- recosF
       unsubscribeUrl <- unsubUrlF
@@ -196,7 +198,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     }
   }
 
-  private def sendAnonymoizedEmailToQa(email: ElectronicMail, emailData: AllDigestRecos, ctx: Context) = {
+  private def sendAnonymoizedEmailToQa(email: ElectronicMail, emailData: AllDigestRecos, ctx: Context): Unit = {
     val fakeUserId = Id[User](2)
     val fakeUser = User(firstName = "Fake", lastName = "User")
     val fakeBasicUser = BasicUser.fromUser(fakeUser)
@@ -221,13 +223,18 @@ class FeedDigestEmailSenderImpl @Inject() (
     val qaHtmlBody: LargeString = views.html.email.feedDigest(qaEmailData, qaCtx).body
     val qaTextBody: Option[LargeString] = Some(views.html.email.feedDigestText(qaEmailData, qaCtx).body)
     val qaEmail = email.copy(
-      to = Seq(EmailAddress("feed-qa@kifi.com")),
+      to = Seq(SystemEmailAddress.FEED_QA),
       category = NotificationCategory.User.DIGEST_QA,
       htmlBody = qaHtmlBody,
       textBody = qaTextBody,
       senderUserId = None
     )
-    shoebox.sendMail(qaEmail)
+
+    val sendMailF = shoebox.sendMail(qaEmail)
+    sendMailF.onComplete {
+      case Success(sent) => if (!sent) airbrake.notify("Failed to cc digest email to feed-qa")
+      case Failure(t) => airbrake.notify("Failed to send digest email to feed-qa", t)
+    }
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
@@ -281,7 +288,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     } yield Some(DigestReco(reco = reco, uri = uri, uriSummary = summaries(uriId), keepers = recoKeepers, config = config))
   } recover {
     case throwable =>
-      airbrake.notify(s"failed to load data for $reco", throwable)
+      airbrake.notify(s"failed to load uri reco details for $reco", throwable)
       None
   }
 
