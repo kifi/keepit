@@ -170,8 +170,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['recoActionService',
-  function (recoActionService) {
+.directive('kfRecoDropdownMenu', ['$document', 'keyIndices', 'recoActionService',
+  function ($document, keyIndices, recoActionService) {
     return {
       restrict: 'A',
       replace: true,
@@ -181,25 +181,50 @@ angular.module('kifi')
       },
       templateUrl: 'recos/recoDropdownMenu.tpl.html',
       link: function (scope, element/*, attrs*/) {
-        var dropdownArrow= element.find('.kf-reco-dropdown-menu-down');
+        var dropdownArrow = element.find('.kf-reco-dropdown-menu-down');
         var dropdownMenu = element.find('.kf-dropdown-menu');
+        var show = false;
+
+        // Clicking outside the dropdown menu will close the menu.
+        function onMouseDown(event) {
+          if ((dropdownMenu.find(event.target).length === 0) &&
+              (!event.target.classList.contains('kf-reco-dropdown-menu-down'))) {
+            hideMenu();
+          }
+        }
+
+        function showMenu() {
+          show = true;
+          dropdownMenu.show();
+          $document.on('mousedown', onMouseDown);
+        }
+
+        function hideMenu() {
+          show = false;
+          dropdownMenu.hide();
+          $document.off('mousedown', onMouseDown);
+        }
 
         dropdownArrow.on('click', function () {
-          dropdownMenu.toggle();
+          if (show) {
+            hideMenu();
+          } else {
+            showMenu();
+          }
         });
 
         scope.upVote = function (reco) {
-          dropdownMenu.hide();
+          hideMenu();
           recoActionService.vote(reco.recoKeep, true);
         };
 
         scope.downVote = function (reco) {
-          dropdownMenu.hide();
+          hideMenu();
           recoActionService.vote(reco.recoKeep, false);
         };
 
         scope.showModal = function () {
-          dropdownMenu.hide();
+          hideMenu();
           scope.showImprovementModal();
         };
       }
