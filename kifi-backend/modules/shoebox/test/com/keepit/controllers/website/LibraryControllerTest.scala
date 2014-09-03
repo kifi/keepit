@@ -671,10 +671,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val u4 = userRepo.save(User(firstName = "Peach", lastName = "Princess"))
 
           val lib = libraryRepo.save(Library(ownerId = u1.id.get, name = "Mario Party", visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("party"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(userId = u2.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(userId = u3.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(userId = u4.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(userId = u2.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1.plusHours(1)))
+          libraryMembershipRepo.save(LibraryMembership(userId = u3.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusHours(2)))
+          libraryMembershipRepo.save(LibraryMembership(userId = u4.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusHours(3)))
           (u1, u2, u3, u4, lib)
         }
 
@@ -733,7 +733,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"count":2,
                |"offset":1
                |}""".stripMargin))
-
       }
     }
 
