@@ -13,7 +13,7 @@ import play.api.libs.ws.ning.NingWSResponse
 
 import play.api.mvc._
 import play.api.libs.ws.Response
-import play.api.libs.ws.WS.WSRequestHolder
+import play.api.libs.ws.WSRequestHolder
 import com.ning.http.client.FluentCaseInsensitiveStringsMap
 import com.keepit.model.User
 

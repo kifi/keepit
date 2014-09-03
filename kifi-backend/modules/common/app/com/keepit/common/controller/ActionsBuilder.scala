@@ -142,7 +142,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     }
   }
 
-  private def as(contentType: String)(result: SimpleResult): SimpleResult = {
+  private def as(contentType: String)(result: Result): Result = {
     result.header.status match {
       case NO_CONTENT | RESET_CONTENT =>
         result
