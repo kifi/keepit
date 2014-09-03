@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/tag/:tagId', {
-      templateUrl: 'tagKeeps/tagKeeps.tpl.html',
-      controller: 'TagKeepsCtrl'
-    });
-  }
-])
-
 .controller('TagKeepsCtrl', [
   '$scope', 'keepService', 'tagService', '$routeParams', '$window',
   function ($scope, keepService, tagService, $routeParams, $window) {

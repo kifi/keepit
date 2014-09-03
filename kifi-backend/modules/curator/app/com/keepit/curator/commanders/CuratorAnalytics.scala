@@ -7,13 +7,14 @@ import com.keepit.curator.RecommendationUserAction
 import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRepo, UriRecommendation }
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
+import com.keepit.common.logging.Logging
 
 @Singleton
 class CuratorAnalytics @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient) {
+    heimdal: HeimdalServiceClient) extends Logging {
 
   def trackDeliveredItems(items: Seq[UriRecommendation], client: Option[RecommendationClientType]): Unit = {
     val clientType = client.getOrElse(RecommendationClientType.Unknown)
@@ -25,10 +26,14 @@ class CuratorAnalytics @Inject() (
   }
 
   def trackUserFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
-    toRecoUserActionContexts(userId, uriId, feedback).foreach { context =>
+    log.info(s"[analytics] Received user $userId reco feedback on $uriId to track: $feedback")
+    val contexts = toRecoUserActionContexts(userId, uriId, feedback)
+    contexts.foreach { context =>
       val event = toHeimdalEvent(context)
+      log.info(s"[analytics] Sending event: $event")
       heimdal.trackEvent(event)
     }
+    if (contexts.isEmpty) log.info(s"[analytics] nothing to do for user $userId reco feedback on $uriId to track: $feedback")
   }
 
   private def toRecoUserActionContext(item: UriRecommendation, clientType: RecommendationClientType): RecommendationUserActionContext = {

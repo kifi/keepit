@@ -93,6 +93,8 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
 
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread]
 
   def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
@@ -390,6 +392,11 @@ class UserThreadRepoImpl @Inject() (
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (row <- rows if row.user === userId && row.uriId === uriId) yield row.id).firstOption.isDefined
+  }
+
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
+    val uriSet = (for (row <- rows if row.user === userId) yield row.uriId).list.toSet
+    uriIds.map(uriId => uriSet.contains(uriId))
   }
 
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {

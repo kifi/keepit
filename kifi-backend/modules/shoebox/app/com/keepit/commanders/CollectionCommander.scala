@@ -142,33 +142,19 @@ class CollectionCommander @Inject() (
     newOrdering
   }
 
-  def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
+  def saveCollection(userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
     val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
-      basicCollection.copy(id = ExternalId.asOpt(id))
-    } map { basicCollection =>
       val name = basicCollection.name.trim.replaceAll("""\s+""", " ")
       if (name.length <= Collection.MaxNameLength) {
         db.readWrite { implicit s =>
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
-          if (existingExternalId.isEmpty || existingExternalId == basicCollection.id) {
+          if (existingExternalId.isEmpty) {
             s.onTransactionSuccess { searchClient.updateURIGraph() }
-            basicCollection.id map { id =>
-              //
-              collectionRepo.getByUserAndExternalId(userId, id) map { coll =>
-                val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
-                updateCollectionOrdering(userId)
-                keptAnalytics.renamedTag(coll, newColl, context)
-                Left(BasicCollection.fromCollection(newColl.summary))
-              } getOrElse {
-                Right(CollectionSaveFail(s"Tag with name $id not found"))
-              }
-            } getOrElse {
-              val newColl = collectionRepo.save(Collection(userId = userId, name = name))
-              updateCollectionOrdering(userId)
-              keptAnalytics.createdTag(newColl, context)
-              Left(BasicCollection.fromCollection(newColl.summary))
-            }
+            val newColl = collectionRepo.save(Collection(userId = userId, name = name))
+            updateCollectionOrdering(userId)
+            keptAnalytics.createdTag(newColl, context)
+            Left(BasicCollection.fromCollection(newColl.summary))
           } else {
             Right(CollectionSaveFail(s"Tag '$name' already exists"))
           }

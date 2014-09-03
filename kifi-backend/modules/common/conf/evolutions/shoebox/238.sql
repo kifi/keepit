@@ -1,10 +1,10 @@
-# SHOEBOX
+# CURATOR
 
 # --- !Ups
 
-ALTER TABLE library_invite
-  ALTER COLUMN user_id bigint(20) DEFAULT NULL;
+ALTER TABLE curator_keep_info
+  ADD COLUMN library_id BIGINT(20) DEFAULT NULL;
 
-INSERT INTO evolutions (name, description) VALUES('238.sql', 'allow libraries to invite emailaddress OR userId');
+insert into evolutions (name, description) values('238.sql', 'add library id column in curator_keep_info');
 
 # --- !Downs

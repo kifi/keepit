@@ -7,7 +7,7 @@ import com.keepit.curator.commanders.SeedAttributionHelper
 import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceClientImpl
 import com.keepit.graph.model.GraphFeedExplanation
-import com.keepit.model.{ Keep, NormalizedURI, User }
+import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import com.keepit.search.{ SharingUserInfo, FakeSearchServiceClient }
 import org.specs2.mutable.Specification
 
@@ -68,7 +68,8 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
   val scoredItem5 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](4), emptyScore.copy(socialScore = 0.02f))
   val scoredItems = Seq(scoredItem1, scoredItem2, scoredItem3, scoredItem4, scoredItem5)
 
-  val defaultKeep = CuratorKeepInfo(uriId = Id[NormalizedURI](1), userId = Id[User](1), keepId = Id[Keep](1), state = CuratorKeepInfoStates.ACTIVE, discoverable = true)
+  val defaultKeep = CuratorKeepInfo(uriId = Id[NormalizedURI](1), userId = Id[User](1), keepId = Id[Keep](1),
+    libraryId = Some(Id[Library](1)), state = CuratorKeepInfoStates.ACTIVE, discoverable = true)
 
   "Seed Attribution helper" should {
     "work" in {
