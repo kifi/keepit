@@ -130,7 +130,7 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class NonUserKifiResultCollector(maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiNonUserResultCollector(maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
 
   import KifiResultCollector._
 
