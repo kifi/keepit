@@ -2,15 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/kifeeeed', {
-      templateUrl: 'recos/adhoc.tpl.html'
-    });
-  }
-])
-
 .controller('AdhocCtrl', [
   '$scope', 'adhocService', '$window',
   function ($scope, adhocService, $window) {
