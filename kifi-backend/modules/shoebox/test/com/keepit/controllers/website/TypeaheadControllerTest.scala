@@ -181,10 +181,12 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           (u1, u2, u3, u4, u5)
         }
 
-        userInteractionCommander.addInteraction(u1.id.get, UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY)
-        userInteractionCommander.addInteraction(u1.id.get, UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY)
-        userInteractionCommander.addInteraction(u1.id.get, EmailRecipient(u4), UserInteraction.INVITE_LIBRARY)
-        userInteractionCommander.addInteraction(u1.id.get, EmailRecipient(u5), UserInteraction.INVITE_LIBRARY)
+        val interactions = Seq(
+          (UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (EmailRecipient(u4), UserInteraction.INVITE_LIBRARY),
+          (EmailRecipient(u5), UserInteraction.INVITE_LIBRARY))
+        userInteractionCommander.addInteractions(u1.id.get, interactions)
 
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "mrkrabs", 0, RichContact(u5, Some("Krabs")))))

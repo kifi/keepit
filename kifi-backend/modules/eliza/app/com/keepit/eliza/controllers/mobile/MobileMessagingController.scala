@@ -1,15 +1,17 @@
 package com.keepit.eliza.controllers.mobile
 
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ MessageSource, Message, MessageThread }
 import com.keepit.common.controller.{ ElizaServiceController, MobileController, ActionAuthenticator }
 import com.keepit.common.time._
 import com.keepit.heimdal._
+import play.api.mvc.Action
 
 import play.modules.statsd.api.Statsd
 
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._

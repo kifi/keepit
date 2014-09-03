@@ -1,31 +1,25 @@
 package com.keepit.commanders
 
-import java.util.concurrent.{ Callable, TimeUnit }
+import java.util.UUID
 
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.TransactionalCaching
-import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.core._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model._
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
-
-import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
-
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
-import java.util.UUID
-import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContext }
-import com.keepit.search.ArticleSearchResult
-import com.google.common.cache.{ CacheBuilder, Cache }
+import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
+import com.keepit.model._
+import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
+import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.json.Json
-import scala.concurrent.Future
-import scala.util.{ Try, Success, Failure, Random }
+
+import scala.util.{ Failure, Random, Success, Try }
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -109,13 +103,13 @@ class KeepInterner @Inject() (
     }
   }
 
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source, installationId)
     (newKeeps ++ existingKeeps, failures)
   }
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, source, mutatePrivacy)
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source, installationId)
     val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
@@ -128,9 +122,9 @@ class KeepInterner @Inject() (
     (newKeeps, existingKeeps, failures)
   }
 
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
     db.readWrite { implicit s =>
-      internUriAndBookmark(rawBookmark, userId, source, mutatePrivacy)
+      internUriAndBookmark(rawBookmark, userId, library, source, installationId)
     } map { persistedBookmarksWithUri =>
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
@@ -141,10 +135,9 @@ class KeepInterner @Inject() (
     }
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource,
-    mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
     val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
-      internUriAndBookmark(bm, userId, source, mutatePrivacy, installationId)(session)
+      internUriAndBookmark(bm, userId, library, source, installationId)(session)
     } map {
       case (bm, res) => bm -> res.flatten
     } partition {
@@ -162,9 +155,9 @@ class KeepInterner @Inject() (
   val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
   private val httpPrefix = "https?://".r
 
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]])(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
-      import NormalizedURIStates._
+      import com.keepit.model.NormalizedURIStates._
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark): _*)
       } catch {
@@ -179,7 +172,7 @@ class KeepInterner @Inject() (
         scraper.scheduleScrape(uri, date)
       }
 
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -194,35 +187,30 @@ class KeepInterner @Inject() (
       Failure(e)
   }
 
-  // Until we can refactor this intern API to use libraries instead of privacy, we need to look up the library.
-  // Since keeping often happens in large batches, we either need to query for the library early on (and pass it down
-  // many functions), or cache it here.
-  // This should be removed as soon as we can. - Andrew
-  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
-
-  private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
+  private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
     installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
-    // This is really messy and I'd *love* a refactor. Specifically, isPrivate vs mutatePrivacy
-    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
-    })
-    def getLibFromPrivacy(isPrivate: Boolean) = {
-      if (isPrivate) Some(secret.id.get) else Some(main.id.get)
-    }
+
+    // todo: swap getPrimaryByUriAndUser to use libraries
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
-        val keepWithPrivate = if (mutatePrivacy) {
-          bookmark.copy(visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = getLibFromPrivacy(isPrivate))
-        } else bookmark
-        val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
-        val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
-        val librariedKeep = if (keepWithTitle.libraryId.isEmpty) keepWithTitle.copy(libraryId = getLibFromPrivacy(keepWithTitle.isPrivate)) else keepWithTitle
-        val persistedKeep = if (librariedKeep != bookmark) keepRepo.save(librariedKeep) else bookmark
-        (false, wasInactiveKeep, persistedKeep)
+        val savedKeep = bookmark.copy(
+          title = title orElse bookmark.title orElse uri.title,
+          state = KeepStates.ACTIVE,
+          visibility = library.visibility,
+          libraryId = Some(library.id.get)
+        ) |> { keep =>
+            if (wasInactiveKeep) {
+              keep.copy(url = url, createdAt = clock.now)
+            } else keep
+          } |> { keep =>
+            keepRepo.save(keep)
+          }
+        (false, wasInactiveKeep, savedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, Keep.isPrivateToVisibility(isPrivate), installationId, getLibFromPrivacy(isPrivate)))) // todo(andrew): Fix to use libraries
+        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get))
+        (true, false, keepRepo.save(keep))
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.

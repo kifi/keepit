@@ -331,7 +331,7 @@ angular.module('kifi')
       getSelected: function () {
         return list.filter(function (keep) {
           return keep.id in selected;
-        });
+        }) || [];
       },
 
       selectAll: function () {

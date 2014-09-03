@@ -2,16 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/profile', {
-      templateUrl: 'profile/profile.tpl.html',
-      controller: 'ProfileCtrl'
-    });
-  }
-])
-
 .controller('ProfileCtrl', [
   '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
   function ($scope, $http, profileService, routeService, $window, socialService) {

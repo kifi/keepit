@@ -2,7 +2,7 @@ package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.db.Id
-import com.keepit.model.{ KeepStates, User, NormalizedURI, Keep }
+import com.keepit.model.{ Library, KeepStates, User, NormalizedURI, Keep }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RSession }
 
@@ -32,8 +32,9 @@ class CuratorKeepInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
+    def libraryId = column[Id[Library]]("library_id", O.Nullable)
     def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, libraryId.?, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
   }
 
   def table(tag: Tag) = new CuratorKeepInfoTable(tag)

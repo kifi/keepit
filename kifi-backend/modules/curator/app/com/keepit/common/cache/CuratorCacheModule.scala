@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 
 import scala.concurrent.duration._
@@ -163,4 +164,10 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Singleton
+  @Provides
+  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForUserIdCache(stats, accessLog, (outerRepo, 30 days))
+
 }

@@ -3,6 +3,7 @@ package com.keepit.controllers.email
 import java.util.NoSuchElementException
 
 import com.keepit.commanders.LibraryCommander
+import com.keepit.common.controller.{ FakeActionAuthenticator, ActionAuthenticator }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -25,21 +26,25 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
 
   "EmailRecosController" should {
     "viewReco" should {
-      "redirect to the page" in {
+      def testViewRecoAction(isAuthenticated: Boolean) = {
         withDb(controllerTestModules: _*) { implicit injector =>
           val userRepo = inject[UserRepo]
           val uriRepo = inject[NormalizedURIRepo]
-          val urlRepo = inject[URLRepo]
-          val controller = inject[EmailRecosController]
+          val authenticator = inject[ActionAuthenticator].asInstanceOf[FakeActionAuthenticator]
+          authenticator.isAuthenticated = isAuthenticated
 
-          val (user1, uri1) = db.readWrite { implicit s =>
-            val user1 = userRepo.save(User(firstName = "Jo", lastName = "Bennett"))
+          val (userOpt, uri1) = db.readWrite { implicit s =>
+            val userOpt = if (isAuthenticated) Some(userRepo.save(User(firstName = "Jo", lastName = "Bennett"))) else None
             uriRepo.count === 0
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
-            (user1, uri1)
+            (userOpt, uri1)
           }
 
-          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+          val controller = inject[EmailRecosController]
+          if (isAuthenticated) {
+            authenticator.setUser(userOpt.get)
+            inject[LibraryCommander].internSystemGeneratedLibraries(userOpt.get.id.get)
+          }
 
           val call = com.keepit.controllers.email.routes.EmailRecosController.viewReco(uri1.externalId)
           call.toString === s"/r/e/1/recos/view?id=${uri1.externalId}"
@@ -48,6 +53,9 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           header("Location", result).get === uri1.url
         }
       }
+
+      "redirect to the page for authenticated user" in testViewRecoAction(true)
+      "redirect to the page for unauthenticated user" in testViewRecoAction(false)
     }
 
     "sendReco" should {
@@ -55,10 +63,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
           val userRepo = inject[UserRepo]
           val uriRepo = inject[NormalizedURIRepo]
-          val urlRepo = inject[URLRepo]
           val controller = inject[EmailRecosController]
           val uri1 = db.readWrite { implicit s =>
-            val user1 = userRepo.save(User(firstName = "Jo", lastName = "Bennett"))
             uriRepo.count === 0
             uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
           }
@@ -76,9 +82,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
     "keepReco" should {
       "persist a new keep for authenticated user" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val userRepo = inject[UserRepo]
           val uriRepo = inject[NormalizedURIRepo]
-          val urlRepo = inject[URLRepo]
           val controller = inject[EmailRecosController]
 
           val uri1 = db.readWrite { implicit rw =>

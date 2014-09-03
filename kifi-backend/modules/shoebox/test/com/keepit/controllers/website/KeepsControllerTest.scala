@@ -409,13 +409,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val path = com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString
         path === "/site/keeps/add"
@@ -442,7 +442,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val expected = Json.parse(s"""
           {
             "keeps":[{"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-                     {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"l8rlPD6Bk7A9"},
+                     {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
                      {"id":"${externalIdForTitle("title 31")}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"l7jlKlnA36Su"}],
             "failures":[],
             "addedToCollection":3
@@ -459,14 +459,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
         path === "/site/collections/create"
 
         val json = Json.obj("name" -> JsString("my tag"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -491,13 +491,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
-        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection("").toString
+        val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
 
         val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = inject[KeepsController].saveCollection("")(request)
+        val result = inject[KeepsController].saveCollection()(request)
         status(result) must equalTo(400)
       }
     }
@@ -509,11 +509,11 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
         val keepJson = Json.obj(
@@ -552,7 +552,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           {
             "removedKeeps":[
               {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-              {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"l8rlPD6Bk7A9"}
+              {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
             ],
             "errors":[]
           }
@@ -570,12 +570,12 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
 
-        val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
+        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
@@ -610,7 +610,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val expected = Json.parse(s"""
           {"removedKeeps":[
             {"id":"${externalIdForTitle("title 11")}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"l7jlKlnA36Su"},
-            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"l8rlPD6Bk7A9"}
+            {"id":"${externalIdForTitle("title 21")}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"l7jlKlnA36Su"}
           ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)

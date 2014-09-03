@@ -2,15 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/recommendation', {
-      templateUrl: 'recos/recosView.tpl.html'
-    });
-  }
-])
-
 .controller('RecosCtrl', [
   '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'keepActionService', 'keepService', 'recoActionService', 'recoDecoratorService', 'tagService',
   function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService, recoActionService, recoDecoratorService, tagService) {

@@ -289,10 +289,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val bookmarks = edges.map {
-      case (uri, user, optionalTitle) => {
+      case (uri, user, optionalTitle) =>
         val url = uriToUrl(uri.id.get)
-        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = None) // todo(andrew): Library id?
-      }
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = None) // todo(andrew): Library id?
     }
     saveBookmarks(bookmarks: _*)
   }
@@ -648,5 +647,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
 
-  def addInteraction(usedId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {}
+  def addInteractions(usedId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]) = {}
 }

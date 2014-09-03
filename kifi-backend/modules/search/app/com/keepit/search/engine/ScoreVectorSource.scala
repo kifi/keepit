@@ -317,8 +317,7 @@ class UriFromKeepsScoreVectorSource(
           docId = pq.top.doc // next doc
 
           // write to the buffer
-          // write the libId. libId is expected for searchable keeps.
-          output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
+          output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
