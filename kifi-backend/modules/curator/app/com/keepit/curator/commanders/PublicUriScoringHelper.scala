@@ -5,13 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.currentDateTime
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.{
-  Keepers,
-  PublicSeedItemWithMultiplier,
-  CuratorKeepInfoRepo,
-  PublicUriScores,
-  PublicScoredSeedItem
-}
+import com.keepit.curator.model.{ SeedItemWithMultiplierType, Keepers, PublicSeedItemWithMultiplier, CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model.{ User, HelpRankInfo, NormalizedURI }
@@ -59,7 +53,8 @@ class PublicUriScoringHelper @Inject() (
 
   }
 
-  def getPublicScoredUris(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
+  def getPublicScoredUris(genericItems: Seq[SeedItemWithMultiplierType], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
+    val items = genericItems match { case items: Seq[PublicSeedItemWithMultiplier] => items }
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
@@ -85,7 +80,8 @@ class PublicUriScoringHelper @Inject() (
     }
   }
 
-  def apply(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
+  def apply(genericItems: Seq[SeedItemWithMultiplierType], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
+    val items = genericItems match { case items: Seq[PublicSeedItemWithMultiplier] => items }
     getPublicScoredUris(items, boostedKeepers)
   }
 }

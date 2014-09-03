@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
+import com.keepit.curator.model.{ SeedItemWithMultiplierType, SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
@@ -62,7 +62,8 @@ class UriScoringHelper @Inject() (
     }
   }
 
-  def apply(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[ScoredSeedItem]] = {
+  def apply(genericItems: Seq[SeedItemWithMultiplierType], boostedKeepers: Set[Id[User]]): Future[Seq[ScoredSeedItem]] = {
+    val items = genericItems match { case items: Seq[SeedItemWithMultiplier] => items }
     require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
     if (items.isEmpty) {
       Future.successful(Seq.empty)

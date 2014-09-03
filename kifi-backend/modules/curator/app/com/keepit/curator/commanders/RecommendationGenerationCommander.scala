@@ -35,7 +35,6 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     publicScoringHelper: PublicUriScoringHelper,
     uriWeightingHelper: UriWeightingHelper,
-    publicUriWeightingHelper: PublicUriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,

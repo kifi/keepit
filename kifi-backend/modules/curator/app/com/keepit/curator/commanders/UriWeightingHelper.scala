@@ -1,7 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
-import com.google.inject.{ Singleton }
+import com.keepit.curator.model.{ SeedItemWithMultiplierType, SeedItemType, PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
 
 import scala.util.matching.Regex
 
@@ -47,35 +46,43 @@ object UrlPatterns {
   )
 }
 
-class UriWeightingHelper() {
+class UriWeightingHelper {
 
-  def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
-    val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
-      if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
+  private class RecoUriWeightingHelper() {
+    def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
+      val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
+        if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
+      }
+      SeedItemWithMultiplier(
+        multiplier = masterWeight,
+        userId = item.userId,
+        uriId = item.uriId,
+        priorScore = item.priorScore,
+        timesKept = item.timesKept,
+        lastSeen = item.lastSeen,
+        keepers = item.keepers)
     }
-    SeedItemWithMultiplier(
-      multiplier = masterWeight,
-      userId = item.userId,
-      uriId = item.uriId,
-      priorScore = item.priorScore,
-      timesKept = item.timesKept,
-      lastSeen = item.lastSeen,
-      keepers = item.keepers)
   }
-}
 
-class PublicUriWeightingHelper() {
-
-  def apply(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
-    val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
-      if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
+  private class PublicUriWeightingHelper {
+    def apply(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
+      val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
+        if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
+      }
+      PublicSeedItemWithMultiplier(
+        multiplier = masterWeight,
+        uriId = item.uriId,
+        timesKept = item.timesKept,
+        lastSeen = item.lastSeen,
+        keepers = item.keepers)
     }
-    PublicSeedItemWithMultiplier(
-      multiplier = masterWeight,
-      uriId = item.uriId,
-      timesKept = item.timesKept,
-      lastSeen = item.lastSeen,
-      keepers = item.keepers)
+  }
+
+  def apply[T <: SeedItemType](items: Seq[T]): Seq[SeedItemWithMultiplierType] = {
+    items match {
+      case seeds: Seq[SeedItem] => new RecoUriWeightingHelper().apply(seeds)
+      case publicSeeds: Seq[PublicSeedItem] => new PublicUriWeightingHelper().apply(publicSeeds)
+    }
   }
 }
 
