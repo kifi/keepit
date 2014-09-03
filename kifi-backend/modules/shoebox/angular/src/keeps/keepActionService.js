@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.factory('keepNetworkService', [
+.factory('keepActionService', [
   '$analytics',
   '$http',
   '$location',

@@ -12,8 +12,8 @@ angular.module('kifi')
 ])
 
 .controller('RecosCtrl', [
-  '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'keepNetworkService', 'keepService', 'recoNetworkService', 'recoService', 'tagService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepNetworkService, keepService, recoNetworkService, recoService, tagService) {
+  '$scope', '$rootScope', '$analytics', '$timeout', '$window', 'keepActionService', 'keepService', 'recoActionService', 'recoDecoratorService', 'tagService',
+  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService, recoActionService, recoDecoratorService, tagService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = [];
@@ -25,10 +25,10 @@ angular.module('kifi')
       $scope.recos = [];
       $scope.loading = true;
      
-      recoNetworkService.getMore(recency).then(function (rawRecos) {
+      recoActionService.getMore(recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
-            $scope.recos.push(recoService.UserRecommendation(rawReco));
+            $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
 
           $scope.recosState = 'hasRecos';
@@ -41,14 +41,14 @@ angular.module('kifi')
     };
 
     $scope.trash = function (reco) {
-      recoNetworkService.trash(reco.recoKeep);
+      recoActionService.trash(reco.recoKeep);
       _.pull($scope.recos, reco);
     };
 
     $scope.keepReco = function (reco) {
-      recoNetworkService.keep(reco.recoKeep);
+      recoActionService.keep(reco.recoKeep);
 
-      keepNetworkService.keepPublic(reco.recoKeep).then(function (keptKeep) {
+      keepActionService.keepPublic(reco.recoKeep).then(function (keptKeep) {
         reco.recoKeep.id = keptKeep.id;
         reco.recoKeep.isPrivate = keptKeep.isPrivate;
 
@@ -60,9 +60,9 @@ angular.module('kifi')
     $scope.showPopular = function () {
       $scope.loading = true;
 
-      recoNetworkService.getPopular().then(function (rawRecos) {
+      recoActionService.getPopular().then(function (rawRecos) {
         rawRecos.forEach(function (rawReco) {
-          $scope.recos.push(recoService.PopularRecommendation(rawReco));
+          $scope.recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
         });
 
         $scope.loading = false;
@@ -92,10 +92,10 @@ angular.module('kifi')
       $scope.numKeptItems = val;
     });
 
-    recoNetworkService.get().then(function (rawRecos) {
+    recoActionService.get().then(function (rawRecos) {
       if (rawRecos.length > 0) {
         rawRecos.forEach(function (rawReco) {
-          $scope.recos.push(recoService.UserRecommendation(rawReco));
+          $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
         });
 
         $scope.loading = false;
@@ -105,9 +105,9 @@ angular.module('kifi')
 
         // If the user has no recommendations, show some popular
         // keeps/libraries as recommendations.
-        recoNetworkService.getPopular().then(function (rawRecos) {
+        recoActionService.getPopular().then(function (rawRecos) {
           rawRecos.forEach(function (rawReco) {
-            $scope.recos.push(recoService.PopularRecommendation(rawReco));
+            $scope.recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
           });
 
           $scope.loading = false;
@@ -120,8 +120,8 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'recoNetworkService',
-  function ($scope, recoNetworkService) {
+  '$scope', 'recoActionService',
+  function ($scope, recoActionService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
@@ -151,13 +151,13 @@ angular.module('kifi')
     };
 
     $scope.submitImprovement = function (reco) {
-      recoNetworkService.improve(reco.recoKeep, $scope.improvement.type);
+      recoActionService.improve(reco.recoKeep, $scope.improvement.type);
     };
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['recoNetworkService',
-  function (recoNetworkService) {
+.directive('kfRecoDropdownMenu', ['recoActionService',
+  function (recoActionService) {
     return {
       restrict: 'A',
       replace: true,
@@ -176,12 +176,12 @@ angular.module('kifi')
 
         scope.upVote = function (reco) {
           dropdownMenu.hide();
-          recoNetworkService.vote(reco.recoKeep, true);
+          recoActionService.vote(reco.recoKeep, true);
         };
 
         scope.downVote = function (reco) {
           dropdownMenu.hide();
-          recoNetworkService.vote(reco.recoKeep, false);
+          recoActionService.vote(reco.recoKeep, false);
         };
 
         scope.showModal = function () {

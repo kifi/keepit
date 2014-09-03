@@ -491,8 +491,8 @@ angular.module('kifi')
 
 // This directive is for recos only right now, and copies a lot of code from kfKeep (above).
 // TODO: consolidate/modularize the two directives so we are DRY.
-.directive('kfKeepContent', ['$document', '$rootScope', 'keepNetworkService', 'keepService', 'recoNetworkService',
-  function ($document, $rootScope, keepNetworkService, keepService, recoNetworkService) {
+.directive('kfKeepContent', ['$document', '$rootScope', 'keepActionService', 'keepService', 'recoActionService',
+  function ($document, $rootScope, keepActionService, keepService, recoActionService) {
     return {
       restrict: 'A',
       scope: {
@@ -623,7 +623,7 @@ angular.module('kifi')
 
         scope.clickKeep = function (keep) {
           if (keep.keepType === 'reco') {
-            recoNetworkService.click(keep);
+            recoActionService.click(keep);
           }
         };
 

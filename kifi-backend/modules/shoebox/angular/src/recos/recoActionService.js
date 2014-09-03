@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.factory('recoNetworkService', [
+.factory('recoActionService', [
   '$http', '$q', 'routeService', 'Clutch',
   function ($http, $q, routeService, Clutch) {
     var rawRecos = [];

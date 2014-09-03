@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.factory('recoService', [
+.factory('recoDecoratorService', [
   function () {
     // Exact copy of what is in Keep constructor. Need to DRY.
     // TODO: move this into util.
@@ -34,6 +34,8 @@ angular.module('kifi')
       return domain + (fileName ? ' · ' + fileName : '');
     }
 
+    // This Keep constructor should eventually move into a keepDecorator service
+    // that will be used by any code that interacts with a page that can be kept.
     function Keep (rawKeep) {
       if (!rawKeep) {
         return {};
@@ -41,12 +43,11 @@ angular.module('kifi')
 
       _.assign(this, rawKeep);
 
+      // The id field in the recommended page coming from the backend is 
+      // actually the url id of the page. To disambiguate from a page's keep id,
+      // use 'urlId' as the property name for the url id.
+      // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
       this.urlId = this.id;
-
-      // This is needed to make keep/unkeep etc. to work.
-      // Compare normal keeps with keeps in search results.
-      // See unkeep() function in keepService.js.
-      // TODO: this should be updated when we refactor KeepService.
       delete this.id;
 
       // Helper functions.
@@ -134,11 +135,11 @@ angular.module('kifi')
     }
 
     var api = {
-      UserRecommendation: function (rawReco) {
+      newUserRecommendation: function (rawReco) {
         return new Recommendation(rawReco, 'recommended');
       },
 
-      PopularRecommendation: function (rawReco) {
+      newPopularRecommendation: function (rawReco) {
         return new Recommendation(rawReco, 'popular');
       }
     };
