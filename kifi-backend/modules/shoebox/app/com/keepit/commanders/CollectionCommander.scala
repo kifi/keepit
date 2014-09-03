@@ -57,6 +57,8 @@ class CollectionCommander @Inject() (
     val collections = sort match {
       case "user" =>
         userSort(userId, unsortedCollections)
+      case "num_keeps" =>
+        unsortedCollections.sortBy(_.keeps)(Ordering[Option[Int]].reverse)
       case _ => // default is "last_kept"
         unsortedCollections
     }
