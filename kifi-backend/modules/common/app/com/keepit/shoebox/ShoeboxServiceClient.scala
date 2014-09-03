@@ -109,7 +109,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
-  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit
+  def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -692,13 +692,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
   }
 
-  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {
-    val json = Json.obj("action" -> action) ++ (src match {
-      case Left(id) =>
-        Json.obj("user" -> id)
-      case Right(email) =>
-        Json.obj("email" -> email)
-    })
-    call(Shoebox.internal.addInteraction(userId), body = json)
+  def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit = {
+    val jsonActions = actions.collect {
+      case (Left(id), action) => Json.obj("user" -> id, "action" -> action)
+      case (Right(email), action) => Json.obj("email" -> email, "action" -> action)
+    }
+    call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
   }
 }

@@ -258,8 +258,8 @@ class LibraryController @Inject() (
 
             Ok(Json.obj("collaborators" -> Json.toJson(collaborators),
               "followers" -> Json.toJson(followers),
-              "numCollabs" -> numC,
-              "numFollows" -> numF,
+              "numCollaborators" -> numC,
+              "numFollowers" -> numF,
               "count" -> take,
               "offset" -> offset))
           } else

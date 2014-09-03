@@ -741,7 +741,7 @@ GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controlle
 
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
 
-POST    /internal/shoebox/user/addInteraction            @com.keepit.controllers.internal.ShoeboxController.addInteraction(userId: Id[User])
+POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)

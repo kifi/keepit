@@ -702,8 +702,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Koopa",
                |  "pictureName":"0.jpg"}
                |  ],
-               |"numCollabs":1,
-               |"numFollows":2,
+               |"numCollaborators":1,
+               |"numFollowers":2,
                |"count":2,
                |"offset":0
                |}""".stripMargin))
@@ -728,8 +728,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Princess",
                |  "pictureName":"0.jpg"}
                |  ],
-               |"numCollabs":1,
-               |"numFollows":2,
+               |"numCollaborators":1,
+               |"numFollowers":2,
                |"count":2,
                |"offset":1
                |}""".stripMargin))
