@@ -8,6 +8,8 @@ import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import scala.util.Random
+
 import com.google.inject.{ Inject, Singleton }
 
 @Singleton
@@ -53,7 +55,11 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
   }
 
   def topPublicRecos(): Seq[RecoInfo] = {
-    db.readOnlyReplica { implicit session => publicFeedRepo.getByTopMasterScore(1000) }.sortBy(-1 * _.updatedAt.getMillis).take(10).map { reco =>
+    val candidates = db.readOnlyReplica { implicit session =>
+      publicFeedRepo.getByTopMasterScore(1000)
+    }.sortBy(-1 * _.updatedAt.getMillis).take(100)
+
+    Random.shuffle(candidates).take(10).map { reco =>
       RecoInfo(
         userId = None,
         uriId = reco.uriId,
