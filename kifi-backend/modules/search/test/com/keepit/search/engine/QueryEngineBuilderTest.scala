@@ -99,5 +99,58 @@ class QueryEngineBuilderTest extends Specification {
         s"Boost(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(1, $tb)), Max(2), 2.0)"
       engine.getQuery() must beAnInstanceOf[KBoostQuery]
     }
+
+    "build a engine with a correct totalSize and coreSize fro ma single term query" in {
+      val query = getParser().parse("kifi").get
+      query must beAnInstanceOf[KBooleanQuery]
+
+      val builder = new QueryEngineBuilder(query)
+
+      Option(builder.build()).map { eng =>
+        eng.getTotalSize() === 1
+        eng.getCoreSize() === 1
+      }.getOrElse(throw new Exception("no engine"))
+
+      builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
+
+      Option(builder.build()).map { eng =>
+        eng.getTotalSize() === 2
+        eng.getCoreSize() === 1
+      }.getOrElse(throw new Exception("no engine"))
+
+      builder.addFilterQuery(new TermQuery(new Term("", "restrict")))
+
+      Option(builder.build()).map { eng =>
+        eng.getTotalSize() === 3
+        eng.getCoreSize() === 1
+      }.getOrElse(throw new Exception("no engine"))
+    }
+
+    "build a engine with a correct totalSize and coreSize from a multi-term query" in {
+      val query = getParser().parse("information overload").get
+      query must beAnInstanceOf[KBooleanQuery]
+
+      val builder = new QueryEngineBuilder(query)
+
+      Some(builder.build()).map { eng =>
+        eng.getTotalSize() === 2
+        eng.getCoreSize() === 2
+      }
+
+      builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
+
+      Some(builder.build()).map { eng =>
+        eng.getTotalSize() === 3
+        eng.getCoreSize() === 2
+      }
+
+      builder.addFilterQuery(new TermQuery(new Term("", "restrict")))
+
+      Some(builder.build()).map { eng =>
+        eng.getTotalSize() === 4
+        eng.getCoreSize() === 2
+      }
+      1 === 1
+    }
   }
 }
