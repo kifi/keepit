@@ -1,6 +1,13 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItemWithMultiplierType, SeedItemType, PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
+import com.keepit.curator.model.{
+  SeedItemWithMultiplierType,
+  SeedItemType,
+  PublicSeedItemWithMultiplier,
+  PublicSeedItem,
+  SeedItemWithMultiplier,
+  SeedItem
+}
 
 import scala.util.matching.Regex
 
