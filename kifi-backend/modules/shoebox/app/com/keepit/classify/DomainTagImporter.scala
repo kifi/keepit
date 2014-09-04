@@ -1,5 +1,7 @@
 package com.keepit.classify
 
+import play.api.libs.ws.ning.NingWSResponse
+
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -32,6 +34,7 @@ import play.api.libs.ws.WS
 import com.keepit.heimdal._
 import akka.actor.Status.Failure
 import com.keepit.model.NotificationCategory
+import play.api.Play.current
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
@@ -91,7 +94,7 @@ private[classify] class DomainTagImportActor @Inject() (
               category = NotificationCategory.System.ADMIN))
             val s = new FileOutputStream(outputPath)
             try {
-              IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
+              IOUtils.copy(res.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream, s)
             } finally {
               s.close()
             }

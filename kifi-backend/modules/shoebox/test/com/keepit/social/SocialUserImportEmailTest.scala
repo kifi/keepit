@@ -41,7 +41,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
         val graphs = List(
           ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
-        graphs map { case (filename, emailString) => testSocialUserImportEmail(filename, EmailAddress(emailString)) }
+        graphs forall { case (filename, emailString) => testSocialUserImportEmail(filename, EmailAddress(emailString)) }
       }
     }
   }
@@ -55,7 +55,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
       .map(em => inject[UserCommander].importSocialEmail(user.id.get, em)).head
     email.address === emailAddress
     db.readOnlyMaster { implicit session =>
-      emailAddressRepo.get(email.id.get).address === emailAddress
+      emailAddressRepo.get(email.id.get).address == emailAddress
     }
   }
 

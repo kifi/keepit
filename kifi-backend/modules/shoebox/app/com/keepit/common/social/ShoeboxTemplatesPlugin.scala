@@ -1,17 +1,11 @@
 package com.keepit.common.social
 
 import com.keepit.common.logging.Logging
-
-import play.api.Play.current
+import play.api.Application
 import play.api.data.Form
-import play.api.i18n.Messages
 import play.api.mvc.Request
-import play.api.templates.Html
-import play.api.{ Play, Application }
+import play.twirl.api.Html
 import securesocial.controllers.DefaultTemplatesPlugin
-import securesocial.core.SecureSocial
-import com.keepit.controllers.core.routes
-import play.api.mvc.Results.Redirect
 
 class ShoeboxTemplatesPlugin(app: Application) extends DefaultTemplatesPlugin(app) with Logging {
 

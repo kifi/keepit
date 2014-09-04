@@ -12,15 +12,15 @@ trait ServiceController extends Controller with Logging {
 
   def resolve[T](a: T) = Future.successful(a)
 
-  def SafeAsyncAction(f: Request[AnyContent] => SimpleResult)(implicit ex: ExecutionContext) = Action.async { request =>
+  def SafeAsyncAction(f: Request[AnyContent] => Result)(implicit ex: ExecutionContext) = Action.async { request =>
     SafeFuture(f(request))
   }
 
-  def SafeAsyncAction(f: => SimpleResult)(implicit ex: ExecutionContext) = Action.async {
+  def SafeAsyncAction(f: => Result)(implicit ex: ExecutionContext) = Action.async {
     SafeFuture(f)
   }
 
-  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => SimpleResult)(implicit ex: ExecutionContext) = Action.async[A](parser) { request =>
+  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => Result)(implicit ex: ExecutionContext) = Action.async[A](parser) { request =>
     SafeFuture(f(request))
   }
 

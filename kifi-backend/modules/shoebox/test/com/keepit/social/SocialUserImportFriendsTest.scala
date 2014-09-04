@@ -37,8 +37,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
           ).withUser(u))
           su
         }
-        graphs map { case (filename, numOfFriends) => testFacebookGraph(socialUser, filename, numOfFriends) }
-
+        graphs forall { case (filename, numOfFriends) => testFacebookGraph(socialUser, filename, numOfFriends) }
       }
     }
   }
@@ -47,7 +46,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
     val socialUsers = inject[SocialUserImportFriends].importFriends(socialUserInfo, extractedFriends)
-    socialUsers.size === numOfFriends
+    socialUsers.size == numOfFriends
   }
 
 }
