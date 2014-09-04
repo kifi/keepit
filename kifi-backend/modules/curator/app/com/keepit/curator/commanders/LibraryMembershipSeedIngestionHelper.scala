@@ -20,14 +20,14 @@ class LibraryMembershipSeedIngestionHelper @Inject() (
   private val SEQ_NUM_NAME: Name[SequenceNumber[Library]] = Name("all_library_seq_num")
 
   private def processLibraryMemberships(libMembership: LibraryAndMemberships)(implicit session: RWSession): Unit = {
-    libMembership.memberships.foreach(membership =>
+    libMembership.memberships.foreach { membership =>
       libInfoRepo.save(CuratorLibraryMembershipInfo(
         userId = membership.userId,
         libraryId = membership.libraryId,
         kind = libMembership.library.kind,
         access = membership.access,
         state = State[CuratorLibraryMembershipInfo](membership.state.value)))
-    )
+    }
   }
 
   def apply(maxItems: Int): Future[Boolean] = {
