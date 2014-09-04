@@ -15,8 +15,7 @@ class QueryEngineBuilder(coreQuery: Query) {
 
   private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
   private[this] var _boosters: List[(Query, Float)] = Nil
-  private[this] var _exprIndex: Int = 0
-  private[this] val _core = buildExpr(coreQuery)
+  private[this] val _core = buildExpr(coreQuery) // (query, expr, size)
 
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _boosters = (booster, boostStrength) :: _boosters
@@ -28,13 +27,12 @@ class QueryEngineBuilder(coreQuery: Query) {
   }
 
   def build(): QueryEngine = {
-    val (query, expr, coreSize) = _boosters.foldLeft(_core) {
-      case ((query, expr, coreSize), (booster, boostStrength)) =>
-        val boosterExpr = MaxExpr(_exprIndex)
-        _exprIndex += 1
-        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), coreSize)
+    val (query, expr, totalSize) = _boosters.foldLeft(_core) {
+      case ((query, expr, size), (booster, boostStrength)) =>
+        val boosterExpr = MaxExpr(size)
+        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1)
     }
-    new QueryEngine(expr, query, _exprIndex, coreSize)
+    new QueryEngine(expr, query, totalSize, _core._3)
   }
 
   private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int) = {
@@ -45,16 +43,17 @@ class QueryEngineBuilder(coreQuery: Query) {
         val optional = new ArrayBuffer[ScoreExpr]()
         val filterOut = new ArrayBuffer[ScoreExpr]()
 
+        var exprIndex = 0
         clauses.foreach { clause =>
           clause.getOccur match {
-            case MUST_NOT => filterOut += MaxExpr(_exprIndex)
+            case MUST_NOT => filterOut += MaxExpr(exprIndex)
             case occur =>
               clause.getQuery match {
-                case q: KFilterQuery => required += MaxExpr(_exprIndex)
-                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_exprIndex, _tieBreakerMultiplier)
+                case q: KFilterQuery => required += MaxExpr(exprIndex)
+                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(exprIndex, _tieBreakerMultiplier)
               }
           }
-          _exprIndex += 1
+          exprIndex += 1
         }
 
         // put all together and build a score expression
@@ -66,7 +65,7 @@ class QueryEngineBuilder(coreQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (coreQuery, expr, _exprIndex)
+        (coreQuery, expr, exprIndex)
 
       case textQuery: KTextQuery =>
         (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)

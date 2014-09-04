@@ -16,9 +16,8 @@ angular.module('kifi')
     libraryP.then(function (library) {
       _.forEach(library.keeps, keepService.buildKeep);
       $scope.library = library;
-      $scope.keeps = library.keeps || [];
+      $scope.keeps.push.apply($scope.keeps, library.keeps);
       $scope.loading = false;
-      $scope.getNextKeeps();
     });
 
     $scope.hasMore = function () {

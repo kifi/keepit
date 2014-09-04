@@ -14,7 +14,7 @@ class RecencyQuery(val subQuery: Query, val timeStampField: String, val recencyB
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenSubQuery = subQuery.rewrite(reader)
-    if (this eq rewrittenSubQuery) this else new RecencyQuery(rewrittenSubQuery, timeStampField, recencyBoostStrength, halfDecayMillis)
+    if (subQuery eq rewrittenSubQuery) this else new RecencyQuery(rewrittenSubQuery, timeStampField, recencyBoostStrength, halfDecayMillis)
   }
 
   override def extractTerms(out: JSet[Term]): Unit = subQuery.extractTerms(out)
