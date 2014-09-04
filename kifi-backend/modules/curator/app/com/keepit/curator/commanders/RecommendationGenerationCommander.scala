@@ -112,15 +112,15 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.2 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 3) {
-      scores.socialScore > 0.7 ||
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
+      scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
-        scores.recentInterestScore > 0.1 ||
+        scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3 ||
-        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.3 || scores.recentInterestScore > 0.1))
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
@@ -198,7 +198,7 @@ class RecommendationGenerationCommander @Inject() (
 
       val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
       val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
-        scoredItems.filter(si => shouldInclude(si.uriScores))
+        scoredItems.filter(si => shouldInclude(si.uriScores) || (userId.id == 6834 || userId.id == 1398 || userId.id == 6622 || userId.id == 4344)) //total hack to track down an issue. If you see this code after Sept. 10th 2014 throw something (soft) at Stephen
       }.flatMap { scoredItems =>
         attributionHelper.getAttributions(scoredItems)
       }
