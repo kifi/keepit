@@ -84,10 +84,7 @@ class LibraryController @Inject() (
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
         (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get) || {
           val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
-          if (passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get))
-            true
-          else
-            false
+          passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
         }
     }
   }
