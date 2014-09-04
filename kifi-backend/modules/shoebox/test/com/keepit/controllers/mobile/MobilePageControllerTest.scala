@@ -82,8 +82,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
 
-          val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
-          val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Baking", createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
+          val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
+          val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Baking"), createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
 
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll2.id.get))
@@ -150,8 +150,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
 
-          val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
-          val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Baking", createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
+          val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
+          val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Baking"), createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
 
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll2.id.get))

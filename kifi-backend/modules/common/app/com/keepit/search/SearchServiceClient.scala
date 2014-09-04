@@ -107,6 +107,8 @@ trait SearchServiceClient extends ServiceClient {
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
 
+  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]]
+
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
@@ -444,6 +446,16 @@ class SearchServiceClientImpl(
     }
   }
 
+  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]] = {
+    var builder = new SearchRequestBuilder(new ListBuffer)
+    builder += ("query", query)
+    builder += ("prior", Json.toJson(prior.map { case (k, v) => k.lang -> v }))
+    val request = builder.build
+    distRouter.dispatch(plan, Search.internal.distLangDetect, request).map { f =>
+      f.map { r => r.json.as[Map[String, Double]].map { case (k, v) => Lang(k) -> v } }
+    }
+  }
+
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]] = {
     if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distAugmentation(), Json.toJson(request)).map { futureClientResponse =>
       futureClientResponse.map { r => r.json.as[ItemAugmentationResponse] }
@@ -459,6 +471,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)
 }

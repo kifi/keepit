@@ -168,7 +168,7 @@ class CortexServiceClientImpl(
 
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]] = {
     val payload = Json.obj("userId" -> userId, "uriIds" -> Json.toJson(uriIds))
-    call(Cortex.internal.batchUserURIsInterests(), payload).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
+    call(Cortex.internal.batchUserURIsInterests(), payload, callTimeouts = longTimeout).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
   }
 
   def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = {

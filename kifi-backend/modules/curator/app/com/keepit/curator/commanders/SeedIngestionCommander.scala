@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.{Library, NormalizedURI, ExperimentType, User}
+import com.keepit.model.{ Library, NormalizedURI, ExperimentType, User }
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
@@ -64,7 +64,7 @@ class SeedIngestionCommander @Inject() (
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId, INGESTION_BATCH_SIZE).map(_ => ())
 
-  private def cookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers, libraries: Seq[Id[Library]]): SeedItem = SeedItem(
+  private def cookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
     uriId = rawItem.uriId,
     url = rawItem.url,
@@ -73,7 +73,6 @@ class SeedIngestionCommander @Inject() (
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
     keepers = keepers,
-    libraries = libraries,
     discoverable = rawItem.discoverable
   )
 
@@ -95,12 +94,10 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        val libraries = libSeqRepo.getLibrariesByUserIdAndUriId(userId, rawItem.uriId)
-        cookSeedItem(userId, rawItem, keepers, libraries)
+        cookSeedItem(userId, rawItem, keepers)
       }
     }
   }
-
 
   def getPreviousSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Future[Seq[SeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
@@ -112,8 +109,7 @@ class SeedIngestionCommander @Inject() (
           } else {
             Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawSeed.uriId))
           }
-        val libraries = libSeqRepo.getLibrariesByUserIdAndUriId(userId, rawSeed.uriId)
-        cookSeedItem(userId, rawSeed, keepers, libraries)
+        cookSeedItem(userId, rawSeed, keepers)
       }
     }
   }
@@ -140,8 +136,7 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        val libraries = libSeqRepo.getLibrariesByUserIdAndUriId(userId, rawItem.uriId)
-        cookSeedItem(userId, rawItem, keepers, libraries)
+        cookSeedItem(userId, rawItem, keepers)
       }
     }
   }
@@ -157,8 +152,7 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        val libraries = libSeqRepo.getLibrariesByUserIdAndUriId(userId, rawItem.uriId)
-        cookSeedItem(userId, rawItem, keepers, libraries)
+        cookSeedItem(userId, rawItem, keepers)
       }.filter { seedItem =>
         seedItem.keepers match {
           case Keepers.ReasonableNumber(users) => !users.contains(userId)

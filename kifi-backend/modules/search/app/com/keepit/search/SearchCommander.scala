@@ -80,6 +80,10 @@ trait SearchCommander {
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
 
+  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang]
+
+  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]]
+
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
@@ -444,22 +448,7 @@ class SearchCommanderImpl @Inject() (
       resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
     }
 
-    val acceptLangs = {
-      val langs = acceptLangCodes.toSet.flatMap { code: String =>
-        val langCode = code.substring(0, 2)
-        if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-        else {
-          val lang = Lang(langCode)
-          if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
-        }
-      }
-      if (langs.isEmpty) {
-        log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(DefaultAnalyzer.defaultLang)
-      } else {
-        langs
-      }
-    }
+    val acceptLangs = parseAcceptLangs(acceptLangCodes)
 
     val langProf = {
       val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
@@ -494,8 +483,73 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
+  private def parseAcceptLangs(acceptLangCodes: Seq[String]): Set[Lang] = {
+    val langs = acceptLangCodes.toSet.flatMap { code: String =>
+      val langCode = code.substring(0, 2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
+    }
+    if (langs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      Set(DefaultAnalyzer.defaultLang)
+    } else {
+      langs
+    }
+  }
+
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
+  }
+
+  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = {
+    val (localShards, dispatchPlan) = distributionPlan(Id[User](-1), shards)
+    langDetect(localShards, dispatchPlan, query, acceptLangs)
+  }
+
+  private def langDetect(
+    localShards: Set[Shard[NormalizedURI]],
+    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    query: String,
+    acceptLangCodes: Seq[String]): Future[Lang] = {
+
+    val prior = {
+      val acceptLangs = parseAcceptLangs(acceptLangCodes)
+      val weight = 5.0
+      val allLangs = DefaultAnalyzer.languages
+
+      val eachLangProb = (1.0 / (acceptLangs.size.toDouble * weight + allLangs.size.toDouble))
+      allLangs.map { lang =>
+        if (acceptLangs.contains(lang)) (lang -> eachLangProb * weight) else (lang -> eachLangProb)
+      }.toMap
+    }
+
+    val resultFutures = new ListBuffer[Future[Map[Lang, Double]]]()
+
+    if (dispatchPlan.nonEmpty) {
+      resultFutures ++= searchClient.distLangDetect(dispatchPlan, query, prior)
+    }
+    if (localShards.nonEmpty) {
+      resultFutures += searchFactory.distLangDetect(localShards, query, prior)
+    }
+
+    Future.sequence(resultFutures).map { results =>
+      var mergedResult: Map[Lang, Double] = Map()
+      results.foreach { r =>
+        if (mergedResult.isEmpty) {
+          mergedResult ++= r
+        } else {
+          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
+        }
+      }
+      mergedResult.maxBy(_._2)._1
+    }
+  }
+
+  def distLangDetect(localShards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
+    searchFactory.distLangDetect(localShards, query, prior)
   }
 
   private def getSearchFilter(

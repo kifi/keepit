@@ -432,8 +432,8 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         val (coll1set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 0 }
         val (coll2set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 1 }
         val Seq(coll1, coll2) = saveCollections(
-          Collection(userId = user1.id.get, name = "mycoll"),
-          Collection(userId = user1.id.get, name = "different mycoll")
+          Collection(userId = user1.id.get, name = Hashtag("mycoll")),
+          Collection(userId = user1.id.get, name = Hashtag("different mycoll"))
         )
         saveBookmarksToCollection(coll1.id.get, coll1set: _*)
         saveBookmarksToCollection(coll2.id.get, coll2set: _*)
