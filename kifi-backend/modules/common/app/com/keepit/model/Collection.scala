@@ -12,16 +12,31 @@ import com.keepit.common.strings._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.serializer.BinaryFormat
+import com.keepit.serializer.{ TupleFormat, BinaryFormat }
 import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
 import scala.Some
+
+case class Hashtag(tag: String) extends AnyVal {
+  override def toString = tag
+}
+
+object Hashtag {
+  implicit val format: Format[Hashtag] = Format(__.read[String].map(Hashtag(_)), new Writes[Hashtag] { def writes(o: Hashtag) = JsString(o.tag) })
+  implicit def hashtagMapFormat[T](implicit tFormat: Format[T]) = {
+    implicit val tupleFormat = TupleFormat.tuple2Format[Hashtag, T]
+    new Format[Map[Hashtag, T]] {
+      def reads(json: JsValue) = json.validate[Seq[(Hashtag, T)]].map(_.toMap)
+      def writes(itemMap: Map[Hashtag, T]) = Json.toJson(itemMap.toSeq)
+    }
+  }
+}
 
 case class Collection(
     id: Option[Id[Collection]] = None,
     externalId: ExternalId[Collection] = ExternalId(),
     userId: Id[User],
-    name: String,
+    name: Hashtag,
     state: State[Collection] = CollectionStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
@@ -39,7 +54,7 @@ object Collection {
     (__ \ 'id).formatNullable(Id.format[Collection]) and
     (__ \ 'externalId).format(ExternalId.format[Collection]) and
     (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'name).format[String] and
+    (__ \ 'name).format[Hashtag] and
     (__ \ 'state).format(State.format[Collection]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
@@ -50,7 +65,7 @@ object Collection {
   val MaxNameLength = 64
 }
 
-case class CollectionSummary(id: Id[Collection], externalId: ExternalId[Collection], name: String)
+case class CollectionSummary(id: Id[Collection], externalId: ExternalId[Collection], name: Hashtag)
 
 class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
 
@@ -65,7 +80,7 @@ class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
     collections foreach { collection =>
       outStream.writeLong(collection.id.id) //2 bytes
       outStream.writeUTF(collection.externalId.id)
-      outStream.writeUTF(collection.name)
+      outStream.writeUTF(collection.name.tag)
     }
     outStream.writeLong(-1)
     outStream.close()
@@ -80,7 +95,7 @@ class CollectionSummariesFormat extends BinaryFormat[Seq[CollectionSummary]] {
       val externalIdString = inStream.readUTF()
       val nameString = inStream.readUTF()
 
-      collections.append(CollectionSummary(Id[Collection](idLong), ExternalId[Collection](externalIdString), nameString))
+      collections.append(CollectionSummary(Id[Collection](idLong), ExternalId[Collection](externalIdString), Hashtag(nameString)))
 
       idLong = inStream.readLong()
     }
@@ -94,7 +109,7 @@ object CollectionSummary {
 
 case class SendableTag(
   id: ExternalId[Collection],
-  name: String)
+  name: Hashtag)
 
 object SendableTag {
   private implicit val externalIdFormat = ExternalId.format[Collection]

@@ -240,6 +240,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result3: Future[SimpleResult] = libraryController.getLibraryById(pubId1, lib1.universalLink)(request3)
         status(result3) must equalTo(OK)
         Json.parse(contentAsString(result3)) must equalTo(expected)
+
+        // test read_only if you have an invite
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
+        }
+        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
+        val result4: Future[SimpleResult] = libraryController.getLibraryById(pubId1)(request4)
+        status(result4) must equalTo(OK)
+        Json.parse(contentAsString(result4)) must equalTo(expected)
       }
     }
     "get library by path" in {
@@ -307,6 +316,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result4: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput, lib1.universalLink)(request4)
         status(result4) must equalTo(OK)
         Json.parse(contentAsString(result4)) must equalTo(expected)
+
+        // test read_only if you have an invite
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
+        }
+        val request5 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
+        val result5: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput)(request5)
+        status(result5) must equalTo(OK)
+        Json.parse(contentAsString(result5)) must equalTo(expected)
       }
     }
 

@@ -42,9 +42,9 @@ class KeepToCollectionTest extends Specification with ShoeboxTestInjector {
             uriId = uri4.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(0).id.get))

@@ -75,6 +75,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val usernameTypeMapper = MappedColumnType.base[Username, String](_.value, Username.apply)
   implicit val libraryKindTypeMapper = MappedColumnType.base[LibraryKind, String](_.value, LibraryKind.apply)
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
+  implicit val hashtagTypeMapper = MappedColumnType.base[Hashtag, String](_.tag, Hashtag.apply)
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
@@ -146,6 +147,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
   implicit val setEmailAddressParameter = setParameterFromMapper[EmailAddress]
+  implicit val setHashtagParameter = setParameterFromMapper[Hashtag]
 
   // GetResult mappers to be used for interpolated query results
 
@@ -163,4 +165,5 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val getEmailAddressResult = getResultFromMapper[EmailAddress]
   implicit val getLibraryVisiblityResult = getResultFromMapper[LibraryVisibility]
   implicit val getOptLibraryVisiblityResult = getResultOptionFromMapper[LibraryVisibility]
+  implicit val getHashtagResult = getResultFromMapper[Hashtag]
 }

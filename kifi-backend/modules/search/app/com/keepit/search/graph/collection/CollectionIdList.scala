@@ -1,7 +1,7 @@
 package com.keepit.search.graph.collection
 
 import com.keepit.common.db.Id
-import com.keepit.model.Collection
+import com.keepit.model.{ Hashtag, Collection }
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
@@ -15,8 +15,8 @@ trait CollectionIdList {
   def ids: Array[Long]
 }
 
-class SortedCollections(collections: Seq[(Id[Collection], String)]) {
-  def toSeq: Seq[(Id[Collection], String)] = collections
+class SortedCollections(collections: Seq[(Id[Collection], Hashtag)]) {
+  def toSeq: Seq[(Id[Collection], Hashtag)] = collections
 }
 
 object CollectionIdList {
@@ -40,13 +40,13 @@ object CollectionIdList {
     override def ids: Array[Long] = Array.empty[Long]
   }
 
-  def sortCollections(collections: Seq[(Id[Collection], String)]): SortedCollections = new SortedCollections(collections.sortBy(_._1.id))
+  def sortCollections(collections: Seq[(Id[Collection], Hashtag)]): SortedCollections = new SortedCollections(collections.sortBy(_._1.id))
 
-  def toByteArray(collections: Seq[(Id[Collection], String)]): Array[Byte] = toByteArrayFromSorted(collections.sortBy(_._1.id))
+  def toByteArray(collections: Seq[(Id[Collection], Hashtag)]): Array[Byte] = toByteArrayFromSorted(collections.sortBy(_._1.id))
 
   def toByteArray(collections: SortedCollections): Array[Byte] = toByteArrayFromSorted(collections.toSeq)
 
-  private def toByteArrayFromSorted(sortedCollections: Seq[(Id[Collection], String)]): Array[Byte] = {
+  private def toByteArrayFromSorted(sortedCollections: Seq[(Id[Collection], Hashtag)]): Array[Byte] = {
     val size = sortedCollections.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)

@@ -211,7 +211,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
         val searcher = new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, user.id.get)
 
         def getCollectionId(name: String): Long = {
-          collections.find(_.name == name).get.id.get.id
+          collections.find(_.name.tag == name).get.id.get.id
         }
         def detect(text: String) = {
           val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
