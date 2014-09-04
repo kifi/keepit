@@ -23,13 +23,13 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 2 minutes, 5 minutes) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
       generationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
       feedCommander.precomputePublicFeeds()
     }
     scheduleTaskOnLeader(system, 1 hours, 5 hours) {

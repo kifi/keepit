@@ -25,6 +25,7 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   libraryCommander: LibraryCommander,
+  keepsCommander: KeepsCommander,
   actionAuthenticator: ActionAuthenticator,
   clock: Clock,
   implicit val config: PublicIdConfiguration)
@@ -237,21 +238,23 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticated { request =>
+  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
       case Success(libraryId) =>
-
         db.readOnlyReplica { implicit session =>
           if (canView(request.userId, libraryRepo.get(libraryId), authToken, passcode)) {
-            val take = Math.min(count, 100)
+            val take = Math.min(count, 30)
             val numKeeps = keepRepo.getCountByLibrary(libraryId)
-            val keepInfos = keepRepo.getByLibrary(libraryId, take, offset).map(KeepInfo.fromKeep)
-            Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+            val keeps = keepRepo.getByLibrary(libraryId, take, offset)
+            val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userId, keeps)
+            keepInfosF.map { keepInfos =>
+              Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+            }
           } else
-            BadRequest(Json.obj("error" -> "invalid access"))
+            Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
         }
     }
   }

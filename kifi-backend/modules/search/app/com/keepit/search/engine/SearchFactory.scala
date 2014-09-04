@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
-import com.keepit.search.engine.parser.{ QueryLanguageDetector, KQueryParser }
+import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
@@ -180,25 +180,6 @@ class SearchFactory @Inject() (
           )
         }
       case None => Seq.empty[KifiSearchNonUserImpl]
-    }
-  }
-
-  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
-    Future.traverse(shards) { shard =>
-      SafeFuture {
-        val detector = new QueryLanguageDetector(shardedArticleIndexer.getIndexer(shard).getSearcher)
-        detector.detect(query, prior)
-      }
-    }.map { results =>
-      var mergedResult: Map[Lang, Double] = Map()
-      results.foreach { r =>
-        if (mergedResult.isEmpty) {
-          mergedResult ++= r
-        } else {
-          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
-        }
-      }
-      mergedResult
     }
   }
 }
