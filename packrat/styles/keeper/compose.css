@@ -348,9 +348,10 @@ a.kifi-compose-submit.kifi-active {
   font-size: 12px;
   line-height: 15px;
   color: #000;
-  transition-property: opacity, height;
-  transition-timing-function: linear, ease;
-  transition-duration: 2s;
+  transition-property: height, opacity;
+  transition-timing-function: ease;
+  transition-duration: .2s, .12s;
+  transition-delay: 0s, .08s;
 }
 .kifi-ti-dropdown:not(:empty) {
   border-bottom: 1px solid #d2d2d2;
@@ -362,6 +363,8 @@ a.kifi-compose-submit.kifi-active {
   position: absolute;
   width: 100%;
   z-index: 1;
+  transition-duration: .2s;
+  transition-delay: 0s;
 }
 .kifi-ti-dropdown-item {
   position: relative;

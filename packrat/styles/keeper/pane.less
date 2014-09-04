@@ -431,17 +431,17 @@ div.kifi-pane-empty>img {
 .kifi-pane-shade {
   position: absolute;
   width: 100%;
-  background: rgba(0,0,0,.3);
+  background: rgba(241,241,241,.85);
   top: 0;
   bottom: 100%;
   opacity: 0;
-  transition: opacity .5s ease, bottom 0s .5s;
+  transition: opacity .3s ease, bottom 0s .3s;
   z-index: 2;
-}
-.kifi-shaded > .kifi-pane-shade {
-  opacity: 1;
-  bottom: 64px;
-  transition-delay: 0s;
+  .kifi-shaded>& {
+    opacity: 1;
+    bottom: 64px;
+    transition-delay: 0s;
+  }
 }
 .kifi-pane .kifi-keeper,
 .kifi-pane .kifi-tagbox {

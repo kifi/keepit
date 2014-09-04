@@ -309,9 +309,6 @@
           return false;
         }
       })
-      // .on('transitionend', 'li.kifi-ti-dropdown-item-obsolete', function () {
-      //   $(this).remove();
-      // })
       .on('mousedown', '.' + classes.dropdownItemX, function (e) {
         if (e.which === 1) {
           return false;
@@ -635,19 +632,19 @@
 
     function populateDropdown(query, results) {
       var now = Date.now();
-      if ($dropdown.data('populating') > now - 3000) {
+      if ($dropdown.data('populating') > now - 1000) {
         $dropdown.data('queued', [query, results]);
         return;
       }
-      $dropdown.data('populating', now);
-      // var qOld = $dropdown.data('q') || '';
-      $dropdown.removeClass(classes.dropdownSearching).data({q: query, mouseMoved: false});
+      $dropdown.data({populating: now, queued: null, q: query, mouseMoved: false})
+        .removeClass(classes.dropdownSearching);
 
       // Either preserve the selection or, if the first item represents an actual token, auto-select it.
       var els = results.map(createDropdownItemEl);
       var selectedResult = $(selectedDropdownItem).data('tokenInput');
       var selectedResultNewIndex = selectedResult ? results.map(getId).indexOf(selectedResult.id) : -1;
-      selectedDropdownItem = selectedResultNewIndex > 0 ? els[selectedResultNewIndex] : $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
+      selectedDropdownItem = selectedResultNewIndex >= 0 && $(selectedDropdownItem).is(':nth-child(n+2)') ?
+        els[selectedResultNewIndex] : $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
       $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
 
       log('[populateDropdown] q:', query, 'results:', results.length, 'children:', $dropdown[0].childElementCount, 'style:', $dropdown[0].style.cssText);
@@ -659,46 +656,21 @@
         if (els.length) {
           $dropdown.css('height', 0).append(els);
           $dropdown.off('transitionend').on('transitionend', function (e) {
-            $dropdown.off('transitionend').css('height', '');
-            donePopulating();
+            if (e.target === this && e.originalEvent.propertyName === 'height') {
+              $dropdown.off('transitionend').css('height', '');
+              donePopulating();
+            }
           }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
         }
       } else if (els.length === 0) {  // hiding entire list
         $dropdown.css('height', $dropdown[0].clientHeight).layout();
         $dropdown.off('transitionend').on('transitionend', function (e) {
-          $dropdown.off('transitionend').empty().css('height', '');
-          donePopulating();
+          if (e.target === this && e.originalEvent.propertyName === 'height') {
+            $dropdown.off('transitionend').empty().css('height', '');
+            donePopulating();
+          }
         }).css('height', 0);
-      // } else if (qOld && query.lastIndexOf(qOld, 0) === 0) {  // refining previous query (e.g. typed a letter)
-      //   var j = 0;
-      //   $dropdown.children().each(function (i, child) {
-      //     if (j < results.length && $.data(child, 'tokenInput').id === results[j].id) {
-      //       $(child).replaceWith(els[j++]);
-      //     } else {
-      //       child.classList.add('kifi-ti-dropdown-item-obsolete');
-      //     }
-      //   });
-      //   $(els.slice(j)).addClass('kifi-ti-dropdown-item-flattened').appendTo($dropdown);
-      //   $dropdown.layout();  // no visible change; just preparing for transitions
-      //   $dropdown.find('.kifi-ti-dropdown-item-flattened').removeClass('kifi-ti-dropdown-item-flattened');
-      //   $dropdown.find('.kifi-ti-dropdown-item-obsolete').addClass('kifi-ti-dropdown-item-flattened');
-      // } else if (query && qOld.lastIndexOf(query, 0) === 0) {  // relaxing previous query (e.g. backspace)
-      //   var children = $dropdown.children().get();
-      //   var i = 0;
-      //   results.forEach(function (result, j) {
-      //     var child = children[i];
-      //     if (child && result.id === $.data(child, 'tokenInput').id) {
-      //       $(child).replaceWith(els[j]);
-      //       i++;
-      //     } else {
-      //       $dropdown[0].insertBefore($(els[j]).addClass('kifi-ti-dropdown-item-flattened')[0], child);
-      //     }
-      //   });
-      //   $(children.slice(i)).addClass('kifi-ti-dropdown-item-obsolete');
-      //   $dropdown.layout();  // no visible change; just preparing for transitions
-      //   $dropdown.find('.kifi-ti-dropdown-item-flattened').removeClass('kifi-ti-dropdown-item-flattened');
-      //   $dropdown.find('.kifi-ti-dropdown-item-obsolete').addClass('kifi-ti-dropdown-item-flattened');
-      } else {  // signficant change to query
+      } else {  // list is changing
         // fade in overlaid as height adjusts and old fades out
         var heightInitial = $dropdown[0].clientHeight;
         $dropdown.css('height', heightInitial);
@@ -712,9 +684,11 @@
           .css({height: heightInitial, visibility: 'visible', transition: 'none'})
           .layout()
           .on('transitionend', function (e) {
-            $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
-            $clone.remove();
-            donePopulating();
+            if (e.target === this && e.originalEvent.propertyName === 'opacity') {
+              $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
+              $clone.remove();
+              donePopulating();
+            }
           })
           .css({height: heightFinal, opacity: 1, transition: ''});
         $dropdown
@@ -726,7 +700,6 @@
       $dropdown.data('populating', 0);
       var queued = $dropdown.data('queued');
       if (queued) {
-        $dropdown.removeData('queued');
         populateDropdown.apply(null, queued);
       }
     }

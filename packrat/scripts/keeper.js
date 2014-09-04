@@ -595,7 +595,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
           toaster.show($slider, opts.to);
           toaster.onHide.add(endStickyToaster);
           toaster.onHidden.add(function (trigger) {
-            if ((trigger === 'x' || trigger === 'esc') && $slider) {
+            if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
               hideSlider('toaster');
             }
           });
