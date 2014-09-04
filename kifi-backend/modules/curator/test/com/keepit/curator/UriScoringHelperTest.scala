@@ -6,7 +6,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.commanders.{ UriWeightingHelper, UriScoringHelper }
-import com.keepit.curator.model.{ Keepers, SeedItem }
+import com.keepit.curator.model.{ ScoredSeedItem, Keepers, SeedItem }
 import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGraphServiceModule }
 import com.keepit.model.{ User, NormalizedURI }
 import org.specs2.mutable.Specification
