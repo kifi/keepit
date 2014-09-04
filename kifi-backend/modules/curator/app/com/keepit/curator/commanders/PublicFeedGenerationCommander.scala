@@ -15,6 +15,7 @@ import com.keepit.curator.model.{
 }
 import com.keepit.model.{ ExperimentType, User, Name, SystemValueRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.akka.SafeFuture
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -44,7 +45,7 @@ class PublicFeedGenerationCommander @Inject() (
       scores.multiplier.getOrElse(1.0f)
   }
 
-  private def getPublicFeedCandidateSeeds(seq: SequenceNumber[PublicSeedItem]) =
+  private def getPublicFeedCandidateSeeds(seq: SequenceNumber[PublicSeedItem]): Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] =
     for {
       seeds <- seedCommander.getBySeqNum(seq, 200)
       candidateURIs <- shoebox.getCandidateURIs(seeds.map { _.uriId })
@@ -70,8 +71,10 @@ class PublicFeedGenerationCommander @Inject() (
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
     }
 
-  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])],
-    lastSeqNum: SequenceNumber[PublicSeedItem], boostedKeepers: Set[Id[User]]) =
+  private def getPrecomputationFeedsResult(
+    publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])],
+    lastSeqNum: SequenceNumber[PublicSeedItem],
+    boostedKeepers: Set[Id[User]]): Future[Boolean] = {
     publicSeedsAndSeqFuture.flatMap {
       case (publicSeedItems, newSeqNum) =>
         if (publicSeedItems.isEmpty) {
@@ -95,8 +98,9 @@ class PublicFeedGenerationCommander @Inject() (
           }
         }
     }
+  }
 
-  def precomputePublicFeeds(): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
+  def precomputePublicFeeds(): Future[Unit] = SafeFuture(pubicFeedsGenerationLock.withLockFuture {
     specialCurators().flatMap { boostedKeepersSeq =>
 
       val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
@@ -111,5 +115,5 @@ class PublicFeedGenerationCommander @Inject() (
         res.map(_ => ())
       }
     }
-  }
+  }, Some("Public Feed Precomputation"))
 }
