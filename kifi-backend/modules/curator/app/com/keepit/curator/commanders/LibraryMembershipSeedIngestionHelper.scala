@@ -16,7 +16,6 @@ class LibraryMembershipSeedIngestionHelper @Inject() (
     libInfoRepo: CuratorLibraryMembershipInfoRepo,
     db: Database,
     shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper with Logging {
-  //triggers ingestions of up to maxItem RawSeedItems. Returns true if there might be more items to be ingested, false otherwise
 
   private val SEQ_NUM_NAME: Name[SequenceNumber[Library]] = Name("all_library_seq_num")
 
