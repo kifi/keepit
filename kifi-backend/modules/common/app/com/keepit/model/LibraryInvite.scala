@@ -59,16 +59,10 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   }
 
   def generatePasscode() = {
-    Random.nextInt(2) match {
-      case 0 =>
-        val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
-        val randomAdj = Words.adjectives(Random.nextInt(Words.adjectives.length));
-        randomAdj + " " + randomNoun
-      case 1 =>
-        val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
-        val randomVerb = Words.verbs(Random.nextInt(Words.verbs.length));
-        randomVerb + " " + randomAdverb
-    }
+    val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
+    val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
+    val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));
+    randomAdverb + " " + randomAdjective + " " + randomNoun
   }
 }
 
