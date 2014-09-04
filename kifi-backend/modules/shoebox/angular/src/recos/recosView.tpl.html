@@ -11,8 +11,8 @@
   <div class="kf-reco kf-reco-info" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
     <span class="kf-reco-icon kf-reco-close-x" ng-click="closeInitialCard()"></span>
     <h4>Turn on Kifi Recommendations</h4>
-    <p>Kifi works by recommending things based on what you've kept. We'll cater to your interests over time but we need at least 5 items to get started (you've kept {{numKeptItems}} so far). It's quick to get started if you <a href="javascript:" ng-click="importBookmarks()">import bookmarks</a>, and even better if you <a href="/invite">connect with friends</a>.
-    <p>In the meantime, enjoy popular things being kept on Kifi.</p>
+    <p>Kifi works by recommending things based on what you've kept. We'll cater to your interests over time but we need at least a dozen good articles kept to get started. It's quick to get started if you <a href="javascript:" ng-click="importBookmarks()">import bookmarks</a>, and even better if you <a href="/invite">connect with friends</a>.
+    <p>In the meantime, enjoy popular things being kept on Kifi. If you keep some of the ones you like it will help us give you personalized recommendations faster.</p>
     <a href="http://support.kifi.com">Learn more</a>
   </div>
 
@@ -29,12 +29,12 @@
     <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)"></span>
-        <div kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
+        <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
         <span>{{reco.recoData.type | titlecase}} {{reco.recoData.kind | titlecase}}</span>
       </header>
 
       <div class="kf-keep">
-        <div kf-keep-content keep="reco.recoKeep" keep-public="keepReco(reco)"></div>
+        <div kf-keep-content keep="reco.recoKeep" keep-public="keepReco(reco, false)" keep-private="keepReco(reco, true)"></div>
       </div>
 
       <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
@@ -48,7 +48,7 @@
             <time am-time-ago="reason.when"></time>
           </div>
           <div ng-if="reason.kind === 'topic'">
-            <div>Because it's trending in a topic you're interested in:
+            <div>Because it's about a topic you're interested in:
             <span class="kf-reco-reason-topic">{{reason.name}}</span></div>
           </div>
           <div ng-if="reason.kind === 'users'">

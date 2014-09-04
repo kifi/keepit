@@ -497,7 +497,8 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
-        keepPublic: '&'
+        keepPublic: '&',
+        keepPrivate: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -609,10 +610,6 @@ angular.module('kifi')
           keepService.unkeep([scope.keep]);
         };
 
-        scope.keepPrivate = function () {
-          keepService.keep([scope.keep], true);
-        };
-
         scope.getSingleSelectedKeep = function () {
           if (scope.keep) {
             return [scope.keep];
@@ -623,7 +620,7 @@ angular.module('kifi')
 
         scope.clickKeep = function (keep) {
           if (keep.keepType === 'reco') {
-            recoActionService.click(keep);
+            recoActionService.trackClick(keep);
           }
         };
 

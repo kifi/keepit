@@ -204,6 +204,8 @@ GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteContro
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+GET     /get-the-kifi-extension-on-your-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "the other one is wrong")
+GET     /get-the-kifi-extension-on-you-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "this is wrong")
 
 # This should match the output format of S3ImageConfig#keyByExternalId
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
@@ -678,6 +680,7 @@ GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.c
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
+GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
