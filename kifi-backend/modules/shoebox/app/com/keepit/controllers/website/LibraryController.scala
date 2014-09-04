@@ -106,7 +106,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None, passcode: Option[String]) = JsonAction.authenticatedAsync { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     // check if str is either a username or externalId
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
