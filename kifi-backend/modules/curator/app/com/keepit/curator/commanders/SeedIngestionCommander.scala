@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.{ NormalizedURI, ExperimentType, User }
+import com.keepit.model.{ Library, NormalizedURI, ExperimentType, User }
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
@@ -21,9 +21,11 @@ import scala.concurrent.Future
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
     topUrisIngestor: TopUriSeedIngestionHelper,
+    libraryIngestor: LibraryMembershipSeedIngestionHelper,
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
+    libSeqRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
     db: Database) extends Logging {
 
@@ -48,11 +50,16 @@ class SeedIngestionCommander @Inject() (
       }
       case _ =>
     }
+
     fut.map(_ => true)
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
     log.info("Ingested one batch of keeps.")
+  }
+
+  def ingestLibraries(batchSize: Option[Int] = Some(INGESTION_BATCH_SIZE)): Future[Unit] = FutureHelpers.whilef(libraryIngestor(batchSize.getOrElse(INGESTION_BATCH_SIZE))) {
+    log.info("Ingested a batch of libraries.")
   }
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId, INGESTION_BATCH_SIZE).map(_ => ())

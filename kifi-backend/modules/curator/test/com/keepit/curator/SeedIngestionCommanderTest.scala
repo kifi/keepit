@@ -346,6 +346,24 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
     }
 
+    "ingest multiple batches of libraryMemberships and update sequence number correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val libMembershipRepo = inject[CuratorLibraryMembershipInfoRepo]
+        val systemValueRepo = inject[SystemValueRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        db.readOnlyMaster { implicit session => libMembershipRepo.all() }.length === 0
+        Await.result(commander.ingestLibraries(), Duration(10, "seconds"))
+        db.readOnlyMaster { implicit session => libMembershipRepo.all() }.length === 5
+        db.readOnlyMaster { implicit session =>
+          systemValueRepo.getSequenceNumber(
+            Name[SequenceNumber[Library]]("all_library_seq_num")
+          ).get
+        } === SequenceNumber[Library](2)
+      }
+    }
+
   }
 }
 
