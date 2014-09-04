@@ -48,7 +48,7 @@ angular.module('kifi')
         });
 
         scope.getCommonTags = function () {
-          var tagLists = _.pluck(scope.getSelectedKeeps(), 'tagList');
+          var tagLists = _.compact(_.pluck(scope.getSelectedKeeps(), 'tagList'));
           var tagIds = _.map(tagLists, function (tagList) { return _.pluck(tagList, 'id'); });
           var commonTagIds = _.union.apply(this, tagIds);
           var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
