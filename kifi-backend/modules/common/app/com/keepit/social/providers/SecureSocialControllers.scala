@@ -73,7 +73,7 @@ object ProviderController extends Controller {
       case Some(p) => {
         try {
           p.authenticate().fold(result => result, {
-            user => completeAuthentication(user, request2session)
+            user => completeAuthentication(user, request.session)
           })
         } catch {
           case ex: AccessDeniedException => {
@@ -167,7 +167,7 @@ object LoginPage extends Controller {
     }
     val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request2session))
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session))
       case None => result
     }
   }

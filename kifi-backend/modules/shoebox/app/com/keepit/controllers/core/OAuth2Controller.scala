@@ -134,7 +134,7 @@ class OAuth2Controller @Inject() (
     stateTokenOpt match {
       case None =>
         log.warnP(s"state token is not provided; body=${request.body} headers=${request.headers}")
-        Redirect("/").withSession(request2session - STATE_TOKEN_KEY)
+        Redirect("/").withSession(request.session - STATE_TOKEN_KEY)
       case Some(stateToken) =>
         val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
         val params = Map(
@@ -149,7 +149,7 @@ class OAuth2Controller @Inject() (
         )
         val url = authUrl + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
         log.infoP(s"REDIRECT to: $url with params: $params")
-        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(request2session + (STATE_TOKEN_KEY -> stateToken))
+        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(request.session + (STATE_TOKEN_KEY -> stateToken))
     }
   }
 
