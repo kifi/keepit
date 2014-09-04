@@ -331,7 +331,13 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("cannot join - not published library"))
       else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
-        libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+        libraryMembershipRepo.getOpt(userId, libraryId) match {
+          case None =>
+            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+          case Some(mem) =>
+            libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+        }
+        libraryRepo.save(lib.copy(memberCount = lib.memberCount + 1))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         Right(lib)
       }
@@ -351,6 +357,8 @@ class LibraryCommander @Inject() (
         case None => Left(LibraryFail("membership not found"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
+          val lib = libraryRepo.get(libraryId)
+          libraryRepo.save(lib.copy(memberCount = lib.memberCount - 1))
           Right()
         }
       }

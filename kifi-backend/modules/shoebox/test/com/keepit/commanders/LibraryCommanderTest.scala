@@ -118,6 +118,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
+      libraryRepo.save(libMurica.copy(memberCount = 3))
+      libraryRepo.save(libScience.copy(memberCount = 2))
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
@@ -527,6 +529,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
           )
+          libraryMembershipRepo.count === 6
+          libraryRepo.get(libMurica.id.get).memberCount === 3 //owner + Ironman + Agent
+          libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
+          libraryRepo.get(libShield.id.get).memberCount === 1 //owner
         }
       }
     }
@@ -538,8 +544,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val libraryCommander = inject[LibraryCommander]
 
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+          libraryRepo.get(libMurica.id.get).memberCount === 3
         }
 
         libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
@@ -547,6 +553,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+          libraryRepo.get(libMurica.id.get).memberCount === 2
         }
       }
     }
