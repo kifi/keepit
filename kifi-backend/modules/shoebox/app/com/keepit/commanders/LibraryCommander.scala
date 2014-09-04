@@ -337,7 +337,7 @@ class LibraryCommander @Inject() (
           case Some(mem) =>
             libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
         }
-        libraryRepo.save(lib.copy(memberCount = lib.memberCount + 1))
+        libraryRepo.updateMemberCount(libraryId)
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         Right(lib)
       }
@@ -357,8 +357,7 @@ class LibraryCommander @Inject() (
         case None => Left(LibraryFail("membership not found"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
-          val lib = libraryRepo.get(libraryId)
-          libraryRepo.save(lib.copy(memberCount = lib.memberCount - 1))
+          libraryRepo.updateMemberCount(libraryId)
           Right()
         }
       }

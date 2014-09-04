@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,6 +19,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
+  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -108,6 +109,11 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
+  }
+
+  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit = {
+    sqlu"UPDATE library SET member_count = (SELECT COUNT(id) FROM library_membership WHERE library_id = ${libraryId} and state='active') WHERE id = ${libraryId} AND state='active'".execute()
+    deleteCache(get(libraryId))
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
