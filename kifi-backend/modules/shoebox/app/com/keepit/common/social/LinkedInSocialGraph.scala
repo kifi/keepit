@@ -27,6 +27,7 @@ import play.api.libs.ws.{ Response, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.LinkedInProvider.LinkedIn
 import com.keepit.common.mail.EmailAddress
+import play.api.Play.current
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id", "firstName", "lastName", "picture-urls::(original);secure=true", "publicProfileUrl")

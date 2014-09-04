@@ -56,7 +56,7 @@ object ApplicationBuild extends Build {
 
   lazy val scraperDependencies = Seq(
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
-    //"org.apache.httpcomponents" % "httpclient" % "4.3.2",
+    "org.apache.httpcomponents" % "httpclient" % "4.3.1",
     "org.apache.tika" % "tika-parsers" % "1.5"
   )
 

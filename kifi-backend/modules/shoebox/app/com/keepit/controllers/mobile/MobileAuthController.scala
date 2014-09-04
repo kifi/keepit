@@ -118,7 +118,7 @@ class MobileAuthController @Inject() (
                 error => throw error,
                 authenticator =>
                   Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                    .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                    .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                     .withCookies(authenticator.toCookie)
               )
             case Some(identity) => // social user exists
@@ -130,11 +130,11 @@ class MobileAuthController @Inject() (
                     error => throw error,
                     authenticator =>
                       Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                        .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                         .withCookies(authenticator.toCookie)
                   )
                 case Some(userId) =>
-                  val newSession = Events.fire(new LoginEvent(identity)).getOrElse(session)
+                  val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
                   Authenticator.create(identity).fold(
                     error => throw error,
                     authenticator =>

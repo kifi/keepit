@@ -30,7 +30,7 @@ class EmailOptOutController @Inject() (
           emailOptOutRepo.getByEmailAddress(addr).collect { case c => NotificationCategory(c.category.category) }
         }
 
-        Ok(views.html.website.optOutEmails(addr.address, opts, flash.get("msg"), secureSocialClientIds))
+        Ok(views.html.website.optOutEmails(addr.address, opts, request.flash.get("msg"), secureSocialClientIds))
       case _ => BadRequest // Don't tell the user why the token is wrong
     }
 

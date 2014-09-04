@@ -11,15 +11,14 @@ import com.keepit.heimdal.{ DelightedAnswerSources, DelightedAnswerSource, Basic
 import com.keepit.model._
 import com.keepit.common.collection._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
 import play.api.libs.json.JsValue
-import play.api.libs.ws.WS.WSRequestHolder
-import play.api.libs.ws.WS
+import play.api.libs.ws.{ WSAuthScheme, WSRequestHolder, WS }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.http.Status
 import com.keepit.common.core._
+import play.api.Play.current
 
 case class DelightedConfig(url: String, apiKey: String)
 
@@ -45,7 +44,7 @@ class DelightedCommanderImpl @Inject() (
   private val LAST_DELIGHTED_FETCH_TIME = Name[SystemValue]("last_delighted_fetch_time")
 
   private def delightedRequest(route: String): WSRequestHolder = {
-    WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", AuthScheme.BASIC)
+    WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", WSAuthScheme.BASIC)
   }
 
   def getUserLastInteractedDate(userId: Id[User]): Option[DateTime] = {

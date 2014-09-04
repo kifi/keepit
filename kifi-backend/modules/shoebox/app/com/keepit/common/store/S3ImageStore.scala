@@ -27,8 +27,11 @@ import java.awt.image.BufferedImage
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, File, InputStream }
 import javax.imageio.ImageIO
 
+import play.api.libs.ws.ning.NingWSResponse
+
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
+import play.api.Play.current
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
@@ -157,7 +160,7 @@ class S3ImageStoreImpl @Inject() (
           case (response, usedDefault) =>
             val usedImage = if (usedDefault) S3UserPictureConfig.defaultName else pictureName
             val key = keyByExternalId(sizeName, externalId, usedImage)
-            val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
+            val putObj = uploadToS3(key, response.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream, label = originalImageUrl)
             (usedImage, putObj)
         }
       })

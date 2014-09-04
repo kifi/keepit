@@ -25,6 +25,7 @@ import com.keepit.abook.model.{ RichContact, EContactRepo, EContact }
 import com.keepit.abook.controllers.{ ABookOwnerInfo, GmailABookOwnerInfo }
 import com.keepit.abook.{ ABookImporterPlugin, ABookInfoRepo }
 import com.keepit.common.core._
+import play.api.Play.current
 
 class ABookCommander @Inject() (
     db: Database,

@@ -2,7 +2,7 @@ package com.keepit.scraper.actor
 
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
-import akka.routing.{ Broadcast, SmallestMailboxRouter }
+import akka.routing.{ SmallestMailboxPool, Broadcast, SmallestMailboxRouter }
 import akka.util.Timeout
 import com.google.inject.{ Inject, Provider }
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
