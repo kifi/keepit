@@ -1,13 +1,7 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  SeedItemWithMultiplierType,
-  SeedItemType,
-  PublicSeedItemWithMultiplier,
-  PublicSeedItem,
-  SeedItemWithMultiplier,
-  SeedItem
-}
+import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
+import com.google.inject.{ Singleton }
 
 import scala.util.matching.Regex
 
@@ -49,12 +43,13 @@ object UrlPatterns {
     UrlPattern("""^https?://(www.)?tripadvisor\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Destination page on tripadvisor"),
     UrlPattern("""^https?://(www.)?medium\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Article on medium.com"),
     UrlPattern("""^https?://blog\.longreads\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Article on longreads.com"),
-    UrlPattern("""^https?://(www.)?youtube\.com[./?\#]watch""".r, 1.2f, "Videos on Youtube"))
+    UrlPattern("""^https?://(www.)?youtube\.com[./?\#]watch""".r, 1.2f, "Videos on Youtube")
+  )
 }
 
-class UriWeightingHelper {
+class UriWeightingHelper() {
 
-  def getRecoWeight(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
+  def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
     val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
       if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
     }
@@ -67,8 +62,11 @@ class UriWeightingHelper {
       lastSeen = item.lastSeen,
       keepers = item.keepers)
   }
+}
 
-  def getPublicWeight(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
+class PublicUriWeightingHelper() {
+
+  def apply(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
     val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
       if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
     }
@@ -78,13 +76,6 @@ class UriWeightingHelper {
       timesKept = item.timesKept,
       lastSeen = item.lastSeen,
       keepers = item.keepers)
-  }
-
-  def apply[T <: SeedItemType](items: Seq[T]): Seq[SeedItemWithMultiplierType] = {
-    items match {
-      case seeds: Seq[SeedItem] => getRecoWeight(seeds)
-      case publicSeeds: Seq[PublicSeedItem] => getPublicWeight(publicSeeds)
-    }
   }
 }
 
