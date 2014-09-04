@@ -9,12 +9,12 @@ angular.module('kifi')
   '$timeout',
   '$window',
   'keepActionService',
-  'keepService',
+  'keepDecoratorService',
   'recoActionService',
   'recoDecoratorService',
   'tagService',
   'undoService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService,
+  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepDecoratorService,
     recoActionService, recoDecoratorService, tagService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
@@ -62,11 +62,8 @@ angular.module('kifi')
     $scope.keepReco = function (reco, isPrivate) {
       recoActionService.trackKeep(reco.recoKeep);
 
-      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keptKeep) {
-        reco.recoKeep.id = keptKeep.id;
-        reco.recoKeep.isPrivate = keptKeep.isPrivate;
-
-        keepService.buildKeep(reco.recoKeep);
+      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keep) {
+        reco.recoKeep.buildKeep(keep);
         tagService.addToKeepCount(1);
       });
     };
