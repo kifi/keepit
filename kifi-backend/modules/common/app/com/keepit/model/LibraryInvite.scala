@@ -12,8 +12,8 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 case class LibraryInvite(
     id: Option[Id[LibraryInvite]] = None,
@@ -25,7 +25,8 @@ case class LibraryInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    authToken: String = RandomStringUtils.randomAlphanumeric(32)) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
+    authToken: String = RandomStringUtils.randomAlphanumeric(32),
+    passCode: String = LibraryInvite.generatePasscode()) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -49,11 +50,19 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
-    (__ \ 'authToken).format[String]
+    (__ \ 'authToken).format[String] and
+    (__ \ 'passCode).format[String]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
+  }
+
+  def generatePasscode() = {
+    val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
+    val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
+    val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));
+    randomAdverb + " " + randomAdjective + " " + randomNoun
   }
 }
 
