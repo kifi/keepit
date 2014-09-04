@@ -81,7 +81,7 @@ trait Indexable[T, S] extends Logging {
   val id: Id[T]
   val isDeleted: Boolean
 
-  val idTerm = new Term(Indexer.idFieldName, id.toString)
+  lazy val idTerm = new Term(Indexer.idFieldName, id.toString)
 
   def buildDocument: Document = {
     val doc = new Document()

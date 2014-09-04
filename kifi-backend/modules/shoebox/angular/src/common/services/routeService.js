@@ -109,6 +109,9 @@ angular.module('kifi')
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
+      getKeepsInLibrary: function (libraryId, count, offset, authToken) {
+        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
+      },
       createLibrary: route('/libraries/add')
     };
   }
