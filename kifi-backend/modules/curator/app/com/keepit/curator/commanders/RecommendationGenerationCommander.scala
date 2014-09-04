@@ -112,15 +112,15 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
-      scores.socialScore > 0.8 ||
+    if ((scores.overallInterestScore > 0.2 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 3) {
+      scores.socialScore > 0.7 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
-        scores.recentInterestScore > 0.15 ||
+        scores.recentInterestScore > 0.1 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3 ||
-        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.3 || scores.recentInterestScore > 0.1))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
