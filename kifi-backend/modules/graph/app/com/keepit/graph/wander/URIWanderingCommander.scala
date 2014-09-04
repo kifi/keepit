@@ -7,9 +7,7 @@ import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.time._
 
 import com.keepit.graph.manager.GraphManager
-import com.keepit.graph.model.Component.Component
 import com.keepit.graph.model.EdgeKind._
-import com.keepit.graph.model.VertexKind._
 import com.keepit.graph.model._
 import com.keepit.model.{ User, NormalizedURI }
 import scala.collection.mutable
@@ -55,16 +53,7 @@ class URIWanderingCommander @Inject() (
   private case class TrialsQuota(user: Map[VertexDataId[UserReader], Int], topic: Map[VertexDataId[LDATopicReader], Int])
 
   private def preScore(user: Id[User], trials: Int): Future[PreScoreResult] = {
-    val wanderLust = Wanderlust(
-      startingVertexKind = "User",
-      startingVertexDataId = user.id,
-      preferredCollisions = Set(), // will walk all types of nodes in graph if it's empty set
-      avoidTrivialCollisions = true,
-      steps = trials,
-      restartProbability = 0.15,
-      recency = Some(120 days),
-      halfLife = Some(7 days)
-    )
+    val wanderLust = Wanderlust.discovery(user).copy(steps = trials)
     wanderingCommander.wander(wanderLust).map { journal =>
       val uriScores = new ListBuffer[(VertexDataId[UriReader], Int)]()
       val userScores = new ListBuffer[(VertexDataId[UserReader], Int)]()
@@ -89,7 +78,7 @@ class URIWanderingCommander @Inject() (
     }
   }
 
-  // each node get a sampling quota, proportionally to the probability estimated by preScore
+  // each node has a sampling quota, proportionally to the probability estimated by preScore
   private def distributeTrialsQuota(preScoreResult: PreScoreResult, totalTrials: Int): TrialsQuota = {
     val (userSum, topicSum) = (preScoreResult.userScore.values.sum.toFloat, preScoreResult.topicScore.values.sum.toFloat)
     val z = userSum + topicSum
@@ -114,7 +103,7 @@ class URIWanderingCommander @Inject() (
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
       val weights = getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
-      val density = ProbabilityDensity(weights)
+      val density = ProbabilityDensity.normalized(weights)
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
       (0 until trials).foreach { i =>
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
@@ -124,7 +113,6 @@ class URIWanderingCommander @Inject() (
   }
 
   private def sampleURIsfromUser(user: VertexDataId[UserReader], trials: Int): Map[Id[NormalizedURI], Int] = {
-
     val keepScores = sampleDestinations(user, (UserReader, KeepReader, TimestampEdgeReader), edgeResolver, trials)
     val uriScores = keepToURI(keepScores.keys.toSeq) map { case (keep, uri) => (VertexDataId.toNormalizedUriId(uri), keepScores(keep)) }
     uriScores.toMap
@@ -136,23 +124,12 @@ class URIWanderingCommander @Inject() (
   }
 
   private def keepToURI(keeps: Seq[VertexDataId[KeepReader]]): Map[VertexDataId[KeepReader], VertexDataId[UriReader]] = {
-    graph.readOnly { reader =>
-      val vertexReader = reader.getNewVertexReader()
-      val keepURIComp = Component(KeepReader, UriReader, EmptyEdgeReader)
-      val keepToURIMap = mutable.Map.empty[VertexDataId[KeepReader], VertexDataId[UriReader]]
-      keeps.foreach { keep =>
-        vertexReader.moveTo(keep)
-        val edgeReader = vertexReader.outgoingEdgeReader
-        while (edgeReader.moveToNextComponent()) {
-          if (edgeReader.component == keepURIComp) {
-            while (edgeReader.moveToNextEdge()) {
-              keepToURIMap(keep) = edgeReader.destination.asId[UriReader]
-            }
-          }
-        }
-      }
-      keepToURIMap.toMap
+    val resolver = edgeResolver
+    val keepToURIMap = mutable.Map.empty[VertexDataId[KeepReader], VertexDataId[UriReader]]
+    keeps.foreach { keep =>
+      sampleDestinations(keep, (KeepReader, UriReader, EmptyEdgeReader), resolver, 1).keysIterator.foreach { uri => keepToURIMap(keep) = uri }
     }
+    keepToURIMap.toMap
   }
 
   private def edgeResolver = {
@@ -167,5 +144,4 @@ class URIWanderingCommander @Inject() (
     }
     RestrictedDestinationResolver(None, mayTraverse, decay)
   }
-
 }
