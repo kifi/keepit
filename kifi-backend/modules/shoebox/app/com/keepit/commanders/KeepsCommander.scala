@@ -265,9 +265,6 @@ class KeepsCommander @Inject() (
             libraryId = keep.libraryId.map(l => Library.publicId(l))
           )
       }
-      println("xxxxxxxxxxxxxxxxxxxxxx\n\n")
-      log.info(keepsInfo.toString)
-      println("\n\nyyyyyyyyyyyyyyyyy")
       keepsInfo
     }
   }

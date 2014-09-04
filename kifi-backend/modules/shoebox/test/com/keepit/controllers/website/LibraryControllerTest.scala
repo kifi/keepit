@@ -578,9 +578,30 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su"
+              },
+              {
+                "id": "${keep1.externalId}",
+                "title": "k1",
+                "url": "http://www.google.com/",
+                "isPrivate": false,
+                "createdAt": "${keep1.createdAt}",
+                "others": -1,
+                "keepers": [
+                  {
+                    "id": "${user1.externalId}",
+                    "firstName": "Aaron",
+                    "lastName": "Hsu",
+                    "pictureName": "0.jpg"
+                  }
+                ],
+                "collections": [],
+                "tags": [],
+                "summary": {},
+                "siteName": "Google",
+                "libraryId": "l7jlKlnA36Su"
               }
             ],
-            "count": 1,
+            "count": 2,
             "offset": 0,
             "numKeeps": 2
            }
