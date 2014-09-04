@@ -204,6 +204,7 @@ GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteContro
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+GET     /get-the-kifi-extension-on-your-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone()
 
 # This should match the output format of S3ImageConfig#keyByExternalId
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
