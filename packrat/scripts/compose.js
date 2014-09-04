@@ -237,16 +237,12 @@ var initCompose = (function() {
         placeholder: 'To',
         onAdd: function () {
           editor.writeDefaultText();
-          if ($to.tokenInput('get').length === 1) {
-            $to.tokenInput('flushCache');
-          }
           throttledSaveDraft();
         },
         onDelete: function () {
           if (!$form.is($forms)) return;
           if ($to.tokenInput('get').length === 0) {
             editor.eraseDefaultText();
-            $to.tokenInput('flushCache');
           }
           throttledSaveDraft();
         }

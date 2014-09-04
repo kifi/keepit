@@ -30,7 +30,7 @@
       "lzstring.min.js",
       "main.js",
       "scorefilter.js",
-      "friend_search_cache.js"
+      "contact_search_cache.js"
     ]
   },
   "content_scripts": [

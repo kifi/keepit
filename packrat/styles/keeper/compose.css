@@ -340,29 +340,28 @@ a.kifi-compose-submit.kifi-active {
   background-color: #6fa6ef;
 }
 .kifi-ti-dropdown {
-  z-index: 999999999992;
-  border: 1px solid #ccc;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
+  margin: 0 !important;
+  padding: 0 !important;
   background-color: #fff;
   overflow: hidden;
   cursor: default;
   font-size: 12px;
   line-height: 15px;
   color: #000;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
+  transition-property: opacity, height;
+  transition-timing-function: linear, ease;
+  transition-duration: 2s;
+}
+.kifi-ti-dropdown:not(:empty) {
+  border-bottom: 1px solid #d2d2d2;
 }
 .kifi-ti-dropdown:not(.kifi-ti-dropdown-searching) {
   background-image: none !important;
 }
-.kifi-ti-dropdown-searching {
-  background: #fff left 6px bottom 6px/44px 8px no-repeat;
-  padding-bottom: 20px;
-}
-.kifi-ti-dropdown>ul {
-  margin: 0 !important;
-  padding: 0 !important;
+.kifi-ti-dropdown-clone {
+  position: absolute;
+  width: 100%;
+  z-index: 1;
 }
 .kifi-ti-dropdown-item {
   position: relative;
@@ -374,6 +373,11 @@ a.kifi-compose-submit.kifi-active {
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   border-top: 1px solid transparent;
+/*
+  transition-property: height, padding-top, padding-bottom, border-top-width;
+  transition-duration: 1.6s;
+  overflow: hidden;
+*/
 }
 .kifi-ti-dropdown-item-selected {
   background-color: #6fa6ef;
@@ -383,14 +387,22 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown-item:not(.kifi-ti-dropdown-email)+.kifi-ti-dropdown-email {
   border-color: #ccc;
 }
+/*
+.kifi-ti-dropdown-item-flattened {
+  height: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-width: 0;
+}
+*/
 .kifi-ti-dropdown-item::before {
-  content: ' ';
+  content: '';
   position: absolute;
   top: 2px;
   left: 6px;
   height: 28px;
   width: 28px;
-  border-radius: 2px;
+  border-radius: 50% !important;
   background: 0 0/28px no-repeat;
   background-image: inherit;
 }
@@ -404,7 +416,7 @@ a.kifi-compose-submit.kifi-active {
   background: #e36767 6px 7px/16px 14px no-repeat;
 }
 .kifi-ti-dropdown-new-email::before {
-  background: #33495F 6px 7px/16px 14px no-repeat;
+  background: #33495f 6px 7px/16px 14px no-repeat;
 }
 .kifi-ti-dropdown-email::before {
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAQAAACMJlQBAAAAW0lEQVR4AX3NoQ0CMABE0ZuEkNqy/wJ0DAySOsIAD8sJeva/5GI57R5Ppz1i2v5tu0UTnSUuTTq7xjZ/SOfpFZp0JjTpTGjSmVBkGH0XmnQmNOlM9N4+NFhOW18UF5AlmfH20gAAAABJRU5ErkJggg==);
@@ -469,7 +481,8 @@ a.kifi-compose-submit.kifi-active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.kifi-ti-dropdown-contact-name:not(:last-child) {
+.kifi-ti-dropdown-contact-name:not(:last-child),
+.kifi-ti-dropdown-new-email:not(.kifi-ti-dropdown-item-token)>.kifi-ti-dropdown-contact-name {
   line-height: 14px;
 }
 .kifi-ti-dropdown-contact-sub {
@@ -482,7 +495,15 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown-contact-sub:first-child {
   line-height: 28px;
 }
-.kifi-ti-dropdown-item-selected>.kifi-ti-dropdown-contact-sub:not(:first-child) {
+.kifi-ti-dropdown-new-email:not(.kifi-ti-dropdown-item-token)::after {
+  display: block;
+  content: 'Keep typing the email address';
+  line-height: 13px;
+  font-size: 11px;
+  color: #999;
+}
+.kifi-ti-dropdown-item-selected>.kifi-ti-dropdown-contact-sub:not(:first-child),
+.kifi-ti-dropdown-item-selected.kifi-ti-dropdown-new-email:not(.kifi-ti-dropdown-item-token)::after {
   color: #eee;
 }
 .kifi-ti-dropdown-tip {

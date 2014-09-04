@@ -6,7 +6,6 @@
   var DEFAULT_SETTINGS = {
     // General
     classPrefix: 'ti-',
-    classForRoots: '',
     placeholder: null,
     disabled: false,
 
@@ -21,11 +20,7 @@
     tokenLimit: Infinity,
     preventDuplicates: false,
     formatToken: function (item) {
-      var iconHtml = '';
-      if (item.id.kind && item.id.kind === 'email') {
-        iconHtml = '<span class="kifi-ti-email-token-icon"></span>';
-      }
-      return '<li>' + iconHtml + '<span>' + htmlEscape(item.name) + '</span></li>';
+      return '<li>' + htmlEscape(item.name) + '</li>';
     },
 
     // Callbacks
@@ -126,10 +121,6 @@
       this.data('tokenInput').toggleDisabled(disable);
       return this;
     },
-    flushCache: function () {
-      this.data('tokenInput').flushCache();
-      return this;
-    },
     destroy: function () {
       if (this.data('tokenInput')) {
         this.data('tokenInput').destroy();
@@ -158,15 +149,9 @@
     $.each(CLASSES, function (key, className) {
       classes[key] = settings.classPrefix + className;
     });
-    if (settings.classForRoots) {
-      classes.dropdown += ' ' + settings.classForRoots;
-    }
 
     // Tokens in the list (for checking dupes)
     var tokens = [];
-
-    // Results cache for speed
-    var cache = new Cache();
 
     // Create a new text input
     var $tokenInput = $('<input type="text" autocomplete="off" autocapitalize="off"/>')
@@ -175,11 +160,17 @@
         if (settings.disabled) {
           return false;
         }
+        if (!tokens.length || this.value) {
+          handleQueryChange();
+        }
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
         hideDropdown();
-        this.value = '';
+        var val = this.value;
+        if (val !== val.trim()) {
+          this.value = val.trim();
+        }
         $tokenList.removeClass(classes.listFocused);
       })
       .on('input', handleQueryChange)
@@ -188,66 +179,57 @@
         var $nextToken;
 
         switch (event.keyCode) {
-          case KEY.LEFT:
-          case KEY.RIGHT:
           case KEY.UP:
           case KEY.DOWN:
-            var upOrLeft = event.keyCode === KEY.UP || event.keyCode === KEY.LEFT;
-            if (!this.value) {
-              $prevToken = $inputToken.prev();
-              $nextToken = $inputToken.next();
-
-              if ($prevToken.is(selectedToken) || $nextToken.is(selectedToken)) {
-                deselectToken($(selectedToken), upOrLeft ? POSITION.BEFORE : POSITION.AFTER);
-              } else if (upOrLeft && $prevToken.length) {
-                selectToken($prevToken);
-              } else if (!upOrLeft && $nextToken.length) {
-                selectToken($nextToken);
-              }
-            } else {
-              var $item = selectedDropdownItem ?
-                $(selectedDropdownItem)[upOrLeft ? 'prev' : 'next']() :
-                $dropdown.find('.' + classes.dropdownItem)[upOrLeft ? 'last' : 'first']();
-
-              if ($item.length) {
-                selectDropdownItem($item[0]);
-              }
-            }
-            return false;
-
-          case KEY.BACKSPACE:
-            if (!this.value) {
-              if (selectedToken) {
-                deleteToken($(selectedToken));
-                $hiddenInput.change();
-              } else {
-                $prevToken = $inputToken.prev();
-                if ($prevToken.length) {
-                  selectToken($prevToken);
-                }
-              }
+            var up = event.keyCode === KEY.UP;
+            var $item = selectedDropdownItem ?
+              $(selectedDropdownItem)[up ? 'prev' : 'next']() :
+              $dropdown.find('.' + classes.dropdownItem)[up ? 'last' : 'first']();
+            if ($item.length) {
+              selectDropdownItem($item[0]);
               return false;
             }
             break;
 
+          case KEY.LEFT:
+          case KEY.RIGHT:
+            var left = event.keyCode === KEY.LEFT;
+            var selStart = this.selectionStart;
+            if (selStart === (left ? 0 : this.value.length) && selStart === this.selectionEnd) {
+              $prevToken = $inputToken.prev();
+              $nextToken = $inputToken.next();
+
+              if ($prevToken.is(selectedToken) || $nextToken.is(selectedToken)) {
+                deselectToken($(selectedToken), left ? POSITION.BEFORE : POSITION.AFTER);
+                return false;
+              } else if (left && $prevToken.length) {
+                selectToken($prevToken);
+                return false;
+              } else if (!left && $nextToken.length) {
+                selectToken($nextToken);
+                return false;
+              }
+            }
+            break;
+
+          case KEY.BACKSPACE:
+            if (selectedToken) {
+              deleteToken($(selectedToken));
+              $hiddenInput.change();
+              return false;
+            } else if (this.selectionStart === 0 && this.selectionEnd === 0) {
+              $prevToken = $inputToken.prev();
+              if ($prevToken.length) {
+                selectToken($prevToken);
+                return false;
+              }
+            }
+            break;
+
           case KEY.TAB:
-            if (selectedDropdownItem) {
-              if (selectedDropdownItem.classList.contains(classes.dropdownItemToken) && !event.shiftKey) {
-                handleItemChosen(selectedDropdownItem);
-                return false;
-              } else {
-                var $item = $(selectedDropdownItem)[event.shiftKey ? 'prev' : 'next']('.' + classes.dropdownItem);
-                if ($item.length || event.shiftKey) {
-                  selectDropdownItem($item[0]);
-                  return false;
-                }
-              }
-            } else if (!event.shiftKey) {
-              var $item = $dropdown.find('.' + classes.dropdownItem);
-              if ($item.length) {
-                selectDropdownItem($item[0]);
-                return false;
-              }
+            if ($(selectedDropdownItem).hasClass(classes.dropdownItemToken) && !event.shiftKey) {
+              handleItemChosen(selectedDropdownItem);
+              return false;
             }
             break;
 
@@ -306,10 +288,67 @@
       .append($tokenInput);
 
     // The list to store the dropdown items in
-    var $dropdown = $('<div/>')
+    var $dropdown = $('<ul/>')
       .addClass(classes.dropdown)
-      .appendTo($('body')[0] || 'html')  // TODO: specify parent as a setting?
-      .hide();
+      .insertBefore($tokenList);
+    $dropdown
+      .on('mouseover', 'li', function () {
+        if ($dropdown.data('mouseMoved')) {  // FF immediately triggers mouseover on element inserted under mouse cursor
+          selectDropdownItem(this);
+        }
+      })
+      .on('mousemove', 'li', $.proxy(function (data) {
+        if (!data.mouseMoved) {
+          data.mouseMoved = true;
+          selectDropdownItem(this);
+        }
+      }, null, $dropdown.data()))
+      .on('mousedown', 'li', function (e) {
+        if (e.which === 1) {
+          handleItemChosen(this);
+          return false;
+        }
+      })
+      // .on('transitionend', 'li.kifi-ti-dropdown-item-obsolete', function () {
+      //   $(this).remove();
+      // })
+      .on('mousedown', '.' + classes.dropdownItemX, function (e) {
+        if (e.which === 1) {
+          return false;
+        }
+      })
+      .on('click', '.' + classes.dropdownItemX, function (e) {
+        if (e.which === 1) {
+          var $item = $(this).closest('.' + classes.dropdownItemToken);
+          var item = $.data($item[0], 'tokenInput');
+
+          if ($.isFunction(settings.onRemove)) {
+            var $itemWaiting = $('<li/>')
+              .addClass(classes.dropdownItem + ' ' + classes.dropdownItemWaiting)
+              .css('display', 'none');
+            $item.after($itemWaiting);
+            var heightAfterAnimationPromise = $item.fadeOut(200).promise().then(function () {
+              $item.remove();
+              $itemWaiting.css('display', 'block');
+              return $itemWaiting.outerHeight();
+            });
+            settings.onRemove.call($hiddenInput, item, replaceDropdownItemWith.bind($itemWaiting, heightAfterAnimationPromise));
+          } else {
+            $item.css({
+              'max-height': $item.outerHeight() + 'px',
+              overflow: 'hidden'
+            })
+            .animate({'max-height': 0}, {
+              duration: 200,
+              easing: 'linear',
+              complete: function () {
+                $(this).remove();
+              }
+            });
+          }
+          return false;
+        }
+      });
 
     // Invisible element for measuring text width
     var $measurer = $('<tester/>')
@@ -390,10 +429,6 @@
 
     this.toggleDisabled = function (disable) {
       toggleDisabled(disable);
-    };
-
-    this.flushCache = function () {
-      cache.flush();
     };
 
     this.destroy = function () {
@@ -595,104 +630,108 @@
     }
 
     function hideDropdown() {
-      $dropdown.hide().empty().removeClass(classes.dropdownSearching).removeData('q');
-      selectedDropdownItem = null;
-      $(window).off('resize.tokenInput');
+      populateDropdown(null, []);
     }
 
-    function showDropdown() {
-      if ($dropdown.css('display') === 'none') {
-        var r = $tokenList[0].getBoundingClientRect();  // TODO: parameterize attaching/positioning
-        var winHeight = window.innerHeight;
-        var winWidth = window.innerWidth;
-        $dropdown.css({
-          display: '',
-          visibility: 'hidden',
-          position: 'fixed',
-          top: r.bottom,
-          right: winWidth - r.right,
-          width: r.width
-        });
-        var r2 = $dropdown[0].getBoundingClientRect();
-        $dropdown.css({
-          visibility: '',
-          right: winWidth - 2 * r.right + r2.right
-        });
-        $(window).on('resize.tokenInput', _.throttle(function () {
-          $dropdown.css('top', $tokenList[0].getBoundingClientRect().bottom);
-        }, 50));
+    function populateDropdown(query, results) {
+      var now = Date.now();
+      if ($dropdown.data('populating') > now - 3000) {
+        $dropdown.data('queued', [query, results]);
+        return;
+      }
+      $dropdown.data('populating', now);
+      // var qOld = $dropdown.data('q') || '';
+      $dropdown.removeClass(classes.dropdownSearching).data({q: query, mouseMoved: false});
+
+      // Either preserve the selection or, if the first item represents an actual token, auto-select it.
+      var els = results.map(createDropdownItemEl);
+      var selectedResult = $(selectedDropdownItem).data('tokenInput');
+      var selectedResultNewIndex = selectedResult ? results.map(getId).indexOf(selectedResult.id) : -1;
+      selectedDropdownItem = selectedResultNewIndex > 0 ? els[selectedResultNewIndex] : $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
+      $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
+
+      log('[populateDropdown] q:', query, 'results:', results.length, 'children:', $dropdown[0].childElementCount, 'style:', $dropdown[0].style.cssText);
+
+      // We have several different techniques for transitioning from one list to the next.
+      // The complexity here is unfortunate, but warranted to create a delightful user experience.
+      // An earlier transition may already be in progress when we arrive here.
+      if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
+        if (els.length) {
+          $dropdown.css('height', 0).append(els);
+          $dropdown.off('transitionend').on('transitionend', function (e) {
+            $dropdown.off('transitionend').css('height', '');
+            donePopulating();
+          }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
+        }
+      } else if (els.length === 0) {  // hiding entire list
+        $dropdown.css('height', $dropdown[0].clientHeight).layout();
+        $dropdown.off('transitionend').on('transitionend', function (e) {
+          $dropdown.off('transitionend').empty().css('height', '');
+          donePopulating();
+        }).css('height', 0);
+      // } else if (qOld && query.lastIndexOf(qOld, 0) === 0) {  // refining previous query (e.g. typed a letter)
+      //   var j = 0;
+      //   $dropdown.children().each(function (i, child) {
+      //     if (j < results.length && $.data(child, 'tokenInput').id === results[j].id) {
+      //       $(child).replaceWith(els[j++]);
+      //     } else {
+      //       child.classList.add('kifi-ti-dropdown-item-obsolete');
+      //     }
+      //   });
+      //   $(els.slice(j)).addClass('kifi-ti-dropdown-item-flattened').appendTo($dropdown);
+      //   $dropdown.layout();  // no visible change; just preparing for transitions
+      //   $dropdown.find('.kifi-ti-dropdown-item-flattened').removeClass('kifi-ti-dropdown-item-flattened');
+      //   $dropdown.find('.kifi-ti-dropdown-item-obsolete').addClass('kifi-ti-dropdown-item-flattened');
+      // } else if (query && qOld.lastIndexOf(query, 0) === 0) {  // relaxing previous query (e.g. backspace)
+      //   var children = $dropdown.children().get();
+      //   var i = 0;
+      //   results.forEach(function (result, j) {
+      //     var child = children[i];
+      //     if (child && result.id === $.data(child, 'tokenInput').id) {
+      //       $(child).replaceWith(els[j]);
+      //       i++;
+      //     } else {
+      //       $dropdown[0].insertBefore($(els[j]).addClass('kifi-ti-dropdown-item-flattened')[0], child);
+      //     }
+      //   });
+      //   $(children.slice(i)).addClass('kifi-ti-dropdown-item-obsolete');
+      //   $dropdown.layout();  // no visible change; just preparing for transitions
+      //   $dropdown.find('.kifi-ti-dropdown-item-flattened').removeClass('kifi-ti-dropdown-item-flattened');
+      //   $dropdown.find('.kifi-ti-dropdown-item-obsolete').addClass('kifi-ti-dropdown-item-flattened');
+      } else {  // signficant change to query
+        // fade in overlaid as height adjusts and old fades out
+        var heightInitial = $dropdown[0].clientHeight;
+        $dropdown.css('height', heightInitial);
+        var $clone = $($dropdown[0].cloneNode(false)).addClass(classes.dropdown + '-clone')
+            .append(els)
+          .css({visibility: 'hidden', opacity: 0, height: ''})
+          .insertBefore($dropdown);
+        var heightFinal = $clone[0].clientHeight;
+        $dropdown.layout();
+        $clone
+          .css({height: heightInitial, visibility: 'visible', transition: 'none'})
+          .layout()
+          .on('transitionend', function (e) {
+            $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
+            $clone.remove();
+            donePopulating();
+          })
+          .css({height: heightFinal, opacity: 1, transition: ''});
+        $dropdown
+          .css({height: heightFinal, opacity: 0});
       }
     }
 
-    function populateDropdown(query, results, partial) {
-      $dropdown.empty().toggleClass(classes.dropdownSearching, !!partial).data('q', query);
-      selectedDropdownItem = null;
-
-      var items = results.map(formatDropdownItem);
-      var $ul = $('<ul/>')
-        .append(items)
-        .appendTo($dropdown)
-        // requiring mousemove once b/c FF immediately triggers mouseover on element inserted under mouse cursor
-        .on('mousemove', 'li', function moved() {
-          selectDropdownItem(this);
-          $ul.off('mousemove', 'li', moved);
-          $ul.on('mouseover', 'li', function () {
-            selectDropdownItem(this);
-          });
-        })
-        .on('mousedown', 'li', function (e) {
-          if (e.which === 1) {
-            handleItemChosen(this);
-            return false;
-          }
-        })
-        .on('mousedown', '.' + classes.dropdownItemX, function (e) {
-          if (e.which === 1) {
-            return false;
-          }
-        })
-        .on('click', '.' + classes.dropdownItemX, function (e) {
-          if (e.which === 1) {
-            var $item = $(this).closest('.' + classes.dropdownItemToken);
-            var item = $.data($item[0], 'tokenInput');
-
-            if ($.isFunction(settings.onRemove)) {
-              var $itemWaiting = $('<li/>')
-                .addClass(classes.dropdownItem + ' ' + classes.dropdownItemWaiting)
-                .css('display', 'none');
-              $item.after($itemWaiting);
-              var heightAfterAnimationPromise = $item.fadeOut(200).promise().then(function () {
-                $item.remove();
-                $itemWaiting.css('display', 'block');
-                return $itemWaiting.outerHeight();
-              });
-              settings.onRemove.call($hiddenInput, item, replaceWith.bind($itemWaiting, heightAfterAnimationPromise));
-            } else {
-              $item.css({
-                'max-height': $item.outerHeight() + 'px',
-                overflow: 'hidden'
-              })
-              .animate({'max-height': 0}, {
-                duration: 200,
-                easing: 'linear',
-                complete: function () {
-                  $(this).remove();
-                }
-              });
-            }
-            return false;
-          }
-        });
-      if ($.isFunction(settings.initDropdown)) {
-        settings.initDropdown($ul);
+    function donePopulating() {
+      $dropdown.data('populating', 0);
+      var queued = $dropdown.data('queued');
+      if (queued) {
+        $dropdown.removeData('queued');
+        populateDropdown.apply(null, queued);
       }
-      if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
-        selectDropdownItem(items[0]);
-      }
-      showDropdown();
     }
 
-    function formatDropdownItem(result) {
+    function createDropdownItemEl(result) {
       return $(settings.formatResult(result))
         .addClass(classes.dropdownItem)
         .data('tokenInput', result)[0];
@@ -701,10 +740,7 @@
     // Highlight an item in the results dropdown (or pass null to deselect)
     function selectDropdownItem(item) {
       $(selectedDropdownItem).removeClass(classes.dropdownItemSelected);
-      selectedDropdownItem = item;
-      if (!$(selectedDropdownItem).hasClass(classes.dropdownItemWaiting)) {
-        $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
-      }
+      $(selectedDropdownItem = item).not('.' + classes.dropdownItemWaiting).addClass(classes.dropdownItemSelected);
     }
 
     // Do a search and show the "searching" dropdown
@@ -716,53 +752,22 @@
       resizeInput();
 
       var query = getCurrentQuery();
-      if (query.length) {
-        var o = cache.get(query);
-        if (o && o.complete) {
-          populateDropdown(query, o.results, false);
-        } else {
-          if (o) {
-            o.results.length = 0;
-          }
-          $dropdown.addClass(classes.dropdownSearching);
-          findItems(tokens.length, query, receiveResults.bind(null, query));
-        }
-      } else {
-        hideDropdown();
+      $dropdown.addClass(classes.dropdownSearching);
+      findItems(tokens.length, query, receiveResults.bind(null, query));
+    }
+
+    function receiveResults(query, results) {
+      if ($tokenInput.val().trim() === query && $dropdown.data('q') !== query &&
+          $dropdown.hasClass(classes.dropdownSearching)) {
+        populateDropdown(query, results);
       }
     }
 
-    function receiveResults(query, results, partial, errored, refresh) {
-      if (!errored) {
-        var o = cache.get(query);
-        if (!o || refresh) {
-          cache.add(query, {results: results, complete: !partial});
-        } else if (!o.complete) {
-          Array.prototype.push.apply(o.results, results);
-          o.complete = !partial;
-        }
-      }
-
-      if ($tokenInput.val().trim() === query && $dropdown.hasClass(classes.dropdownSearching)) {
-        if ($dropdown.data('q') !== query || refresh) {
-          populateDropdown(query, results, partial);
-        } else {
-          if (!partial) {
-            $dropdown.removeClass(classes.dropdownSearching);
-          }
-          if (results.length) {
-            $dropdown.find('ul').append(results.map(formatDropdownItem));
-          }
-        }
-      }
-    }
-
-    function replaceWith(heightAfterAnimationPromise, item) {
-      cache.flush();
+    function replaceDropdownItemWith(heightAfterAnimationPromise, item) {
       var $itemWaiting = this;
       heightAfterAnimationPromise.then(function (height) {
         if (item) {
-          var $newEl = $(formatDropdownItem(item)).fadeIn().css('display', 'block').replaceAll($itemWaiting);
+          $(createDropdownItemEl(item)).fadeIn().css('display', 'block').replaceAll($itemWaiting);
         } else {
           $itemWaiting.css({
             'max-height': height + 'px',
@@ -786,21 +791,17 @@
     function getCurrentQuery() {
       return $tokenInput.val().trim();
     }
-  };
 
-  // basic results cache
-  function Cache() {
-    this.data = {};
-  };
-  Cache.prototype = {
-    add: function (k, v) {
-      this.data[k] = v;
-    },
-    get: function (k) {
-      return this.data[k];
-    },
-    flush: function () {
-      this.data = {};
+    function measureCloneHeight(el, heightProp) {
+      var clone = el.cloneNode(true);
+      $(clone).css({position: 'absolute', zIndex: -1, visibility: 'hidden', height: 'auto'}).insertBefore(el);
+      var val = clone[heightProp];
+      clone.remove();
+      return val;
+    }
+
+    function getId(o) {
+      return o.id;
     }
   };
 

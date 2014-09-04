@@ -1,37 +1,28 @@
-.kifi-toaster {
-  position: absolute;
-  z-index: 1;
-  top: 8px;
-  bottom: 64px;
-  left: 6px;
-  right: 6px;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  background: rgba(255,255,255,.94);
-  transition: background-color .2s linear, visibility 0s;
-  overflow: hidden;
-}
-.kifi-toaster.kifi-down {
-  background: rgba(255,255,255,0);
-  visibility: hidden;
-  transition-delay: 0s, .2s;
-}
 .kifi-toast {
   position: absolute;
-  bottom: 0;
-  left: 0;
+  bottom: 53px;
   right: 0;
-  transition: -webkit-transform .2s ease-out, opacity .2s linear;
-  transition: transform .2s ease-out, opacity .2s linear;
+  width: 306px;
+  border: solid #333;
+  border-width: 0 1px 1px;
+  border-radius: 4px 4px 12px 12px !important;
+  text-align: left;
+  -webkit-transform-origin: 40% bottom;
+  transform-origin: 40% bottom;
+  transition: opacity linear, -webkit-transform ease-out;
+  transition: opacity linear, transform ease-out;
+  transition-duration: .2s;
 }
-.kifi-down>.kifi-toast {
-  -webkit-transform: translateY(100%);
-  transform: translateY(100%);
+.kifi-toast.kifi-down {
   opacity: 0;
+  -webkit-transform: scale(.1);
+  transform: scale(.1);
   transition-timing-function: ease-in;
+  /*transition-duration: .16s;*/
 }
 
 .kifi-toast-other {
+  display: none;
   position: absolute;
   top: -62px;
   left: 6px;
@@ -138,4 +129,7 @@
 .kifi-toast .kifi-compose-draft {
   min-height: 64px;
   max-height: 142px;
+}
+.kifi-toast .kifi-compose-bar {
+  border-radius: 0 0 11px 11px !important;
 }

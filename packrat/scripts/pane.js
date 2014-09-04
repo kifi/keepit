@@ -430,24 +430,6 @@ var pane = pane || function () {  // idempotent for Chrome
         showPane(locator);
       }
     },
-    compose: function (trigger, locator, recipient) {
-      log('[pane:compose]', trigger);
-      api.require('scripts/compose_toaster.js', function () {
-        Q.when($pane || showPane(locator)).done(function () {
-          if ($pane.data('state') !== 'closing') {
-            if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form
-            toaster.toggle($pane).done(function (compose) {
-              if (compose) {
-                if (recipient) {
-                  compose.prefill(recipient);
-                }
-                compose.snapSelection() || compose.focus();
-              }
-            });
-          }
-        });
-      });
-    },
     shade: function () {
       if ($pane) {
         $pane.addClass('kifi-shaded');

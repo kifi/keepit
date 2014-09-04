@@ -393,6 +393,12 @@
     display: block;
     //opacity: 1;
   }
+
+  ::after {
+    content: '';
+    display: block;
+    clear: both;
+  }
 }
 
 .kifi-message-participant-dialog-title {
@@ -422,10 +428,6 @@
     color: white;
     background: shade(@buttonBgColor, 20%);
   }
-}
-
-.kifi-clear {
-  clear: both;
 }
 
 .kifi-root .kifi-ti-dropdown {

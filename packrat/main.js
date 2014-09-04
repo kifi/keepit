@@ -11,7 +11,7 @@ var THREAD_BATCH_SIZE = 8;
 //                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
 var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
 var hostRe = /^https?:\/\/([^\/?#]+)/;
-var emailAddrRe = /^[^@\s]+@[^@\s]+$/; // very lenient
+var emailRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
@@ -25,9 +25,7 @@ var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
-var friends;
-var friendsById;
-var friendSearchCache;
+var contactSearchCache;
 var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
@@ -49,9 +47,7 @@ function clearDataCache() {
   threadLists = {};
   threadsById = {};
   messageData = {};
-  friends = null;
-  friendsById = null;
-  friendSearchCache = null;
+  contactSearchCache = null;
   ruleSet = {rules: {}};
   urlPatterns = null;
   tags = null;
@@ -301,7 +297,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs.bind(null, getTags.bind(null, getFriends)));
+  getRules(getPrefs.bind(null, getTags));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -423,30 +419,11 @@ var socketHandlers = {
   },
   new_friends: function (fr) {
     log('[socket:new_friends]', fr);
-    if (friends) {
-      for (var i = 0; i < fr.length; i++) {
-        var f = standardizeUser(fr[i]);
-        if (f.id in friendsById) {
-          friends = friends.filter(idIsNot(f.id))
-        }
-        friends.push(f);
-        friendsById[f.id] = f;
-        friendSearchCache = null;
-      }
-    }
+    contactSearchCache = null;
   },
   lost_friends: function (fr) {
     log('[socket:lost_friends]', fr);
-    if (friends) {
-      for (var i = 0; i < fr.length; i++) {
-        var f = fr[i];
-        if (f.id in friendsById) {
-          friends = friends.filter(idIsNot(f.id));
-          delete friendsById[f.id];
-          friendSearchCache = null;
-        }
-      }
-    }
+    contactSearchCache = null;
   },
   create_tag: onTagChangeFromServer.bind(null, 'create'),
   rename_tag: onTagChangeFromServer.bind(null, 'rename'),
@@ -1103,77 +1080,55 @@ api.port.on({
         linkedin: dev ? 'ovlhms1y0fjr' : 'r11loldy9zlg'
       }});
   },
-  search_friends: function(data, respond, tab) {
-    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    var searchContext = {sf: sf, q: data.q}
-    var results;
-    if (friendSearchCache) {
-      results = friendSearchCache.get(data);
+  search_contacts: function (data, respond, tab) {
+    if (!contactSearchCache) {
+      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(3600000);
+    }
+    var results = contactSearchCache.get(data);
+    if (results) {
+      respond(results);
     } else {
-      friendSearchCache = new (global.FriendSearchCache || require('./friend_search_cache').FriendSearchCache)(3600000);
-    }
-    if (!results) {
-      var candidates = friendSearchCache.get({includeSelf: data.includeSelf, q: data.q.substr(0, data.q.length - 1)}) ||
-        (data.includeSelf ?
-           friends ? [me].concat(friends) : [me, SUPPORT] :
-           friends || [SUPPORT]);
-      results = sf.filter(data.q, candidates, getName);
-      if (friends) {
-        friendSearchCache.put(data, results);
-      }
-    }
-    if (emailAddrRe.test(data.q)) {
-      var i = 0;
-      while (i < data.participants.length && data.participants[i].id !== data.q) i++;
-      if (i >= data.participants.length) {
-        var newEmailResult = toContactResult.apply(searchContext, [{email: data.q, isNew: true}]);
-      }
-    }
-    var nFriendResultsDesired = newEmailResult ? data.n - 1 : data.n;
-    if (results.length > nFriendResultsDesired) {
-      results = results.slice(0, nFriendResultsDesired);
-    }
-    var nMoreDesired = data.n - results.length; // q might be among the email addresses we receive
-    var searchId = nMoreDesired ? Math.random() * 2e9 | 0 + 1 : undefined;
-    var friendSearchResults = results.map(toFriendSearchResult, searchContext)
-    respond({
-      searchId: searchId,
-      results: (newEmailResult ? [newEmailResult] : []).concat(friendSearchResults)
-    });
-    if (nMoreDesired) {
-      ajax('GET', '/ext/contacts', {q: data.q, n: nMoreDesired}, function (contacts) {
-        if (newEmailResult) {
-          // check if one of the contacts is an exact match for the email address
-          var i = 0;
-          while (i < contacts.length && contacts[i].email !== newEmailResult.email) i++;
-          var hasMatchingEmail = i < contacts.length;
+      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n}, function (contacts) {
+        var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+        if (!data.includeSelf) {
+          contacts = contacts.filter(idIsNot(me.id));
+        } else if (contacts.length < data.n && !contacts.some(hasId(me.id)) && (!data.q || sf.filter(data.q, [me], getName).length)) {
+          contacts.push(clone(me));
         }
-        var update = {searchId: searchId, contacts: contacts.map(toContactResult, searchContext)};
-        if (hasMatchingEmail) {
-          // refreshing the whole list to remove the "new email address" result
-          update.friends = friendSearchResults;
-          update.refresh = true;
-        } else {
+        if (contacts.length < data.n && !contacts.some(hasId(SUPPORT.id)) && (!data.q || sf.filter(data.q, [SUPPORT], getName).length)) {
+          contacts.push(clone(SUPPORT));
         }
-        api.tabs.emit(tab, 'contacts', update);
+        var results = contacts.map(toContactResult, {sf: sf, q: data.q});
+        if (results.length < data.n && data.q && !data.participants.some(hasId(data.q)) && !results.some(hasEmail(data.q))) {
+          results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
+        }
+        respond(results);
+        contactSearchCache.put(data, results);
       }, function () {
-        api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
+        respond(null);
       });
     }
   },
-  search_contacts: function(data, respond, tab) {
-    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    var searchContext = {sf: sf, q: data.q}
-    ajax('GET', '/ext/contacts', {q: data.q, n: data.n}, function (contacts) {
-      respond(contacts.map(toContactResult, searchContext));
-    }, respond);
+  search_contacts_excluding: function (data, respond) {
+    ajax('GET', '/ext/contacts', {q: data.q, n: data.not.length + 1}, function (contacts) {
+      for (var i = 0; i < contacts.length; i++) {
+        var contact = contacts[i];
+        if (data.not.indexOf(contact.id || contact.email) < 0) {
+          respond(toContactResult.call({sf: global.scoreFilter || require('./scorefilter').scoreFilter, q: data.q}, contact));
+          return;
+        }
+      }
+      respond(null);
+    });
   },
-  delete_contact: function(email, respond) {
+  delete_contact: function (email, respond) {
     ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
       log('[delete_contact] resp:', status);
-      respond(status);
+      contactSearchCache = null;
+      respond(true);
     }, function () {
       log('#c00', '[delete_contact] resp:', status);
+      contactSearchCache = null;
       respond(false);
     });
   },
@@ -1202,12 +1157,7 @@ api.port.on({
     }
   },
   open_support_chat: function (_, __, tab) {
-    api.tabs.emit(tab, 'open_to', {
-      trigger: 'deepLink',
-      locator: '/messages',
-      compose: true,
-      to: friendsById && friendsById[SUPPORT.id] || SUPPORT
-    }, {queue: 1});
+    api.tabs.emit(tab, 'compose', {to: SUPPORT, trigger: 'deepLink'}, {queue: 1});
   },
   logged_in: authenticate.bind(null, api.noop),
   remove_notification: function (threadId) {
@@ -1649,11 +1599,12 @@ function awaitDeepLink(link, tabId, retrySec) {
           page: +loc.substr(9, 1),
           x: !experiments || experiments.indexOf('guide_forced') < 0
         }, {queue: 1});
+      } else if (loc.indexOf('#compose') >= 0) {
+        api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});
       } else {
-        api.tabs.emit(tab, 'open_to', {
+        api.tabs.emit(tab, 'show_pane', {
           trigger: 'deepLink',
-          locator: loc.replace(/#.*/, ''),
-          compose: loc.indexOf('#compose') >= 0,
+          locator: loc,
           redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
         }, {queue: 1});
       }
@@ -2283,36 +2234,24 @@ function compilePatterns(arr) {
   return arr;
 }
 
-function toFriendSearchResult(f) {
-  return {
-    id: f.id,
-    name: f.name,
-    pictureName: f.pictureName,
-    parts: this.sf.splitOnMatches(this.q, f.name)
-  };
-}
-
-function toContactResult(f) {
-  if (f.name) {
-    f.nameParts = this.sf.splitOnMatches(this.q, f.name);
+function toContactResult(o) {
+  if (o.name) {
+    o.nameParts = this.sf.splitOnMatches(this.q, o.name);
   }
-  if (f.email) {
-    var i = f.email.indexOf('@');
-    f.emailParts = this.sf.splitOnMatches(this.q, f.email.substr(0, i));
-    var n = f.emailParts.length;
+  if (o.email) {
+    var i = o.email.indexOf('@');
+    o.emailParts = this.sf.splitOnMatches(this.q, o.email.substr(0, i));
+    var n = o.emailParts.length;
     if (n % 2) {
-      f.emailParts[n - 1] += f.email.substr(i);
+      o.emailParts[n - 1] += o.email.substr(i);
     } else {
-      f.emailParts.push(f.email.substr(i));
+      o.emailParts.push(o.email.substr(i));
     }
-    if (!f.id) {
-      f.id = {kind: 'email', email: f.email};
-    }
-    if (!f.name) {
-      f.name = f.email;
+    if (!o.id) {
+      o.id = o.email;
     }
   }
-  return f;
+  return o;
 }
 
 function reTest(s) {
@@ -2329,6 +2268,9 @@ function getId(o) {
 }
 function getName(o) {
   return o.name;
+}
+function hasEmail(email) {
+  return function (o) {return o.email === email};
 }
 function getThreadId(n) {
   return n.thread;
@@ -2361,21 +2303,7 @@ var elizaBaseUri = devUriOr.bind(null, apiUri('eliza'));
 var webBaseUri = devUriOr.bind(null, 'https://www.kifi.com');
 var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
 
-function getFriends(next) {
-  ajax('GET', '/ext/user/friends', function gotFriends(fr) {
-    log('[gotFriends]', fr);
-    friends = fr;
-    friendsById = {};
-    for (var i = 0; i < fr.length; i++) {
-      var f = standardizeUser(fr[i]);
-      friendsById[f.id] = f;
-    }
-    friendSearchCache = null;
-    if (next) next();
-  });
-}
-
-function getTags(next) {
+function getTags() {
   ajax('GET', '/tags', function gotTags(arr) {
     log('[gotTags]', arr);
     tags = arr;
@@ -2383,7 +2311,6 @@ function getTags(next) {
       o[tag.id] = tag;
       return o;
     }, {});
-    if (next) next();
   });
 }
 
