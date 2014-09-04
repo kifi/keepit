@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.model.{ Library, NormalizedURI, User }
+import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
 import org.joda.time.DateTime
@@ -12,8 +12,6 @@ object Keepers {
   case class ReasonableNumber(who: Seq[Id[User]]) extends Keepers
 }
 
-trait SeedItemType
-
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
@@ -23,8 +21,7 @@ case class SeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-
-  discoverable: Boolean) extends SeedItemType
+  discoverable: Boolean)
 
 case class PublicSeedItem(
   uriId: Id[NormalizedURI],
@@ -33,7 +30,7 @@ case class PublicSeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean) extends SeedItemType
+  discoverable: Boolean)
 
 @json case class PublicUriScores(
   popularityScore: Float,
@@ -69,30 +66,23 @@ case class PublicSeedItem(
   """.replace("\n", "").trim
 }
 
-trait SeedItemWithMultiplierType {
-  def multiplier: Float
-  def timesKept: Int
-  def lastSeen: DateTime
-}
-
 case class SeedItemWithMultiplier(
-    override val multiplier: Float = 1.0f,
+    multiplier: Float = 1.0f,
     userId: Id[User],
     uriId: Id[NormalizedURI],
     priorScore: Option[Float] = None,
-    override val timesKept: Int,
-    override val lastSeen: DateTime,
-    keepers: Keepers,
-    libraries: Seq[Id[Library]]) extends SeedItemWithMultiplierType {
+    timesKept: Int,
+    lastSeen: DateTime,
+    keepers: Keepers) {
   def makePublicSeedItemWithMultiplier = PublicSeedItemWithMultiplier(multiplier, uriId, timesKept, lastSeen, keepers)
 }
 
 case class PublicSeedItemWithMultiplier(
-  override val multiplier: Float = 1.0f,
+  multiplier: Float = 1.0f,
   uriId: Id[NormalizedURI],
-  override val timesKept: Int,
-  override val lastSeen: DateTime,
-  keepers: Keepers) extends SeedItemWithMultiplierType
+  timesKept: Int,
+  lastSeen: DateTime,
+  keepers: Keepers)
 
 case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 

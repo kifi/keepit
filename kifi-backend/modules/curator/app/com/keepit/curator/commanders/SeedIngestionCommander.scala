@@ -21,11 +21,11 @@ import scala.concurrent.Future
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
     topUrisIngestor: TopUriSeedIngestionHelper,
-    libraryIngestor: LibrarySeedIngestionHelper,
+    libraryIngestor: LibraryMembershipSeedIngestionHelper,
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
-    libSeqRepo: CuratorLibraryInfoRepo,
+    libSeqRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
     db: Database) extends Logging {
 
@@ -58,7 +58,7 @@ class SeedIngestionCommander @Inject() (
     log.info("Ingested one batch of keeps.")
   }
 
-  def ingestLibraries(): Future[Unit] = FutureHelpers.whilef(libraryIngestor(INGESTION_BATCH_SIZE)) {
+  def ingestLibraries(batchSize: Option[Int] = Some(INGESTION_BATCH_SIZE)): Future[Unit] = FutureHelpers.whilef(libraryIngestor(batchSize.getOrElse(INGESTION_BATCH_SIZE))) {
     log.info("Ingested a batch of libraries.")
   }
 
