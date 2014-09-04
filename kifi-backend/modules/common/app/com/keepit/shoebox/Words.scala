@@ -1,4 +1,4 @@
-package com.keepit.model
+package com.keepit.shoebox
 
 object Words {
   val nouns = Array[String]("time", "year", "people", "thing", "life", "child", "world", "school", "state", "family",
@@ -6,7 +6,7 @@ object Words {
     "question", "work", "number", "night", "point", "home", "water", "room", "mother", "area", "money", "story", "fact",
     "month", "right", "study", "book", "word", "business", "issue", "side", "kind", "head", "house", "service", "friend",
     "father", "power", "hour", "game", "line", "member", "city", "name", "team", "minute", "idea", "body", "back",
-    "parent","face", "others", "level", "office", "door", "health", "person", "history", "party", "result", "change",
+    "parent", "face", "others", "level", "office", "door", "health", "person", "history", "party", "result", "change",
     "morning", "reason", "research", "girl", "food", "moment", "teacher", "force", "foot", "policy", "process", "music",
     "market", "sense", "nation", "plan", "college", "interest", "death", "effect", "class", "control", "care", "field",
     "role", "effort", "rate", "heart", "drug", "show", "leader", "light", "voice", "wife", "police", "mind", "price",
@@ -340,3 +340,4 @@ object Words {
     "sunny", "troubled", "balanced", "flying", "skilled", "managing", "marine", "boring", "fatal", "inherent",
     "selected", "naval")
 }
+
