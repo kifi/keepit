@@ -241,12 +241,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result3) must equalTo(OK)
         Json.parse(contentAsString(result3)) must equalTo(expected)
 
-        // test read_only if you have an invite
+        // test read_only if you have an invite & working passcode
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
         }
         val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
-        val result4: Future[SimpleResult] = libraryController.getLibraryById(pubId1)(request4)
+        val result4: Future[SimpleResult] = libraryController.getLibraryById(pubId = pubId1, passcode = Some("asdf"))(request4)
         status(result4) must equalTo(OK)
         Json.parse(contentAsString(result4)) must equalTo(expected)
       }
@@ -317,14 +317,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(OK)
         Json.parse(contentAsString(result4)) must equalTo(expected)
 
-        // test read_only if you have an invite
+        // test read_only if you have an invite & correct passcode
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
         }
         val request5 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
-        val result5: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput)(request5)
-        status(result5) must equalTo(OK)
-        Json.parse(contentAsString(result5)) must equalTo(expected)
+        val result5: Future[SimpleResult] = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput, passcode = Some("qwer"))(request5)
+        status(result5) must equalTo(BAD_REQUEST)
       }
     }
 
