@@ -27,7 +27,7 @@ class QueryLanguageDetector(searcher: Searcher) {
     // extract terms
     languages.foreach { lang =>
       querySpecs.take(16).foreach { querySpec =>
-        extractTerms("ts", querySpec.term, lang, terms)
+        extractTerms("cs", querySpec.term, lang, terms)
       }
     }
 
@@ -35,12 +35,13 @@ class QueryLanguageDetector(searcher: Searcher) {
     terms.foreach { case (term, stats) => stats.addFreq(searcher.freq(term)) }
 
     // probability
-    val totalFreq = (terms.valuesIterator.map(_.getFreq()).sum + terms.size).toDouble
+    val alpha = 1.0 // smoothing
+    val totalFreq = (terms.valuesIterator.map(_.getFreq()).sum).toDouble + (terms.size.toDouble * alpha)
     prior.iterator.map {
       case (lang, logPrior) =>
-        val totalFreqInLang = (terms.valuesIterator.map(_.getFreq(lang)).sum + terms.size).toDouble
-        val logProb = terms.valuesIterator.foldLeft(logPrior) { (logProb, stats) =>
-          log((stats.getFreq(lang) + 1).toDouble / totalFreqInLang) - log((stats.getFreq() + 1).toDouble / totalFreq)
+        val totalFreqInLang = (terms.valuesIterator.map(_.getFreq(lang)).sum.toDouble + (terms.size.toDouble * alpha))
+        val logProb = terms.valuesIterator.foldLeft(logPrior) { (LogPrior, stats) =>
+          log((stats.getFreq(lang).toDouble + alpha) / totalFreqInLang) - log((stats.getFreq().toDouble + alpha) / totalFreq) + logPrior
         }
         (lang, logProb)
     }.toMap
@@ -57,13 +58,16 @@ class QueryLanguageDetector(searcher: Searcher) {
   }
 }
 
-class TermLangStats(initLang: Set[Lang] = Set()) {
+final class TermLangStats(initLang: Set[Lang] = Set()) {
   private[this] var freq: Int = 0
   private[this] var langs: Set[Lang] = initLang
 
   def addFreq(n: Int): Unit = { freq += n }
   def addLang(lang: Lang): Unit = { langs += lang }
 
+  @inline
   def getFreq(): Int = freq
+
+  @inline
   def getFreq(lang: Lang): Int = { if (langs.contains(lang)) freq else 0 }
 }

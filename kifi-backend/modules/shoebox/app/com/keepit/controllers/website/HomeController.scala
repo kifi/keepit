@@ -297,7 +297,7 @@ class HomeController @Inject() (
     MovedPermanently("/")
   }
 
-  def getKifiExtensionIPhone = Action {
+  def getKifiExtensionIPhone(s: String) = Action { implicit request =>
     Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png">"""))
   }
 
