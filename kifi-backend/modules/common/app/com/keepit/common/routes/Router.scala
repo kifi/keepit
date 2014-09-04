@@ -158,11 +158,12 @@ object Shoebox extends Service {
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesAndMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getKeepsAndTagsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsersForDelighted", Param("maxCount", maxCount), Param("skipCount", skipCount), Param("after", after), Param("before", before))
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
     def getInvitations(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitations", Param("senderId", senderId))
     def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
-    def addInteraction(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteraction", Param("userId", userId))
+    def addInteractions(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteractions", Param("userId", userId))
   }
 }
 
@@ -213,6 +214,7 @@ object Search extends Service {
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
+    def distLangDetect() = ServiceRoute(POST, "/internal/search/dist/langDetect")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
   }
@@ -233,6 +235,7 @@ object Eliza extends Service {
     def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))
     def getRenormalizationSequenceNumber() = ServiceRoute(GET, "/internal/eliza/sequenceNumber/renormalization")
     def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/eliza/keepAttribution", Param("userId", userId), Param("uriId", uriId))
+    def checkUrisDiscussed(userId: Id[User]) = ServiceRoute(POST, "/internal/eliza/checkUrisDiscussed", Param("userId", userId))
   }
 }
 

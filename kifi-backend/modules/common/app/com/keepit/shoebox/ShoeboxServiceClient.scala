@@ -105,11 +105,12 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
-  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit
+  def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -143,6 +144,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val extraLongTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
@@ -614,7 +616,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
       r.json.as[URISummary]
     }
   }
@@ -674,6 +676,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
+    call(Shoebox.internal.getKeepsAndTagsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[KeepAndTags]]
+    }
+  }
+
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
     call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
@@ -692,13 +700,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
   }
 
-  def addInteraction(userId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {
-    val json = Json.obj("action" -> action) ++ (src match {
-      case Left(id) =>
-        Json.obj("user" -> id)
-      case Right(email) =>
-        Json.obj("email" -> email)
-    })
-    call(Shoebox.internal.addInteraction(userId), body = json)
+  def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit = {
+    val jsonActions = actions.collect {
+      case (Left(id), action) => Json.obj("user" -> id, "action" -> action)
+      case (Right(email), action) => Json.obj("email" -> email, "action" -> action)
+    }
+    call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
   }
 }

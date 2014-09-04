@@ -24,8 +24,8 @@ class EmailRecosController @Inject() (
   def viewReco(uriId: ExternalId[NormalizedURI]) = HtmlAction(
     authenticatedAction = { request =>
       val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-      curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(clicked = Some(true),
-        clientType = Some(RecommendationClientType.Email)))
+      val feedback = UriRecommendationFeedback(clicked = Some(true), clientType = Some(RecommendationClientType.Email))
+      curator.updateUriRecommendationFeedback(request.userId, uri.id.get, feedback)
       Found(uri.url)
     },
     unauthenticatedAction = { request =>

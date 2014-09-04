@@ -2,6 +2,7 @@ package com.keepit.curator
 
 import com.keepit.abook.ABookServiceClientModule
 import com.keepit.common.cache.CacheModule
+import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.SearchServiceClientModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
@@ -14,7 +15,7 @@ import com.keepit.common.service.ServiceType
 
 case class CuratorServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.CURATOR
-  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.CORTEX :: ServiceType.HEIMDAL :: ServiceType.SEARCH :: ServiceType.ABOOK :: Nil
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.CORTEX :: ServiceType.HEIMDAL :: ServiceType.SEARCH :: ServiceType.ABOOK :: ServiceType.ELIZA :: Nil
 }
 
 abstract class CuratorModule(
@@ -27,6 +28,7 @@ abstract class CuratorModule(
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val searchServiceClientModule: SearchServiceClientModule
   val abookServiceClientModule: ABookServiceClientModule
+  val elizaServiceClientModule: ElizaServiceClientModule
   val secureSocialModule = RemoteSecureSocialModule()
   val curatorSlickModule = CuratorSlickModule()
   val dbSequencingModule = CuratorDbSequencingModule()

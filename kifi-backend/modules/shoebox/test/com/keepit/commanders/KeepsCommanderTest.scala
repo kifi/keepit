@@ -73,7 +73,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-          val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = "t1"))
+          val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("t1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
         }
 

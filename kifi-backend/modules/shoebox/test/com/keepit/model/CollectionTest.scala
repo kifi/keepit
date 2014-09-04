@@ -43,10 +43,10 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-      val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1))
-      val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Apparel", createdAt = t1))
-      val coll3 = collectionRepo.save(Collection(userId = user1.id.get, name = "Scala", createdAt = t2))
-      val coll4 = collectionRepo.save(Collection(userId = user2.id.get, name = "Scala", createdAt = t2))
+      val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1))
+      val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Apparel"), createdAt = t1))
+      val coll3 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Scala"), createdAt = t2))
+      val coll4 = collectionRepo.save(Collection(userId = user2.id.get, name = Hashtag("Scala"), createdAt = t2))
 
       (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4)
     }
@@ -54,10 +54,10 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
 
   "collections" should {
     "binary serialization" in {
-      val coll1 = Collection(id = Some(Id[Collection](1)), userId = Id[User](1), name = "Cooking")
-      val coll2 = Collection(id = Some(Id[Collection](2)), userId = Id[User](1), name = "Apparel")
-      val coll3 = Collection(id = Some(Id[Collection](3)), userId = Id[User](1), name = "Scala")
-      val coll4 = Collection(id = Some(Id[Collection](4)), userId = Id[User](1), name = "Java")
+      val coll1 = Collection(id = Some(Id[Collection](1)), userId = Id[User](1), name = Hashtag("Cooking"))
+      val coll2 = Collection(id = Some(Id[Collection](2)), userId = Id[User](1), name = Hashtag("Apparel"))
+      val coll3 = Collection(id = Some(Id[Collection](3)), userId = Id[User](1), name = Hashtag("Scala"))
+      val coll4 = Collection(id = Some(Id[Collection](4)), userId = Id[User](1), name = Hashtag("Java"))
       val collectionSummaries = Seq(coll1.summary, coll2.summary, coll3.summary, coll4.summary)
       val formatter = new CollectionSummariesFormat()
       val binary = formatter.writes(Some(collectionSummaries))
@@ -72,15 +72,15 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll2.id.get))
         }
         db.readOnlyMaster { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Apparel", "Cooking", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Apparel", "Cooking", "Scala")
           keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
           keepRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
           keepRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
@@ -92,8 +92,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
@@ -104,8 +104,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
         db.readWrite { implicit s =>
@@ -123,8 +123,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnlyMaster { implicit s =>
-            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
-            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
           }
         }
       }
@@ -134,8 +134,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll3.id.get))
-          collectionRepo.getByUserAndName(user1.id.get, "Scala").get.id.get === coll3.id.get
-          collectionRepo.getByUserAndName(user2.id.get, "Scala").get.id.get === coll4.id.get
+          collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala")).get.id.get === coll3.id.get
+          collectionRepo.getByUserAndName(user2.id.get, Hashtag("Scala")).get.id.get === coll4.id.get
           keepToCollectionRepo.getKeepsInCollection(coll3.id.get).length === 1
           keepToCollectionRepo.getUriIdsInCollection(coll3.id.get).length === 1
           keepToCollectionRepo.getKeepsInCollection(coll4.id.get).length === 0
@@ -143,7 +143,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getKeepsInCollection(coll4.id.get).length === 1
           keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 1
-          collectionRepo.getByUserAndName(user2.id.get, "Cooking") must beNone
+          collectionRepo.getByUserAndName(user2.id.get, Hashtag("Cooking")) must beNone
         }
       }
     }
@@ -151,8 +151,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
@@ -226,7 +226,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       withDb(modules: _*) { implicit injector =>
         val (user1, _, _, _, _, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
-          collectionRepo.getByUserAndName(user1.id.get, "scala") === collectionRepo.getByUserAndName(user1.id.get, "Scala")
+          collectionRepo.getByUserAndName(user1.id.get, Hashtag("scala")) === collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala"))
         }
       }
     }

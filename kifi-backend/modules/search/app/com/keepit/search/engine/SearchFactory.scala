@@ -8,9 +8,9 @@ import com.keepit.model._
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
-import com.keepit.search.engine.parser.KQueryParser
+import com.keepit.search.engine.parser.{ QueryLanguageDetector, KQueryParser }
 import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
@@ -84,7 +84,7 @@ class SearchFactory @Inject() (
           val timeLogs = new SearchTimeLogs()
           timeLogs.queryParsing = parser.totalParseTime
 
-          new KifiSearch(
+          new KifiSearchImpl(
             userId,
             numHitsToReturn,
             filter,
@@ -127,7 +127,7 @@ class SearchFactory @Inject() (
     future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds) }(immediate)
   }
 
-  def getNonUserSearch(
+  def getKifiNonUserSearch(
     shards: Set[Shard[NormalizedURI]],
     libId: Id[Library],
     queryString: String,
@@ -135,7 +135,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig): Seq[NonUserSearch] = {
+    config: SearchConfig): Seq[KifiSearchNonUserImpl] = {
 
     // this non-user is treat as if he/she is a member of the library
     val libraryIdsFuture = Future.successful((LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
@@ -165,7 +165,7 @@ class SearchFactory @Inject() (
           val timeLogs = new SearchTimeLogs()
           timeLogs.queryParsing = parser.totalParseTime
 
-          new NonUserSearch(
+          new KifiSearchNonUserImpl(
             libId,
             numHitsToReturn,
             filter,
@@ -179,7 +179,26 @@ class SearchFactory @Inject() (
             timeLogs
           )
         }
-      case None => Seq.empty[NonUserSearch]
+      case None => Seq.empty[KifiSearchNonUserImpl]
+    }
+  }
+
+  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
+    Future.traverse(shards) { shard =>
+      SafeFuture {
+        val detector = new QueryLanguageDetector(shardedArticleIndexer.getIndexer(shard).getSearcher)
+        detector.detect(query, prior)
+      }
+    }.map { results =>
+      var mergedResult: Map[Lang, Double] = Map()
+      results.foreach { r =>
+        if (mergedResult.isEmpty) {
+          mergedResult ++= r
+        } else {
+          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
+        }
+      }
+      mergedResult
     }
   }
 }

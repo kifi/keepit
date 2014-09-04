@@ -38,20 +38,18 @@ class LibraryCommander @Inject() (
     clock: Clock) extends Logging {
 
   def createFullLibraryInfo(library: Library): FullLibraryInfo = {
-    val (lib, owner, collabs, follows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
+
+    val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
-      val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
-      val (collabs, follows) = memberships.foldLeft(List.empty[BasicUser], List.empty[BasicUser]) {
-        case ((c1, f1), m) => m.access match {
-          case LibraryAccess.READ_ONLY => (c1, basicUserRepo.load(m.userId) :: f1)
-          case LibraryAccess.READ_INSERT => (basicUserRepo.load(m.userId) :: c1, f1)
-          case LibraryAccess.READ_WRITE => (basicUserRepo.load(m.userId) :: c1, f1)
-          case _ => (c1, f1)
-        }
-      }
+      val (firstFollows, firstCollabs) = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 10, 0, Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE, LibraryAccess.READ_ONLY)).partition(u => u.access == LibraryAccess.READ_ONLY)
+      val collabs = firstCollabs.map(m => basicUserRepo.load(m.userId))
+      val follows = firstFollows.map(m => basicUserRepo.load(m.userId))
+      val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+      val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+
       val keeps = keepRepo.getByLibrary(library.id.get, 10, 0).map(KeepInfo.fromKeep)
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
-      (library, owner, collabs, follows, keeps, keepCount)
+      (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }
 
     FullLibraryInfo(
@@ -62,12 +60,12 @@ class LibraryCommander @Inject() (
       slug = lib.slug,
       url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
       visibility = lib.visibility,
-      collaborators = collabs, // todo(andrew): should only be first `x` collaborators
-      followers = follows, // todo(andrew): should only be first `x` followers
+      collaborators = collabs,
+      followers = follows,
       keeps = keeps,
       numKeeps = keepCount,
-      numCollaborators = collabs.length, // todo(andrew): should be the total number of collaborators in the library
-      numFollowers = follows.length) // todo(andrew): should be the total number of followers in the library
+      numCollaborators = numCollabs,
+      numFollowers = numFollows)
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -177,7 +175,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
     val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
       val ownerId = library.ownerId

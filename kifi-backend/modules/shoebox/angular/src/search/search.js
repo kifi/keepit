@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/find', {
-      templateUrl: 'search/search.tpl.html',
-      controller: 'SearchCtrl'
-    });
-  }
-])
-
 .controller('SearchCtrl', [
   '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log',
 function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
