@@ -24,7 +24,7 @@ class PublicFeedGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     publicScoringHelper: PublicUriScoringHelper,
-    publicUriWeightingHelper: PublicUriWeightingHelper,
+    uriWeightingHelper: UriWeightingHelper,
     db: Database,
     publicFeedRepo: PublicFeedRepo,
     systemValueRepo: SystemValueRepo,
@@ -87,7 +87,7 @@ class PublicFeedGenerationCommander @Inject() (
               case _ => false
             }
           }
-          val weightedItems = publicUriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
+          val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()
