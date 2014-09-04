@@ -61,4 +61,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
   def getScoreExpr(): ScoreExpr = scoreExpr
   def getQuery(): Query = query
+  def getTotalSize(): Int = totalSize
+  def getCoreSize(): Int = coreSize
 }
