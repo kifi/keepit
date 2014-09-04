@@ -60,17 +60,11 @@ angular.module('kifi')
     Keep.prototype.buildKeep = function (keep, isMyBookmark) {
       this.id = keep.id;
       this.isPrivate = keep.isPrivate;
-
-      this.isMyBookmark = isMyBookmark;
-      if (typeof this.isMyBookmark !== 'boolean') {
-        this.isMyBookmark = true;
-      }
+      this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
 
       this.tagList = this.tagList || [];
       this.collections = this.collections || [];
 
-      // Todo: move addTag and removeTag to some kind of mixin so they don't hang
-      // onto every really kept Keep.
       this.addTag = function (tag) {
         this.tagList.push(tag);
         this.collections.push(tag.id);
