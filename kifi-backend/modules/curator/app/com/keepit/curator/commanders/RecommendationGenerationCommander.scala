@@ -20,6 +20,7 @@ import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -42,7 +43,8 @@ class RecommendationGenerationCommander @Inject() (
     uriRecRepo: UriRecommendationRepo,
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
-    experimentCommander: RemoteUserExperimentCommander) {
+    experimentCommander: RemoteUserExperimentCommander,
+    serviceDiscovery: ServiceDiscovery) {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(10)
@@ -110,15 +112,15 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
-      scores.socialScore > 0.8 ||
+    if ((scores.overallInterestScore > 0.2 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 3) {
+      scores.socialScore > 0.7 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
-        scores.recentInterestScore > 0.15 ||
+        scores.recentInterestScore > 0.1 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3 ||
-        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.3 || scores.recentInterestScore > 0.1))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
@@ -229,14 +231,20 @@ class RecommendationGenerationCommander @Inject() (
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
-      val state: UserRecommendationGenerationState = getStateOfUser(userId)
-      val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
-      val res: Future[Boolean] = seedsAndSeqFuture.flatMap { case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
+      if (serviceDiscovery.isLeader()) {
+        val state: UserRecommendationGenerationState = getStateOfUser(userId)
+        val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
+        val res: Future[Boolean] = seedsAndSeqFuture.flatMap { case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
 
-      res.onFailure {
-        case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+        res.onFailure {
+          case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+        }
+        res.map(_ => ())
+      } else {
+        airbrake.notify("Trying to run reco precomputation on non-leader!")
+        recommendationGenerationLock.clear() //no point in alerting again and again for queued up tasks
+        Future.successful()
       }
-      res.map(_ => ())
     }
   }
 

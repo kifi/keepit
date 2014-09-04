@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ SeedItemWithMultiplierType, SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
+import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
@@ -32,8 +32,8 @@ class UriScoringHelper @Inject() (
     interestScores.map { scores =>
       scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
-        (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat,
-          recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat)
+        (overallOpt.map(uis => if (uis.confidence > 0.1 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat,
+          recentOpt.map(uis => if (uis.confidence > 0.1 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat)
       }.unzip
     }
   }
@@ -62,8 +62,7 @@ class UriScoringHelper @Inject() (
     }
   }
 
-  def apply(genericItems: Seq[SeedItemWithMultiplierType], boostedKeepers: Set[Id[User]]): Future[Seq[ScoredSeedItem]] = {
-    val items = genericItems match { case items: Seq[SeedItemWithMultiplier] => items }
+  def apply(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[ScoredSeedItem]] = {
     require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
     if (items.isEmpty) {
       Future.successful(Seq.empty)
