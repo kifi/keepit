@@ -168,7 +168,7 @@ final class TaggedScorer(tag: Byte, scorer: Scorer) {
   def taggedScore(boost: Float) = DataBuffer.taggedFloatBits(tag, scorer.score * boost)
 }
 
-final class TaggedScorerQueue(size: Int) extends PriorityQueue[TaggedScorer](size) {
+final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer](coreSize) {
   override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
 
   private val dependentScores: ArrayBuffer[TaggedScorer] = ArrayBuffer()
@@ -188,7 +188,8 @@ final class TaggedScorerQueue(size: Int) extends PriorityQueue[TaggedScorer](siz
 
     if (size > 0) {
       var i = 0
-      while (i < dependentScores.length) {
+      val len = dependentScores.size
+      while (i < len) {
         val scorer = dependentScores(i)
         if (scorer.doc < docId) {
           if (scorer.advance(docId) == docId) {
@@ -215,6 +216,8 @@ final class TaggedScorerQueue(size: Int) extends PriorityQueue[TaggedScorer](siz
     }
     scorer.doc
   }
+
+  def createScoreArray: Array[Int] = new Array[Int](size() + dependentScores.size)
 }
 
 //
@@ -236,7 +239,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
-    val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
+    val taggedScores = pq.createScoreArray // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
@@ -298,7 +301,7 @@ class UriFromKeepsScoreVectorSource(
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
     loadURIsInNetwork(idFilter, reader, uriIdDocValues, writer, output)
 
-    val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
+    val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
@@ -397,7 +400,7 @@ class LibraryScoreVectorSource(
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
-    val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
+    val taggedScores = pq.createScoreArray // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
@@ -454,7 +457,7 @@ class LibraryFromKeepsScoreVectorSource(
 
     val writer: DataBufferWriter = new DataBufferWriter
 
-    val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
+    val taggedScores = pq.createScoreArray // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {

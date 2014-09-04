@@ -10,7 +10,9 @@ import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.SearchCommander
 import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{ JsNumber, JsString, JsObject }
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (

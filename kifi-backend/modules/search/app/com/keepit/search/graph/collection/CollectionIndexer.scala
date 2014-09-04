@@ -147,7 +147,7 @@ object CollectionIndexer {
       val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
       doc.add(externalId)
 
-      val name = buildBinaryDocValuesField(nameField, collection.name)
+      val name = buildBinaryDocValuesField(nameField, collection.name.tag)
       doc.add(name)
 
       doc

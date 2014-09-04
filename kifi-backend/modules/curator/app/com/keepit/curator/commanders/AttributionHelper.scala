@@ -45,7 +45,7 @@ class SeedAttributionHelper @Inject() (
   private def getUserAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[UserAttribution]]] = {
     require(seeds.map(_.userId).toSet.size <= 1, "Batch looking up of sharing users must be all for the same user")
 
-    def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.5f
+    def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.1f
 
     val ret: Array[Option[UserAttribution]] = Array.fill(seeds.size)(None)
 

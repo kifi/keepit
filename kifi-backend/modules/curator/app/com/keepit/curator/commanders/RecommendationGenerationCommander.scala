@@ -10,7 +10,6 @@ import com.keepit.curator.model.{
   UriRecommendationRepo,
   UriRecommendation,
   UriScores,
-  PublicFeedRepo,
   SeedItem
 }
 import com.keepit.common.db.{ SequenceNumber, Id }
@@ -21,6 +20,7 @@ import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -37,18 +37,17 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     publicScoringHelper: PublicUriScoringHelper,
     uriWeightingHelper: UriWeightingHelper,
-    publicUriWeightingHelper: PublicUriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
-    publicFeedRepo: PublicFeedRepo,
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
-    experimentCommander: RemoteUserExperimentCommander) {
+    experimentCommander: RemoteUserExperimentCommander,
+    serviceDiscovery: ServiceDiscovery) {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(15)
+  val recommendationGenerationLock = new ReactiveLock(10)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
@@ -109,10 +108,10 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = {
-    perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
+    perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock(1))
   }
 
-  private def shouldInclude(scores: UriScores): Boolean = { //ZZZ curations score here
+  private def shouldInclude(scores: UriScores): Boolean = {
     if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
@@ -127,7 +126,7 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  private def getStateOfUser(userId: Id[User]) =
+  private def getStateOfUser(userId: Id[User]): UserRecommendationGenerationState =
     db.readOnlyMaster { implicit session =>
       genStateRepo.getByUserId(userId)
     } getOrElse {
@@ -141,7 +140,7 @@ class RecommendationGenerationCommander @Inject() (
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
-        val candidates = (candidateSeeds zip checkThreads).collect { case (cand, hasChat) if hasChat => cand }
+        val candidates = (candidateSeeds zip checkThreads).collect { case (cand, hasChat) if !hasChat => cand }
         (candidates, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
       }
     }
@@ -184,54 +183,68 @@ class RecommendationGenerationCommander @Inject() (
       genStateRepo.save(newState)
     }
 
-  private def processSeeds(seedItems: Seq[SeedItem], newState: UserRecommendationGenerationState,
-    userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Boolean] = {
-    val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
-      seedItem.keepers match {
-        case Keepers.ReasonableNumber(users) => !users.contains(userId)
-        case _ => false
+  private def processSeeds(
+    seedItems: Seq[SeedItem],
+    newState: UserRecommendationGenerationState,
+    userId: Id[User],
+    boostedKeepers: Set[Id[User]]): Future[Boolean] =
+    {
+      val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
+        seedItem.keepers match {
+          case Keepers.ReasonableNumber(users) => !users.contains(userId)
+          case _ => false
+        }
+      }
+
+      val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
+      val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
+        scoredItems.filter(si => shouldInclude(si.uriScores) || (userId.id == 6834 || userId.id == 1398 || userId.id == 6622 || userId.id == 4344)) //total hack to track down an issue. If you see this code after Sept. 10th 2014 throw something (soft) at Stephen
+      }.flatMap { scoredItems =>
+        attributionHelper.getAttributions(scoredItems)
+      }
+
+      toBeSaved.map { items =>
+        saveScoredSeedItems(items, userId, newState)
+        precomputeRecommendationsForUser(userId, boostedKeepers)
+        seedItems.nonEmpty
       }
     }
 
-    val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
-    val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
-      scoredItems.filter(si => shouldInclude(si.uriScores))
-    }.flatMap { scoredItems =>
-      attributionHelper.getAttributions(scoredItems)
-    }
-
-    toBeSaved.map { items =>
-      saveScoredSeedItems(items, userId, newState)
-      precomputeRecommendationsForUser(userId, boostedKeepers)
-      seedItems.nonEmpty
-    }
-  }
-
-  private def getPrecomputationRecosResult(seeds: Seq[SeedItem], newSeqNum: SequenceNumber[SeedItem],
-    state: UserRecommendationGenerationState, userId: Id[User],
-    boostedKeepers: Set[Id[User]]): Future[Boolean] = {
-    val newState = state.copy(seq = newSeqNum)
-    if (seeds.isEmpty) {
-      db.readWrite { implicit session =>
-        genStateRepo.save(newState)
+  private def getPrecomputationRecosResult(
+    seeds: Seq[SeedItem],
+    newSeqNum: SequenceNumber[SeedItem],
+    state: UserRecommendationGenerationState,
+    userId: Id[User],
+    boostedKeepers: Set[Id[User]]): Future[Boolean] =
+    {
+      val newState = state.copy(seq = newSeqNum)
+      if (seeds.isEmpty) {
+        db.readWrite { implicit session =>
+          genStateRepo.save(newState)
+        }
+        if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
+        Future.successful(false)
+      } else {
+        processSeeds(seeds, newState, userId, boostedKeepers)
       }
-      if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
-      Future.successful(false)
-    } else {
-      processSeeds(seeds, newState, userId, boostedKeepers)
     }
-  }
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
-      val state = getStateOfUser(userId)
-      val seedsAndSeqFuture = getCandidateSeedsForUser(userId, state)
-      val res: Future[Boolean] = seedsAndSeqFuture.flatMap { case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
+      if (serviceDiscovery.isLeader()) {
+        val state: UserRecommendationGenerationState = getStateOfUser(userId)
+        val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
+        val res: Future[Boolean] = seedsAndSeqFuture.flatMap { case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
 
-      res.onFailure {
-        case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+        res.onFailure {
+          case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+        }
+        res.map(_ => ())
+      } else {
+        airbrake.notify("Trying to run reco precomputation on non-leader!")
+        recommendationGenerationLock.clear() //no point in alerting again and again for queued up tasks
+        Future.successful()
       }
-      res.map(_ => ())
     }
   }
 
@@ -249,28 +262,29 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   def resetUser(userId: Id[User]): Future[Unit] = {
-    getPerUserGenerationLock(userId).withLock {
+    getPerUserGenerationLock(userId).withLockFuture {
       db.readWriteAsync { implicit s =>
         val stateOpt = genStateRepo.getByUserId(userId)
         stateOpt.foreach { state =>
           genStateRepo.save(state.copy(seq = SequenceNumber.ZERO))
         }
-      }
+      }.flatMap { _ =>
 
-      val state = getStateOfUser(userId)
+        val state = getStateOfUser(userId)
 
-      val seedsFuture = getRescoreSeedsForUser(userId)
-      specialCurators().flatMap { boostedKeepersSeq =>
-        val res: Future[Unit] = seedsFuture.flatMap { seeds =>
-          val batches = seeds.grouped(200)
-          FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, boostedKeepersSeq.toSet))
+        val seedsFuture = getRescoreSeedsForUser(userId)
+        specialCurators().flatMap { boostedKeepersSeq =>
+          val res: Future[Unit] = seedsFuture.flatMap { seeds =>
+            val batches = seeds.grouped(200)
+            FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, boostedKeepersSeq.toSet))
+          }
+
+          res.onFailure {
+            case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+          }
+
+          res
         }
-
-        res.onFailure {
-          case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
-        }
-
-        res
       }
     }
   }

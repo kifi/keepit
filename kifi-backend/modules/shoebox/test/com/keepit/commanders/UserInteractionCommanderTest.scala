@@ -26,12 +26,15 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
           (user1, user2, user3, user4)
         }
 
-        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, EmailRecipient(user4), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+        val interactionSeq = Seq(
+          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
+          (UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
+          (EmailRecipient(user4), UserInteraction.MESSAGE_USER),
+          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
+          (UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
+          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+        )
+        userInteractionCommander.addInteractions(user1.id.get, interactionSeq)
 
         def createList(objs: List[JsObject]) = {
           objs.map { o =>
@@ -57,7 +60,7 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
 
         // test interaction array keeps X most recent interactions
         for (i <- 1 to UserInteraction.maximumInteractions) {
-          userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+          userInteractionCommander.addInteractions(user1.id.get, Seq((UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)))
         }
         db.readOnlyMaster { implicit session =>
           userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === UserInteraction.maximumInteractions

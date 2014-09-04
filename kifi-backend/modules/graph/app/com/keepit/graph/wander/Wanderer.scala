@@ -11,7 +11,7 @@ trait Wanderer {
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit
 }
 
-class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends Logging {
+class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends DestinationWeightsQuerier with Logging {
   type TransitionProbabilityCache = mutable.Map[VertexId, mutable.Map[Component, ProbabilityDensity[VertexId]]]
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
@@ -87,6 +87,14 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   }
 
   private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
+    val edgeWeights = getDestinationWeights(wanderer, scout, component, resolver)
+    ProbabilityDensity.normalized(edgeWeights)
+  }
+}
+
+trait DestinationWeightsQuerier {
+
+  def getDestinationWeights(wanderer: GlobalVertexReader, scout: GlobalVertexReader, component: Component, resolver: EdgeResolver): Seq[(VertexId, Double)] = {
     val edgeWeights = mutable.MutableList[(VertexId, Double)]()
     wanderer.outgoingEdgeReader.reset()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
@@ -99,6 +107,6 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
         }
       }
     }
-    ProbabilityDensity.normalized(edgeWeights)
+    edgeWeights
   }
 }

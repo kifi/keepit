@@ -342,13 +342,20 @@ class KeepsController @Inject() (
   }
 
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
-    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId, withPageInfo) map { res =>
+    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
+      val basicCollection = collectionOpt.flatMap { collStrExtId =>
+        ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
+          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(request.userId, collExtId)(_)).map { c =>
+            BasicCollection.fromCollection(c.summary)
+          }
+        }
+      }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       Ok(Json.obj(
-        "collection" -> res._1,
+        "collection" -> basicCollection,
         "before" -> before,
         "after" -> after,
-        "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_))
+        "keeps" -> Json.toJson(res)
       ) ++ helprank)
     }
   }

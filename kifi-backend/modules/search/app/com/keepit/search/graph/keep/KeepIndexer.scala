@@ -3,7 +3,7 @@ package com.keepit.search.graph.keep
 import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ NormalizedURI, Keep }
+import com.keepit.model.{ KeepAndTags, NormalizedURI, Keep }
 import scala.concurrent.Future
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.sharding.{ ShardedIndexer, Shard }
@@ -51,13 +51,13 @@ class ShardedKeepIndexer(
   }
 
   private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[(Map[Shard[NormalizedURI], Seq[KeepIndexable]], SequenceNumber[Keep], Boolean)] = {
-    shoebox.getBookmarksChanged(seq, fetchSize).map { changedKeeps =>
+    shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
       val shardedIndexables = indexShards.keys.map { shard =>
-        val indexables = changedKeeps.map { keep => new KeepIndexable(keep, shard) }
+        val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, tags) => new KeepIndexable(keep, tags, shard) }
         shard -> indexables
       }.toMap
-      val exhausted = changedKeeps.length < fetchSize
-      val maxSeq = changedKeeps.map(_.seq).max
+      val exhausted = changedKeepsAndTags.length < fetchSize
+      val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
       (shardedIndexables, maxSeq, exhausted)
     }
   }

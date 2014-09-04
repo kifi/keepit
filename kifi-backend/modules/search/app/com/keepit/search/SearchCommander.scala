@@ -22,6 +22,7 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
+import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -444,22 +445,7 @@ class SearchCommanderImpl @Inject() (
       resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
     }
 
-    val acceptLangs = {
-      val langs = acceptLangCodes.toSet.flatMap { code: String =>
-        val langCode = code.substring(0, 2)
-        if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-        else {
-          val lang = Lang(langCode)
-          if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
-        }
-      }
-      if (langs.isEmpty) {
-        log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(DefaultAnalyzer.defaultLang)
-      } else {
-        langs
-      }
-    }
+    val acceptLangs = parseAcceptLangs(acceptLangCodes)
 
     val langProf = {
       val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
@@ -491,6 +477,23 @@ class SearchCommanderImpl @Inject() (
       (firstLang, secondLang)
     } else {
       (secondLang.get, Some(firstLang))
+    }
+  }
+
+  private def parseAcceptLangs(acceptLangCodes: Seq[String]): Set[Lang] = {
+    val langs = acceptLangCodes.toSet.flatMap { code: String =>
+      val langCode = code.substring(0, 2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
+    }
+    if (langs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      Set(DefaultAnalyzer.defaultLang)
+    } else {
+      langs
     }
   }
 

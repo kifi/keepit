@@ -83,9 +83,9 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = k1.id.get, collectionId = collections(0).id.get))
           collectionRepo.collectionChanged(collections(0).id.get, true)
@@ -157,9 +157,9 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
           collectionRepo.collectionChanged(collections(0).id.get, true)
@@ -232,9 +232,9 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
 
           (user1, bookmark1, bookmark2, collections)
@@ -292,9 +292,9 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uriRepo.count === 0
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollection3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
 
           (user1, collections)

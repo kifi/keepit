@@ -12,16 +12,18 @@ class UserInteractionCommander @Inject() (
     userRepo: UserRepo,
     userValueRepo: UserValueRepo) {
 
-  def addInteraction(uid: Id[User], recipient: InteractionRecipient, interaction: UserInteraction): Unit = {
+  def addInteractions(uid: Id[User], recipients: Seq[(InteractionRecipient, UserInteraction)]): Unit = {
     val interactions = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(uid, UserValues.recentInteractions)
     }.as[List[JsObject]]
-    val newJson = recipient match {
-      case UserRecipient(id) => Json.obj("user" -> id, "action" -> interaction.value)
-      case EmailRecipient(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
+
+    val newJson = recipients collect {
+      case (UserRecipient(id), interaction) => Json.obj("user" -> id, "action" -> interaction.value)
+      case (EmailRecipient(email), interaction) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
+
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
-    val newInteractions = newJson :: interactions.take(UserInteraction.maximumInteractions - 1)
+    val newInteractions = newJson.reverse ++ interactions.take(UserInteraction.maximumInteractions - 1)
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
     }

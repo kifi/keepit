@@ -99,8 +99,8 @@ class LDACommander @Inject() (
   private def computeGaussianInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeat.feature) match {
       case (Some(userFeat), Some(uriFeatVec)) =>
-        val userMean = userFeat.userTopicMean.get.mean
-        val userVar = userFeat.userTopicVar.get.value
+        val userMean = projectToActive(userFeat.userTopicMean.get.mean)
+        val userVar = projectToActive(userFeat.userTopicVar.get.value)
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeatVec.value, userMean, userVar, userMean.map { _ / s })

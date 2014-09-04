@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
