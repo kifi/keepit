@@ -11,7 +11,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.model._
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 
 class LibraryController @Inject() (
@@ -28,14 +30,16 @@ class LibraryController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def addLibrary() = JsonAction.authenticatedParseJson { request =>
+  def addLibrary() = JsonAction.authenticatedParseJsonAsync { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) =>
-        BadRequest(Json.obj("error" -> message))
+        Future.successful(BadRequest(Json.obj("error" -> message)))
       case Right(newLibrary) =>
-        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(newLibrary)))
+        libraryCommander.createFullLibraryInfo(request.userId, newLibrary).map { lib =>
+          Ok(Json.toJson(lib))
+        }
     }
   }
 
@@ -87,21 +91,23 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library], authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticated { request =>
+  def getLibraryById(pubId: PublicId[Library], authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         if (canView(request.userId, lib, authToken, passcode))
-          Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
+          libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
+            Ok(Json.obj("library" -> Json.toJson(libInfo)))
+          }
         else
-          BadRequest(Json.obj("error" -> "invalid access"))
+          Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticated { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None, passcode: Option[String]) = JsonAction.authenticatedAsync { request =>
     // check if str is either a username or externalId
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
@@ -110,17 +116,20 @@ class LibraryController @Inject() (
       }
     }
     ownerOpt match {
-      case None => BadRequest(Json.obj("error" -> "invalid username"))
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid username")))
       case Some(owner) =>
-
         db.readOnlyMaster { implicit s =>
           libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) match {
-            case None => BadRequest(Json.obj("error" -> "no library found"))
+            case None =>
+              Future.successful(BadRequest(Json.obj("error" -> "no library found")))
             case Some(lib) =>
               if (canView(request.userId, lib, authToken, passcode))
-                Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
+                libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
+                  Ok(Json.obj("library" -> Json.toJson(libInfo)))
+                }
               else
-                BadRequest(Json.obj("error" -> "invalid access"))
+                Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
           }
         }
     }
