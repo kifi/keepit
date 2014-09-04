@@ -1,5 +1,6 @@
 
 POST    /internal/graph/wander          @com.keepit.graph.controllers.internal.GraphController.wander()
+GET     /internal/graph/uriWandering    @com.keepit.graph.controllers.internal.GraphController.uriWandering(userId: Id[User], steps: Int)
 GET     /internal/graph/statistics      @com.keepit.graph.controllers.internal.GraphController.getGraphStatistics()
 GET     /internal/graph/state           @com.keepit.graph.controllers.internal.GraphController.getGraphUpdaterState()
 GET     /internal/graph/kinds           @com.keepit.graph.controllers.internal.GraphController.getGraphKinds()
