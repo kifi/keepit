@@ -50,7 +50,7 @@ angular.module('kifi')
     $scope.scrollDisabled = false;
 
     $scope.getNextKeeps = function () {
-      if ($scope.loading || !$scope.library || $scope.keeps.length == 0) {
+      if ($scope.loading || !$scope.library || $scope.keeps.length === 0) {
         return;
       }
 
