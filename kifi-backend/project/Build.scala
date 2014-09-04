@@ -29,14 +29,16 @@ object ApplicationBuild extends Build {
     ws
   )
 
+  val slickVersion = "2.0.3"
+
   lazy val sqldbDependencies = Seq(
     "mysql" % "mysql-connector-java" % "5.1.25",
-    "com.typesafe.slick" %% "slick" % "2.1.0" exclude("play", "*")
+    "com.typesafe.slick" %% "slick" % slickVersion exclude("play", "*")
   )
 
   lazy val shoeboxDependencies = Seq(
     "javax.mail" % "mail" % "1.4.5",
-    "com.typesafe.slick" %% "slick-testkit" % "2.1.0" exclude("play", "*"),
+    "com.typesafe.slick" %% "slick-testkit" % slickVersion exclude("play", "*"),
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
     "org.feijoas" %% "mango" % "0.10"
