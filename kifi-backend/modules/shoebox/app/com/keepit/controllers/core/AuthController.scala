@@ -56,7 +56,7 @@ class AuthController @Inject() (
     implicit val secureSocialClientIds: SecureSocialClientIds) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   // path is an Angular route
-  val LinkRedirects = Map("recommendation" -> s"${config.applicationBaseUrl}/recommendation")
+  val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations")
 
   private val PopupKey = "popup"
 

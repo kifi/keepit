@@ -82,17 +82,6 @@ class ExtSearchController @Inject() (
 
   private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
 
-  def langDetect(query: String) = JsonAction.authenticatedAsync { request =>
-    val startTime = System.currentTimeMillis()
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-    searchCommander.langDetect(query, acceptLangs).map { lang =>
-      Ok(JsObject(List(
-        "elapsedMillis" -> JsNumber(System.currentTimeMillis() - startTime),
-        "lang" -> JsString(lang.lang)
-      )))
-    }
-  }
-
   //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)

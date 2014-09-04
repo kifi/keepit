@@ -36,7 +36,8 @@ class LibraryInviteRepoImpl @Inject() (
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
-    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def passCode = column[String]("passcode", O.NotNull)
+    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passCode) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)

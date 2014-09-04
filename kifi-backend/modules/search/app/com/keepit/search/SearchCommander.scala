@@ -22,6 +22,7 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
+import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -79,10 +80,6 @@ trait SearchCommander {
     debug: Option[String]): KifiShardResult
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
-
-  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang]
-
-  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]]
 
   def explain(
     userId: Id[User],
@@ -502,54 +499,6 @@ class SearchCommanderImpl @Inject() (
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
-  }
-
-  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = {
-    val (localShards, dispatchPlan) = distributionPlan(Id[User](-1), shards)
-    langDetect(localShards, dispatchPlan, query, acceptLangs)
-  }
-
-  private def langDetect(
-    localShards: Set[Shard[NormalizedURI]],
-    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    query: String,
-    acceptLangCodes: Seq[String]): Future[Lang] = {
-
-    val prior = {
-      val acceptLangs = parseAcceptLangs(acceptLangCodes)
-      val weight = 5.0
-      val allLangs = DefaultAnalyzer.languages
-
-      val eachLangProb = (1.0 / (acceptLangs.size.toDouble * weight + allLangs.size.toDouble))
-      allLangs.map { lang =>
-        if (acceptLangs.contains(lang)) (lang -> eachLangProb * weight) else (lang -> eachLangProb)
-      }.toMap
-    }
-
-    val resultFutures = new ListBuffer[Future[Map[Lang, Double]]]()
-
-    if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangDetect(dispatchPlan, query, prior)
-    }
-    if (localShards.nonEmpty) {
-      resultFutures += searchFactory.distLangDetect(localShards, query, prior)
-    }
-
-    Future.sequence(resultFutures).map { results =>
-      var mergedResult: Map[Lang, Double] = Map()
-      results.foreach { r =>
-        if (mergedResult.isEmpty) {
-          mergedResult ++= r
-        } else {
-          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
-        }
-      }
-      mergedResult.maxBy(_._2)._1
-    }
-  }
-
-  def distLangDetect(localShards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
-    searchFactory.distLangDetect(localShards, query, prior)
   }
 
   private def getSearchFilter(

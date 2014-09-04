@@ -40,6 +40,10 @@ class KifiSiteRouter @Inject() (
   db: Database)
     extends WebsiteController(actionAuthenticator.get) with ShoeboxServiceController {
 
+  val redirects = Map[String, String](
+    "recommendation" -> "recommendations" //can be removed after Sept. 10th 2014 -Stephen
+  )
+
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
   def app(path: String) = HtmlAction.apply(authenticatedAction = { request =>
     routeRequest(request)
@@ -68,6 +72,8 @@ class KifiSiteRouter @Inject() (
             case ang: Angular =>
               AngularDistAssets.angularApp()
           }
+        case (r: Request[T], route: RedirectRoute) =>
+          Redirect("/" + route.url)
         case (r: Request[T], _) if request.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -100,8 +106,12 @@ class KifiSiteRouter @Inject() (
   def route(request: Request[_]): Routeable = {
     val path = Path(request.path)
 
-    db.readOnlyReplica { implicit session =>
-      angularRouter.route(request, path) getOrElse Error404
+    redirects.get(path.path).map { targetPath =>
+      RedirectRoute(targetPath)
+    } getOrElse {
+      db.readOnlyReplica { implicit session =>
+        angularRouter.route(request, path) getOrElse Error404
+      }
     }
   }
 
@@ -123,7 +133,7 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     "profile" -> Seq(),
     "kifeeeed" -> Seq(),
     "find" -> Seq(),
-    "recommendation" -> Seq()
+    "recommendations" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[Request[_] => Future[String]]] = Map(
     "friends" -> Seq(),

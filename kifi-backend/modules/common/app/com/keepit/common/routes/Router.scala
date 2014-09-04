@@ -214,7 +214,6 @@ object Search extends Service {
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
-    def distLangDetect() = ServiceRoute(POST, "/internal/search/dist/langDetect")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
   }
@@ -374,6 +373,7 @@ object Graph extends Service {
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
     def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
+    def uriWandering(userId: Id[User], steps: Int) = ServiceRoute(GET, "/internal/graph/uriWandering", Param("userId", userId), Param("steps", steps))
     def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def refreshSociallyRelatedEntities(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/refreshSociallyRelatedEntities", Param("userId", userId))

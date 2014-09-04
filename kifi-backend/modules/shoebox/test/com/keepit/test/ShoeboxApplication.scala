@@ -11,18 +11,22 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
+import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.normalizer.FakeNormalizationServiceModule
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox._
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
@@ -77,7 +81,11 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
-    FakeShoeboxStoreModule()
+    FakeShoeboxStoreModule(),
+    FakeExternalServiceModule(),
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule(),
+    FakeSearchServiceClientModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]

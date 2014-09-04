@@ -67,5 +67,9 @@ class ReactiveLock(numConcurrent: Int = 1) {
 
   def running: Int = runningCount
 
+  def clear(): Unit = lock.synchronized {
+    taskQueue.clear()
+  }
+
 }
 

@@ -29,6 +29,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.templates.Html
 
 import securesocial.core.{ SecureSocial, Authenticator }
 
@@ -291,8 +292,13 @@ class HomeController @Inject() (
   }
 
   // Do not remove until at least 1 Mar 2014. The extension sends users to this URL after installation.
+  // It's okay, comment from 21 Jan 2014. This method is safe here.
   def gettingStarted = Action { request =>
     MovedPermanently("/")
+  }
+
+  def getKifiExtensionIPhone(s: String) = Action { implicit request =>
+    Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png">"""))
   }
 
 }
