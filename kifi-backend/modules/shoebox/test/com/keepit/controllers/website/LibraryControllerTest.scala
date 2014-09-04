@@ -556,27 +556,55 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected1 = Json.parse(
           s"""
-             |{
-               |"keeps": [
-                 |{
-                 |"id":"${keep2.externalId}",
-                 |"title":"k2",
-                 |"url":"http://www.amazon.com/",
-                 |"isPrivate":false,
-                 |"libraryId":"l7jlKlnA36Su"
-                 |},
-                 |{
-                 |"id":"${keep1.externalId}",
-                 |"title":"k1",
-                 |"url":"http://www.google.com/",
-                 |"isPrivate":false,
-                 |"libraryId":"l7jlKlnA36Su"
-                 |}
-               |],
-               |"count": 2,
-               |"numKeeps": 2,
-               |"offset" : 0
-             |}
+          {
+            "keeps": [
+              {
+                "id": "${keep2.externalId}",
+                "title": "k2",
+                "url": "http://www.amazon.com/",
+                "isPrivate": false,
+                "createdAt": "${keep2.createdAt}",
+                "others": -1,
+                "keepers": [
+                  {
+                    "id": "${user1.externalId}",
+                    "firstName": "Aaron",
+                    "lastName": "Hsu",
+                    "pictureName": "0.jpg"
+                  }
+                ],
+                "collections": [],
+                "tags": [],
+                "summary": {},
+                "siteName": "Amazon",
+                "libraryId": "l7jlKlnA36Su"
+              },
+              {
+                "id": "${keep1.externalId}",
+                "title": "k1",
+                "url": "http://www.google.com/",
+                "isPrivate": false,
+                "createdAt": "${keep1.createdAt}",
+                "others": -1,
+                "keepers": [
+                  {
+                    "id": "${user1.externalId}",
+                    "firstName": "Aaron",
+                    "lastName": "Hsu",
+                    "pictureName": "0.jpg"
+                  }
+                ],
+                "collections": [],
+                "tags": [],
+                "summary": {},
+                "siteName": "Google",
+                "libraryId": "l7jlKlnA36Su"
+              }
+            ],
+            "count": 2,
+            "offset": 0,
+            "numKeeps": 2
+           }
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
