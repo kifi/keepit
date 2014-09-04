@@ -491,14 +491,20 @@ angular.module('kifi')
 
 // This directive is for recos only right now, and copies a lot of code from kfKeep (above).
 // TODO: consolidate/modularize the two directives so we are DRY.
-.directive('kfKeepContent', ['$document', '$rootScope', 'keepActionService', 'keepService', 'recoActionService',
-  function ($document, $rootScope, keepActionService, keepService, recoActionService) {
+.directive('kfKeepContent', [
+  '$document',
+  '$rootScope',
+  'keepActionService',
+  'keepService',
+  'recoActionService',
+  'tagService',
+  'undoService',
+  function ($document, $rootScope, keepActionService, keepService, recoActionService, tagService, undoService) {
     return {
       restrict: 'A',
       scope: {
         keep: '=',
-        keepPublic: '&',
-        keepPrivate: '&'
+        keepCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -595,7 +601,7 @@ angular.module('kifi')
         };
 
         scope.togglePrivate = function (keep) {
-          keepActionService.togglePrivate([keep]);
+          keepActionService.togglePrivateOne(keep);
         };
 
         scope.isPrivate = function () {
@@ -606,8 +612,40 @@ angular.module('kifi')
           $rootScope.$emit('showGlobalModal','installExtension');
         };
 
-        scope.unkeep = function () {
-          keepService.unkeep([scope.keep]);
+        function keepOne (keep, isPrivate) {
+          keepActionService.keepOne(keep, isPrivate).then(function (keptKeep) {
+             keep.buildKeep(keptKeep);
+             tagService.addToKeepCount(1);
+           });
+
+          if (_.isFunction(scope.keepCallback)) {
+            scope.keepCallback();
+          }
+        }
+
+        scope.keepPublic = function (keep) {
+          keepOne(keep, false);
+        };
+
+        scope.keepPrivate = function (keep) {
+          keepOne(keep, true);
+        };
+
+        scope.unkeep = function (keep) {
+          keepActionService.unkeepOne(keep).then(function () {
+            keep.makeUnkept();
+
+            undoService.add('Keep deleted.', function () {
+              keepOne(keep);
+            });
+
+            tagService.addToKeepCount(-1);
+
+            // TODO: migrate over the selection api functions.
+            // if (api.isSelected(keep)) {
+            //   api.unselect(keep);
+            // }
+          });
         };
 
         scope.getSingleSelectedKeep = function (keep) {

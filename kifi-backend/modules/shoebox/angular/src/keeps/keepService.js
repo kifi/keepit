@@ -546,16 +546,6 @@ angular.module('kifi')
         });
       },
 
-      toggleKeep: function (keeps, isPrivate) {
-        var isKept = _.every(keeps, 'isMyBookmark');
-        isPrivate = isPrivate == null ? _.some(keeps, 'isPrivate') : !! isPrivate;
-
-        if (isKept) {
-          return api.unkeep(keeps);
-        }
-        return api.keep(keeps, isPrivate);
-      },
-
       togglePrivate: function (keeps) {
         return api.keep(keeps, !_.every(keeps, 'isPrivate'));
       },

@@ -59,15 +59,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.keepReco = function (reco, isPrivate) {
-      recoActionService.trackKeep(reco.recoKeep);
-
-      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keep) {
-        reco.recoKeep.buildKeep(keep);
-        tagService.addToKeepCount(1);
-      });
-    };
-
     $scope.showPopular = function () {
       $scope.loading = true;
 
@@ -159,6 +150,10 @@ angular.module('kifi')
 
     $scope.submitImprovement = function (reco) {
       recoActionService.improve(reco.recoKeep, $scope.improvement.type);
+    };
+
+    $scope.trackRecoKeep = function (recoKeep) {
+      recoActionService.trackKeep(recoKeep);
     };
   }
 ])

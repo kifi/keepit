@@ -9,12 +9,13 @@ angular.module('kifi')
   '$log',
   '$q',
   'env',
-  function ($analytics, $http, $location, $log, $q, env) {
-    function keepMany (keeps, isPrivate) {
+  'routeService',
+  function ($analytics, $http, $location, $log, $q, env, routeService) {
+    function keepMany(keeps, isPrivate) {
       $analytics.eventTrack('user_clicked_page', {
-          'action': 'keep',
-          'path': $location.path()
-        });
+        'action': 'keep',
+        'path': $location.path()
+      });
 
       if (!(keeps && keeps.length)) {
         return $q.when(keeps || []);
@@ -33,7 +34,7 @@ angular.module('kifi')
           };
         })
       };
-      $log.log('keepService.keep()', data);
+      $log.log('keepActionService.keep()', data);
 
       var url = env.xhrBase + '/keeps/add';
       var config = {
@@ -45,22 +46,60 @@ angular.module('kifi')
       });
     }
 
-    function keepOne (keep, isPrivate) {
+    function keepOne(keep, isPrivate) {
       return keepMany([keep], isPrivate).then(function (keeps) {
         return keeps[0];
       });
     }
 
-    function togglePrivate (keeps) {
+    function togglePrivateMany(keeps) {
       // If all the keeps were private, they will all become public.
       // If all the keeps were public, they will all become private.
       // If some of the keeps were private and some public, they will all become private.
       return keepMany(keeps, !_.every(keeps, 'isPrivate'));
     }
 
+    function togglePrivateOne(keep) {
+      return togglePrivateMany([keep]);
+    }
+
+    function unkeep(keeps) {
+      $analytics.eventTrack('user_clicked_page', {
+        'action': 'unkeep',
+        'path': $location.path()
+      });
+
+      if (!(keeps && keeps.length)) {
+        return;
+      }
+
+      var url, data;
+
+      if (keeps.length === 1 && keeps[0].id) {
+        url = routeService.removeSingleKeep(keeps[0].id);
+        data = {};
+      } else {
+        url = routeService.removeKeeps;
+        data = _.map(keeps, function (keep) {
+          return {
+            url: keep.url
+          };
+        });
+      }
+
+      $log.log('keepService.unkeep()', url, data);
+
+      return $http.post(url, data);
+    }
+
+    function unkeepOne(keep) {
+      return unkeep([keep]);
+    }
+
     var api = {
       keepOne: keepOne,
-      togglePrivate: togglePrivate
+      togglePrivateOne: togglePrivateOne,
+      unkeepOne: unkeepOne
     };
 
     return api;

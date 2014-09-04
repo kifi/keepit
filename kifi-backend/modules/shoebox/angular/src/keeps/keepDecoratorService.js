@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', ['util',
-  function (util) {
+.factory('keepDecoratorService', ['tagService', 'util',
+  function (tagService, util) {
     function Keep (rawKeep, keepType) {
       if (!rawKeep) {
         return {};
@@ -85,6 +85,21 @@ angular.module('kifi')
           return false;
         }
       };
+    };
+
+    Keep.prototype.makeUnkept = function () {
+      this.unkept = true;
+      this.isMyBookmark = false;
+
+      if (this.tagList){
+        this.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+
+          if (existingTag) {
+            existingTag.keeps--;
+          }
+        });
+      }
     };
 
     var api = {
