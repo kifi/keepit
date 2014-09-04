@@ -6,7 +6,7 @@ import com.google.inject.Inject
 
 import com.keepit.heimdal._
 import com.keepit.commanders._
-import com.keepit.commanders.KeepInfosWithCollection._
+import com.keepit.commanders.RawBookmarksWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.common.db.slick.Database
@@ -41,6 +41,7 @@ class KeepsController @Inject() (
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  libraryCommander: LibraryCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -182,10 +183,20 @@ class KeepsController @Inject() (
 
   def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticatedParseJson { request =>
     try {
-      Json.fromJson[KeepInfosWithCollection](request.body).asOpt map { fromJson =>
+      Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
         val source = KeepSource.site
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson, request.userId, source, separateExisting)
+
+        val library = {
+          val (main, secret) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
+          if (fromJson.keeps.headOption.flatMap(_.isPrivate).getOrElse(false)) {
+            secret
+          } else {
+            main
+          }
+        }
+
+        val (keeps, addedToCollection, failures, alreadyKeptOpt) = bookmarksCommander.keepMultiple(fromJson.keeps, library.id.get, request.userId, source, fromJson.collection, separateExisting)
         log.info(s"kept ${keeps.size} keeps")
         Ok(Json.obj(
           "keeps" -> keeps,
@@ -204,7 +215,7 @@ class KeepsController @Inject() (
   }
 
   def unkeepMultiple() = JsonAction.authenticated { request =>
-    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+    request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { keepInfos =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
       Ok(Json.obj(
@@ -331,13 +342,20 @@ class KeepsController @Inject() (
   }
 
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
-    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId, withPageInfo) map { res =>
+    bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
+      val basicCollection = collectionOpt.flatMap { collStrExtId =>
+        ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
+          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(request.userId, collExtId)(_)).map { c =>
+            BasicCollection.fromCollection(c.summary)
+          }
+        }
+      }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
       Ok(Json.obj(
-        "collection" -> res._1,
+        "collection" -> basicCollection,
         "before" -> before,
         "after" -> after,
-        "keeps" -> res._2.map(KeepInfo.fromFullKeepInfo(_))
+        "keeps" -> Json.toJson(res)
       ) ++ helprank)
     }
   }
@@ -356,9 +374,9 @@ class KeepsController @Inject() (
     }
   }
 
-  def saveCollection(id: String) = JsonAction.authenticated { request =>
+  def saveCollection() = JsonAction.authenticated { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    collectionCommander.saveCollection(id, request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
+    collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
     }

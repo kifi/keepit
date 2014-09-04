@@ -1,8 +1,15 @@
 @(library: Library,
   owner: User,
   totalKeepCount: Int,
-  keepInfos: Seq[(Keep, NormalizedURI, User, Seq[String])]
+  keepInfos: Seq[(Keep, NormalizedURI, User, Seq[Hashtag])],
+  page: Int,
+  pageSize: Int
 )
+@import com.keepit.controllers.admin.routes
+
+@otherPagesRoute(page: Int) = {
+  @com.keepit.controllers.admin.routes.AdminLibraryController.libraryKeepsView(library.id.get, page)
+}
 
 @admin(library.name, stylesheets = List("admin_library")) {
     <br/>
@@ -17,6 +24,7 @@
   <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminBookmarksController.updateBookmarks()"
   method="POST">
     <button type="submit" class="btn">Update</button><br/><br/>
+    @adminHelper.pagination(page, totalKeepCount, pageSize, otherPagesRoute _) {
 		  <table class="table table-bordered">
 		    <tr>
 		      <th>#</th>
@@ -49,6 +57,7 @@
 			   </tr>
 			 }
 			</table>
+    }
     <button type="submit" class="btn">Update</button>
   </form>
 

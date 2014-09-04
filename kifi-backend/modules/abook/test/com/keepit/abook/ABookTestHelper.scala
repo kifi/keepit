@@ -43,7 +43,7 @@ trait ABookTestHelper {
     "contacts" -> c42
   )
 
-  val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"), /* Some(true), */ Some("42go.com"))
+  val gmailOwner = GmailABookOwnerInfo(Some("123456789"), Some("42@42go.com"))
   val gmailUploadJson = Json.obj(
     "origin" -> "gmail",
     "ownerId" -> gmailOwner.id.get,
@@ -51,7 +51,7 @@ trait ABookTestHelper {
     "contacts" -> c42
   )
 
-  val gmailOwner2 = GmailABookOwnerInfo(Some("53"), Some("53@53go.com"), /* Some(true), */ Some("53.com"))
+  val gmailOwner2 = GmailABookOwnerInfo(Some("53"), Some("53@53go.com"))
   val gmailUploadJson2 = Json.obj(
     "origin" -> "gmail",
     "ownerId" -> gmailOwner2.id.get,

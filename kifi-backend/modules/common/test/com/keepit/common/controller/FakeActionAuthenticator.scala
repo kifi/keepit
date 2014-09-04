@@ -52,6 +52,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with Logging {
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
+  var isAuthenticated = true
 
   def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): FakeActionAuthenticator = {
     fixedUser = Some(user)
@@ -65,11 +66,18 @@ class FakeActionAuthenticator extends ActionAuthenticator with Logging {
     onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
     onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = Action.async(bodyParser) { request =>
     try {
-      val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent", username = None))
-      log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
-      val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
-      log.debug("executed action with res: $res")
-      res
+      if (isAuthenticated) {
+        val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent", username = None))
+        log.debug(s"running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
+        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
+        log.debug(s"executed action with res: $res")
+        res
+      } else {
+        log.debug(s"running unauthenticated action, request on path ${request.path} api: $apiClient")
+        val res = onUnauthenticated(request)
+        log.debug(s"executed action with res: $res")
+        res
+      }
     } catch {
       case t: Throwable =>
         t.printStackTrace()

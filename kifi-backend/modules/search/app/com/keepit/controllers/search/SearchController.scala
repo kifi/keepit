@@ -75,6 +75,7 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
+    val library = (searchRequest \ "library").asOpt[String]
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
     val debug = (searchRequest \ "debug").asOpt[String]
@@ -90,6 +91,7 @@ class SearchController @Inject() (
       userExperiments,
       query,
       filter,
+      library,
       maxHits,
       context,
       None,
@@ -104,6 +106,18 @@ class SearchController @Inject() (
     val userId = Id[User]((json \ "request").as[Long])
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
+  }
+
+  def distLangDetect() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val searchRequest = (json \ "request")
+    val query = (searchRequest \ "query").as[String]
+    val prior = (searchRequest \ "prior").as[Map[String, Double]].map { case (k, v) => Lang(k) -> v }
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    searchCommander.distLangDetect(shards, query, prior).map { result =>
+      Ok(Json.toJson(result.map { case (lang, freq) => lang.lang -> freq }))
+    }
   }
 
   def distAugmentation() = Action.async(parse.tolerantJson) { request =>

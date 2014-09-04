@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/helprank/:helprank', {
-      templateUrl: 'helprank/helprank.tpl.html',
-      controller: 'HelpRankCtrl'
-    });
-  }
-])
-
 .controller('HelpRankCtrl', [
   '$scope', 'keepService', '$routeParams',
   function ($scope, keepService, $routeParams) {

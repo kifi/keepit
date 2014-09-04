@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.search.engine.{ Visibility, SearchFactory }
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResultMerger, KifiShardResult }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,6 +22,7 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
+import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -56,6 +58,7 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -70,12 +73,17 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
+
+  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang]
+
+  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]]
 
   def explain(
     userId: Id[User],
@@ -97,7 +105,8 @@ class SearchCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     override val searchClient: SearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
+    monitoredAwait: MonitoredAwait,
+    implicit val publicIdConfig: PublicIdConfiguration) extends SearchCommander with Sharding with Logging {
 
   private[this] lazy val compatibilitySupport = new SearchCommanderBackwardCompatibilitySupport(shards, searchFactory, mainSearcherFactory)
 
@@ -123,7 +132,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context)
+    val searchFilter = getSearchFilter(filter, None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -233,6 +242,7 @@ class SearchCommanderImpl @Inject() (
           experiments,
           query,
           filter,
+          None,
           maxHits,
           context,
           predefinedConfig,
@@ -247,7 +257,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context)
+    val searchFilter = getSearchFilter(filter, None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -286,6 +296,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -301,7 +312,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context)
+    val searchFilter = getSearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -314,7 +325,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, debug).foreach { f =>
+      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new KifiShardResult(json))
       }
     }
@@ -325,7 +336,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
         Try {
-          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, debug)
+          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, library, maxHits, context, predefinedConfig, debug)
         }
       ).future
     }
@@ -362,6 +373,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
@@ -371,7 +383,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context)
+    val searchFilter = getSearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -380,9 +392,15 @@ class SearchCommanderImpl @Inject() (
 
     timing.factory
 
-    val searches = searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+    val searches = if (userId.id >= 0) {
+      // logged in user
+      searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+    } else {
+      searchFactory.getKifiNonUserSearch(localShards, searchFilter.libraryId.get, query, firstLang, secondLang, maxHits, searchFilter, config)
+    }
+
     val future = Future.traverse(searches) { search =>
-      SafeFuture { search.search() }
+      SafeFuture { search.execute() }
     }
 
     timing.search // search start
@@ -431,22 +449,7 @@ class SearchCommanderImpl @Inject() (
       resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
     }
 
-    val acceptLangs = {
-      val langs = acceptLangCodes.toSet.flatMap { code: String =>
-        val langCode = code.substring(0, 2)
-        if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-        else {
-          val lang = Lang(langCode)
-          if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
-        }
-      }
-      if (langs.isEmpty) {
-        log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(DefaultAnalyzer.defaultLang)
-      } else {
-        langs
-      }
-    }
+    val acceptLangs = parseAcceptLangs(acceptLangCodes)
 
     val langProf = {
       val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
@@ -481,23 +484,88 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
+  private def parseAcceptLangs(acceptLangCodes: Seq[String]): Set[Lang] = {
+    val langs = acceptLangCodes.toSet.flatMap { code: String =>
+      val langCode = code.substring(0, 2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
+    }
+    if (langs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      Set(DefaultAnalyzer.defaultLang)
+    } else {
+      langs
+    }
+  }
+
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
+  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = {
+    val (localShards, dispatchPlan) = distributionPlan(Id[User](-1), shards)
+    langDetect(localShards, dispatchPlan, query, acceptLangs)
+  }
+
+  private def langDetect(
+    localShards: Set[Shard[NormalizedURI]],
+    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    query: String,
+    acceptLangCodes: Seq[String]): Future[Lang] = {
+
+    val prior = {
+      val acceptLangs = parseAcceptLangs(acceptLangCodes)
+      val weight = 5.0
+      val allLangs = DefaultAnalyzer.languages
+
+      val eachLangProb = (1.0 / (acceptLangs.size.toDouble * weight + allLangs.size.toDouble))
+      allLangs.map { lang =>
+        if (acceptLangs.contains(lang)) (lang -> math.log(eachLangProb * weight)) else (lang -> math.log(eachLangProb))
+      }.toMap
+    }
+
+    val resultFutures = new ListBuffer[Future[Map[Lang, Double]]]()
+
+    if (dispatchPlan.nonEmpty) {
+      resultFutures ++= searchClient.distLangDetect(dispatchPlan, query, prior)
+    }
+    if (localShards.nonEmpty) {
+      resultFutures += searchFactory.distLangDetect(localShards, query, prior)
+    }
+
+    Future.sequence(resultFutures).map { results =>
+      var mergedResult: Map[Lang, Double] = Map()
+      results.foreach { r =>
+        if (mergedResult.isEmpty) {
+          mergedResult ++= r
+        } else {
+          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
+        }
+      }
+      mergedResult.maxBy(_._2)._1
+    }
+  }
+
+  def distLangDetect(localShards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
+    searchFactory.distLangDetect(localShards, query, prior)
+  }
+
   private def getSearchFilter(
-    userId: Id[User],
     filter: Option[String],
+    library: Option[String],
     context: Option[String]): SearchFilter = {
     filter match {
       case Some("m") =>
-        SearchFilter.mine(context)
+        SearchFilter.mine(library, context)
       case Some("f") =>
-        SearchFilter.friends(context)
+        SearchFilter.friends(library, context)
       case Some("a") =>
-        SearchFilter.all(context)
+        SearchFilter.all(library, context)
       case _ =>
-        SearchFilter.default(context)
+        SearchFilter.default(library, context)
     }
   }
 

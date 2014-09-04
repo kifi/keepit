@@ -1,5 +1,6 @@
 package com.keepit.search.sharding
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import org.specs2.mutable._
 import play.api.test.Helpers._
 import com.keepit.model._
@@ -15,6 +16,7 @@ import scala.concurrent._
 class IndexShardingTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards = ActiveShards((new ShardSpecParser).parse("0,1/2"))
+  implicit private val publicIdConfig = PublicIdConfiguration("secret key")
   val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
@@ -31,7 +33,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         )
         val collections = collKeeps.zipWithIndex.map {
           case (s, i) =>
-            val Seq(collection) = saveCollections(Collection(userId = users(i).id.get, name = s"coll $i"))
+            val Seq(collection) = saveCollections(Collection(userId = users(i).id.get, name = Hashtag(s"coll $i")))
             saveBookmarksToCollection(collection.id.get, s: _*)
             collection
         }
@@ -108,7 +110,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val expectedUriToUserEdges = uris.take(5).map(_ -> Seq(user))
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
         val collection = {
-          val Seq(collection) = saveCollections(Collection(userId = userId, name = "mutating collection"))
+          val Seq(collection) = saveCollections(Collection(userId = userId, name = Hashtag("mutating collection")))
           saveBookmarksToCollection(collection.id.get, bookmarks: _*)
           collection
         }

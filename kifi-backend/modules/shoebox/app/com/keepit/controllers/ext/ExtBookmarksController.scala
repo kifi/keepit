@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier, HealthcheckPlugin }
@@ -56,6 +56,7 @@ class ExtBookmarksController @Inject() (
   rawKeepFactory: RawKeepFactory,
   searchClient: SearchServiceClient,
   normalizedURIInterner: NormalizedURIInterner,
+  libraryCommander: LibraryCommander,
   clock: Clock,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -67,11 +68,25 @@ class ExtBookmarksController @Inject() (
     Ok(Json.obj())
   }
 
+  // Move to an endpoint that accepts a libraryId: PublicId[Library] and tag: String instead!
   def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+    val url = (request.body \ "url").as[String]
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val libIdOpt = for {
+          uri <- uriRepo.getByNormalizedUrl(url)
+          keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
+          libraryId <- keep.libraryId
+        } yield libraryId
+        libIdOpt.getOrElse {
+          libraryCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
+        }
+      }
+    }
     db.readWrite { implicit s =>
       collectionRepo.getOpt(id) map { tag =>
-        bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.keeper, request.kifiInstallationId)
+        bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None)), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
         Ok(Json.toJson(SendableTag from tag.summary))
       } getOrElse {
         BadRequest(Json.obj("error" -> "noSuchTag"))
@@ -81,9 +96,22 @@ class ExtBookmarksController @Inject() (
 
   def createAndApplyTag() = JsonAction.authenticatedParseJson { request =>
     val name = (request.body \ "name").as[String]
+    val url = (request.body \ "url").as[String]
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val libIdOpt = for {
+          uri <- uriRepo.getByNormalizedUrl(url)
+          keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
+          libraryId <- keep.libraryId
+        } yield libraryId
+        libIdOpt.getOrElse {
+          libraryCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
+        }
+      }
+    }
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val tag = bookmarksCommander.getOrCreateTag(request.userId, name)
-    bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.keeper, request.kifiInstallationId)
+    bookmarksCommander.tagUrl(tag, Seq(RawBookmarkRepresentation(url = url, isPrivate = None)), request.userId, libraryId, KeepSource.keeper, request.kifiInstallationId)
     Ok(Json.toJson(SendableTag from tag.summary))
   }
 
@@ -115,7 +143,7 @@ class ExtBookmarksController @Inject() (
       }
     } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromKeep(bookmark)), request.userId).headOption match {
+      bookmarksCommander.unkeepMultiple(Seq(RawBookmarkRepresentation(url = bookmark.url, isPrivate = None)), request.userId).headOption match {
         case Some(deactivatedKeepInfo) =>
           Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
         case None =>
@@ -126,6 +154,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
+  // migrate to endpoint that uses libraryId: PublicId[Library]
   def keep() = JsonAction.authenticatedParseJson { request =>
     val info = request.body.as[JsObject]
     val source = KeepSource.keeper
@@ -134,7 +163,19 @@ class ExtBookmarksController @Inject() (
       hcb += ("guided", true)
     }
     implicit val context = hcb.build
-    Ok(Json.toJson(bookmarksCommander.keepOne(info, request.userId, request.kifiInstallationId, source)))
+    val rawBookmark = info.as[RawBookmarkRepresentation]
+    val libraryId = {
+      db.readWrite { implicit session =>
+        val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
+        if (rawBookmark.isPrivate.exists(l => l)) {
+          secret.id.get
+        } else {
+          main.id.get
+        }
+      }
+    }
+
+    Ok(Json.toJson(bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
   }
 
   def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
@@ -170,37 +211,25 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
-  // addBookmarks will soon handle *only* browser bookmark imports
   def addBookmarks() = JsonAction.authenticated(parser = parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body
+    // todo:
+    // val libraryId = (request.body \ "libraryId").asOpt[String].map(id => PublicId[Library](id))
 
     val bookmarkSource = (json \ "source").asOpt[String].map(KeepSource.get) getOrElse KeepSource.unknown
     if (!KeepSource.valid.contains(bookmarkSource)) {
       val message = s"Invalid bookmark source: $bookmarkSource from user ${request.user} running extension ${request.kifiInstallationId}"
       airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(message), message, Some(request.user)))
     }
-    bookmarkSource match {
-      case KeepSource("plugin_start") => Forbidden
-      case KeepSource.bookmarkImport =>
-        SafeFuture {
-          log.debug(s"adding bookmarks import of user $userId")
+    SafeFuture {
+      log.debug(s"adding bookmarks import of user $userId")
 
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
-          bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
-        }
-        Status(ACCEPTED)(JsNumber(0))
-      case _ =>
-        SafeFuture {
-          log.debug(s"adding bookmarks of user $userId")
-
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
-          bookmarkInterner.internRawBookmarks(rawBookmarkFactory.toRawBookmarks(json), request.userId, bookmarkSource, mutatePrivacy = true, installationId = request.kifiInstallationId)
-          searchClient.updateURIGraph()
-        }
-        Status(ACCEPTED)(JsNumber(0))
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
+      bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
     }
+    Status(ACCEPTED)(JsNumber(0))
   }
 
 }

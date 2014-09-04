@@ -21,7 +21,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
-  def getByUserAndName(userId: Id[User], name: String,
+  def getByUserAndName(userId: Id[User], name: Hashtag,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def count(userId: Id[User])(implicit session: RSession): Int
@@ -50,7 +50,7 @@ class CollectionRepoImpl @Inject() (
 
   class CollectionTable(tag: Tag) extends RepoTable[Collection](db, tag, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection] {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def name = column[String]("name", O.NotNull)
+    def name = column[Hashtag]("name", O.NotNull)
     def lastKeptTo = column[Option[DateTime]]("last_kept_to", O.Nullable)
     def * = (id.?, externalId, userId, name, state, createdAt, updatedAt, lastKeptTo, seq) <> (
       (Collection.apply _).tupled, Collection.unapply _)
@@ -83,7 +83,7 @@ class CollectionRepoImpl @Inject() (
       import StaticQuery.interpolation
       import scala.collection.JavaConversions._
       sql"select id, external_id, name from collection where user_id = $userId and state = '#${CollectionStates.ACTIVE}' order by last_kept_to desc, id limit 500".
-        as[(Id[Collection], ExternalId[Collection], String)].list.map { row =>
+        as[(Id[Collection], ExternalId[Collection], Hashtag)].list.map { row =>
           CollectionSummary(row._1, row._2, row._3)
         }
     }
@@ -94,7 +94,7 @@ class CollectionRepoImpl @Inject() (
       c <- rows if c.userId === userId && c.externalId === externalId && c.state =!= excludeState.getOrElse(null)
     } yield c).firstOption
 
-  def getByUserAndName(userId: Id[User], name: String,
+  def getByUserAndName(userId: Id[User], name: Hashtag,
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection] =
     (for (
       c <- rows if c.userId === userId && c.name === name

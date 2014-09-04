@@ -11,7 +11,7 @@ object Keepers {
   case object TooMany extends Keepers
   case class ReasonableNumber(who: Seq[Id[User]]) extends Keepers
 }
-
+trait SeedItemType
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
@@ -21,7 +21,7 @@ case class SeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean)
+  discoverable: Boolean) extends SeedItemType
 
 case class PublicSeedItem(
   uriId: Id[NormalizedURI],
@@ -30,7 +30,7 @@ case class PublicSeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean)
+  discoverable: Boolean) extends SeedItemType
 
 @json case class PublicUriScores(
   popularityScore: Float,
@@ -66,23 +66,29 @@ case class PublicSeedItem(
   """.replace("\n", "").trim
 }
 
+trait SeedItemWithMultiplierType {
+  def multiplier: Float
+  def timesKept: Int
+  def lastSeen: DateTime
+}
+
 case class SeedItemWithMultiplier(
-    multiplier: Float = 1.0f,
+    override val multiplier: Float = 1.0f,
     userId: Id[User],
     uriId: Id[NormalizedURI],
     priorScore: Option[Float] = None,
-    timesKept: Int,
-    lastSeen: DateTime,
-    keepers: Keepers) {
+    override val timesKept: Int,
+    override val lastSeen: DateTime,
+    keepers: Keepers) extends SeedItemWithMultiplierType {
   def makePublicSeedItemWithMultiplier = PublicSeedItemWithMultiplier(multiplier, uriId, timesKept, lastSeen, keepers)
 }
 
 case class PublicSeedItemWithMultiplier(
-  multiplier: Float = 1.0f,
+  override val multiplier: Float = 1.0f,
   uriId: Id[NormalizedURI],
-  timesKept: Int,
-  lastSeen: DateTime,
-  keepers: Keepers)
+  override val timesKept: Int,
+  override val lastSeen: DateTime,
+  keepers: Keepers) extends SeedItemWithMultiplierType
 
 case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 

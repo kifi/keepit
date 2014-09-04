@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/', {
-      templateUrl: 'home/home.tpl.html',
-      controller: 'HomeCtrl'
-    });
-  }
-])
-
 .controller('HomeCtrl', [
   '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window', 'installService', '$rootScope',
   function ($scope, tagService, keepService, $q, $timeout, $window, installService, $rootScope) {

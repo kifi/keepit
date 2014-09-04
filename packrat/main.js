@@ -1177,8 +1177,11 @@ api.port.on({
       respond(false);
     });
   },
-  open_tab: function (path) {
-    api.tabs.open(webBaseUri() + path);
+  open_tab: function (data) {
+    api.tabs.open(webBaseUri() + data.path);
+    if (data.source === 'keeper') {
+      mixpanel.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
+    }
   },
   close_tab: function (_, __, tab) {
     api.tabs.close(tab.id);

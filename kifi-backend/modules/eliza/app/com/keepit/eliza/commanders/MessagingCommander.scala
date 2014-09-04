@@ -140,6 +140,10 @@ class MessagingCommander @Inject() (
     }
   }
 
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
+  }
+
   def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
     val (threadExtId, userThreads): (ExternalId[MessageThread], Seq[UserThread]) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(id)
@@ -631,10 +635,10 @@ class MessagingCommander @Inject() (
       userRecipients <- userRecipientsFuture
       nonUserRecipients <- nonUserRecipientsFuture
     } yield {
-      userRecipients.map(id => shoebox.addInteraction(userId, Left(id), action = "message"))
-      nonUserRecipients.collect {
-        case NonUserEmailParticipant(address) => shoebox.addInteraction(userId, Right(address), action = "message")
+      val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
+        case NonUserEmailParticipant(address) => (Right(address), "message")
       }
+      shoebox.addInteractions(userId, actions)
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
       val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
 

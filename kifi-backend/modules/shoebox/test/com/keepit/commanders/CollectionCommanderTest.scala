@@ -49,9 +49,9 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           val collectionRepo = inject[CollectionRepo]
-          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+          val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction2"))) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(0).id.get))
@@ -123,10 +123,10 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
 
-          val tagA = Collection(userId = user1.id.get, name = "tagA")
-          val tagB = Collection(userId = user1.id.get, name = "tagB")
-          val tagC = Collection(userId = user1.id.get, name = "tagC")
-          val tagD = Collection(userId = user1.id.get, name = "tagD")
+          val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
+          val tagB = Collection(userId = user1.id.get, name = Hashtag("tagB"))
+          val tagC = Collection(userId = user1.id.get, name = Hashtag("tagC"))
+          val tagD = Collection(userId = user1.id.get, name = Hashtag("tagD"))
 
           val collections = collectionRepo.save(tagA) ::
             collectionRepo.save(tagB) ::

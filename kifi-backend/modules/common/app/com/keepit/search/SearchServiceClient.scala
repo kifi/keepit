@@ -100,11 +100,14 @@ trait SearchServiceClient extends ServiceClient {
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
+
+  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]]
 
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
@@ -390,7 +393,7 @@ class SearchServiceClientImpl(
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, maxHits, context, debug)
   }
 
   def distSearch2(
@@ -400,11 +403,12 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, maxHits, context, debug)
+    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug)
   }
 
   private def distSearch(
@@ -415,6 +419,7 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -427,6 +432,7 @@ class SearchServiceClientImpl(
     builder += ("lang1", firstLang.lang)
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
     if (filter.isDefined) builder += ("filter", filter.get)
+    if (library.isDefined) builder += ("library", library.get)
     if (context.isDefined) builder += ("context", context.get)
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
@@ -437,6 +443,16 @@ class SearchServiceClientImpl(
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {
     distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
       f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
+    }
+  }
+
+  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]] = {
+    var builder = new SearchRequestBuilder(new ListBuffer)
+    builder += ("query", query)
+    builder += ("prior", Json.toJson(prior.map { case (k, v) => k.lang -> v }))
+    val request = builder.build
+    distRouter.dispatch(plan, Search.internal.distLangDetect, request).map { f =>
+      f.map { r => r.json.as[Map[String, Double]].map { case (k, v) => Lang(k) -> v } }
     }
   }
 
@@ -455,6 +471,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)
 }

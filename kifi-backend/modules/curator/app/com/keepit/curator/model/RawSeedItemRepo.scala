@@ -19,6 +19,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] with RepoWithDelete[RawSeedItem] {
+  def getByUserIdAndUriIds(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[RawSeedItem]
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem]
   def getDiscoverableBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
@@ -81,6 +82,10 @@ class RawSeedItemRepoImpl @Inject() (
   override def save(RawSeedItem: RawSeedItem)(implicit session: RWSession): RawSeedItem = {
     val toSave = RawSeedItem.copy(seq = deferredSeqNum())
     super.save(toSave)
+  }
+
+  def getByUserIdAndUriIds(userId: Id[User], uris: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId === userId && uris.toSet.contains(row.uriId)) yield row).list
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem] = {

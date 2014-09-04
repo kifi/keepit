@@ -79,7 +79,7 @@ class KeepRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -91,7 +91,7 @@ class KeepRepoImpl @Inject() (
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     var privateFlag: Boolean = false
 
-    Keep.applyWithPrimary(
+    Keep.applyFromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
@@ -388,7 +388,7 @@ class KeepRepoImpl @Inject() (
 
   // Make compiled in Slick 2.1
   def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).drop(offset).take(count).list
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.id desc).drop(offset).take(count).list
   }
 
   private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {

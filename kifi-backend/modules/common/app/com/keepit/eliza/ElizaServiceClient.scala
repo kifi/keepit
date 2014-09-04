@@ -46,6 +46,8 @@ trait ElizaServiceClient extends ServiceClient {
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
 
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+
   //migration
   def importThread(data: JsObject): Unit
 
@@ -133,6 +135,12 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds)).map { r =>
+      r.json.as[Seq[Boolean]]
+    }
+  }
+
   //migration
   def importThread(data: JsObject): Unit = {
     call(Eliza.internal.importThread, data)
@@ -184,6 +192,10 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean] = {
     Promise.successful(true).future
+  }
+
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    Future.successful(Seq.fill(uriIds.size)(false))
   }
 
   //migration

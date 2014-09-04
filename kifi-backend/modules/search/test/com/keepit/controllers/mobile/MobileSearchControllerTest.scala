@@ -21,6 +21,8 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import scala.concurrent.Future
+
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
   def modules = Seq(
@@ -196,6 +198,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -210,12 +213,17 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
+
+  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = ???
+
+  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???

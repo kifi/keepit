@@ -22,7 +22,7 @@ object BasicCollection {
   implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val format = Json.format[BasicCollection]
   def fromCollection(c: CollectionSummary, keeps: Option[Int] = None): BasicCollection =
-    BasicCollection(Some(c.externalId), c.name, keeps)
+    BasicCollection(Some(c.externalId), c.name.tag, keeps)
 }
 
 case class BasicCollectionByIdKey(id: Id[Collection]) extends Key[BasicCollection] {
@@ -41,7 +41,6 @@ class CollectionCommander @Inject() (
     collectionRepo: CollectionRepo,
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
-    keepToCollectionRepo: KeepToCollectionRepo,
     keptAnalytics: KeepingAnalytics,
     basicCollectionCache: BasicCollectionByIdCache,
     clock: Clock) extends Logging {
@@ -57,6 +56,8 @@ class CollectionCommander @Inject() (
     val collections = sort match {
       case "user" =>
         userSort(userId, unsortedCollections)
+      case "num_keeps" =>
+        unsortedCollections.sortBy(_.keeps)(Ordering[Option[Int]].reverse)
       case _ => // default is "last_kept"
         unsortedCollections
     }
@@ -142,33 +143,19 @@ class CollectionCommander @Inject() (
     newOrdering
   }
 
-  def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
+  def saveCollection(userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
     val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
-      basicCollection.copy(id = ExternalId.asOpt(id))
-    } map { basicCollection =>
-      val name = basicCollection.name.trim.replaceAll("""\s+""", " ")
-      if (name.length <= Collection.MaxNameLength) {
+      val name = Hashtag(basicCollection.name.trim.replaceAll("""\s+""", " "))
+      if (name.tag.length <= Collection.MaxNameLength) {
         db.readWrite { implicit s =>
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
-          if (existingExternalId.isEmpty || existingExternalId == basicCollection.id) {
+          if (existingExternalId.isEmpty) {
             s.onTransactionSuccess { searchClient.updateURIGraph() }
-            basicCollection.id map { id =>
-              //
-              collectionRepo.getByUserAndExternalId(userId, id) map { coll =>
-                val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
-                updateCollectionOrdering(userId)
-                keptAnalytics.renamedTag(coll, newColl, context)
-                Left(BasicCollection.fromCollection(newColl.summary))
-              } getOrElse {
-                Right(CollectionSaveFail(s"Tag with name $id not found"))
-              }
-            } getOrElse {
-              val newColl = collectionRepo.save(Collection(userId = userId, name = name))
-              updateCollectionOrdering(userId)
-              keptAnalytics.createdTag(newColl, context)
-              Left(BasicCollection.fromCollection(newColl.summary))
-            }
+            val newColl = collectionRepo.save(Collection(userId = userId, name = name))
+            updateCollectionOrdering(userId)
+            keptAnalytics.createdTag(newColl, context)
+            Left(BasicCollection.fromCollection(newColl.summary))
           } else {
             Right(CollectionSaveFail(s"Tag '$name' already exists"))
           }

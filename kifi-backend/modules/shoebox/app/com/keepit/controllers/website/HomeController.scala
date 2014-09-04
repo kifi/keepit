@@ -29,6 +29,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.templates.Html
 
 import securesocial.core.{ SecureSocial, Authenticator }
 
@@ -201,20 +202,6 @@ class HomeController @Inject() (
     }
   }
 
-  // this is for testing and will eventually be thrown away
-  def kifeeeedEmail(code: String) = HtmlAction.authenticatedAsync { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.DIGEST_EMAIl)) {
-      log.info(s"kifeeeedEmail($code)requested by " + request.userId)
-      if (code.endsWith("-all"))
-        curatorServiceClient.triggerEmail(code.substring(0, code.length - 4)).map { res => Ok(JsString(res)) }
-      else
-        curatorServiceClient.triggerEmailToUser(code, request.userId).map { res => Ok(JsString(res)) }
-    } else {
-      log.info(s"kifeeeedEmail($code) rejected for " + request.userId)
-      Future.successful(Redirect("/"))
-    }
-  }
-
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
@@ -305,8 +292,13 @@ class HomeController @Inject() (
   }
 
   // Do not remove until at least 1 Mar 2014. The extension sends users to this URL after installation.
+  // It's okay, comment from 21 Jan 2014. This method is safe here.
   def gettingStarted = Action { request =>
     MovedPermanently("/")
+  }
+
+  def getKifiExtensionIPhone = Action {
+    Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png">"""))
   }
 
 }
