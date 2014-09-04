@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', [
-  function () {
+.factory('keepDecoratorService', ['util',
+  function (util) {
     function Keep (rawKeep, keepType) {
       if (!rawKeep) {
         return {};
@@ -22,34 +22,6 @@ angular.module('kifi')
       }
 
       // Helper functions.
-      function formatTitleFromUrl(url) {
-        var aUrlParser = document.createElement('a');
-        var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
-        var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
-        var fileNameToSpaceRe = /[\/._-]/g;
-
-        aUrlParser.href = url;
-
-        var domain = aUrlParser.hostname;
-        var domainIdx = url.indexOf(domain);
-        var domainMatch = domain.match(secLevDomainRe);
-        if (domainMatch) {
-          domainIdx += domainMatch.index;
-          domain = domainMatch[0];
-        }
-
-        var fileName = aUrlParser.pathname;
-        var fileNameIdx = url.indexOf(fileName, domainIdx + domain.length);
-        var fileNameMatch = fileName.match(fileNameRe);
-        if (fileNameMatch) {
-          fileNameIdx += fileNameMatch.index;
-          fileName = fileNameMatch[0];
-        }
-        fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight().trimLeft();
-
-        return domain + (fileName ? ' · ' + fileName : '');
-      }
-
       function shouldShowSmallImage(summary) {
         var imageWidthThreshold = 200;
         return (summary.imageWidth && summary.imageWidth < imageWidthThreshold) || summary.description;
@@ -77,7 +49,7 @@ angular.module('kifi')
 
       // Add new properties to the keep.
       this.titleAttr = this.title || this.url;
-      this.titleHtml = this.title || formatTitleFromUrl(this.url);
+      this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
       this.hasSmallImage = this.summary && shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary);
       this.hasBigImage = this.summary && (!shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary));
       this.readTime = getKeepReadTime(this.summary);
