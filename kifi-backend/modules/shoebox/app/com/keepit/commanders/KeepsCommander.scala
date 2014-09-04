@@ -89,6 +89,8 @@ object KeepInfo {
     )
   }
 
+  // Are you looking for a decorated keep (with tags, rekeepers, etc)?
+  // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
   }
