@@ -130,7 +130,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val overrideConfig = Configuration(ConfigFactory.parseFile(new File(path, "override.conf"))) // Configuration override (erased with the next deploy)
     super.onLoadConfig(config ++ localConfig ++ overrideConfig, path, classloader, mode)
   }
-  override def onBadRequest(request: RequestHeader, error: String): Future[SimpleResult] = {
+  override def onBadRequest(request: RequestHeader, error: String): Future[Result] = {
     val errorId = ExternalId[Exception]()
     val msg = s"BAD REQUEST: $errorId: [$error] on ${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
     log.warn(msg)
@@ -145,7 +145,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
   }
 
-  override def onHandlerNotFound(request: RequestHeader): Future[SimpleResult] = {
+  override def onHandlerNotFound(request: RequestHeader): Future[Result] = {
     val errorId = ExternalId[Exception]()
     log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
     Future.successful(allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId))))
@@ -166,7 +166,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
   }
 
-  override def onError(request: RequestHeader, ex: Throwable): Future[SimpleResult] = Future {
+  override def onError(request: RequestHeader, ex: Throwable): Future[Result] = Future {
     try {
       val errorId: ExternalId[_] = ex match {
         case reported: ReportedException => reported.id
@@ -246,7 +246,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     serviceDiscovery.unRegister()
   }
 
-  private def allowCrossOrigin(request: RequestHeader, result: SimpleResult): SimpleResult = { // for kifi.com/site dev
+  private def allowCrossOrigin(request: RequestHeader, result: Result): Result = { // for kifi.com/site dev
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")

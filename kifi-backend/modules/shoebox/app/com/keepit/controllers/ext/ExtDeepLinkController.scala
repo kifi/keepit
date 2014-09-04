@@ -7,7 +7,7 @@ import com.keepit.controllers.email.HandleDeepLinkRequests
 import com.keepit.model._
 import com.keepit.common.db.Id
 
-import play.api.mvc.{ AnyContent, SimpleResult, Action, Request }
+import play.api.mvc.{ AnyContent, Result, Action, Request }
 import play.api.libs.json.{ Json, JsString, JsObject }
 import com.keepit.common.net.UserAgent
 import scala.Some
