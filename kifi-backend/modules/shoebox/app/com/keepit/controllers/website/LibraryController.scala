@@ -24,6 +24,7 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   libraryCommander: LibraryCommander,
+  keepsCommander: KeepsCommander,
   actionAuthenticator: ActionAuthenticator,
   clock: Clock,
   implicit val config: PublicIdConfiguration)
@@ -239,9 +240,10 @@ class LibraryController @Inject() (
 
         db.readOnlyReplica { implicit session =>
           if (canView(request.userId, libraryRepo.get(libraryId), authToken)) {
-            val take = Math.min(count, 100)
+            val take = Math.min(count, 30)
             val numKeeps = keepRepo.getCountByLibrary(libraryId)
-            val keepInfos = keepRepo.getByLibrary(libraryId, take, offset).map(KeepInfo.fromKeep)
+            val keeps = keepRepo.getByLibrary(libraryId, take, offset)
+            val keepInfos = keepsCommander.decorateKeepsIntoKeepInfos(request.userId, keeps)
             Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
           } else
             BadRequest(Json.obj("error" -> "invalid access"))
