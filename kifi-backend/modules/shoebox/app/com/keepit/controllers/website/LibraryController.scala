@@ -233,24 +233,20 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None) = JsonAction.authenticatedAsync { request =>
+  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
+        BadRequest(Json.obj("error" -> "invalid id"))
       case Success(libraryId) =>
-
         db.readOnlyReplica { implicit session =>
           if (canView(request.userId, libraryRepo.get(libraryId), authToken)) {
             val take = Math.min(count, 30)
             val numKeeps = keepRepo.getCountByLibrary(libraryId)
-            val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-            val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userId, keeps)
-            keepInfosF.map { keepInfos =>
-              Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
-            }
+            val keepInfos = keepRepo.getByLibrary(libraryId, take, offset).map(KeepInfo.fromKeep)
+            Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
           } else
-            Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+            BadRequest(Json.obj("error" -> "invalid access"))
         }
     }
   }
