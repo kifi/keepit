@@ -98,12 +98,13 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-        if (canView(request.userId, lib, authToken, passcode))
-          libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
-            Ok(Json.obj("library" -> Json.toJson(libInfo)))
+        if (canView(request.userId, lib, authToken, passcode)) {
+          libraryCommander.createFullLibraryInfo(request.userId, lib).map { library =>
+            Ok(Json.obj("library" -> Json.toJson(library)))
           }
-        else
+        } else {
           Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+        }
     }
   }
 
@@ -124,12 +125,13 @@ class LibraryController @Inject() (
             case None =>
               Future.successful(BadRequest(Json.obj("error" -> "no library found")))
             case Some(lib) =>
-              if (canView(request.userId, lib, authToken, passcode))
+              if (canView(request.userId, lib, authToken, passcode)) {
                 libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
                   Ok(Json.obj("library" -> Json.toJson(libInfo)))
                 }
-              else
+              } else {
                 Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+              }
           }
         }
     }
