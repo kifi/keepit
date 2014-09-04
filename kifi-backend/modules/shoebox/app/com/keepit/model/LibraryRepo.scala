@@ -11,6 +11,7 @@ import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, Sequenc
 import com.keepit.common.time.Clock
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
