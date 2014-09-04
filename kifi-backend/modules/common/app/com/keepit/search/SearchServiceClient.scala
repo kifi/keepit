@@ -107,8 +107,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
 
-  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]]
-
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
@@ -443,16 +441,6 @@ class SearchServiceClientImpl(
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {
     distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
       f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
-    }
-  }
-
-  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]] = {
-    var builder = new SearchRequestBuilder(new ListBuffer)
-    builder += ("query", query)
-    builder += ("prior", Json.toJson(prior.map { case (k, v) => k.lang -> v }))
-    val request = builder.build
-    distRouter.dispatch(plan, Search.internal.distLangDetect, request).map { f =>
-      f.map { r => r.json.as[Map[String, Double]].map { case (k, v) => Lang(k) -> v } }
     }
   }
 
