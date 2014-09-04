@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import com.keepit.shoebox.Words
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._

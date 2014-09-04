@@ -79,22 +79,24 @@ class LibraryController @Inject() (
     }
   }
 
-  private def canView(userId: Id[User], lib: Library, authToken: Option[String]): Boolean = {
+  private def canView(userId: Id[User], lib: Library, authToken: Option[String], passcode: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
-        libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get).nonEmpty ||
-        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get)
+        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get) || {
+          val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
+          passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
+        }
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library], authToken: Option[String] = None) = JsonAction.authenticatedAsync { request =>
+  def getLibraryById(pubId: PublicId[Library], authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-        if (canView(request.userId, lib, authToken)) {
+        if (canView(request.userId, lib, authToken, passcode)) {
           libraryCommander.createFullLibraryInfo(request.userId, lib).map { library =>
             Ok(Json.obj("library" -> Json.toJson(library)))
           }
@@ -104,7 +106,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None) = JsonAction.authenticatedAsync { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     // check if str is either a username or externalId
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
@@ -121,7 +123,7 @@ class LibraryController @Inject() (
             case None =>
               Future.successful(BadRequest(Json.obj("error" -> "no library found")))
             case Some(lib) =>
-              if (canView(request.userId, lib, authToken)) {
+              if (canView(request.userId, lib, authToken, passcode)) {
                 libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
                   Ok(Json.obj("library" -> Json.toJson(libInfo)))
                 }
@@ -233,15 +235,14 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None) = JsonAction.authenticatedAsync { request =>
+  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticatedAsync { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
       case Success(libraryId) =>
-
         db.readOnlyReplica { implicit session =>
-          if (canView(request.userId, libraryRepo.get(libraryId), authToken)) {
+          if (canView(request.userId, libraryRepo.get(libraryId), authToken, passcode)) {
             val take = Math.min(count, 30)
             val numKeeps = keepRepo.getCountByLibrary(libraryId)
             val keeps = keepRepo.getByLibrary(libraryId, take, offset)
@@ -255,7 +256,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getCollaborators(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None) = JsonAction.authenticated { request =>
+  def getCollaborators(pubId: PublicId[Library], count: Int, offset: Int, authToken: Option[String] = None, passcode: Option[String] = None) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
@@ -263,7 +264,7 @@ class LibraryController @Inject() (
       case Success(libraryId) =>
 
         db.readOnlyReplica { implicit session =>
-          if (canView(request.userId, libraryRepo.get(libraryId), authToken)) {
+          if (canView(request.userId, libraryRepo.get(libraryId), authToken, passcode)) {
             val take = Math.min(count, 10)
             val memberships = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, take, offset, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT, LibraryAccess.READ_ONLY))
             val (f, c) = memberships.partition(_.access == LibraryAccess.READ_ONLY)
