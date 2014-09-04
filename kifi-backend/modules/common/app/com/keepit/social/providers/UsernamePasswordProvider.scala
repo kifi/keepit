@@ -12,7 +12,7 @@ import play.api.mvc.Results.Forbidden
 
 import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
 import securesocial.core._
-import play.api.libs.ws.Response
+import play.api.libs.ws.WSResponse
 import securesocial.core.IdentityId
 import net.codingwell.scalaguice.InjectorExtensions._
 
@@ -44,7 +44,7 @@ class UsernamePasswordProvider(app: Application)
     )
   }
 
-  override protected def buildInfo(response: Response): OAuth2Info = {
+  override protected def buildInfo(response: WSResponse): OAuth2Info = {
     try super.buildInfo(response) catch {
       case e: Throwable =>
         log.info(s"[securesocial] Failed to build oauth2 info. Response was ${response.body}")

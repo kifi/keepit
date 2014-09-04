@@ -20,10 +20,9 @@ import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.Failure
-import scala.Some
 import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.ws.Response
+import play.api.libs.ws.WSResponse
 
 case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
 
@@ -187,7 +186,7 @@ class OAuth2Controller @Inject() (
       val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
       log.infoP(s"POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-      val tokenRespOptF = call.map { resp: Response =>
+      val tokenRespOptF = call.map { resp: WSResponse =>
         log.infoP(s"$provider's access token response: ${resp.body}")
         provider match {
           case "google" => resp.status match {

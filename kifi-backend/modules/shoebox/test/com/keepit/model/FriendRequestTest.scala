@@ -21,19 +21,19 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           )
         }
         db.readOnlyMaster { implicit s =>
-          friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
-          friendRequestRepo.getByRecipient(users(1)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
-          friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
+          friendRequestRepo.getBySender(users(0)).map(_.recipientId) must contain(exactly(users(1), users(2)))
+          friendRequestRepo.getByRecipient(users(1)).map(_.senderId) must contain(exactly(users(0)))
+          friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must contain(exactly(users(0)))
           friendRequestRepo.getBySenderAndRecipient(users(0), users(1)) must beSome(fr1)
         }
         db.readWrite { implicit s =>
           friendRequestRepo.save(fr1.copy(state = FriendRequestStates.ACCEPTED))
         }
         db.readOnlyMaster { implicit s =>
-          friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(2)))
+          friendRequestRepo.getBySender(users(0)).map(_.recipientId) must contain(exactly(users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
           friendRequestRepo.getCountByRecipient(users(2)) must_== 1
-          friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
+          friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must contain(exactly(users(0)))
           friendRequestRepo.getBySenderAndRecipient(users(0), users(1)) must beNone
         }
         db.readWrite { implicit s =>
@@ -42,7 +42,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)) must beEmpty
           friendRequestRepo.getBySender(users(0), states = Set(FriendRequestStates.ACCEPTED,
-            FriendRequestStates.IGNORED)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
+            FriendRequestStates.IGNORED)).map(_.recipientId) must contain(exactly(users(1), users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
           friendRequestRepo.getCountByRecipient(users(2)) must_== 0
           friendRequestRepo.getByRecipient(users(2)) must beEmpty

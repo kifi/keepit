@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
-import play.api.templates.Html
+import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI

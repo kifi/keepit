@@ -17,7 +17,6 @@ import org.apache.commons.io.IOUtils
 import play.api.libs.json._
 import play.api.libs.ws._
 import play.api.libs.ws.ning.NingWSResponse
-import play.mvc.Http.Status
 
 import scala.util.Try
 import scala.xml._
@@ -28,7 +27,7 @@ case class SlowJsonParsingException(request: Request, response: ClientResponse, 
 }
 
 trait ClientResponse {
-  def res: Response
+  def res: WSResponse
   def request: Request
   def isUp: Boolean
   def bytes: Array[Byte]
@@ -41,7 +40,7 @@ trait ClientResponse {
 
 class ClientResponseException(message: String, cause: Throwable) extends Exception(message, cause)
 
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, maxJsonParseTime: Int) extends ClientResponse with Logging {
+class ClientResponseImpl(val request: Request, val res: WSResponse, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, maxJsonParseTime: Int) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 

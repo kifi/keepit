@@ -15,7 +15,7 @@ import scala.util.Failure
 import play.api.libs.concurrent.Execution.Implicits._
 
 import Logging._
-import play.api.libs.ws.{ Response, WS }
+import play.api.libs.ws.{ WSResponse, WS }
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
@@ -93,7 +93,7 @@ class ABookCommander @Inject() (
     }
 
     val userInfoF: Future[GmailABookOwnerInfo] = getGmailOwnerInfo(userId, accessToken)
-    val contactsRespF: Future[Response] = WS.url(CONTACTS_URL).withRequestTimeout(120000).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
+    val contactsRespF: Future[WSResponse] = WS.url(CONTACTS_URL).withRequestTimeout(120000).withQueryString(("access_token", accessToken), ("max-results", Int.MaxValue.toString)).get
     for {
       userInfo <- userInfoF
       contactsResp <- contactsRespF

@@ -4,7 +4,7 @@ import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceContro
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.model.{ User, DeepLocator, NormalizedURI }
-import play.api.mvc.{ SimpleResult, Request }
+import play.api.mvc.{ Result, Request }
 
 trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
 
@@ -41,7 +41,7 @@ trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
     }
   }
 
-  protected def doHandleMobile(request: Request[_], uri: NormalizedURI, locator: DeepLocator): SimpleResult = {
+  protected def doHandleMobile(request: Request[_], uri: NormalizedURI, locator: DeepLocator): Result = {
     val (isIphone, isKifiIphoneApp) = mobileCheck(request)
     if (locator.value.endsWith("#compose")) {
       log.info(s"iphone app cannot yet handle #compose")

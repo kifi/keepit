@@ -3,12 +3,12 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.mail.{ PostOffice, LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress }
+import com.keepit.common.mail.{ LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress }
 import com.keepit.common.db.slick.Database
 
 import play.api.mvc.Action
 
-import play.api.templates.Html
+import play.twirl.api.Html
 import com.keepit.model.NotificationCategory
 
 class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) extends ShoeboxServiceController {
