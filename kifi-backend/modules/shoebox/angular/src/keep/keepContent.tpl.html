@@ -35,7 +35,7 @@
       <span kf-keep-who-text keep="keep"></span>
     </div>
 
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
+    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
   </div>
 
   <div class="kf-keep-footer">
@@ -44,10 +44,10 @@
       <a kf-max-version="3.0.7" href="javascript:" ng-click="triggerInstall()">Send</a>
     </span>
     <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate(keep)" href='javascript:'>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate(keep)" href='javascript:'>Make Public</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic(keep)" href='javascript:'>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Keep Privately</a></span>
     <div class="kf-keep-private" ng-if="isMine() && isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>

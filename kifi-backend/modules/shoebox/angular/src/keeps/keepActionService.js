@@ -51,8 +51,16 @@ angular.module('kifi')
       });
     }
 
+    function togglePrivate (keeps) {
+      // If all the keeps were private, they will all become public.
+      // If all the keeps were public, they will all become private.
+      // If some of the keeps were private and some public, they will all become private.
+      return keepMany(keeps, !_.every(keeps, 'isPrivate'));
+    }
+
     var api = {
-      keepOne: keepOne
+      keepOne: keepOne,
+      togglePrivate: togglePrivate
     };
 
     return api;

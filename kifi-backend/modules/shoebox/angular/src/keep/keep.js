@@ -594,8 +594,8 @@ angular.module('kifi')
           return scope.isMyBookmark(scope.keep);
         };
 
-        scope.togglePrivate = function () {
-          keepService.togglePrivate([scope.keep]);
+        scope.togglePrivate = function (keep) {
+          keepActionService.togglePrivate([keep]);
         };
 
         scope.isPrivate = function () {
@@ -610,12 +610,8 @@ angular.module('kifi')
           keepService.unkeep([scope.keep]);
         };
 
-        scope.getSingleSelectedKeep = function () {
-          if (scope.keep) {
-            return [scope.keep];
-          } else {
-            return [];
-          }
+        scope.getSingleSelectedKeep = function (keep) {
+          return [keep];
         };
 
         scope.clickKeep = function (keep) {

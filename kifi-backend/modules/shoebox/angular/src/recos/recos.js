@@ -163,8 +163,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['$document', 'keyIndices', 'recoActionService',
-  function ($document, keyIndices, recoActionService) {
+.directive('kfRecoDropdownMenu', ['$document', 'recoActionService',
+  function ($document, recoActionService) {
     return {
       restrict: 'A',
       replace: true,
