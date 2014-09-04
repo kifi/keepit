@@ -30,7 +30,7 @@ angular.module('kifi')
       controller: 'ProfileCtrl'
     }).when('/kifeeeed', {
       templateUrl: 'recos/adhoc.tpl.html'
-    }).when('/recommendation', {
+    }).when('/recommendations', {
       templateUrl: 'recos/recosView.tpl.html'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
