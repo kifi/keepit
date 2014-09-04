@@ -22,6 +22,7 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
+import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -522,7 +523,7 @@ class SearchCommanderImpl @Inject() (
 
       val eachLangProb = (1.0 / (acceptLangs.size.toDouble * weight + allLangs.size.toDouble))
       allLangs.map { lang =>
-        if (acceptLangs.contains(lang)) (lang -> eachLangProb * weight) else (lang -> eachLangProb)
+        if (acceptLangs.contains(lang)) (lang -> math.log(eachLangProb * weight)) else (lang -> math.log(eachLangProb))
       }.toMap
     }
 
