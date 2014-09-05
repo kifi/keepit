@@ -9,7 +9,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ EmailToSend, EmailAddress }
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -94,6 +94,7 @@ object Shoebox extends Service {
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
+    def processAndSendMail(email: EmailToSend) = ServiceRoute(POST, "/internal/shoebox/database/processAndSendMail")
     def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedCollections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUriIdsInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getUriIdsInCollection", Param("collectionId", collectionId))
