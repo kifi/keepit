@@ -16,7 +16,7 @@ angular.module('kifi')
     // Attempt to pre-populate the library object while we wait
     if (libraryService.librarySummaries) {
       var lib = _.find(libraryService.librarySummaries, function (elem) {
-        return elem.url == '/' + username + '/' + librarySlug;
+        return elem.url === '/' + username + '/' + librarySlug;
       });
       if (lib) {
         util.replaceObjectInPlace($scope.library, lib);
