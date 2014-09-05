@@ -1,5 +1,5 @@
 .kf-recos-view-header
-  padding: 25px 25px 40px 30px
+  padding: 25px 25px 30px 30px
   min-height: 50px
 
   .kf-recos-clover-icon
@@ -18,7 +18,7 @@
 .kf-reco-recency
   position: relative
   float: right
-  width: calc(100% - 280px)
+  width: calc(100% - 315px)
 
 .kf-reco-refresh-btn
   position: absolute
@@ -49,8 +49,20 @@
 .kf-reco-recency-all-time
   left: 0
 
+  &::before
+    content: 'All time'
+
+    @media (min-width: 1024px) and (max-width: 1100px)
+      content: 'At'
+
 .kf-reco-recency-recent
   right: 0
+
+  &::before
+    content: 'Recent'
+
+    @media (min-width: 1024px) and (max-width: 1100px)
+      content: 'Re'
 
 .kf-reco-slider-container
   position: absolute
