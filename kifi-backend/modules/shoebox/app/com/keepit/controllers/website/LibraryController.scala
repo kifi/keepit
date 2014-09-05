@@ -10,6 +10,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.model._
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -342,6 +343,23 @@ class LibraryController @Inject() (
           Ok(Json.obj("success" -> true))
         }
     }
+  }
+
+  def setUniversalLinks(readOnly: Boolean = true) = JsonAction.authenticated { request =>
+    var c = 0
+    db.readWrite { implicit s =>
+      libraryRepo.all.map { lib =>
+        lib.universalLink match {
+          case Some(u) => {} // if link already there, great, do nothing!
+          case None => //otherwise, give it a link!
+            val newLink = RandomStringUtils.randomAlphanumeric(40)
+            log.info("Setting universal link %s for libraryId %s".format(newLink, lib.id.get.toString))
+            if (!readOnly) libraryRepo.save(lib.copy(universalLink = Some(newLink)))
+            c = c + 1
+        }
+      }
+    }
+    Ok(Json.obj("success" -> c))
   }
 
 }
