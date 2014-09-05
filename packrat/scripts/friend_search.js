@@ -28,7 +28,7 @@ var initFriendSearch = (function () {
   };
 
   function search(participants, includeSelf, numTokens, query, withResults) {
-    api.port.emit('search_contacts', {q: query, n: 4, participants: participants, includeSelf: includeSelf(numTokens)}, withResults);
+    api.port.emit('search_contacts', {q: query, n: 6, participants: participants, includeSelf: includeSelf(numTokens)}, withResults);
   }
 
   function formatToken(item) {
