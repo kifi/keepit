@@ -153,7 +153,7 @@ class HomeController @Inject() (
     }
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
-        .withSession(session - AuthController.LinkWithKey)
+        .withSession(request.session - AuthController.LinkWithKey)
     } else if (request.user.state == UserStates.PENDING) {
       pendingHome()
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
@@ -284,7 +284,7 @@ class HomeController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)("0"),
           authenticator => {
             Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
-              .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession(request.session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
               .withCookies(authenticator.toCookie)
           }
         )

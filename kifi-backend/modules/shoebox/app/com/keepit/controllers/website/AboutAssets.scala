@@ -17,7 +17,7 @@ class AboutAssets @Inject() (applicationConfig: FortyTwoConfig) extends AssetsBu
     "investors.html" -> "investors",
     "join_us.html" -> "join_us")
 
-  override def at(path: String, file: String): Action[AnyContent] = Action.async { request =>
+  override def at(path: String, file: String, aggressiveCaching: Boolean): Action[AnyContent] = Action.async { request =>
     if (request.domain.contains("42go")) {
       Future.successful(OldSiteRedirects.get(file) map { redirectFile =>
         MovedPermanently(applicationConfig.applicationBaseUrl + "/about/" + redirectFile)

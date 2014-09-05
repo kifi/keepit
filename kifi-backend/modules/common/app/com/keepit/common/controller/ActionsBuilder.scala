@@ -30,7 +30,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       } else {
         Future.successful(Redirect("/login")
           .flashing("error" -> Messages("securesocial.loginRequired"))
-          .withSession(request2session + (SecureSocial.OriginalUrlKey -> request.uri)))
+          .withSession(request.session + (SecureSocial.OriginalUrlKey -> request.uri)))
       }
     }
     p

@@ -52,7 +52,7 @@ object Global {
     ws,
     "com.typesafe.play.plugins" %% "play-statsd" % "2.2.0" exclude("play", "*"),
     "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
-    "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
+    "kifi-securesocial" %% "kifi-securesocial" % "master-20140903" exclude("play", "*"),
     "org.clapper" %% "grizzled-slf4j" % "1.0.1",
     "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
     "org.apache.commons" % "commons-compress" % "1.4.1",

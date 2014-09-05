@@ -87,8 +87,8 @@ class AuthController @Inject() (
       inviteCommander.markPendingInvitesAsAccepted(request.user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
       Redirect(com.keepit.controllers.website.routes.HomeController.install())
     } else {
-      session.get(SecureSocial.OriginalUrlKey) map { url =>
-        Redirect(url).withSession(session - SecureSocial.OriginalUrlKey)
+      request.session.get(SecureSocial.OriginalUrlKey) map { url =>
+        Redirect(url).withSession(request.session - SecureSocial.OriginalUrlKey)
       } getOrElse {
         Redirect("/")
       }
@@ -142,14 +142,14 @@ class AuthController @Inject() (
   }
 
   def popupBeforeLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
-    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
+    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(request.session + (PopupKey -> "1"))
   }
 
   def popupAfterLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
     val identity = request.identityOpt.get
     Ok(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>")
-      .withSession(session - PopupKey)
+      .withSession(request.session - PopupKey)
   }
 
   // --
@@ -279,7 +279,7 @@ class AuthController @Inject() (
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
-      .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
+      .withSession(request.session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
   def forgotPassword() = JsonAction.parseJson(allowPending = true)(

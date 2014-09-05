@@ -8,6 +8,7 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.{ ExternalId, Id }
+import play.api.Play.current
 
 class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 

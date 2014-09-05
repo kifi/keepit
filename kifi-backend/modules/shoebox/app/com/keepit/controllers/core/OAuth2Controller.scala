@@ -20,10 +20,9 @@ import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.Failure
-import scala.Some
 import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.ws.Response
+import play.api.libs.ws.WSResponse
 
 case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
 
@@ -134,7 +133,7 @@ class OAuth2Controller @Inject() (
     stateTokenOpt match {
       case None =>
         log.warnP(s"state token is not provided; body=${request.body} headers=${request.headers}")
-        Redirect("/").withSession(session - STATE_TOKEN_KEY)
+        Redirect("/").withSession(request.session - STATE_TOKEN_KEY)
       case Some(stateToken) =>
         val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
         val params = Map(
@@ -149,7 +148,7 @@ class OAuth2Controller @Inject() (
         )
         val url = authUrl + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
         log.infoP(s"REDIRECT to: $url with params: $params")
-        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(session + (STATE_TOKEN_KEY -> stateToken))
+        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(request.session + (STATE_TOKEN_KEY -> stateToken))
     }
   }
 
@@ -157,8 +156,8 @@ class OAuth2Controller @Inject() (
   def callback(provider: String) = JsonAction.authenticatedAsync { implicit request =>
     implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
-    val redirectHome = Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withSession(session - STATE_TOKEN_KEY)
-    val redirectInvite = Redirect("/invite").withSession(session - STATE_TOKEN_KEY) // todo: make configurable
+    val redirectHome = Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withSession(request.session - STATE_TOKEN_KEY)
+    val redirectInvite = Redirect("/invite").withSession(request.session - STATE_TOKEN_KEY) // todo: make configurable
 
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val stateOpt = request.queryString.get("state").flatMap(_.headOption)
@@ -187,7 +186,7 @@ class OAuth2Controller @Inject() (
       val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
       log.infoP(s"POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-      val tokenRespOptF = call.map { resp: Response =>
+      val tokenRespOptF = call.map { resp: WSResponse =>
         log.infoP(s"$provider's access token response: ${resp.body}")
         provider match {
           case "google" => resp.status match {
@@ -230,11 +229,11 @@ class OAuth2Controller @Inject() (
                     case Failure(t) =>
                       airbrake.notify(s"$prefix Caught exception $t while importing contacts", t)
                       val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsFailure(redirectUrlOpt)
-                      Redirect(route).withSession(session - STATE_TOKEN_KEY)
+                      Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
                     case Success(abookInfo) =>
                       log.infoP(s"abook imported: $abookInfo")
                       val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsSuccess(redirectUrlOpt, abookInfo.numContacts)
-                      Redirect(route).withSession(session - STATE_TOKEN_KEY)
+                      Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
                   }
                 }
               }
@@ -245,7 +244,7 @@ class OAuth2Controller @Inject() (
                   friendsF.map { friendsResp =>
                     val friends = friendsResp.json
                     log.infoP("friends:\n${Json.prettyPrint(friends)}")
-                    Ok(friends).withSession(session - STATE_TOKEN_KEY)
+                    Ok(friends).withSession(request.session - STATE_TOKEN_KEY)
                   }
                 } else redirectHomeF
               }
@@ -281,7 +280,7 @@ class OAuth2Controller @Inject() (
 
   private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
-    val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
+    val redirectInvite = Redirect("/friends/invite/email").withSession(request.session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")
     val userId = request.userId
     val tokenRespOptF = abookServiceClient.getOAuth2Token(userId, abookId) flatMap { tokenOpt =>
@@ -341,7 +340,7 @@ class OAuth2Controller @Inject() (
     val stateToken = Json.toJson(StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)).toString()
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
     log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")
-    Redirect(route).withSession(session - STATE_TOKEN_KEY)
+    Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
   }
 
 }

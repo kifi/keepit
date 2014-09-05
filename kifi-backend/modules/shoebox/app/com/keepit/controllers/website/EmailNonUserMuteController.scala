@@ -19,7 +19,7 @@ class EmailNonUserMuteController @Inject() (
     elizaServiceClient.getNonUserThreadMuteInfo(publicId).map { content =>
       content map {
         case (identifier, muted) =>
-          Ok(views.html.email.muteEmails(identifier, muted, flash.get("msg")))
+          Ok(views.html.email.muteEmails(identifier, muted, request.flash.get("msg")))
       } getOrElse (BadRequest)
     }
   }
