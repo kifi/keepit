@@ -117,7 +117,7 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def saveCollection(user: User, name: String)(implicit injector: Injector): Collection = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    val Seq(collection) = fakeShoeboxServiceClient.saveCollections(Collection(userId = user.id.get, name = name))
+    val Seq(collection) = fakeShoeboxServiceClient.saveCollections(Collection(userId = user.id.get, name = Hashtag(name)))
     collection
   }
 

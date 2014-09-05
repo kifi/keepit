@@ -27,7 +27,7 @@
                                         <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">
                                             This digest is a recommended list based on your interests and recent activity on Kifi.
                                             @if(!allRecos.isFacebookConnected) {
-                                            You can also <a href="${ctx.baseUrl}/link/facebook?redirect=recommendation" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
+                                            You can also <a href="@{ctx.baseUrl}/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
                                             }
                                             <br/>
                                         </td>
@@ -60,7 +60,7 @@
                 <td align="center">
                     <table border="0" cellspacing="0" cellpadding="0" align="center">
                         <tr>
-                            <td><a href="${ctx.baseUrl}/recommendation" target="_blank"><img src="@assetUrl("digest/viewfulllist.png")" alt="View Full list" width="174" height="46" style="display:block;" border="0" /></a></td>
+                            <td><a href="@{ctx.baseUrl}/recommendations" target="_blank"><img src="@assetUrl("digest/viewfulllist.png")" alt="View Full list" width="174" height="46" style="display:block;" border="0" /></a></td>
                         </tr>
                     </table>
                 </td>

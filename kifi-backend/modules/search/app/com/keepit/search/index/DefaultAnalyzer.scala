@@ -135,6 +135,8 @@ object DefaultAnalyzer {
     "tr" -> langAnalyzers("tr").withStemFilter(_.Turkish)
   )
 
+  val languages: Set[Lang] = langAnalyzers.keySet.map(Lang(_))
+
   def getAnalyzer(lang: Lang): Analyzer = langAnalyzers.getOrElse(lang.lang, defaultAnalyzer)
   def getAnalyzerWithStemmer(lang: Lang): Analyzer = langAnalyzerWithStemmer.getOrElse(lang.lang, getAnalyzer(lang))
 }

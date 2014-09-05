@@ -1,10 +1,9 @@
 package com.keepit.search
 
-import com.keepit.model.{ Library, NormalizedURI, User }
+import com.keepit.model.{ Hashtag, Library, NormalizedURI, User }
 import com.keepit.common.db.Id
-import com.keepit.search.Item.{ Tag }
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepFields }
+import com.keepit.search.graph.keep.{ KeepRecord, ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term
 import com.keepit.search.index.WrappedSubReader
@@ -19,6 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.search.AugmentationCommander.DistributionPlan
 import com.keepit.common.logging.Logging
+import org.apache.lucene.util.BytesRef
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -70,13 +70,13 @@ class AugmentationCommanderImpl @Inject() (
   private def augmentItem(item: Item, info: AugmentationInfo, augmentationScores: ContextualAugmentationScores): AugmentedItem = {
     val kept = item.keptIn.flatMap { libraryId =>
       info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
-        val sortedTags = keepInfo.tags.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
+        val sortedTags = keepInfo.tags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
         val userIdOpt = keepInfo.keptBy
         (libraryId, userIdOpt, sortedTags)
       }
     }
 
-    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Tag]) {
+    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
       case ((moreKeeps, moreTags), RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
     }
 
@@ -130,26 +130,35 @@ class AugmentationCommanderImpl @Inject() (
       val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
       val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
       val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
+      val recordDocValue = reader.getBinaryDocValues(KeepFields.recordField)
       val docs = reader.termDocsEnum(uriTerm)
 
-      var docId = docs.nextDoc()
-      while (docId < NO_MORE_DOCS) {
+      def tags(docId: Int): Set[Hashtag] = {
+        val ref = new BytesRef()
+        recordDocValue.get(docId, ref)
+        val record = KeepRecord.fromByteArray(ref.bytes, ref.offset, ref.length)
+        record.tags
+      }
 
-        val libraryId = libraryIdDocValues.get(docId)
-        val userId = userIdDocValues.get(docId)
-        val visibility = visibilityDocValues.get(docId)
-        val tags: Seq[String] = ??? //todo(Léo): implement
+      if (docs != null) {
+        var docId = docs.nextDoc()
+        while (docId < NO_MORE_DOCS) {
 
-        if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
-          val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
-          keeps += RestrictedKeepInfo(Some(Id(libraryId)), userIdOpt, tags)
-        } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
-          case PUBLISHED => keeps += RestrictedKeepInfo(Some(Id(libraryId)), Some(Id(userId)), tags)
-          case DISCOVERABLE => keeps += RestrictedKeepInfo(None, Some(Id(userId)), Seq.empty)
-          case SECRET => // ignore
-        }
-        else if (visibility == PUBLISHED) { // kept in a public library
-          //todo(Léo): define which published libraries are relevant
+          val libraryId = libraryIdDocValues.get(docId)
+          val userId = userIdDocValues.get(docId)
+          val visibility = visibilityDocValues.get(docId)
+
+          if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
+            val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
+            keeps += RestrictedKeepInfo(Some(Id(libraryId)), userIdOpt, tags(docId))
+          } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
+            case PUBLISHED => keeps += RestrictedKeepInfo(Some(Id(libraryId)), Some(Id(userId)), tags(docId))
+            case DISCOVERABLE => keeps += RestrictedKeepInfo(None, Some(Id(userId)), Set.empty)
+            case SECRET => // ignore
+          }
+          else if (visibility == PUBLISHED) { // kept in a public library
+            //todo(Léo): define which published libraries are relevant
+          }
         }
 
         docId = docs.nextDoc()
@@ -161,7 +170,7 @@ class AugmentationCommanderImpl @Inject() (
   private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): ContextualAugmentationScores = {
     val libraryScores = MutableMap[Id[Library], Float]() withDefaultValue 0f
     val userScores = MutableMap[Id[User], Float]() withDefaultValue 0f
-    val tagScores = MutableMap[Tag, Float]() withDefaultValue 0f
+    val tagScores = MutableMap[Hashtag, Float]() withDefaultValue 0f
 
     weigthedAugmentationInfos.foreach {
       case (info, weight) =>

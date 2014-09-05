@@ -22,8 +22,8 @@ class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
 
       // Anonymized event with tag information
       anonymise(contextBuilder)
-      contextBuilder += ("oldTagName", oldTag.name)
-      contextBuilder += ("tagName", newTag.name)
+      contextBuilder += ("oldTagName", oldTag.name.tag)
+      contextBuilder += ("tagName", newTag.name.tag)
       heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, renamedAt))
     }
   }
@@ -41,7 +41,7 @@ class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
 
       // Anonymized event with tag information
       anonymise(contextBuilder)
-      contextBuilder += ("tagName", newTag.name)
+      contextBuilder += ("tagName", newTag.name.tag)
       heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, createdAt))
     }
   }
@@ -206,7 +206,7 @@ class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
     if (action == "taggedPage") {
       anonymise(contextBuilder)
       contextBuilder.addUrlInfo(keep.url)
-      contextBuilder += ("tagName", tag.name)
+      contextBuilder += ("tagName", tag.name.tag)
       heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, changedAt))
     }
   }

@@ -1,5 +1,5 @@
 .kf-recos-view-header
-  padding: 25px 25px 40px 30px
+  padding: 25px 25px 20px 30px
   min-height: 50px
 
   .kf-recos-clover-icon
@@ -9,16 +9,38 @@
   .kf-recos-clover-icon
     margin-right: 8px
 
+  .kf-main-title
+    position: relative
+    &::after
+      content: '(a beta feature)';
+      position: absolute;
+      bottom: -2px;
+      right: -20px;
+      padding: 2px 40px 0;
+      background: radial-gradient(#fff 30%, rgba(255,255,255,0) 80%);
+      font: 11px Helvetica,Arial,sans-serif;
+      text-align: center;
+      color: #c00;
+
   .kf-subtitle
     margin: -8px 0 0 50px
 
+  &::after
+    content: ''
+    display: block
+    clear: both
+
 .kf-recos-title
-  display: inline-block
+  float: left
+  margin-bottom: 20px
+  min-width: 260px
 
 .kf-reco-recency
   position: relative
-  float: right
-  width: calc(100% - 280px)
+  float: left
+  margin-left: 40px
+  width: calc(100% - 300px)
+  min-width: 240px
 
 .kf-reco-refresh-btn
   position: absolute
@@ -40,7 +62,7 @@
   position: relative
   width: calc(100% - 85px)
   height: 50px
-  
+
 .kf-reco-recency-all-time
 .kf-reco-recency-recent
   position: absolute
@@ -84,6 +106,13 @@
 
 .kf-reco.ng-leave.ng-leave-active
   opacity: 0
+
+.kf-reco.ng-enter
+  opacity: 0
+  transition: 0.5s ease all
+
+.kf-reco.ng-enter.ng-enter-active
+  opacity: 1
 
 .kf-reco-info
   margin: 0 25px 20px 30px
@@ -251,7 +280,7 @@
 // Dropdown menu
 .kf-reco-dropdown-menu-container
   position: relative
-  
+
   .kf-dropdown-menu
     display: none
     top: 10px
@@ -272,7 +301,7 @@
 
       &:active
         background: #ccc
-  
+
 // Modal
 .kf-reco-improve-modal
   p

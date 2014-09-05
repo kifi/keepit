@@ -31,20 +31,24 @@ object ABookOwnerInfo {
   val EMPTY = ABookOwnerInfo(None, None)
 }
 
-class GmailABookOwnerInfo(id: Option[String], email: Option[String], /* val verified:Option[Boolean] = None, */ val hd: Option[String] = None) extends ABookOwnerInfo(id, email)
+class GmailABookOwnerInfo(id: Option[String], email: Option[String]) extends ABookOwnerInfo(id, email) {
+  override def toString = s"[GmailABookOwnerInfo: id=$id email=$email"
+}
 
 object GmailABookOwnerInfo {
-  def apply(id: Option[String], email: Option[String], /* verified:Option[Boolean],*/ hd: Option[String]) = new GmailABookOwnerInfo(id, email, hd)
-  def unapply(userInfo: GmailABookOwnerInfo): Option[(Option[String], Option[String], /* Option[Boolean],*/ Option[String])] = Some(userInfo.id, userInfo.email, /* userInfo.verified, */ userInfo.hd)
+  def apply(id: Option[String], email: Option[String]) = new GmailABookOwnerInfo(id, email)
+  def unapply(userInfo: GmailABookOwnerInfo): Option[(Option[String], Option[String])] = Some(userInfo.id, userInfo.email)
 
-  implicit val format = (
-    (__ \ 'id).formatNullable[String] and
-    (__ \ 'email).formatNullable[String] and
-    //    (__ \ 'verified_email).formatNullable[Boolean] and
-    (__ \ 'hd).formatNullable[String]
-  )(GmailABookOwnerInfo.apply, unlift(GmailABookOwnerInfo.unapply))
+  implicit val reads: Reads[GmailABookOwnerInfo] = (
+    (__ \ 'sub).read[String] orElse (__ \ 'id).read[String] fmap (x => Option(x)) and
+    (__ \ 'email).readNullable[String]
+  )(GmailABookOwnerInfo.apply _)
 
-  val EMPTY = GmailABookOwnerInfo(None, None, /* None, */ None)
+  implicit val writes: Writes[GmailABookOwnerInfo] = (
+    (__ \ 'id).writeNullable[String] and
+    (__ \ 'email).writeNullable[String]
+  )(unlift(GmailABookOwnerInfo.unapply))
+  val EMPTY = GmailABookOwnerInfo(None, None)
 }
 
 import Logging._

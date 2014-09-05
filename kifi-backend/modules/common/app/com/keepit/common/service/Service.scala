@@ -34,7 +34,7 @@ object ServiceType {
   case object SHOEBOX extends ServiceType("SHOEBOX", "SB")
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2)
-  case object ABOOK extends ServiceType("ABOOK", "AB")
+  case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2)
   case object SCRAPER extends ServiceType("SCRAPER", "SC", loadFactor = 5)
   case object DEV_MODE extends ServiceType("DEV_MODE", "DM")
   case object TEST_MODE extends ServiceType("TEST_MODE", "TM")

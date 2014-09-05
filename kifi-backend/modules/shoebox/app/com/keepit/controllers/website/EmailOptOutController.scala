@@ -40,7 +40,8 @@ class EmailOptOutController @Inject() (
     tuple(
       "all" -> optional(text),
       "invite" -> optional(text),
-      "message" -> optional(text)
+      "message" -> optional(text),
+      "digest" -> optional(text)
     )
   )
   def optOutAction(optOutToken: String) = Action { implicit request =>
@@ -50,7 +51,7 @@ class EmailOptOutController @Inject() (
       optOutForm.bindFromRequest.fold(
         formWithErrors => BadRequest,
         {
-          case (all, invite, message) =>
+          case (all, invite, message, digest) =>
             // Checkbox unchecked == unsubscribe
             db.readWrite { implicit session =>
               all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
@@ -59,6 +60,8 @@ class EmailOptOutController @Inject() (
                 .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.NonUser.INVITATION) }
               message.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.MESSAGE) }
                 .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
+              digest.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.DIGEST) }
+                .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.DIGEST) }
             }
             Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
         }

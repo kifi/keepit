@@ -236,10 +236,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
         val result2: Future[SimpleResult] = libraryController.getLibraryById(pubId1)(request2)
         status(result2) must equalTo(BAD_REQUEST)
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1, lib1.universalLink).url)
-        val result3: Future[SimpleResult] = libraryController.getLibraryById(pubId1, lib1.universalLink)(request3)
+        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1, Some(lib1.universalLink)).url)
+        val result3: Future[SimpleResult] = libraryController.getLibraryById(pubId1, Some(lib1.universalLink))(request3)
         status(result3) must equalTo(OK)
         Json.parse(contentAsString(result3)) must equalTo(expected)
+
+        // test read_only if you have an invite & working passcode
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
+        }
+        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
+        val result4: Future[SimpleResult] = libraryController.getLibraryById(pubId = pubId1, passcode = Some("asdf"))(request4)
+        status(result4) must equalTo(OK)
+        Json.parse(contentAsString(result4)) must equalTo(expected)
       }
     }
     "get library by path" in {
@@ -303,10 +312,18 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
         val result3: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput)(request3)
         status(result3) must equalTo(BAD_REQUEST)
-        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput, lib1.universalLink).url)
-        val result4: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput, lib1.universalLink)(request4)
+        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput, Some(lib1.universalLink)).url)
+        val result4: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput, Some(lib1.universalLink))(request4)
         status(result4) must equalTo(OK)
         Json.parse(contentAsString(result4)) must equalTo(expected)
+
+        // test read_only if you have an invite & correct passcode
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
+        }
+        val request5 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
+        val result5: Future[SimpleResult] = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput, passcode = Some("qwer"))(request5)
+        status(result5) must equalTo(BAD_REQUEST)
       }
     }
 
@@ -538,27 +555,55 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected1 = Json.parse(
           s"""
-             |{
-               |"keeps": [
-                 |{
-                 |"id":"${keep2.externalId}",
-                 |"title":"k2",
-                 |"url":"http://www.amazon.com/",
-                 |"isPrivate":false,
-                 |"libraryId":"l7jlKlnA36Su"
-                 |},
-                 |{
-                 |"id":"${keep1.externalId}",
-                 |"title":"k1",
-                 |"url":"http://www.google.com/",
-                 |"isPrivate":false,
-                 |"libraryId":"l7jlKlnA36Su"
-                 |}
-               |],
-               |"count": 2,
-               |"numKeeps": 2,
-               |"offset" : 0
-             |}
+          {
+            "keeps": [
+              {
+                "id": "${keep2.externalId}",
+                "title": "k2",
+                "url": "http://www.amazon.com/",
+                "isPrivate": false,
+                "createdAt": "${keep2.createdAt}",
+                "others": -1,
+                "keepers": [
+                  {
+                    "id": "${user1.externalId}",
+                    "firstName": "Aaron",
+                    "lastName": "Hsu",
+                    "pictureName": "0.jpg"
+                  }
+                ],
+                "collections": [],
+                "tags": [],
+                "summary": {},
+                "siteName": "Amazon",
+                "libraryId": "l7jlKlnA36Su"
+              },
+              {
+                "id": "${keep1.externalId}",
+                "title": "k1",
+                "url": "http://www.google.com/",
+                "isPrivate": false,
+                "createdAt": "${keep1.createdAt}",
+                "others": -1,
+                "keepers": [
+                  {
+                    "id": "${user1.externalId}",
+                    "firstName": "Aaron",
+                    "lastName": "Hsu",
+                    "pictureName": "0.jpg"
+                  }
+                ],
+                "collections": [],
+                "tags": [],
+                "summary": {},
+                "siteName": "Google",
+                "libraryId": "l7jlKlnA36Su"
+              }
+            ],
+            "count": 2,
+            "offset": 0,
+            "numKeeps": 2
+           }
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
@@ -567,8 +612,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0).url)
         val result2: Future[SimpleResult] = libraryController.getKeeps(pubId1, 10, 0)(request2)
         status(result2) must equalTo(BAD_REQUEST)
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0, lib1.universalLink).url)
-        val result3: Future[SimpleResult] = libraryController.getKeeps(pubId1, 10, 0, lib1.universalLink)(request3)
+        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0, Some(lib1.universalLink)).url)
+        val result3: Future[SimpleResult] = libraryController.getKeeps(pubId1, 10, 0, Some(lib1.universalLink))(request3)
         status(result3) must equalTo(OK)
         Json.parse(contentAsString(result3)) must equalTo(expected1)
       }
@@ -702,8 +747,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Koopa",
                |  "pictureName":"0.jpg"}
                |  ],
-               |"numCollabs":1,
-               |"numFollows":2,
+               |"numCollaborators":1,
+               |"numFollowers":2,
                |"count":2,
                |"offset":0
                |}""".stripMargin))
@@ -728,8 +773,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Princess",
                |  "pictureName":"0.jpg"}
                |  ],
-               |"numCollabs":1,
-               |"numFollows":2,
+               |"numCollaborators":1,
+               |"numFollowers":2,
                |"count":2,
                |"offset":1
                |}""".stripMargin))

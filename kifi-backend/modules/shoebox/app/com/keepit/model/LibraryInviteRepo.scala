@@ -31,12 +31,13 @@ class LibraryInviteRepoImpl @Inject() (
 
   class LibraryInviteTable(tag: Tag) extends RepoTable[LibraryInvite](db, tag, "library_invite") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def ownerId = column[Id[User]]("owner_id", O.Nullable)
+    def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
-    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def passCode = column[String]("passcode", O.NotNull)
+    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passCode) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
