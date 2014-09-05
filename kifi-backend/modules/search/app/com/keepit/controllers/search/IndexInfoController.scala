@@ -22,8 +22,8 @@ class IndexInfoController @Inject() (
     userGraphPlugin: UserGraphPlugin,
     searchFriendPlugin: SearchFriendGraphPlugin,
     messageIndexerPlugin: MessageIndexerPlugin,
-    keepIndexerPlugin: KeepIndexerPlugin,
-    libraryIndexerPlugin: LibraryIndexerPlugin,
+//    keepIndexerPlugin: KeepIndexerPlugin,
+//    libraryIndexerPlugin: LibraryIndexerPlugin,
     phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
   def listAll() = Action { implicit request =>
@@ -35,8 +35,8 @@ class IndexInfoController @Inject() (
       userGraphPlugin.indexInfos ++
       searchFriendPlugin.indexInfos ++
       messageIndexerPlugin.indexInfos ++
-      keepIndexerPlugin.indexInfos ++
-      libraryIndexerPlugin.indexInfos ++
+//      keepIndexerPlugin.indexInfos ++
+//      libraryIndexerPlugin.indexInfos ++
       phraseIndexerPlugin.indexInfos
     )
     Ok(Json.toJson(infos))
