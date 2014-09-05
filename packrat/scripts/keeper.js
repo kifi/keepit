@@ -229,6 +229,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (this.classList.contains('kifi-keep-tag')) {
         keepPage('public', e, true);
       }
+      if (window.toaster && toaster.showing()) {
+        toaster.hide();
+      }
       api.require('scripts/tagbox.js', function () {
         tagbox.onShow.add(beginStickyTagbox);
         tagbox.onHide.add(endStickyTagbox);
@@ -607,6 +610,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
         beginStickyPane();
+        if (window.tagbox && tagbox.active) {
+          tagbox.hide('keeper:onPaneChange');
+        } else if (window.toaster && toaster.showing()) {
+          toaster.hide();
+        }
       } else {  // dislodge from pane and prepare for x transition
         $slider.prependTo(tile).layout();
         endStickyPane();

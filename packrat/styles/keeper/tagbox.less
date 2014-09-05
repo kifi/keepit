@@ -1,16 +1,16 @@
 .kifi-group {
-  &::before, &::after {
-    content: "";
+  &::before,
+  &::after {
+    content: '';
     display: table;
   }
-
   &::after {
     clear: both;
   }
 }
 
-@tagbox-edge: 3px;
-@tagbox-radius: 9px;
+@tagbox-edge: 1px;
+@tagbox-radius: 12px;
 @taggedHeight1: 84px;
 @taggedHeight2: @taggedHeight1 + 42px;
 @taggedPadding: 15px;
@@ -18,27 +18,27 @@
 .kifi-tagbox {
   position: absolute;
   bottom: 56px;
-  right: 0;
-  width: 300px;
-  border-top-left-radius: @tagbox-radius !important;
-  border-top-right-radius: @tagbox-radius !important;
+  right: 2px;
+  width: 302px;
+  border-radius: 4px 4px @tagbox-radius @tagbox-radius !important;
   padding: 0 @tagbox-edge @tagbox-edge;
   background: #333;
   font-weight: normal;
   text-align: left;
   opacity: 0;
-  -webkit-transform-origin: right bottom;
-  transform-origin: right bottom;
+  -webkit-transform-origin: 94% bottom;
+  transform-origin: 94% bottom;
   -webkit-transform: scale(.1);
   transform: scale(.1);
   transition: opacity linear, -webkit-transform ease-in;
   transition: opacity linear, transform ease-in;
   transition-duration: .12s;
 
-  [kifi-with-pane] & {
+  .kifi-pane>& {
     bottom: 64px;
-    width: 312px;
-    border-bottom: 0;
+    right: 6px;
+    -webkit-transform-origin: 82% bottom;
+    transform-origin: 82% bottom;
   }
 
   &.kifi-in {
@@ -50,17 +50,11 @@
   }
 }
 
-html:not([kifi-with-pane]) {
-  .kifi-tagbox {
-    border-bottom-left-radius: @tagbox-radius !important;
-    border-bottom-right-radius: @tagbox-radius !important;
-  }
-  .kifi-suggested:not(.kifi-tagged)>.kifi-tagbox-top,
-  .kifi-tagbox-empty,
-  .kifi-tagbox-tagged-wrapper {
-    border-bottom-left-radius: @tagbox-radius - @tagbox-edge !important;
-    border-bottom-right-radius: @tagbox-radius - @tagbox-edge !important;
-  }
+.kifi-suggested:not(.kifi-tagged)>.kifi-tagbox-top,
+.kifi-tagbox-empty,
+.kifi-tagbox-tagged-wrapper {
+  border-bottom-left-radius: @tagbox-radius - @tagbox-edge !important;
+  border-bottom-right-radius: @tagbox-radius - @tagbox-edge !important;
 }
 
 .kifi-tagbox-x {
@@ -98,9 +92,9 @@ html:not([kifi-with-pane]) {
   }
 }
 .kifi-tagbox-title {
-  text-align: center;
+  padding-left: 16px;
   line-height: 37px;
-  font-size: 14px;
+  font-size: 13px;
   color: white;
   font-weight: 300;
 }

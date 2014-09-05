@@ -66,8 +66,8 @@ var toaster = (function () {
     }, {
       compose: 'compose'
     }))
-    .on('click', '.kifi-toast-x', function (e) {
-      if (e.which === 1) {
+    .on('click mousedown', '.kifi-toast-x', function (e) {
+      if (e.which === 1 && $toast) {
         hide(e, 'x');
       }
     })
@@ -129,7 +129,9 @@ var toaster = (function () {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {
           pane.show({locator: '/messages/' + resp.threadId});
-          hide();
+          if ($toast) {
+            hide();
+          }
         });
       });
   }
