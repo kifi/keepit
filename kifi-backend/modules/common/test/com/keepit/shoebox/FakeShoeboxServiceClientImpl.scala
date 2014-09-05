@@ -11,7 +11,7 @@ import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{ Map => MutableMap }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser, SocialId }
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailModule, EmailAddress, ElectronicMail }
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import com.google.inject.util.Providers
@@ -643,4 +643,18 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
 
   def addInteractions(usedId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]) = {}
+
+  def sendMailModule(module: EmailModule) = synchronized {
+    val mail = ElectronicMail(
+      from = module.from,
+      to = module.to,
+      cc = module.cc,
+      subject = module.subject,
+      htmlBody = LargeString(module.htmlContent.mkString("<br/>")),
+      category = module.category,
+      senderUserId = module.senderUserId
+    )
+    sentMail += mail
+    Future.successful(true)
+  }
 }

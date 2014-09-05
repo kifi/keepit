@@ -1,5 +1,6 @@
-@(ctx: email.helpers.Context)
-@import email.helpers.{ black, iTunesAppStoreUrl }
+@import com.keepit.model.Email.helpers._
+@import com.keepit.model.Email.placeholders._
+@import com.keepit.model.Email.black
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
     <tr>
@@ -14,11 +15,11 @@
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                         <tr>
                                             <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:22px;">
-                                                <a href="@ctx.kifiLogoUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi.com</a>
+                                                <a href="@kifiLogoUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi.com</a>
                                                 Your recommendations network<br/>Follow us on
-                                                <a href="@ctx.kifiTwitterUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a>
+                                                <a href="@kifiTwitterUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a>
                                                 &nbsp;
-                                                <a href="@ctx.kifiFacebookUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a>
+                                                <a href="@kifiFacebookUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a>
                                             </td>
                                         </tr>
                                     </table>
@@ -51,8 +52,8 @@
                             </tr>
                             <tr>
                                 <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">
-                                    View our <a href="@ctx.privacyUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>.
-                                    <a href="@ctx.unsubscribeUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">Click to unsubscribe</a>
+                                    View our <a href="@privacyUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>.
+                                    <a href="@unsubscribeUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">Click to unsubscribe</a>
                                     from updates like this.<br class="br"/>
                                     &copy; 2014 FortyTwo, Inc. All rights reserved.
                                 </td>

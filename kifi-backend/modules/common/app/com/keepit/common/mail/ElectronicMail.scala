@@ -10,6 +10,7 @@ import com.keepit.model.User
 import org.joda.time.DateTime
 
 import play.api.mvc.PathBindable
+import play.api.templates.Html
 
 case class ElectronicMailMessageId(id: String) {
   def toEmailHeader = s"<$id>"
@@ -31,6 +32,45 @@ object ElectronicMailCategory {
 
     override def unbind(key: String, value: ElectronicMailCategory): String = value.category
   }
+}
+
+case class EmailModule(
+  title: String = "Kifi",
+  from: EmailAddress,
+  fromName: Option[String] = None,
+  to: Seq[EmailAddress] = Seq[EmailAddress](),
+  cc: Seq[EmailAddress] = Seq[EmailAddress](),
+  subject: String,
+  htmlContent: Seq[Html],
+  category: ElectronicMailCategory,
+  campaign: Option[String] = None,
+  senderUserId: Option[Id[User]] = None,
+  unsubscribableEmail: Option[EmailAddress] = None)
+
+object EmailModule {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import ElectronicMail.emailCategoryFormat
+
+  implicit val htmlFormat = new Format[Html] {
+    def reads(js: JsValue) = JsSuccess(Html(js.as[JsString].toString()))
+
+    def writes(o: Html) = JsString(o.toString())
+  }
+
+  implicit val emailModule = (
+    (__ \ 'title).format[String] and
+    (__ \ 'from).format[EmailAddress] and
+    (__ \ 'fromName).formatNullable[String] and
+    (__ \ 'to).format[Seq[EmailAddress]] and
+    (__ \ 'cc).format[Seq[EmailAddress]] and
+    (__ \ 'subject).format[String] and
+    (__ \ 'htmlBody).format[Seq[Html]] and
+    (__ \ 'category).format[ElectronicMailCategory] and
+    (__ \ 'campaign).format[Option[String]] and
+    (__ \ 'senderUserId).format[Option[Id[User]]] and
+    (__ \ 'unsubscribableEmail).format[Option[EmailAddress]]
+  )(EmailModule.apply, unlift(EmailModule.unapply))
 }
 
 case class ElectronicMail(

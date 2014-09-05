@@ -1,5 +1,6 @@
-@(ctx: email.helpers.Context)
-@import email.helpers._
+@import com.keepit.model.Email.helpers._
+@import com.keepit.model.Email.placeholders._
+@import com.keepit.model.Email.black
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
     <tr>
@@ -14,8 +15,8 @@
                         <table width="33" border="0" cellspacing="0" cellpadding="0" align="left">
                             <tr>
                                 <td align="left" width="33" height="19">
-                                    <a href="@ctx.kifiLogoUrl" target="_blank">
-                                        <img src="@black.assetUrl("kifi-logo.png")" alt="Kifi" width="33" height="19"  style="display:block;" border="0"/>
+                                    <a href="@kifiLogoUrl" target="_blank">
+                                        <img src="@black.assetUrl("kifi-logo.png")" alt="Kifi" width="33" height="19" style="display:block;" border="0"/>
                                     </a>
                                 </td>
                             </tr>

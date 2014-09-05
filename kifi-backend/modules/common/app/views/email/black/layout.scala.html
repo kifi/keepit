@@ -1,12 +1,14 @@
-@(ctx: email.helpers.Context)(content: Html)
-@import email.helpers.black
+@(contents: Seq[Html])
+@import com.keepit.model.Email.helpers._
+@import com.keepit.model.Email.placeholders._
+@import com.keepit.model.Email.black
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>@ctx.title</title>
-@email.black.headCss()
+<title>@title</title>
+@email.black.headCss
 </head>
 <body marginwidth="0" marginheight="0" style="margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;" offset="0" topmargin="0" leftmargin="0" bgcolor="#f3f3f3">
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#f3f3f3">
@@ -21,20 +23,22 @@
             </tr>
             <tr>
                 <td bgcolor="#333333">
-                    @email.black.header(ctx)
+                    @email.black.header
                 </td>
             </tr>
+            @for(html <- contents) {
             <tr>
                 <td bgcolor="#ffffff">
-                    @content
+                    @html
                 </td>
             </tr>
+            }
             <tr>
                 <td height="40">&nbsp;</td>
             </tr>
             <tr>
                 <td valign="top">
-                    @email.black.footer(ctx)
+                    @email.black.footer
                 </td>
             </tr>
         </table>
