@@ -641,7 +641,7 @@ class SearchCommanderBackwardCompatibilitySupport(
             isPrivate,
             sharingUserIds,
             score,
-            null
+            new Scoring(score, 0.0f, 0.0f, 0.0f, false)
           )
 
         case None =>
