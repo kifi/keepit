@@ -10,6 +10,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.model._
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -82,7 +83,7 @@ class LibraryController @Inject() (
   private def canView(userId: Id[User], lib: Library, authToken: Option[String], passcode: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
-        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get) || {
+        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink == authToken.get) || {
           val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
           passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
         }
@@ -343,6 +344,5 @@ class LibraryController @Inject() (
         }
     }
   }
-
 }
 

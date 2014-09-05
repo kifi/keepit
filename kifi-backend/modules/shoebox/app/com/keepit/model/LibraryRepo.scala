@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,6 +11,7 @@ import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, Sequenc
 import com.keepit.common.time.Clock
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
@@ -19,6 +20,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
+  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -41,7 +43,7 @@ class LibraryRepoImpl @Inject() (
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
-    def universalLink = column[Option[String]]("universal_link", O.Nullable)
+    def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount) <> ((Library.apply _).tupled, Library.unapply)
@@ -108,6 +110,11 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
+  }
+
+  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit = {
+    sqlu"UPDATE library SET member_count = (SELECT COUNT(id) FROM library_membership WHERE library_id = ${libraryId} and state='active') WHERE id = ${libraryId} AND state='active'".execute()
+    deleteCache(get(libraryId))
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

@@ -3,6 +3,7 @@ package com.keepit.graph.wander
 import com.google.inject.Inject
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.time._
 
@@ -18,17 +19,19 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class URIWanderingCommander @Inject() (
     graph: GraphManager,
-    wanderingCommander: WanderingCommander) extends DestinationWeightsQuerier {
+    wanderingCommander: WanderingCommander) extends DestinationWeightsQuerier with Logging {
 
   val uriWanderLock = new ReactiveLock(5)
 
   def wander(user: Id[User], trials: Int): Future[Map[Id[NormalizedURI], Int]] = {
     uriWanderLock.withLockFuture {
       val (preScoreTrials, additionalTrials) = ((0.2f * trials).toInt, (0.8f * trials).toInt)
+      val t0 = System.currentTimeMillis()
       preScore(user, preScoreTrials).map { preScoreResult =>
         if (preScoreResult.isEmpty()) {
           Map()
         } else {
+          val t1 = System.currentTimeMillis()
           val trialsQuota = distributeTrialsQuota(preScoreResult, additionalTrials)
 
           val uriScores = mutable.Map[Id[NormalizedURI], Int]().withDefaultValue(0)
@@ -37,8 +40,13 @@ class URIWanderingCommander @Inject() (
               val uriId = VertexDataId.toNormalizedUriId(uri)
               uriScores(uriId) += s
           }
+          val t2 = System.currentTimeMillis()
           sampleURIs(trialsQuota.user)(sampleURIsfromUser) foreach { case (uriId, s) => uriScores(uriId) += s }
+          val t3 = System.currentTimeMillis()
           sampleURIs(trialsQuota.topic)(sampleURIsfromTopic) foreach { case (uriId, s) => uriScores(uriId) += s }
+          val t4 = System.currentTimeMillis()
+
+          log.info(s"preScore takes ${t1 - t0} millis, assign quota takes ${t2 - t1} millis, sampling from ${trialsQuota.user.size} users takes ${t3 - t2} millis, sampling from ${trialsQuota.topic.size} topics takes ${t4 - t3} millis")
 
           uriScores.toMap
         }
@@ -135,12 +143,12 @@ class URIWanderingCommander @Inject() (
   private def edgeResolver = {
     val now = currentDateTime.getMillis
     val recency = 120 days
-    val halfLife = 7 days
+    val halfLife = 14 days
     val from = now - recency.toMillis
     val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = { case _ => true }
     val decay: TimestampEdgeReader => Double = {
       case outdatedEdge: TimestampEdgeReader if (outdatedEdge.timestamp < from) => 0
-      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis)
+      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis.toDouble)
     }
     RestrictedDestinationResolver(None, mayTraverse, decay)
   }

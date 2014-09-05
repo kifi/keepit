@@ -334,14 +334,16 @@ class UriFromKeepsScoreVectorSource(
   private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
     def load(libId: Long, visibility: Int): Unit = {
       val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
-      var docId = td.nextDoc()
-      while (docId < NO_MORE_DOCS) {
-        val uriId = uriIdDocValues.get(docId)
+      if (td != null) {
+        var docId = td.nextDoc()
+        while (docId < NO_MORE_DOCS) {
+          val uriId = uriIdDocValues.get(docId)
 
-        if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
-          // write to the buffer
-          output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8) // id (8 bytes)
-          writer.putLong(uriId).putLong(libId)
+          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            // write to the buffer
+            output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8 + 8) // id (8 bytes), libId (8 bytes)
+            writer.putLong(uriId).putLong(libId)
+          }
         }
       }
     }
@@ -353,14 +355,16 @@ class UriFromKeepsScoreVectorSource(
 
     myFriendIds.foreach { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
-      var docId = td.nextDoc()
-      while (docId < NO_MORE_DOCS) {
-        val uriId = uriIdDocValues.get(docId)
+      if (td != null) {
+        var docId = td.nextDoc()
+        while (docId < NO_MORE_DOCS) {
+          val uriId = uriIdDocValues.get(docId)
 
-        if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
-          // write to the buffer
-          output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
-          writer.putLong(uriId)
+          if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            // write to the buffer
+            output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
+            writer.putLong(uriId)
+          }
         }
       }
     }
