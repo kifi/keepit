@@ -90,9 +90,9 @@ class ExtSearchController @Inject() (
     Ok
   }
 
-  def instance() = JsonAction.authenticated { request =>
+  def instance() = HtmlAction.authenticated { request =>
     if (request.experiments.contains(ADMIN)) {
-      Ok(JsString(amazonInstanceInfo.name.getOrElse("")))
+      Ok(amazonInstanceInfo.name.getOrElse(""))
     } else {
       NotFound
     }
