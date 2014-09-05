@@ -94,7 +94,7 @@ object Shoebox extends Service {
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def sendMailToUser() = ServiceRoute(POST, "/internal/shoebox/database/sendMailToUser")
-    def processAndSendMail(email: EmailToSend) = ServiceRoute(POST, "/internal/shoebox/database/processAndSendMail")
+    def processAndSendMail() = ServiceRoute(POST, "/internal/shoebox/database/processAndSendMail")
     def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedCollections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUriIdsInCollection(collectionId: Id[Collection]) = ServiceRoute(GET, "/internal/shoebox/database/getUriIdsInCollection", Param("collectionId", collectionId))

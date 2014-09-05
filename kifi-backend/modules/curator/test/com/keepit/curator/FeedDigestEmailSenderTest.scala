@@ -161,7 +161,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         // Friend Recommendations
         friends.slice(0, 4).foreach { user =>
-          mail42body must contain(s"""?friend=<% ["userExternalId",${user.id.get}] %>&subtype=digestPymk""")
+          mail42body must contain(s"""?friend=<%kf% ["userExternalId",${user.id.get}] %kf%>&subtype=digestPymk""")
         }
         mail42body must not contain friends(5).externalId.toString
 
