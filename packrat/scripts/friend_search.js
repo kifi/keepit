@@ -61,7 +61,9 @@ var initFriendSearch = (function () {
       html.push('</div></li>');
       return html.join('');
     } else if (res.email) {
-      var html = ['<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">'];
+      var html = [
+        '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">',
+        '<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>'];
       if (res.nameParts) {
         html.push('<div class="kifi-ti-dropdown-contact-name">');
         appendParts(html, res.nameParts);
@@ -70,7 +72,7 @@ var initFriendSearch = (function () {
         html.push('<div class="kifi-ti-dropdown-contact-name">');
       }
       appendParts(html, res.emailParts);
-      html.push('</div><a class="kifi-ti-dropdown-item-x" href="javascript:"></a></li>');
+      html.push('</div></li>');
       return html.join('');
     }
   }

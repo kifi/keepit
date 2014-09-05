@@ -369,18 +369,13 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown-item {
   position: relative;
   margin: 0 !important;
-  padding: 2px 6px 2px 42px !important;
+  padding: 2px 30px 2px 42px !important;
   background: -9999px no-repeat;
   height: 34px;
   line-height: 28px;
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   border-top: 1px solid transparent;
-/*
-  transition-property: height, padding-top, padding-bottom, border-top-width;
-  transition-duration: 1.6s;
-  overflow: hidden;
-*/
 }
 .kifi-ti-dropdown-item-selected {
   background-color: #6fa6ef;
@@ -390,14 +385,6 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown-item:not(.kifi-ti-dropdown-email)+.kifi-ti-dropdown-email {
   border-color: #ccc;
 }
-/*
-.kifi-ti-dropdown-item-flattened {
-  height: 0;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  border-top-width: 0;
-}
-*/
 .kifi-ti-dropdown-item::before {
   content: '';
   position: absolute;
@@ -480,7 +467,6 @@ a.kifi-compose-submit.kifi-active {
 .kifi-ti-dropdown-contact-name,
 .kifi-ti-dropdown-contact-sub {
   white-space: nowrap;
-  width: 190px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
