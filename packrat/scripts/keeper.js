@@ -595,8 +595,16 @@ var keeper = keeper || function () {  // idempotent for Chrome
       beginStickyToaster();
       api.require('scripts/compose_toaster.js', function () {
         if (opts.trigger !== 'deepLink' || !toaster.showing()) {  // don't clobber form
+          if (window.pane) {
+            pane.shade();
+          }
           toaster.show($slider, opts.to);
-          toaster.onHide.add(endStickyToaster);
+          toaster.onHide.add(function () {
+            endStickyToaster();
+            if (window.pane) {
+              pane.unshade();
+            }
+          });
           toaster.onHidden.add(function (trigger) {
             if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
               hideSlider('toaster');
