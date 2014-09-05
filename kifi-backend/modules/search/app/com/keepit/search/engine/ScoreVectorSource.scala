@@ -341,7 +341,7 @@ class UriFromKeepsScoreVectorSource(
 
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
             // write to the buffer
-            output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8) // id (8 bytes)
+            output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8 + 8) // id (8 bytes), libId (8 bytes)
             writer.putLong(uriId).putLong(libId)
           }
         }
