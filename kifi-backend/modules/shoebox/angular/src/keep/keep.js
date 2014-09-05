@@ -399,8 +399,6 @@ angular.module('kifi')
             return { guess: guessWidth, score: netScore, hi: imageHeight};
           }
 
-          var i = 0;
-          var bestI = -1;
           var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
           var incrSize = (high - low) / 8;
           var order = [0, 3, 5, 6, 4, 2, 1];
@@ -410,7 +408,6 @@ angular.module('kifi')
           for (var m in order) {
             res = calcHeightDelta(low + order[m] * incrSize);
             if (bestRes.score > res.score) {
-              bestI = order[m];
               bestRes = res;
               if (bestRes.score < 50) {
                 break;
