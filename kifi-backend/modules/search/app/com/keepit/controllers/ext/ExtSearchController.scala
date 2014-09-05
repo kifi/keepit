@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
@@ -12,13 +13,14 @@ import com.keepit.search.SearchCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{ JsNumber, JsString, JsObject }
+import play.api.libs.json.JsString
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     shoeboxClient: ShoeboxServiceClient,
-    searchCommander: SearchCommander) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
+    searchCommander: SearchCommander,
+    amazonInstanceInfo: AmazonInstanceInfo) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -86,6 +88,14 @@ class ExtSearchController @Inject() (
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
+  }
+
+  def instance() = JsonAction.authenticated { request =>
+    if (request.experiments.contains(ADMIN)) {
+      Ok(JsString(amazonInstanceInfo.name.getOrElse("")))
+    } else {
+      NotFound
+    }
   }
 }
 
