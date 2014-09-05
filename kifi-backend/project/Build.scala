@@ -2,9 +2,8 @@ import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 import sbt.Keys._
 import sbt._
 import play.Play.autoImport._
+import com.typesafe.sbt.web.SbtWeb.autoImport._
 import PlayKeys._
-import play.twirl.sbt.Import._
-
 
 object ApplicationBuild extends Build {
 
@@ -105,8 +104,9 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
-    //unmanagedResourceDirectories in Assets += baseDirectory.value / "angular",
-    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/img",
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/dist",
+      javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
   ).settings(
     Frontend.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
