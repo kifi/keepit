@@ -3,7 +3,6 @@ package com.keepit.search
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
-import com.keepit.search.graph.keep.KeepIndexerPlugin
 import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.article.ArticleIndexerPlugin
@@ -44,8 +43,8 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[UserGraphPlugin] != null)
     require(injector.instance[SearchFriendGraphPlugin] != null)
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded
+    // require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded todo(Léo): activate once Shoebox is ready
+    // require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded todo(Léo): activate once Shoebox is ready
     require(NlpParser.enabled)
   }
 }
