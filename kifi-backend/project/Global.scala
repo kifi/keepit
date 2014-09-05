@@ -43,6 +43,7 @@ object Global {
     // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
     // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
     // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
+    // "theatr.us" at "http://repo.theatr.us"
   )
 
 
@@ -69,7 +70,7 @@ object Global {
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
-    "us.theatr" %% "akka-quartz" % "0.2.0_42.1" exclude("c3p0", "c3p0"),
+    "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",

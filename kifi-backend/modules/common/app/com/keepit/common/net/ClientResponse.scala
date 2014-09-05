@@ -5,6 +5,7 @@ import com.google.inject.Provider
 import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.ning.http.client.providers.netty.NettyResponse
 
 import com.ning.http.util.AsyncHttpProviderUtils.parseCharset
 
@@ -16,7 +17,6 @@ import org.apache.commons.io.IOUtils
 
 import play.api.libs.json._
 import play.api.libs.ws._
-import play.api.libs.ws.ning.NingWSResponse
 
 import scala.util.Try
 import scala.xml._
@@ -46,7 +46,7 @@ class ClientResponseImpl(val request: Request, val res: WSResponse, airbrake: Pr
 
   lazy val status: Int = res.status
 
-  lazy val bytes: Array[Byte] = res.underlying[NingWSResponse].ahcResponse.getResponseBodyAsBytes
+  lazy val bytes: Array[Byte] = res.underlying[NettyResponse].getResponseBodyAsBytes
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime
 
@@ -55,7 +55,7 @@ class ClientResponseImpl(val request: Request, val res: WSResponse, airbrake: Pr
    */
   def isUp = res.header(CommonHeaders.IsUP).map(_ != "N").getOrElse(true)
 
-  lazy val ahcResponse = res.underlying[NingWSResponse].ahcResponse
+  lazy val ahcResponse = res.underlying[NettyResponse]
 
   // the following is copied from play.api.libs.ws.WS
   // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
