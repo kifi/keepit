@@ -152,8 +152,12 @@ angular.module('kifi')
       recoActionService.improve(reco.recoKeep, $scope.improvement.type);
     };
 
-    $scope.trackRecoKeep = function (recoKeep) {
-      recoActionService.trackKeep(recoKeep);
+    $scope.trackRecoKeep = function (keep) {
+      recoActionService.trackKeep(keep);
+    };
+
+    $scope.trackRecoClick = function (keep) {
+      recoActionService.trackClick(keep);
     };
   }
 ])

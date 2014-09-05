@@ -504,7 +504,8 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
-        keepCallback: '&'
+        keepCallback: '&',
+        clickCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -543,73 +544,40 @@ angular.module('kifi')
           }
         }
 
-        function getSite() {
-          var keep = scope.keep;
-          if (keep) {
-            return keep.siteName || keep.url;
-          }
-        }
-
         function updateSiteDescHtml() {
           if (scope.keep) {
-            scope.keep.descHtml = formatDesc(getSite());
+            scope.keep.descHtml = formatDesc(scope.keep.siteName || scope.keep.url);
           }
         }
 
-        scope.showSmallImage = function () {
-          return scope.keep.hasSmallImage && !useBigLayout;
+        scope.showSmallImage = function (keep) {
+          return keep.hasSmallImage && !useBigLayout;
         };
 
-        scope.showBigImage = function () {
-          return scope.keep.hasBigImage || (scope.keep.summary && useBigLayout);
+        scope.showBigImage = function (keep) {
+          return keep.hasBigImage || (keep.summary && useBigLayout);
         };
 
-        scope.hasKeepers = function () {
-          var keep = scope.keep;
-          return keep && !!(keep.keepers && keep.keepers.length);
+        scope.addingTag = { enabled: false };
+
+        scope.hasTag = function (keep) {
+          return keep.tagList && keep.tagList.length > 0;
         };
 
-        scope.isMyBookmark = function (keep) {
-          return (keep && keep.isMyBookmark) || false;
-        };
-
-        scope.addingTag = {enabled: false};
-
-        scope.getTags = function () {
-          return scope.keep && scope.keep.tagList;
-        };
-
-        scope.hasTag = function () {
-          var tags = scope.getTags();
-          if (tags) {
-            return !!tags.length;
-          } else {
-            return false;
-          }
-        };
-
-        scope.showTags = function () {
-          return scope.isMyBookmark(scope.keep) && (scope.hasTag() || scope.addingTag.enabled);
+        scope.showTags = function (keep) {
+          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
         };
 
         scope.showAddTag = function () {
           scope.addingTag.enabled = true;
         };
 
-        scope.isMine = function () {
-          return scope.isMyBookmark(scope.keep);
-        };
-
         scope.togglePrivate = function (keep) {
           keepActionService.togglePrivateOne(keep);
         };
 
-        scope.isPrivate = function () {
-          return (scope.keep && scope.keep.isPrivate) || false;
-        };
-
         scope.triggerInstall = function () {
-          $rootScope.$emit('showGlobalModal','installExtension');
+          $rootScope.$emit('showGlobalModal', 'installExtension');
         };
 
         function keepOne (keep, isPrivate) {
@@ -619,7 +587,7 @@ angular.module('kifi')
            });
 
           if (_.isFunction(scope.keepCallback)) {
-            scope.keepCallback();
+            scope.keepCallback({ 'keep': keep });
           }
         }
 
@@ -650,12 +618,6 @@ angular.module('kifi')
 
         scope.getSingleSelectedKeep = function (keep) {
           return [keep];
-        };
-
-        scope.clickKeep = function (keep) {
-          if (keep.keepType === 'reco') {
-            recoActionService.trackClick(keep);
-          }
         };
 
         scope.$watch('keep.url', function () {
