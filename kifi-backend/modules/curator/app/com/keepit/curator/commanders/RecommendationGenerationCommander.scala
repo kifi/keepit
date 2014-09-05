@@ -198,7 +198,7 @@ class RecommendationGenerationCommander @Inject() (
 
       val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
       val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
-        scoredItems.filter(si => shouldInclude(si.uriScores) || (userId.id == 6834 || userId.id == 1398 || userId.id == 6622 || userId.id == 4344)) //total hack to track down an issue. If you see this code after Sept. 10th 2014 throw something (soft) at Stephen
+        scoredItems.filter(si => shouldInclude(si.uriScores))
       }.flatMap { scoredItems =>
         attributionHelper.getAttributions(scoredItems)
       }
