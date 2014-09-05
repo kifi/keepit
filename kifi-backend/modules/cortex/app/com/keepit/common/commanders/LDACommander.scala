@@ -103,7 +103,7 @@ class LDACommander @Inject() (
         val userVar = projectToActive(userFeat.userTopicVar.get.value)
         val s = userMean.sum
         assume(s > 0)
-        val dist = weightedMDistanceDiagGaussian(uriFeatVec.value, userMean, userVar, userMean.map { _ / s })
+        val dist = weightedMDistanceDiagGaussian(projectToActive(uriFeatVec.value), userMean, userVar, userMean.map { _ / s })
         val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
         Some(LDAUserURIInterestScore(exp(-1 * dist), confidence))
       case _ => None
