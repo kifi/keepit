@@ -1,5 +1,5 @@
 .kf-recos-view-header
-  padding: 25px 25px 30px 30px
+  padding: 25px 25px 10px 30px
   min-height: 50px
 
   .kf-recos-clover-icon
@@ -12,13 +12,22 @@
   .kf-subtitle
     margin: -8px 0 0 45px
 
+  &::after
+    content: ''
+    display: block
+    clear: both
+
 .kf-recos-title
-  display: inline-block
+  float: left
+  margin-bottom: 20px
+  min-width: 260px
 
 .kf-reco-recency
   position: relative
-  float: right
-  width: calc(100% - 315px)
+  float: left
+  margin-left: 80px
+  width: calc(100% - 340px)
+  min-width: 240px
 
 .kf-reco-refresh-btn
   position: absolute
@@ -38,9 +47,9 @@
 
 .kf-reco-recency-slider
   position: relative
-  width: calc(100% - 85px)
+  width: calc(100% - 95px)
   height: 50px
-  
+
 .kf-reco-recency-all-time
 .kf-reco-recency-recent
   position: absolute
@@ -49,20 +58,8 @@
 .kf-reco-recency-all-time
   left: 0
 
-  &::before
-    content: 'All time'
-
-    @media (min-width: 1024px) and (max-width: 1100px)
-      content: 'At'
-
 .kf-reco-recency-recent
   right: 0
-
-  &::before
-    content: 'Recent'
-
-    @media (min-width: 1024px) and (max-width: 1100px)
-      content: 'Re'
 
 .kf-reco-slider-container
   position: absolute
@@ -270,7 +267,7 @@
 // Dropdown menu
 .kf-reco-dropdown-menu-container
   position: relative
-  
+
   .kf-dropdown-menu
     display: none
     top: 10px
@@ -291,7 +288,7 @@
 
       &:active
         background: #ccc
-  
+
 // Modal
 .kf-reco-improve-modal
   p
