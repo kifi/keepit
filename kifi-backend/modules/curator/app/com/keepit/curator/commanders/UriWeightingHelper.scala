@@ -1,7 +1,6 @@
 package com.keepit.curator.commanders
 
 import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
-import com.google.inject.{ Singleton }
 
 import scala.util.matching.Regex
 

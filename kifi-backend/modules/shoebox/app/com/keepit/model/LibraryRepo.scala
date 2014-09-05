@@ -19,6 +19,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
+  def getLibrariesByKind(libs: Set[Id[Library]])(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -108,6 +109,10 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
+  }
+
+  def getLibrariesByKind(libs: Set[Id[Library]])(implicit session: RSession): Seq[Id[Library]] = {
+    (for (row <- rows if row.id inSetBind libs) yield (row.id, row.kind)).list.filter(_._2 == LibraryKind.USER_CREATED).map(_._1)
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

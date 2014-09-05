@@ -40,6 +40,16 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
     (user1, user2, shoebox)
   }
 
+  private def saveLibraryMemberships()(implicit injector: Injector) = {
+    val membership1 = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](42), access = LibraryAccess.OWNER, showInSearch = false)
+    val membership2 = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](42), access = LibraryAccess.OWNER, showInSearch = false)
+    val membership3 = LibraryMembership(libraryId = Id[Library](2), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
+    val membership4 = LibraryMembership(libraryId = Id[Library](2), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
+    val membership5 = LibraryMembership(libraryId = Id[Library](3), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
+    val shoebox = shoeboxClientInstance()
+    shoebox.saveLibraryMembership(membership1, membership2, membership3, membership4, membership5)
+  }
+
   "SeedIngestionCommander" should {
 
     "ingest keeps and have discoverability correctly -- test case 1" in {
@@ -349,18 +359,20 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
     "ingest multiple batches of libraryMemberships and update sequence number correctly" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
+        val libraryMemberships = saveLibraryMemberships()
         val libMembershipRepo = inject[CuratorLibraryMembershipInfoRepo]
         val systemValueRepo = inject[SystemValueRepo]
         val commander = inject[SeedIngestionCommander]
 
         db.readOnlyMaster { implicit session => libMembershipRepo.all() }.length === 0
         Await.result(commander.ingestLibraries(), Duration(10, "seconds"))
-        db.readOnlyMaster { implicit session => libMembershipRepo.all() }.length === 5
+        db.readOnlyMaster { implicit session => libMembershipRepo.all() }.length === 3
         db.readOnlyMaster { implicit session =>
           systemValueRepo.getSequenceNumber(
-            Name[SequenceNumber[Library]]("all_library_seq_num")
+            Name[SequenceNumber[LibraryMembership]]("all_library_membership_seq_num")
           ).get
-        } === SequenceNumber[Library](2)
+        } === SequenceNumber[LibraryMembership](5)
+
       }
     }
 

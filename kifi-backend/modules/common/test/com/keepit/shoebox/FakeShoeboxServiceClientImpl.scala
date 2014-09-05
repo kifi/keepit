@@ -146,6 +146,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val searchFriendSeqCounter = new AtomicInteger(0)
   private def nextSearchFriendSeqNum() = SequenceNumber[SearchFriend](searchFriendSeqCounter.incrementAndGet())
 
+  private val libraryMembershipSeqCounter = new AtomicInteger(0)
+  private def nextLibraryMembershipSeqNum() = SequenceNumber[LibraryMembership](libraryMembershipSeqCounter.incrementAndGet())
+
   // Fake repos
 
   val allUsers = MutableMap[Id[User], User]()
@@ -170,8 +173,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val sentMail = mutable.MutableList[ElectronicMail]()
   val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
+  val allLibraryMemberships = mutable.MutableList[LibraryMembership]()
 
   // Fake data initialization methods
+
+  def saveLibraryMembership(libMemberships: LibraryMembership*): Seq[LibraryMembership] = {
+    libMemberships.foreach(libMembership => allLibraryMemberships += libMembership.copy(seq = nextLibraryMembershipSeqNum()))
+    allLibraryMemberships
+  }
 
   def saveUsers(users: User*): Seq[User] = {
     users.map { user =>
@@ -630,23 +639,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 
-  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
-    val lib1 = Library(name = "lib1", ownerId = Id[User](42), visibility = LibraryVisibility.DISCOVERABLE,
-      slug = LibrarySlug("good"), seq = SequenceNumber.ZERO, memberCount = 10)
-    val lib2 = Library(name = "lib2", ownerId = Id[User](43), visibility = LibraryVisibility.DISCOVERABLE,
-      slug = LibrarySlug("good"), seq = SequenceNumber(1), memberCount = 10)
-    val lib3 = Library(name = "lib3", ownerId = Id[User](43), visibility = LibraryVisibility.DISCOVERABLE,
-      slug = LibrarySlug("good"), seq = SequenceNumber(2), memberCount = 10)
-    val membership1 = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](42), access = LibraryAccess.OWNER, showInSearch = false)
-    val membership2 = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](42), access = LibraryAccess.OWNER, showInSearch = false)
-    val membership3 = LibraryMembership(libraryId = Id[Library](2), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
-    val membership4 = LibraryMembership(libraryId = Id[Library](2), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
-    val membership5 = LibraryMembership(libraryId = Id[Library](3), userId = Id[User](43), access = LibraryAccess.OWNER, showInSearch = false)
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
 
-    val libAndMembership1 = LibraryAndMemberships(lib1, Seq(membership1, membership2))
-    val libAndMembership2 = LibraryAndMemberships(lib2, Seq(membership3, membership4))
-    val libAndMembership3 = LibraryAndMemberships(lib3, Seq(membership5))
-    Future.successful(Seq(libAndMembership1, libAndMembership2, libAndMembership3))
+  def getLibraryMembershipChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembership]] = {
+    Future.successful(allLibraryMemberships)
   }
 
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = Future.successful(Seq.empty)

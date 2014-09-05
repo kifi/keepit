@@ -27,6 +27,7 @@ import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
 

@@ -13,7 +13,6 @@ case class CuratorLibraryMembershipInfo(
     userId: Id[User],
     libraryId: Id[Library],
     access: LibraryAccess,
-    kind: LibraryKind,
     state: State[CuratorLibraryMembershipInfo]) extends Model[CuratorLibraryMembershipInfo] with ModelWithState[CuratorLibraryMembershipInfo] {
   def withId(id: Id[CuratorLibraryMembershipInfo]): CuratorLibraryMembershipInfo = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): CuratorLibraryMembershipInfo = this.copy(updateAt = updateTime)

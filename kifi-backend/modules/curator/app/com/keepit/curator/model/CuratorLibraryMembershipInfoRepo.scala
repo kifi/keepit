@@ -9,7 +9,7 @@ import com.keepit.model.{ LibraryAccess, LibraryKind, Library, User }
 
 @ImplementedBy(classOf[CuratorLibraryMembershipInfoRepoImpl])
 trait CuratorLibraryMembershipInfoRepo extends DbRepo[CuratorLibraryMembershipInfo] {
-  def getByLibraryId(libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo]
+  def getByUserAndLibraryId(userId: Id[User], libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo]
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]]
 }
 
@@ -25,9 +25,8 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
   class CuratorLibraryMembershipInfoTable(tag: Tag) extends RepoTable[CuratorLibraryMembershipInfo](db, tag, "curator_library_membership_info") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def kind = column[LibraryKind]("library_kind", O.NotNull)
     def access = column[LibraryAccess]("library_access", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, libraryId, access, kind, state) <> ((CuratorLibraryMembershipInfo.apply _).tupled, CuratorLibraryMembershipInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, libraryId, access, state) <> ((CuratorLibraryMembershipInfo.apply _).tupled, CuratorLibraryMembershipInfo.unapply _)
   }
 
   def table(tag: Tag) = new CuratorLibraryMembershipInfoTable(tag)
@@ -36,8 +35,8 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
   def deleteCache(model: CuratorLibraryMembershipInfo)(implicit session: RSession): Unit = {}
   def invalidateCache(model: CuratorLibraryMembershipInfo)(implicit session: RSession): Unit = {}
 
-  def getByLibraryId(libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo] = {
-    (for (row <- rows if row.libraryId === libId) yield row).firstOption
+  def getByUserAndLibraryId(userId: Id[User], libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo] = {
+    (for (row <- rows if row.userId === userId && row.libraryId === libId) yield row).firstOption
   }
 
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]] = {

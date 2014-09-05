@@ -15,21 +15,18 @@ class CuratorLibraryMembershipInfoRepoTest extends Specification with CuratorTes
             userId = Id[User](42),
             libraryId = Id[Library](1),
             access = LibraryAccess.READ_WRITE,
-            kind = LibraryKind.USER_CREATED,
             state = CuratorLibraryMembershipInfoStates.ACTIVE
           ))
           repo.save(CuratorLibraryMembershipInfo(
             userId = Id[User](42),
             libraryId = Id[Library](2),
             access = LibraryAccess.READ_WRITE,
-            kind = LibraryKind.USER_CREATED,
             state = CuratorLibraryMembershipInfoStates.ACTIVE
           ))
           repo.save(CuratorLibraryMembershipInfo(
             userId = Id[User](43),
             libraryId = Id[Library](1),
             access = LibraryAccess.READ_WRITE,
-            kind = LibraryKind.USER_CREATED,
             state = CuratorLibraryMembershipInfoStates.ACTIVE
           ))
 
