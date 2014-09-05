@@ -3,19 +3,30 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', 'keepService', '$routeParams', 'libraryService',
-  function ($scope, keepService, $routeParams, libraryService) {
+  '$scope', 'keepService', '$routeParams', 'libraryService', 'util',
+  function ($scope, keepService, $routeParams, libraryService, util) {
     $scope.keeps = [];
-
+    $scope.library = {};
     var username = $routeParams.username;
     var librarySlug = $routeParams.librarySlug;
 
     var libraryP = libraryService.getLibraryByUserSlug(username, librarySlug);
 
+    // librarySummaries has a few of the fields we need to draw the library.
+    // Attempt to pre-populate the library object while we wait
+    if (libraryService.librarySummaries) {
+      var lib = _.find(libraryService.librarySummaries, function (elem) {
+        return elem.url == '/' + username + '/' + librarySlug;
+      });
+      if (lib) {
+        util.replaceObjectInPlace($scope.library, lib);
+      }
+    }
+
     $scope.loading = true;
     libraryP.then(function (library) {
       _.forEach(library.keeps, keepService.buildKeep);
-      $scope.library = library;
+      util.replaceObjectInPlace($scope.library, library);
       $scope.keeps.push.apply($scope.keeps, library.keeps);
       $scope.loading = false;
     });
@@ -42,7 +53,7 @@ angular.module('kifi')
       case 2:
         return 'Showing both Keeps';
       }
-      return 'Showing ' + numShown + ' of ' + $scope.library.numKeeps + ' latest Keeps';
+      return 'Showing ' + numShown + ' of ' + $scope.library.numKeeps + ' Keeps';
     };
 
     $scope.scrollDistance = '100%';
