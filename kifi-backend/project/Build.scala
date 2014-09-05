@@ -4,6 +4,7 @@ import sbt._
 import play.Play.autoImport._
 import PlayKeys._
 import play.twirl.sbt.Import._
+import com.typesafe.sbt.web.SbtWeb.autoImport._
 
 
 object ApplicationBuild extends Build {
@@ -103,7 +104,7 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
-    //unmanagedResourceDirectories in Assets += baseDirectory.value / "angular",
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular",
     javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
   ).settings(
     Frontend.gulpCommands: _*
