@@ -13,6 +13,7 @@ import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.core._
+import com.keepit.model.view.UserSessionView
 
 import play.api.Play.current
 import play.api.{ Application, Play }
@@ -350,7 +351,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
       state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
     )
   }
-  private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
+  private def authenticatorFromSession(session: UserSessionView): Authenticator = Authenticator(
     id = session.externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
@@ -364,19 +365,19 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
     authenticatorFromSession(session)
   }
 
-  private def internSession(newSession: UserSession): UserSession = loadSession(newSession) getOrElse persistSession(newSession)
+  private def internSession(newSession: UserSession): UserSessionView = loadSession(newSession) getOrElse persistSession(newSession)
 
-  private def loadSession(newSession: UserSession): Option[UserSession] = timing(s"loadSession ${newSession.socialId}") {
+  private def loadSession(newSession: UserSession): Option[UserSessionView] = timing(s"loadSession ${newSession.socialId}") {
     db.readOnlyMaster { implicit s => //from cache
-      sessionRepo.getOpt(newSession.externalId)
+      sessionRepo.getViewOpt(newSession.externalId)
     }
   }
 
-  private def persistSession(newSession: UserSession): UserSession = timing(s"persistSession ${newSession.socialId}") {
+  private def persistSession(newSession: UserSession): UserSessionView = timing(s"persistSession ${newSession.socialId}") {
     db.readWrite(attempts = 3) { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
       log.debug(s"[save] newSession=$sessionFromCookie")
-      sessionFromCookie
+      sessionFromCookie.toUserSessionView
     }
   }
 
@@ -397,11 +398,11 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
 
     val res = externalIdOpt flatMap { externalId =>
       db.readOnlyMaster { implicit s =>
-        val sess = sessionRepo.getOpt(externalId)
+        val sess = sessionRepo.getViewOpt(externalId)
         log.debug(s"[find] sessionRepo.get($externalId)=$sess")
         sess
       } collect {
-        case s if s.isValid =>
+        case s if s.valid =>
           authenticatorFromSession(s)
       }
     }
@@ -412,7 +413,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
   def delete(id: String): Either[Error, Unit] = reportExceptionsAndTime(s"delete $id") {
     db.readWrite(attempts = 3) { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
-        sessionRepo.save(session invalidated)
+        sessionRepo.save(session.invalidated)
       }
     }
   }
