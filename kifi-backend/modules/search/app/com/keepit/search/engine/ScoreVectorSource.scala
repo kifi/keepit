@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.logging.Logging
 import com.keepit.model.LibraryVisibility
 import com.keepit.search.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
@@ -26,7 +27,7 @@ trait ScoreVectorSource {
   def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer): Unit
 }
 
-trait ScoreVectorSourceLike extends ScoreVectorSource {
+trait ScoreVectorSourceLike extends ScoreVectorSource with Logging {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
     val weights = new ArrayBuffer[(Weight, Float)]
     val weight = searcher.createWeight(query)
@@ -87,16 +88,20 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
 
   protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    val scorer = recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    if (scorer == null) log.warn("RecencyScorer is null")
+    scorer
   }
 
   @inline
   protected def getRecencyBoost(recencyScorer: RecencyScorer, docId: Int) = {
-    if (recencyScorer.docID() < docId) {
-      if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
-    } else {
-      if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
-    }
+    if (recencyScorer != null) {
+      if (recencyScorer.docID() < docId) {
+        if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
+      } else {
+        if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
+      }
+    } else 1.0f
   }
 }
 
@@ -305,7 +310,6 @@ class UriFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val keepId = idMapper.getId(docId)
       val uriId = uriIdDocValues.get(docId)
       val libId = libraryIdDocValues.get(docId)
 
@@ -318,6 +322,8 @@ class UriFromKeepsScoreVectorSource(
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
           docId = pq.top.doc // next doc
+
+          val keepId = idMapper.getId(docId)
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
@@ -344,6 +350,7 @@ class UriFromKeepsScoreVectorSource(
             output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8 + 8) // id (8 bytes), libId (8 bytes)
             writer.putLong(uriId).putLong(libId)
           }
+          docId = td.nextDoc()
         }
       }
     }
@@ -365,6 +372,7 @@ class UriFromKeepsScoreVectorSource(
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
           }
+          docId = td.nextDoc()
         }
       }
     }

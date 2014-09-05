@@ -111,12 +111,16 @@ class URIWanderingCommander @Inject() (
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
+      val t0 = System.currentTimeMillis
       val weights = getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
       val density = ProbabilityDensity.normalized(weights)
+      val t1 = System.currentTimeMillis
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
       (0 until trials).foreach { i =>
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
       }
+      val t2 = System.currentTimeMillis
+      if (t2 - t0 > 5) log.info(s"sampling destination for ${component}: ${t1 - t0} millis to gather edge weights, edge size: ${weights.size}, ${t2 - t1} millis to sample ${trials} times")
       scores.toMap
     }
   }
