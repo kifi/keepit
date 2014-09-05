@@ -44,7 +44,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private val fetchSize = 10000
   private val modelName = StatModelName.LDA_USER_STATS
   private val min_num_words = 50
-  protected val min_num_evidence = 50
+  protected val min_num_evidence = 20
 
   def update(): Unit = {
     val tasks = fetchTasks
