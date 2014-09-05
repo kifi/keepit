@@ -159,9 +159,9 @@ class AugmentationCommanderImpl @Inject() (
           else if (visibility == PUBLISHED) { // kept in a public library
             //todo(Léo): define which published libraries are relevant
           }
-        }
 
-        docId = docs.nextDoc()
+          docId = docs.nextDoc()
+        }
       }
     }
     AugmentationInfo(keeps.toList)

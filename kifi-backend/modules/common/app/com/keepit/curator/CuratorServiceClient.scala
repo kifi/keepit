@@ -74,6 +74,6 @@ class CuratorServiceClientImpl(
   }
 
   def resetUserRecoGenState(userId: Id[User]): Future[Unit] = {
-    call(Curator.internal.resetUserRecoGenState(userId)).map { x => }
+    callLeader(Curator.internal.resetUserRecoGenState(userId)).map { x => }
   }
 }
