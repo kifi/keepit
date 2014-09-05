@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins._
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater, FeaturePluginMessages }
 import com.keepit.model.User
 import math.abs
 import com.keepit.cortex.utils.MatrixUtils._
@@ -114,6 +114,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     def changedMuch(numOfEvidenceBefore: Int, numOfEvidenceNow: Int) = {
       val diff = abs(numOfEvidenceNow - numOfEvidenceBefore)
       if (model.get.state != UserLDAStatsStates.ACTIVE && numOfEvidenceNow >= min_num_evidence) true
+      else if (numOfEvidenceNow < min_num_evidence && model.get.state == UserLDAInterestsStates.ACTIVE) true
       else (diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100)
     }
 
