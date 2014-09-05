@@ -119,7 +119,7 @@ class URIWanderingCommander @Inject() (
       (0 until trials).foreach { i =>
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
       }
-      val t2 = System. currentTimeMillis
+      val t2 = System.currentTimeMillis
       if (t2 - t0 > 5) log.info(s"sampling destination for ${component}: ${t1 - t0} millis to gather edge weights, edge size: ${weights.size}, ${t2 - t1} millis to sample ${trials} times")
       scores.toMap
     }
