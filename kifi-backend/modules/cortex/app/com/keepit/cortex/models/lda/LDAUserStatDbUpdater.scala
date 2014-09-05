@@ -94,7 +94,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private def shouldComputeFeature(model: Option[UserLDAStats], numOfEvidenceNow: Int): Boolean = {
     def changedMuch(numOfEvidenceBefore: Int, numOfEvidenceNow: Int) = {
       val diff = abs(numOfEvidenceNow - numOfEvidenceBefore)
-      if (numOfEvidenceBefore < min_num_evidence && numOfEvidenceNow >= min_num_evidence) true
+      if (model.get.state != UserLDAStatsStates.ACTIVE && numOfEvidenceNow >= min_num_evidence) true
       else (diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100)
     }
 
