@@ -104,9 +104,8 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
-    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/img",
-    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/dist",
-      javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/play-refs",
+    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
   ).settings(
     Frontend.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
