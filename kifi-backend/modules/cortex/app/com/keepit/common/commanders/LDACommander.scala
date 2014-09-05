@@ -140,11 +140,9 @@ class LDACommander @Inject() (
   }
 
   private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    val alpha = if (isRecent) (numOfEvidenceForUser - 20) / 5f else (numOfEvidenceForUser - 30) / 10f
-    val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
+    // only consider uri confidence for now.
     val beta = (numOfWords - 50) / 50f
-    val s2 = 1f / (1 + exp(-1 * beta)).toFloat
-    s1 * s2
+    1f / (1 + exp(-1 * beta)).toFloat
   }
 
   def sampleURIs(topicId: Int): Seq[(Id[NormalizedURI], Float)] = {
