@@ -29,7 +29,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.templates.Html
+import play.twirl.api.Html
 
 import securesocial.core.{ SecureSocial, Authenticator }
 
