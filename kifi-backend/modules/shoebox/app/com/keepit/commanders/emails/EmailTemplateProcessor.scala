@@ -76,16 +76,19 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => input.imageUrls(userId)
-        case tags.unsubscribeUrl if emailToSend.to.isLeft =>
-          val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
-          getUnsubUrl(address)
-        case tags.unsubscribeUrl if emailToSend.to.isRight => getUnsubUrl(emailToSend.to.right.get)
+        case tags.unsubscribeUrl =>
+          getUnsubUrl(emailToSend.to match {
+            case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
+            case Right(address) => address
+          })
         case tags.unsubscribeUserUrl =>
           val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
           getUnsubUrl(address)
         case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
         case tags.userExternalId => user.externalId.toString()
         case tags.title => emailToSend.title
+        case tags.baseUrl => config.applicationBaseUrl
+        case tags.campaign => emailToSend.campaign.getOrElse("unknown")
       }
     }))
   }

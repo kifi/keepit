@@ -51,13 +51,15 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         val emailRepo = inject[ElectronicMailRepo]
 
         val emailToSend = EmailToSend(
+          title = "Testing!!!",
           to = Left(id3),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),
           subject = "hi",
           category = NotificationCategory.System.ADMIN,
-          htmlTemplates = Seq(html1, html2)
+          htmlTemplates = Seq(html1, html2),
+          campaign = Some("testing")
         )
 
         val emailF = commander.send(emailToSend)
@@ -71,6 +73,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
           email.cc === Seq(SystemEmailAddress.ENG)
           email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
           val html = email.htmlBody.toString()
+          html must contain("<title>Testing!!!</title>")
           html must contain("Hello, Bryan Cranston")
           html must contain("Image: http://cloudfront/1_100x100_0")
         }

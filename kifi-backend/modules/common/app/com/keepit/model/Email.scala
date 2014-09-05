@@ -37,7 +37,9 @@ object Email {
 
     def args: Seq[JsValue]
 
-    override def toString =
+    def toHtml = Html(toString())
+
+    override def toString() =
       tagLeftDelim + JsArray(Seq(JsString(label.value)) ++ args).toString() + tagRightDelim
   }
 
@@ -72,27 +74,29 @@ object Email {
   val tagRegex = (Regex.quoteReplacement(tagLeftDelim) + "(.*?)" + Regex.quoteReplacement(tagRightDelim)).r
 
   object placeholders {
-    def firstName(id: Id[User]) = Tag1(tags.firstName, id)
+    // NOTE: tags must return Html type so special characters aren't escaped by Play
 
-    def lastName(id: Id[User]) = Tag1(tags.lastName, id)
+    def firstName(id: Id[User]) = Tag1(tags.firstName, id).toHtml
 
-    def fullName(id: Id[User]) = Tag1(tags.fullName, id)
+    def lastName(id: Id[User]) = Tag1(tags.lastName, id).toHtml
 
-    def avatarUrl(id: Id[User]) = Tag1(tags.avatarUrl, id)
+    def fullName(id: Id[User]) = Tag1(tags.fullName, id).toHtml
 
-    def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id)
+    def avatarUrl(id: Id[User]) = Tag1(tags.avatarUrl, id).toHtml
 
-    def unsubscribeUrl = Tag0(tags.unsubscribeUrl)
+    def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def unsubscribeUrl(id: Id[User]) = Tag1(tags.unsubscribeUserUrl, id)
+    def unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 
-    def unsubscribeUrl(address: EmailAddress) = Tag1(tags.unsubscribeEmailUrl, address)
+    def unsubscribeUrl(id: Id[User]) = Tag1(tags.unsubscribeUserUrl, id).toHtml
 
-    def campaign = Tag0(tags.campaign)
+    def unsubscribeUrl(address: EmailAddress) = Tag1(tags.unsubscribeEmailUrl, address).toHtml
 
-    def title = Tag0(tags.title)
+    val campaign = Tag0(tags.campaign).toHtml
 
-    def baseUrl = Tag0(tags.baseUrl)
+    val title = Tag0(tags.title).toHtml
+
+    val baseUrl = Tag0(tags.baseUrl).toHtml
   }
 
   object helpers {
@@ -101,7 +105,7 @@ object Email {
     val cdnBaseUrl = "https://djty7jcqog9qu.cloudfront.net"
     val iTunesAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575"
 
-    private val campaignTagStr = campaign.toString()
+    private val campaignTagStr = campaign.body
 
     val kifiLogoUrl = htmlUrl(s"$baseUrl/?", "headerLogo")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy")

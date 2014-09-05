@@ -111,7 +111,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
   def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
-  def sendMailModule(email: EmailToSend): Future[Boolean]
+  def processAndSendMail(email: EmailToSend): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -709,7 +709,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
   }
 
-  def sendMailModule(email: EmailToSend) = {
-    call(Shoebox.internal.sendMailModule(email)).map(_.json.as[Boolean])
+  def processAndSendMail(email: EmailToSend) = {
+    call(Shoebox.internal.processAndSendMail(email)).map(_.json.as[Boolean])
   }
 }

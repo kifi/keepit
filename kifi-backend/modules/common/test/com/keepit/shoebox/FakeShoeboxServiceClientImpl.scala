@@ -644,7 +644,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def addInteractions(usedId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]) = {}
 
-  def sendMailModule(emailToSend: EmailToSend) = synchronized {
+  def processAndSendMail(emailToSend: EmailToSend) = synchronized {
     val mail = ElectronicMail(
       from = emailToSend.from,
       to = Seq(emailToSend.to match {

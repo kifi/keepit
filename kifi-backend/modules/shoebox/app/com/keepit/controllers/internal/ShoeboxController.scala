@@ -113,7 +113,7 @@ class ShoeboxController @Inject() (
     Ok("true")
   }
 
-  def sendMailTemplate = Action.async(parse.tolerantJson) { request =>
+  def processAndSendMail = Action.async(parse.tolerantJson) { request =>
     request.body.asOpt[EmailToSend] match {
       case Some(module) =>
         emailTemplateSender.send(module).map { mail =>

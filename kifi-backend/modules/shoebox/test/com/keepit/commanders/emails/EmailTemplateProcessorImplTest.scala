@@ -56,6 +56,8 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
 
         val processor = inject[EmailTemplateProcessorImpl]
         val emailToSend = EmailToSend(
+          title = "Test Email!!!",
+          campaign = Some("tester"),
           to = Right(SystemEmailAddress.JOSH),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
@@ -68,13 +70,13 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val outputF = processor.process(emailToSend)
         val output = Await.result(outputF, Duration(5, "seconds")).body
 
+        output must contain("privacy?utm_source=footerPrivacy&utm_medium=email&utm_campaign=tester")
+        output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("""<img src="http://cloudfront/1_100x100_0" alt="Aaron Paul"/>""")
         output must contain("""<img src="http://cloudfront/2_100x100_0" alt="Bryan Cranston"/>""")
         output must contain("""<img src="http://cloudfront/3_100x100_0" alt="Anna Gunn"/>""")
         output must contain("""<img src="http://cloudfront/4_100x100_0" alt="Dean Norris"/>""")
-        output must be matching """(\s|.)*<a href="https://www.kifi.com/unsubscribe/[^"]+">Unsubscribe User(\s|.)*"""
-        output must be matching """(\s|.)*<a href="https://www.kifi.com/unsubscribe/[^"]+">Unsubscribe Email(\s|.)*"""
       }
     }
   }

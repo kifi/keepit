@@ -179,7 +179,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    shoebox.sendMailModule(emailToSend).map { sent =>
+    shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
@@ -224,7 +224,7 @@ class FeedDigestEmailSenderImpl @Inject() (
       fromName = Some("Kifi")
     )
 
-    val sendMailF = shoebox.sendMailModule(qaEmailToSend)
+    val sendMailF = shoebox.processAndSendMail(qaEmailToSend)
     sendMailF.onComplete {
       case Success(sent) => if (!sent) airbrake.notify("Failed to cc digest email to feed-qa")
       case Failure(t) => airbrake.notify("Failed to send digest email to feed-qa", t)

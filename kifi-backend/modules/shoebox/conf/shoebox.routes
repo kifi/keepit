@@ -665,7 +665,7 @@ POST    /internal/shoebox/database/getLatestKeep  @com.keepit.controllers.intern
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
-POST    /internal/shoebox/database/sendMailModule     @com.keepit.controllers.internal.ShoeboxController.sendMailModule
+POST    /internal/shoebox/database/processAndSendMail @com.keepit.controllers.internal.ShoeboxController.processAndSendMail
 GET     /internal/shoebox/database/getPhrasesChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
 GET     /internal/shoebox/database/changedCollections @com.keepit.controllers.internal.ShoeboxDataPipeController.getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int)
 GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers.internal.ShoeboxController.getUriIdsInCollection(collectionId: Id[Collection])
