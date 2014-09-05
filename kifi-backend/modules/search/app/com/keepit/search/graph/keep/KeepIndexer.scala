@@ -18,7 +18,7 @@ class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], v
   val name = "KeepIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
-  override val commitBatchSize = 500
+  override val commitBatchSize = 200
 
   private[keep] def processIndexables(indexables: Seq[KeepIndexable]): Int = updateLock.synchronized {
     indexables.foreach(validate)
@@ -45,7 +45,7 @@ class ShardedKeepIndexer(
 
   def update(): Int = throw new UnsupportedOperationException()
 
-  val fetchSize = 500
+  val fetchSize = 200
 
   private[keep] def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
