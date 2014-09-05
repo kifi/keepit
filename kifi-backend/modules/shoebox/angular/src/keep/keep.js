@@ -401,7 +401,7 @@ angular.module('kifi')
 
           var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
           var incrSize = (high - low) / 8;
-          var order = [0, 3, 5, 6, 4, 2, 1];
+          var order = [8, 5, 3, 6, 0, 4, 2, 1];
           var bestRes = {score: 999};
 
           var res;
