@@ -9,12 +9,11 @@ angular.module('kifi')
   '$timeout',
   '$window',
   'keepActionService',
-  'keepDecoratorService',
   'recoActionService',
   'recoDecoratorService',
   'tagService',
   'undoService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepDecoratorService,
+  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService,
     recoActionService, recoDecoratorService, tagService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
@@ -43,7 +42,7 @@ angular.module('kifi')
     };
 
     $scope.trash = function (reco) {
-      recoActionService.trash(reco.recoKeep);
+      recoActionService.trash(reco.card.item);
       
       var trashedRecoIndex = _.findIndex($scope.recos, reco);
       var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
@@ -149,15 +148,15 @@ angular.module('kifi')
     };
 
     $scope.submitImprovement = function (reco) {
-      recoActionService.improve(reco.recoKeep, $scope.improvement.type);
+      recoActionService.improve(reco.card.item, $scope.improvement.type);
     };
 
-    $scope.trackRecoKeep = function (keep) {
-      recoActionService.trackKeep(keep);
+    $scope.trackItemKeep = function (item) {
+      recoActionService.trackKeep(item);
     };
 
-    $scope.trackRecoClick = function (keep) {
-      recoActionService.trackClick(keep);
+    $scope.trackItemClick = function (item) {
+      recoActionService.trackClick(item);
     };
   }
 ])
@@ -207,12 +206,12 @@ angular.module('kifi')
 
         scope.upVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.recoKeep, true);
+          recoActionService.vote(reco.card.item, true);
         };
 
         scope.downVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.recoKeep, false);
+          recoActionService.vote(reco.card.item, false);
         };
 
         scope.showModal = function () {

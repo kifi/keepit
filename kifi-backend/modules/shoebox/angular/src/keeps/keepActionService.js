@@ -11,6 +11,7 @@ angular.module('kifi')
   'env',
   'routeService',
   function ($analytics, $http, $location, $log, $q, env, routeService) {
+    
     function keepMany(keeps, isPrivate) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'keep',

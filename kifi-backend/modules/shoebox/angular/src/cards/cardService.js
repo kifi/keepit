@@ -2,23 +2,23 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', ['tagService', 'util',
+.factory('cardService', ['tagService', 'util',
   function (tagService, util) {
-    function Keep (rawKeep, keepType) {
-      if (!rawKeep) {
+    function Card (item, itemType) {
+      if (!item) {
         return {};
       }
 
-      _.assign(this, rawKeep);
+      this.item = item;
 
       // For recommendations, the id field in the recommended page coming from the backend is 
       // actually the url id of the page. To disambiguate from a page's keep id,
       // use 'urlId' as the property name for the url id.
       // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
-      if (keepType === 'reco') {
-        this.keepType = keepType;
-        this.urlId = this.id;
-        delete this.id;
+      // This really shouldn't be happening on the client side.
+      if (itemType === 'reco') {
+        item.urlId = item.id;
+        delete item.id;
       }
 
       // Helper functions.
@@ -48,18 +48,18 @@ angular.module('kifi')
       }
 
       // Add new properties to the keep.
-      this.titleAttr = this.title || this.url;
-      this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
-      this.hasSmallImage = this.summary && shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary);
-      this.hasBigImage = this.summary && (!shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary));
-      this.readTime = getKeepReadTime(this.summary);
-      this.showSocial = this.others || (this.keepers && this.keepers.length > 0);
+      this.titleAttr = this.item.title || this.item.url;
+      this.titleHtml = this.item.title || util.formatTitleFromUrl(this.item.url);
+      this.hasSmallImage = this.item.summary && shouldShowSmallImage(this.item.summary) && hasSaneAspectRatio(this.item.summary);
+      this.hasBigImage = this.item.summary && (!shouldShowSmallImage(this.item.summary) && hasSaneAspectRatio(this.item.summary));
+      this.readTime = getKeepReadTime(this.item.summary);
+      this.showSocial = this.item.others || (this.item.keepers && this.item.keepers.length > 0);
     }
 
     // Add properties that are specific to a really kept Keep.
-    Keep.prototype.buildKeep = function (keep, isMyBookmark) {
-      this.id = keep.id;
-      this.isPrivate = keep.isPrivate;
+    Card.prototype.buildKeep = function (keptItem, isMyBookmark) {
+      this.item.id = keptItem.id;
+      this.item.isPrivate = keptItem.isPrivate;
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
 
       this.tagList = this.tagList || [];
@@ -87,7 +87,7 @@ angular.module('kifi')
       };
     };
 
-    Keep.prototype.makeUnkept = function () {
+    Card.prototype.makeUnkept = function () {
       this.unkept = true;
       this.isMyBookmark = false;
 
@@ -103,7 +103,7 @@ angular.module('kifi')
     };
 
     var api = {
-      Keep: Keep
+      Card: Card
     };
 
     return api;

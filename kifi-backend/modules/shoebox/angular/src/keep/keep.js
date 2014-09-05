@@ -503,15 +503,15 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        keep: '=',
+        card: '=',
         keepCallback: '&',
         clickCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
       link: function (scope, element/*, attrs*/) {
-        if (!scope.keep) {
-          return;  // TODO: remove the checks in the rest of this file.
+        if (!scope.card) {
+          return;
         }
 
         var useBigLayout = false;
@@ -544,67 +544,65 @@ angular.module('kifi')
           }
         }
 
-        function updateSiteDescHtml() {
-          if (scope.keep) {
-            scope.keep.descHtml = formatDesc(scope.keep.siteName || scope.keep.url);
-          }
+        function updateSiteDescHtml(card) {
+          card.descHtml = formatDesc(card.item.siteName || card.item.url);
         }
 
-        scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout;
+        scope.showSmallImage = function (card) {
+          return card.hasSmallImage && !useBigLayout;
         };
 
-        scope.showBigImage = function (keep) {
-          return keep.hasBigImage || (keep.summary && useBigLayout);
+        scope.showBigImage = function (card) {
+          return card.hasBigImage || (card.item.summary && useBigLayout);
         };
 
         scope.addingTag = { enabled: false };
 
-        scope.hasTag = function (keep) {
-          return keep.tagList && keep.tagList.length > 0;
+        scope.hasTag = function (card) {
+          return card.tagList && card.tagList.length > 0;
         };
 
-        scope.showTags = function (keep) {
-          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
+        scope.showTags = function (card) {
+          return card.isMyBookmark && (scope.hasTag(card) || scope.addingTag.enabled);
         };
 
         scope.showAddTag = function () {
           scope.addingTag.enabled = true;
         };
 
-        scope.togglePrivate = function (keep) {
-          keepActionService.togglePrivateOne(keep);
+        scope.togglePrivate = function (card) {
+          keepActionService.togglePrivateOne(card.item);
         };
 
         scope.triggerInstall = function () {
           $rootScope.$emit('showGlobalModal', 'installExtension');
         };
 
-        function keepOne (keep, isPrivate) {
-          keepActionService.keepOne(keep, isPrivate).then(function (keptKeep) {
-             keep.buildKeep(keptKeep);
+        function keepOne (card, isPrivate) {
+          keepActionService.keepOne(card.item, isPrivate).then(function (keptItem) {
+             card.buildKeep(keptItem);
              tagService.addToKeepCount(1);
            });
 
           if (_.isFunction(scope.keepCallback)) {
-            scope.keepCallback({ 'keep': keep });
+            scope.keepCallback({ 'item': card.item });
           }
         }
 
-        scope.keepPublic = function (keep) {
-          keepOne(keep, false);
+        scope.keepPublic = function (card) {
+          keepOne(card, false);
         };
 
-        scope.keepPrivate = function (keep) {
-          keepOne(keep, true);
+        scope.keepPrivate = function (card) {
+          keepOne(card, true);
         };
 
-        scope.unkeep = function (keep) {
-          keepActionService.unkeepOne(keep).then(function () {
-            keep.makeUnkept();
+        scope.unkeep = function (card) {
+          keepActionService.unkeepOne(card.item).then(function () {
+            card.makeUnkept();
 
             undoService.add('Keep deleted.', function () {
-              keepOne(keep);
+              keepOne(card);
             });
 
             tagService.addToKeepCount(-1);
@@ -616,21 +614,21 @@ angular.module('kifi')
           });
         };
 
-        scope.getSingleSelectedKeep = function (keep) {
-          return [keep];
+        scope.getSingleSelectedKeep = function (card) {
+          return [card];
         };
 
-        scope.$watch('keep.url', function () {
-          updateSiteDescHtml();
+        scope.$watch('card.item.url', function () {
+          updateSiteDescHtml(scope.card);
         });
 
-        function sizeImage() {
-          if (!scope.keep || !scope.keep.summary || !scope.keep.summary.description) {
+        function sizeImage(card) {
+          if (!card || !card.item || !card.item.summary || !card.summary.description) {
             return;
           }
 
           var $sizer = angular.element('.kf-keep-description-sizer');
-          var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
+          var img = { w: card.item.summary.imageWidth, h: card.item.summary.imageHeight };
           var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
           var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
 
@@ -657,16 +655,16 @@ angular.module('kifi')
             return desc;
           }
 
-          if (!scope.keep.summary.trimmedDesc) {
-            var trimmed = trimDesc(scope.keep.summary.description);
+          if (!card.item.summary.trimmedDesc) {
+            var trimmed = trimDesc(card.item.summary.description);
             if (trimmed === false) {
               useBigLayout = true;
               return;
             }
-            scope.keep.summary.trimmedDesc = trimmed;
+            card.item.summary.trimmedDesc = trimmed;
           }
 
-          $sizer.text(scope.keep.summary.trimmedDesc);
+          $sizer.text(card.item.summary.trimmedDesc);
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
@@ -710,7 +708,7 @@ angular.module('kifi')
           var linesToShow = Math.floor((bestRes.hi / 23)); // line height
           var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
 
-          scope.keep.sizeCard = function () {
+          card.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
@@ -724,32 +722,34 @@ angular.module('kifi')
           };
         }
 
-        function maybeSizeImage() {
-          if (scope.keep && scope.keep.summary) {
-            var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
-            if (hasImage && scope.keep.summary.description && scope.keep.hasSmallImage) {
-              scope.keep.sizeCard = null;
-              scope.keep.calcSizeCard = sizeImage;
+        function maybeSizeImage(card) {
+          if (card && card.item && card.item.summary) {
+            var hasImage = card.item.summary.imageWidth > 50 && card.item.summary.imageHeight > 50;
+            if (hasImage && card.item.summary.description && card.item.hasSmallImage) {
+              card.item.sizeCard = null;
+              card.item.calcSizeCard = sizeImage;
             }
           }
         }
 
-        scope.$on('resizeImage', maybeSizeImage);
+        scope.$on('resizeImage', function () {
+          maybeSizeImage(scope.card);
+        });
 
-        scope.$watch('keep', function () {
-          if (scope.keep && scope.keep.summary) {
-            maybeSizeImage();
-            if (scope.keep.calcSizeCard) {
-              scope.keep.calcSizeCard();
-              scope.keep.calcSizeCard = null; // only want it called once.
-              if (scope.keep.sizeCard) {
-                scope.keep.sizeCard();
+        scope.$watch('card.item', function () {
+          if (scope.card.item.summary) {
+            maybeSizeImage(scope.card);
+            if (scope.card.calcSizeCard) {
+              scope.card.calcSizeCard();
+              scope.card.calcSizeCard = null; // only want it called once.
+              if (scope.card.sizeCard) {
+                scope.card.sizeCard();
               }
             }
           }
         });
 
-        updateSiteDescHtml();
+        updateSiteDescHtml(scope.card);
       }
     };
   }
