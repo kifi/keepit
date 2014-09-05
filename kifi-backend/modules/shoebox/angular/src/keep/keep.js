@@ -314,7 +314,26 @@ angular.module('kifi')
           scope.isDragTarget = false;
         };
 
+        function sizeNet(input) {
+          var net = {'layers':[{'cardWidth':{},'aspectRatio':{},'trimmed':{},'textWidth':{}},{'0':{'bias':1.3444274054784888,'weights':{'cardWidth':-8.717716438258577,'aspectRatio':9.63884228874839,'trimmed':3.9634021743444494,'textWidth':8.102393627447226}},'1':{'bias':2.5782651230134364,'weights':{'cardWidth':2.33877073442796,'aspectRatio':6.565257963093417,'trimmed':-11.124740555626337,'textWidth':-10.740884331089598}},'2':{'bias':2.5766387411430034,'weights':{'cardWidth':-21.04635816337819,'aspectRatio':16.44204315977007,'trimmed':4.225642585215847,'textWidth':14.066363124240846}},'3':{'bias':1.991060733669454,'weights':{'cardWidth':-10.847272465172836,'aspectRatio':12.421629483473708,'trimmed':-2.110488609381166,'textWidth':5.421125666083703}},'4':{'bias':-4.413110945192458,'weights':{'cardWidth':-0.37240056010854383,'aspectRatio':-7.584209514219222,'trimmed':5.42657314473735,'textWidth':5.576383681172731}}},{'score':{'bias':2.7395591395577257,'weights':{'0':-5.2446457044491,'1':-1.608948011454371,'2':-2.3547613161157988,'3':3.349134955715897,'4':3.6568787613192244}}}],'outputLookup':true,'inputLookup':true};
 
+          for (var i = 1; i < net.layers.length; i++) {
+            var layer = net.layers[i];
+            var output = {};
+
+            for (var id in layer) {
+              var node = layer[id];
+              var sum = node.bias;
+
+              for (var iid in node.weights) {
+                sum += node.weights[iid] * input[iid];
+              }
+              output[id] = (1 / (1 + Math.exp(-sum)));
+            }
+            input = output;
+          }
+          return output;
+        }
 
 
         // TODO: add/remove kf-candidate-drag-target on dragenter/dragleave
@@ -328,13 +347,13 @@ angular.module('kifi')
           var $sizer = angular.element('.kf-keep-description-sizer');
           var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
           var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
-          var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
 
           $sizer[0].style.width = '';
 
           function trimDesc(desc) {
             $sizer.text(desc);
             var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 23);
+            scope.keep.summary.trWidth = singleLineWidthPx;
 
             if (desc.length > 150) {
               // If description is quite long, trim it. We're drawing it, because for non-latin
@@ -345,7 +364,7 @@ angular.module('kifi')
                 return desc.substr(0, Math.floor(showRatio * desc.length));
               }
             } else {
-              if (singleLineWidthPx < cardWidth && img.w > 0.75 * cardWidth) {
+              if (singleLineWidthPx < cardWidth && scope.keep.summary.imageWidth > 0.75 * cardWidth) {
                 // If the text draws as one line, we may be interested in using the big image layout.
                 return false;
               }
@@ -362,43 +381,41 @@ angular.module('kifi')
             scope.keep.summary.trimmedDesc = trimmed;
           }
 
-          $sizer.text(scope.keep.summary.trimmedDesc);
-
           function calcHeightDelta(guessWidth) {
-            function tryWidth(width) {
-              $sizer[0].style.width = width + 'px';
-              //$sizer.width(width);
-              var height = $sizer[0].offsetHeight + 25; // subtitle is 25px
-              return height;
-            }
             var imageWidth = cardWidth - guessWidth;
             var imageHeight = imageWidth / (img.w / img.h);
-            var textHeight = tryWidth(guessWidth);
-            var delta = textHeight - imageHeight;
-            var score = Math.abs(delta) + 0.5 * Math.abs(optimalWidth - imageWidth); // 30% penalty for distance away from optimal width
+
+            var netRes = sizeNet({cardWidth: cardWidth/1000, aspectRatio: (img.w / img.h)/5, trimmed: scope.keep.summary.trWidth/5000, textWidth: guessWidth/1000})
+            var netScore = netRes.score * 1000;
+
 
             if (imageHeight > img.h) {
-              score += (imageHeight - img.h);
+              netScore += (imageHeight - img.h);
             }
             if (imageWidth > img.w) {
-              score += (imageWidth - img.w);
+              netScore += (imageWidth - img.w);
             }
 
-            return { guess: guessWidth, delta: delta, score: score, ht: Math.ceil(textHeight), hi: imageHeight};
+            return { guess: guessWidth, score: netScore, hi: imageHeight};
           }
 
           var i = 0;
+          var bestI = -1;
           var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
-          var guess = (high - low) / 2 + low;
-          var res = calcHeightDelta(guess);
-          var bestRes = res;
+          var incrSize = (high - low) / 8;
+          var order = [0, 3, 5, 6, 4, 2, 1];
+          var bestRes = {score: 999};
 
-          while(low + i < high && bestRes.score > 20) {
-            res = calcHeightDelta(low + i);
+          var res;
+          for (var m in order) {
+            res = calcHeightDelta(low + order[m] * incrSize);
             if (bestRes.score > res.score) {
+              bestI = order[m];
               bestRes = res;
+              if (bestRes.score < 50) {
+                break;
+              }
             }
-            i += 40;
           }
 
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
