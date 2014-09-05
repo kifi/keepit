@@ -1109,18 +1109,6 @@ api.port.on({
       });
     }
   },
-  search_contacts_excluding: function (data, respond) {
-    ajax('GET', '/ext/contacts', {q: data.q, n: data.not.length + 1}, function (contacts) {
-      for (var i = 0; i < contacts.length; i++) {
-        var contact = contacts[i];
-        if (data.not.indexOf(contact.id || contact.email) < 0) {
-          respond(toContactResult.call({sf: global.scoreFilter || require('./scorefilter').scoreFilter, q: data.q}, contact));
-          return;
-        }
-      }
-      respond(null);
-    });
-  },
   delete_contact: function (email, respond) {
     ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
       log('[delete_contact] resp:', status);

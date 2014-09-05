@@ -20,11 +20,7 @@ var initFriendSearch = (function () {
         var query = $in.tokenInput('getQuery');
         var items = $in.tokenInput('getItems');
         api.port.emit('delete_contact', item.email, function (success) {
-          if (success) {
-            api.port.emit('search_contacts_excluding', {q: query, not: items.map(getId)}, replaceWith); // find a replacement
-          } else {
-            replaceWith(item); // put original back
-          }
+          replaceWith(success ? null : item);
         });
       }
     }, options));
