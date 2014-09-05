@@ -37,12 +37,13 @@ object Global {
     "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     // "kevoree Repository" at "http://maven2.kevoree.org/release/",
     "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
-    "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel"
+    "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
     //for org.mongodb#casb
     // "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
     // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
     // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
     // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
+    "theatr.us" at "http://repo.theatr.us"
   )
 
 
@@ -69,7 +70,7 @@ object Global {
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
-    "us.theatr" %% "akka-quartz" % "0.2.0_42.1" exclude("c3p0", "c3p0"),
+    "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",
