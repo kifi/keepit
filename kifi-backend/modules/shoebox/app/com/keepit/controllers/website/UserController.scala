@@ -1,51 +1,39 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.commanders.ConnectionInfo
-import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.slick._
-import com.keepit.common.mail._
-import com.keepit.common.performance.timing
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.core.NetworkInfoLoader
-import com.keepit.commanders._
-import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
-import com.keepit.model._
-import com.keepit.social.BasicUser
-import play.api.libs.json.Json.toJson
-import com.keepit.abook.{ ABookUploadConf, ABookServiceClient }
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent.{ Promise => PlayPromise }
-import play.api.libs.Comet
-import com.keepit.common.time._
-import play.api.templates.Html
-import play.api.libs.iteratee.Enumerator
-import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
-import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{ Action, Request, MaxSizeExceeded }
+
+import com.google.inject.Inject
+import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
+import com.keepit.commanders.{ ConnectionInfo, _ }
+import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.http._
+import com.keepit.common.mail.{ EmailAddress, _ }
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
+import com.keepit.common.time._
+import com.keepit.controllers.core.NetworkInfoLoader
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ BasicDelightedAnswer, DelightedAnswerSources }
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model._
+import com.keepit.search.SearchServiceClient
+import com.keepit.social.BasicUser
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.libs.json._
+import play.api.libs.Comet
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.concurrent.{ Promise => PlayPromise }
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.Json.toJson
+import play.api.libs.json.{ JsBoolean, JsNumber, JsObject, JsString, _ }
+import play.api.mvc.{ MaxSizeExceeded, Request }
+import play.twirl.api.Html
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
-import com.keepit.model.UserEmailAddress
-import play.api.libs.json.JsString
-import play.api.libs.json.JsBoolean
-import scala.Some
-import play.api.libs.json.JsUndefined
-import play.api.libs.json.JsNumber
-import com.keepit.common.mail.EmailAddress
-import play.api.libs.json.JsObject
-import com.keepit.search.SearchServiceClient
-import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.http._
-import com.keepit.common.AnyExtensionOps
 
 class UserController @Inject() (
     db: Database,
@@ -560,7 +548,7 @@ class UserController @Inject() (
   // todo(Andrew): Remove when ng is out
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
   def getABookUploadStatus(id: Id[ABookInfo], callbackOpt: Option[String]) = HtmlAction.authenticated { request =>
-    import ABookInfoStates._
+    import com.keepit.model.ABookInfoStates._
     val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
     val done = new AtomicBoolean(false)

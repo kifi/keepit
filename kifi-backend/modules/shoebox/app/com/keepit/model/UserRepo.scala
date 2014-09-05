@@ -16,7 +16,6 @@ import org.joda.time.DateTime
 import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
 import Q.interpolation
-import scalax.io.CloseableIterator
 import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[UserRepoImpl])

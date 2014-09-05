@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.templates.Html
+import play.twirl.api.Html
 
 import java.net.URLDecoder
 

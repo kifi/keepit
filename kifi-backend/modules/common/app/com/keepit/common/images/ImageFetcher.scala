@@ -58,7 +58,7 @@ class ImageFetcherImpl @Inject() (
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
-          withInputStream(resp.underlying[NingWSResponse].getAHCResponse.getResponseBodyAsStream) { is =>
+          withInputStream(resp.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream) { is =>
             getBufferedImage(is) match {
               case Failure(ex) =>
                 log.error(s"Failed to process image: ($url)")

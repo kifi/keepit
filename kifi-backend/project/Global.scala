@@ -43,6 +43,7 @@ object Global {
     // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
     // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
     // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
+    // "theatr.us" at "http://repo.theatr.us"
   )
 
 
@@ -50,11 +51,11 @@ object Global {
     jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
     cache,
     ws,
-    "com.typesafe.play.plugins" %% "play-statsd" % "2.2.0" exclude("play", "*"),
-    "com.typesafe" %% "play-plugins-mailer" % "2.2.0" exclude("play", "*"),
-    "securesocial" %% "securesocial" % "master-20130808" exclude("play", "*"),
+    "com.typesafe.akka" %% "akka-testkit" % "2.3.4" exclude("play", "*"),
+    "com.typesafe.play.plugins" %% "play-statsd" % "2.3.0" exclude("play", "*"),
+    "com.typesafe.play.plugins" %% "play-plugins-mailer" % "2.3.0" exclude("play", "*"),
+    "kifi-securesocial" %% "kifi-securesocial" % "master-20140903" exclude("play", "*"),
     "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-    "com.typesafe.akka" %% "akka-testkit" % "2.2.3"  exclude("play", "*"),
     "org.apache.commons" % "commons-compress" % "1.4.1",
     "org.apache.commons" % "commons-math3" % "3.1.1",
     "commons-io" % "commons-io" % "2.4",
@@ -69,7 +70,7 @@ object Global {
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
-    "us.theatr" %% "akka-quartz" % "0.2.0_42.1" exclude("c3p0", "c3p0"),
+    "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",

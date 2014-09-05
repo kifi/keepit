@@ -2,10 +2,8 @@ import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 import sbt.Keys._
 import sbt._
 import play.Play.autoImport._
-import PlayKeys._
-import play.twirl.sbt.Import._
 import com.typesafe.sbt.web.SbtWeb.autoImport._
-
+import PlayKeys._
 
 object ApplicationBuild extends Build {
 
@@ -30,14 +28,16 @@ object ApplicationBuild extends Build {
     ws
   )
 
+  val slickVersion = "2.0.3"
+
   lazy val sqldbDependencies = Seq(
     "mysql" % "mysql-connector-java" % "5.1.25",
-    "com.typesafe.slick" %% "slick" % "2.1.0" exclude("play", "*")
+    "com.typesafe.slick" %% "slick" % slickVersion exclude("play", "*")
   )
 
   lazy val shoeboxDependencies = Seq(
     "javax.mail" % "mail" % "1.4.5",
-    "com.typesafe.slick" %% "slick-testkit" % "2.1.0" exclude("play", "*"),
+    "com.typesafe.slick" %% "slick-testkit" % slickVersion exclude("play", "*"),
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
     "org.feijoas" %% "mango" % "0.10"
@@ -57,7 +57,7 @@ object ApplicationBuild extends Build {
 
   lazy val scraperDependencies = Seq(
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
-    //"org.apache.httpcomponents" % "httpclient" % "4.3.2",
+    "org.apache.httpcomponents" % "httpclient" % "4.3.1",
     "org.apache.tika" % "tika-parsers" % "1.5"
   )
 
@@ -104,8 +104,9 @@ object ApplicationBuild extends Build {
   ).settings(
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
-    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular",
-    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/img",
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/dist",
+      javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
   ).settings(
     Frontend.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")

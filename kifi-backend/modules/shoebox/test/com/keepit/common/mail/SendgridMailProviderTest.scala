@@ -1,7 +1,7 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import play.api.templates.Html
+import play.twirl.api.Html
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import com.keepit.model.NotificationCategory

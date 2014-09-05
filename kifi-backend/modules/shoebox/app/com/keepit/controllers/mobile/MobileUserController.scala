@@ -190,7 +190,7 @@ class MobileUserController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_server_error")),
           authenticator => {
             Ok(Json.obj("code" -> code))
-              .withSession(session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession(request.session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
               .withCookies(authenticator.toCookie)
           }
         )

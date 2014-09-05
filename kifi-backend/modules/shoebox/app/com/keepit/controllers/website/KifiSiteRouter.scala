@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ LibraryRepo, LibrarySlug, UserRepo, Username }
-import play.api.mvc.{ SimpleResult, Request }
+import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -84,7 +84,7 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  private def landingPage(request: Request[_]): SimpleResult = {
+  private def landingPage(request: Request[_]): Result = {
     if (request.identityOpt.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else {
