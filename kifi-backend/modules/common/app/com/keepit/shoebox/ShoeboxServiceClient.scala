@@ -222,6 +222,10 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.sendMailToUser(), payload).map(r => r.body.toBoolean)
   }
 
+  def processAndSendMail(email: EmailToSend) = {
+    call(Shoebox.internal.processAndSendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
+  }
+
   def getUser(userId: Id[User]): Future[Option[User]] = consolidateGetUserReq(userId) { key =>
     val user = cacheProvider.userIdCache.get(UserIdKey(key))
     if (user.isDefined) {
@@ -707,9 +711,5 @@ class ShoeboxServiceClientImpl @Inject() (
       case (Right(email), action) => Json.obj("email" -> email, "action" -> action)
     }
     call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
-  }
-
-  def processAndSendMail(email: EmailToSend) = {
-    call(Shoebox.internal.processAndSendMail(email)).map(_.json.as[Boolean])
   }
 }

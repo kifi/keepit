@@ -51,6 +51,10 @@ object Email {
     def args = Seq(writer.writes(arg))
   }
 
+  case class Tag2[S, T](label: TagLabel, arg0: S, arg1: T)(implicit val writerS: Writes[S], writerT: Writes[T]) extends Tag {
+    def args = Seq(writerS.writes(arg0), writerT.writes(arg1))
+  }
+
   case class Tag3[S, T, U](label: TagLabel, arg0: S, arg1: T, arg2: U)(implicit val writerS: Writes[S], writerT: Writes[T], writerU: Writes[U]) extends Tag {
     def args = Seq(writerS.writes(arg0), writerT.writes(arg1), writerU.writes(arg2))
   }
@@ -69,8 +73,8 @@ object Email {
     val baseUrl = TagLabel("baseUrl")
   }
 
-  val tagLeftDelim: String = "<% "
-  val tagRightDelim: String = " %>"
+  val tagLeftDelim: String = "<%kf% "
+  val tagRightDelim: String = " %kf%>"
   val tagRegex = (Regex.quoteReplacement(tagLeftDelim) + "(.*?)" + Regex.quoteReplacement(tagRightDelim)).r
 
   object placeholders {

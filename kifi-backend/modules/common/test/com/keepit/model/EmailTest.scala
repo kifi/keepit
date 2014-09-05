@@ -19,6 +19,7 @@ class EmailTest extends Specification {
     "title" in {
       Email.placeholders.title.toString() === ld + "[\"title\"]" + rd
     }
+
     "firstName" in {
       firstName(id42).toString() === ld + "[\"firstName\",42]" + rd
     }
