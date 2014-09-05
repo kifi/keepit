@@ -9,6 +9,19 @@
   .kf-recos-clover-icon
     margin-right: 8px
 
+  .kf-main-title
+    position: relative
+    &::after
+      content: '(a beta feature)';
+      position: absolute;
+      bottom: -2px;
+      right: -20px;
+      padding: 2px 40px 0;
+      background: radial-gradient(#fff 30%, rgba(255,255,255,0) 80%);
+      font: 11px Helvetica,Arial,sans-serif;
+      text-align: center;
+      color: #c00;
+
   .kf-subtitle
     margin: -8px 0 0 50px
 
