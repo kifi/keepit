@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail.{ SystemEmailAddress, EmailModule }
+import com.keepit.common.mail.{ SystemEmailAddress, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -15,7 +15,6 @@ import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
 import play.api.templates.Html
 import com.keepit.model.Email.placeholders._
-import views.html.helper.input
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -34,7 +33,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     FakeCuratorServiceClientModule()
   )
 
-  "EmailHtmlPreProcessorImpl" should {
+  "EmailTemplateProcessor" should {
     "replaces placeholders with real values" in {
       withDb(modules: _*) { implicit injector =>
         val testFactory = inject[ShoeboxTestFactory]
@@ -45,29 +44,28 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
 
         val html1 = Html(s"""
           |${firstName(id1)} ${lastName(id1)} and ${fullName(id2)} joined!
-          |<img src="${avatarUrl(id1)}" alt="${fullName(id4)}"/>
-          |<img src="${avatarUrl(id2)}" alt="${fullName(id4)}"/>
-          |<img src="${avatarUrl(id3)}" alt="${fullName(id4)}"/>
+          |<img src="${avatarUrl(id1)}" alt="${fullName(id1)}"/>
+          |<img src="${avatarUrl(id2)}" alt="${fullName(id2)}"/>
+          |<img src="${avatarUrl(id3)}" alt="${fullName(id3)}"/>
           |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
-          |<a href="${unsubscribeUrl}">Unsubscribe Me</a>
+          |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
         """.stripMargin)
         val html2 = Html("")
 
         val processor = inject[EmailTemplateProcessorImpl]
-        val emailModule = EmailModule(
-          to = Seq(SystemEmailAddress.JOSH),
+        val emailToSend = EmailToSend(
+          to = Right(SystemEmailAddress.JOSH),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),
           subject = "hi",
           category = NotificationCategory.System.ADMIN,
-          htmlContent = Seq(html1, html2),
-          unsubscribableEmail = Some(user3.primaryEmail.get)
+          htmlTemplates = Seq(html1, html2)
         )
 
-        val outputF = processor.process(emailModule)
+        val outputF = processor.process(emailToSend)
         val output = Await.result(outputF, Duration(5, "seconds")).body
 
         output must contain("Aaron Paul and Bryan Cranston joined!")

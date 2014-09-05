@@ -9,7 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailModule, SystemEmailAddress }
+import com.keepit.common.mail.{ EmailToSend, SystemEmailAddress }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
@@ -168,30 +168,29 @@ class FeedDigestEmailSenderImpl @Inject() (
     // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
     // TODO(josh) add textBody to EmailModule
 
-    // TODO(josh) send PYMK as a 2nd module ("tip") instead of inline feedDigest
-    val module = EmailModule(
+    val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.head.title}",
-      to = Seq(user.primaryEmail.get),
+      to = Left(user.id.get),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlContent = Seq(views.html.email.feedDigest(emailData)),
+      htmlTemplates = Seq(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some("Kifi")
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    shoebox.sendMailModule(module).map { sent =>
+    shoebox.sendMailModule(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
         }
-        sendAnonymoizedEmailToQa(module, emailData)
+        sendAnonymoizedEmailToQa(emailToSend, emailData)
       }
       DigestRecoMail(userId, sent, digestRecos)
     }
   }
 
-  private def sendAnonymoizedEmailToQa(module: EmailModule, emailData: AllDigestRecos): Unit = {
+  private def sendAnonymoizedEmailToQa(module: EmailToSend, emailData: AllDigestRecos): Unit = {
     def fakeUserId = Id[User](Random.nextInt(Int.MaxValue))
     val fakeUser = User(firstName = "Fake", lastName = "User")
     val fakeBasicUser = BasicUser.fromUser(fakeUser)
@@ -215,17 +214,17 @@ class FeedDigestEmailSenderImpl @Inject() (
       }
     )
 
-    val qaModule = EmailModule(
+    val qaEmailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST_QA,
       subject = s"Kifi Digest: ${emailData.recos.head.title}",
-      to = Seq(SystemEmailAddress.FEED_QA),
+      to = Right(SystemEmailAddress.FEED_QA),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlContent = Seq(views.html.email.feedDigest(qaEmailData)),
+      htmlTemplates = Seq(views.html.email.feedDigest(qaEmailData)),
       senderUserId = None,
       fromName = Some("Kifi")
     )
 
-    val sendMailF = shoebox.sendMailModule(qaModule)
+    val sendMailF = shoebox.sendMailModule(qaEmailToSend)
     sendMailF.onComplete {
       case Success(sent) => if (!sent) airbrake.notify("Failed to cc digest email to feed-qa")
       case Failure(t) => airbrake.notify("Failed to send digest email to feed-qa", t)

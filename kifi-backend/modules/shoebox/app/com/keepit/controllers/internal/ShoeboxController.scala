@@ -2,14 +2,14 @@ package com.keepit.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.commanders._
-import com.keepit.commanders.emails.EmailModuleSender
+import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailModule, EmailAddress, ElectronicMail, LocalPostOffice }
+import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -57,7 +57,7 @@ class ShoeboxController @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
-  emailModuleSender: EmailModuleSender,
+  emailTemplateSender: EmailTemplateSender,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -97,7 +97,7 @@ class ShoeboxController @Inject() (
         Ok("true")
       case None =>
         val e = new Exception("Unable to parse email")
-        airbrake.notify(s"Unable to parse: ${request.body.toString}", e)
+        airbrake.notify(s"Unable to parse: ${request.body}", e)
         Ok("false")
     }
   }
@@ -113,15 +113,15 @@ class ShoeboxController @Inject() (
     Ok("true")
   }
 
-  def sendMailModule = Action.async(parse.tolerantJson) { request =>
-    request.body.asOpt[EmailModule] match {
+  def sendMailTemplate = Action.async(parse.tolerantJson) { request =>
+    request.body.asOpt[EmailToSend] match {
       case Some(module) =>
-        emailModuleSender.send(module).map { mail =>
+        emailTemplateSender.send(module).map { mail =>
           Ok(if (mail.isReadyToSend) "true" else "false")
         }
       case None =>
-        val e = new Exception("Unable to parse MailModule")
-        airbrake.notify(s"Unable to parse: ${request.body.toString}", e)
+        val e = new Exception("Unable to parse EmailToSend")
+        airbrake.notify(s"Unable to parse: ${request.body}", e)
         Future.successful(Ok("false"))
     }
   }

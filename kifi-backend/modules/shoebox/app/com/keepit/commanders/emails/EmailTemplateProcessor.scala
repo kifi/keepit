@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ EmailModule, EmailAddress }
+import com.keepit.common.mail.{ EmailToSend, EmailAddress }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.Email.{ TagWrapper, tags }
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
@@ -17,17 +17,17 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[EmailTemplateProcessorImpl])
-trait EmailHtmlPreProcessor {
-  def process(module: EmailModule): Future[Html]
+trait EmailTemplateProcessor {
+  def process(module: EmailToSend): Future[Html]
 }
 
 class EmailTemplateProcessorImpl @Inject() (
     shoebox: ShoeboxServiceClient,
     db: Database, userRepo: UserRepo,
     userCommander: UserCommander,
-    userEmailAddrRepo: UserEmailAddressRepo,
+    emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
-    emailOptOutCommander: EmailOptOutCommander) extends EmailHtmlPreProcessor {
+    emailOptOutCommander: EmailOptOutCommander) extends EmailTemplateProcessor {
   import com.keepit.model.Email.tagRegex
 
   /* for the lack of a better name, this is just a trait that encapsulates
@@ -42,9 +42,9 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String])
 
-  def process(module: EmailModule) = {
-    val html = views.html.email.black.layout(module.htmlContent)
-    val needs = getNeededObjects(html)
+  def process(emailToSend: EmailToSend) = {
+    val html = views.html.email.black.layout(emailToSend.htmlTemplates)
+    val needs = getNeededObjects(html, emailToSend)
 
     val userIds = needs.collect { case UserNeeded(id) => id }
     val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
@@ -57,11 +57,11 @@ class EmailTemplateProcessorImpl @Inject() (
       userImageUrls <- userImageUrlsF
     } yield {
       val input = DataNeededResult(users = users, imageUrls = userImageUrls)
-      evalHtml(html, input, module)
+      evalHtml(html, input, emailToSend)
     }
   }
 
-  private def evalHtml(html: Html, input: DataNeededResult, module: EmailModule) = {
+  private def evalHtml(html: Html, input: DataNeededResult, emailToSend: EmailToSend) = {
     Html(tagRegex.replaceAllIn(html.body, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -76,19 +76,22 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => input.imageUrls(userId)
-        case tags.unsubscribeUrl if module.unsubscribableEmail.isDefined => getUnsubUrl(module.unsubscribableEmail.get)
-        case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
+        case tags.unsubscribeUrl if emailToSend.to.isLeft =>
+          val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
+          getUnsubUrl(address)
+        case tags.unsubscribeUrl if emailToSend.to.isRight => getUnsubUrl(emailToSend.to.right.get)
         case tags.unsubscribeUserUrl =>
-          val emailAddr = db.readOnlyReplica { implicit s => userEmailAddrRepo.getByUser(userId) }
-          getUnsubUrl(emailAddr)
+          val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
+          getUnsubUrl(address)
+        case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
         case tags.userExternalId => user.externalId.toString()
-        case tags.title => module.title
+        case tags.title => emailToSend.title
       }
     }))
   }
 
   // used to gather the types of objects we need to replace the tags with real values
-  private def getNeededObjects(html: Html) = {
+  private def getNeededObjects(html: Html, emailToSend: EmailToSend) = {
     tagRegex.findAllMatchIn(html.body).map[NeededObject] { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -116,9 +119,7 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def getUnsubUrl(emailAddr: EmailAddress) = {
-    // tokens end with \r\n and I don't like it
-    val rawToken = emailOptOutCommander.generateOptOutToken(emailAddr)
-    val token = if (rawToken.substring(rawToken.size - 2) == "\r\n") rawToken.substring(0, rawToken.size - 2) else rawToken
+    val token = emailOptOutCommander.generateOptOutToken(emailAddr)
     s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(token)}"
   }
 

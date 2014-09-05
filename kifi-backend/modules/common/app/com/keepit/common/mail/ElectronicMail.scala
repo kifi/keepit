@@ -6,6 +6,7 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import com.keepit.model.User
+import com.keepit.serializer.EitherFormat
 
 import org.joda.time.DateTime
 
@@ -34,20 +35,19 @@ object ElectronicMailCategory {
   }
 }
 
-case class EmailModule(
+case class EmailToSend(
   title: String = "Kifi",
   from: EmailAddress,
   fromName: Option[String] = None,
-  to: Seq[EmailAddress] = Seq[EmailAddress](),
+  to: Either[Id[User], EmailAddress],
   cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
-  htmlContent: Seq[Html],
+  htmlTemplates: Seq[Html],
   category: ElectronicMailCategory,
   campaign: Option[String] = None,
-  senderUserId: Option[Id[User]] = None,
-  unsubscribableEmail: Option[EmailAddress] = None)
+  senderUserId: Option[Id[User]] = None)
 
-object EmailModule {
+object EmailToSend {
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
   import ElectronicMail.emailCategoryFormat
@@ -58,19 +58,19 @@ object EmailModule {
     def writes(o: Html) = JsString(o.toString())
   }
 
-  implicit val emailModule = (
+  val toFormat = EitherFormat[Id[User], EmailAddress]
+  implicit val emailToSendFormat = (
     (__ \ 'title).format[String] and
     (__ \ 'from).format[EmailAddress] and
     (__ \ 'fromName).formatNullable[String] and
-    (__ \ 'to).format[Seq[EmailAddress]] and
+    (__ \ 'to).format(toFormat) and
     (__ \ 'cc).format[Seq[EmailAddress]] and
     (__ \ 'subject).format[String] and
-    (__ \ 'htmlBody).format[Seq[Html]] and
+    (__ \ 'htmlTemplates).format[Seq[Html]] and
     (__ \ 'category).format[ElectronicMailCategory] and
     (__ \ 'campaign).format[Option[String]] and
-    (__ \ 'senderUserId).format[Option[Id[User]]] and
-    (__ \ 'unsubscribableEmail).format[Option[EmailAddress]]
-  )(EmailModule.apply, unlift(EmailModule.unapply))
+    (__ \ 'senderUserId).format[Option[Id[User]]]
+  )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }
 
 case class ElectronicMail(

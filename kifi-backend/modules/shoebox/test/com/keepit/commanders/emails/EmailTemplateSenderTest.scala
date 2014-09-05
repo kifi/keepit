@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail.{ ElectronicMailRepo, ElectronicMailCategory, SystemEmailAddress, EmailModule, FakeOutbox, FakeMailModule }
+import com.keepit.common.mail._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -19,7 +19,7 @@ import play.api.templates.Html
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class EmailModuleSenderTest extends Specification with ShoeboxTestInjector {
+class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
     FakeMailModule(),
@@ -34,7 +34,7 @@ class EmailModuleSenderTest extends Specification with ShoeboxTestInjector {
     FakeCuratorServiceClientModule()
   )
 
-  "EmailModuleSenderCommander" should {
+  "EmailTemplateSenderCommander" should {
     "send email" in {
       import com.keepit.model.Email.placeholders._
       withDb(modules: _*) { implicit injector =>
@@ -46,28 +46,28 @@ class EmailModuleSenderTest extends Specification with ShoeboxTestInjector {
 
         val html1 = Html("Hello, " + fullName(id2))
         val html2 = Html("Image: " + avatarUrl(id1))
-        val commander = inject[EmailModuleSender]
+        val commander = inject[EmailTemplateSender]
         val config = inject[FortyTwoConfig]
         val emailRepo = inject[ElectronicMailRepo]
 
-        val emailModule = EmailModule(
-          to = Seq(SystemEmailAddress.JOSH),
+        val emailToSend = EmailToSend(
+          to = Left(id3),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some("Kifi"),
           subject = "hi",
           category = NotificationCategory.System.ADMIN,
-          htmlContent = Seq(html1, html2)
+          htmlTemplates = Seq(html1, html2)
         )
 
-        val emailF = commander.send(emailModule)
+        val emailF = commander.send(emailToSend)
         val email = Await.result(emailF, Duration(5, "seconds"))
 
         db.readOnlyMaster { implicit s =>
           val freshEmail = emailRepo.get(email.id.get)
           freshEmail === email
           email.subject === "hi"
-          email.to === Seq(SystemEmailAddress.JOSH)
+          email.to === Seq(EmailAddress("test@gmail.com"))
           email.cc === Seq(SystemEmailAddress.ENG)
           email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
           val html = email.htmlBody.toString()

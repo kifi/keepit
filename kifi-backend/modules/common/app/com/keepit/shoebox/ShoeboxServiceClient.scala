@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailModule, EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
@@ -111,7 +111,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
   def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
-  def sendMailModule(module: EmailModule): Future[Boolean]
+  def sendMailModule(email: EmailToSend): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -709,7 +709,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
   }
 
-  def sendMailModule(module: EmailModule) = {
-    call(Shoebox.internal.sendMailModule(module)).map(_.json.as[Boolean])
+  def sendMailModule(email: EmailToSend) = {
+    call(Shoebox.internal.sendMailModule(email)).map(_.json.as[Boolean])
   }
 }
