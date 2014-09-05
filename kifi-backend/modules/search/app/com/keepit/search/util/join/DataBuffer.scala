@@ -20,11 +20,12 @@ object DataBuffer {
 
 }
 
-class DataBuffer {
+class DataBuffer(maxPages: Int = 10000) {
   // this class is not thread-safe
 
   import com.keepit.search.util.join.DataBuffer._
 
+  private[this] var _numPages = 0
   private[this] var _numRecords = 0
   private[this] var _localOffset = 0 // bytes
   private[this] var _freeSpace = 0 // bytes
@@ -32,6 +33,9 @@ class DataBuffer {
   private[this] val _dataBuf = new ArrayBuffer[Page]()
 
   private[this] def addPage(): Unit = {
+    _numPages += 1
+    if (numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
+
     _currentPage = new Page(DataBuffer.PAGE_SHORT_ARRAY_SIZE)
     _dataBuf += _currentPage
     _freeSpace = DataBuffer.PAGE_SIZE
@@ -81,3 +85,4 @@ class DataBuffer {
 }
 
 class DataBufferException(msg: String) extends Exception(msg)
+class DataBufferFullException(msg: String) extends Exception(msg)
