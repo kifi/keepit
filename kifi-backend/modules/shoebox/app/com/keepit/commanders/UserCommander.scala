@@ -523,9 +523,9 @@ class UserCommander @Inject() (
     elizaServiceClient.sendGlobalNotification(
       userIds = Set(recipient.id.get),
       title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
-      body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-      linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-      linkUrl = "https://kifi.com/friends/requests",
+      body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
+      linkText = s"Respond to ${requestingUser.firstName}’s friend request",
+      linkUrl = "https://www.kifi.com/friends",
       imageUrl = requestingUserImage,
       sticky = false,
       category = NotificationCategory.User.FRIEND_REQUEST
