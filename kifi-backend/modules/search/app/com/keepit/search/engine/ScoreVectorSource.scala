@@ -305,7 +305,6 @@ class UriFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val keepId = idMapper.getId(docId)
       val uriId = uriIdDocValues.get(docId)
       val libId = libraryIdDocValues.get(docId)
 
@@ -318,6 +317,8 @@ class UriFromKeepsScoreVectorSource(
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
           docId = pq.top.doc // next doc
+
+          val keepId = idMapper.getId(docId)
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
@@ -344,6 +345,7 @@ class UriFromKeepsScoreVectorSource(
             output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8 + 8) // id (8 bytes), libId (8 bytes)
             writer.putLong(uriId).putLong(libId)
           }
+          docId = td.nextDoc()
         }
       }
     }
@@ -365,6 +367,7 @@ class UriFromKeepsScoreVectorSource(
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
           }
+          docId = td.nextDoc()
         }
       }
     }
