@@ -40,10 +40,12 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     foreachReader { reader =>
       val idMapper = reader.getIdMapper
       val td = reader.termDocsEnum(term)
-      var doc = td.nextDoc()
-      while (doc != NO_MORE_DOCS) {
-        buf += idMapper.getId(doc)
-        doc = td.nextDoc()
+      if (td != null) {
+        var doc = td.nextDoc()
+        while (doc != NO_MORE_DOCS) {
+          buf += idMapper.getId(doc)
+          doc = td.nextDoc()
+        }
       }
     }
     buf
@@ -58,8 +60,10 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   def has(term: Term): Boolean = {
     foreachReader { reader =>
       val td = reader.termDocsEnum(term)
-      var doc = td.nextDoc()
-      if (doc != NO_MORE_DOCS) return true
+      if (td != null) {
+        var doc = td.nextDoc()
+        if (doc != NO_MORE_DOCS) return true
+      }
     }
     false
   }

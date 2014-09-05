@@ -119,13 +119,13 @@ class WanderingAdminController @Inject() (
     val start = clock.now()
 
     graphClient.uriWander(userId, steps).map { uriScores =>
+      val end = clock.now()
+      val timing = end.getMillis - start.getMillis
 
       val sortedUris = db.readOnlyReplica { implicit session =>
         uriScores.map { case (uriId, count) => uriRepo.get(uriId) -> count }
       }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
 
-      val end = clock.now()
-      val timing = end.getMillis - start.getMillis
       Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
     }
   }

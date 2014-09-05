@@ -44,7 +44,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private val fetchSize = 10000
   private val modelName = StatModelName.LDA_USER_STATS
   private val min_num_words = 50
-  protected val min_num_evidence = 50
+  protected val min_num_evidence = 5
 
   def update(): Unit = {
     val tasks = fetchTasks
@@ -62,7 +62,9 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   }
 
   private def processTasks(keeps: Seq[CortexKeep]): Unit = {
-    val users = keeps.map { _.userId }.distinct
+    //val users = keeps.map { _.userId }.distinct
+    val users0 = keeps.map { _.userId }.distinct
+    val users = if (users0.size > 0 && users0.map { _.id }.max > 100) (users0 ++ List(Id[User](6834), Id[User](1398), Id[User](6622), Id[User](4344))).distinct else users0
     users.foreach { processUser(_) }
     log.info(s"${users.size} users processed")
     keeps.lastOption.map { keep =>
@@ -92,7 +94,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   private def shouldComputeFeature(model: Option[UserLDAStats], numOfEvidenceNow: Int): Boolean = {
     def changedMuch(numOfEvidenceBefore: Int, numOfEvidenceNow: Int) = {
       val diff = abs(numOfEvidenceNow - numOfEvidenceBefore)
-      if (numOfEvidenceBefore == 0) true
+      if (numOfEvidenceBefore < min_num_evidence && numOfEvidenceNow >= min_num_evidence) true
       else (diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100)
     }
 
