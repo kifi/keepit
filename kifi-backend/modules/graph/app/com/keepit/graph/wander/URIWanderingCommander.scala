@@ -68,15 +68,15 @@ class URIWanderingCommander @Inject() (
       val topicScores = new ListBuffer[(VertexDataId[LDATopicReader], Int)]()
 
       journal.getVisited().foreach {
-        case (id, score) if id.kind == UriReader.kind =>
+        case (id, score) if id.kind == UriReader.kind && score > 1 =>
           val uriId = id.asId[UriReader]
           uriScores += uriId -> score
-        case (id, score) if id.kind == UserReader.kind =>
+        case (id, score) if id.kind == UserReader.kind && score > 1 =>
           val userId = id.asId[UserReader]
           if (VertexDataId.toUserId(userId) != user) {
             userScores += userId -> score
           }
-        case (id, score) if id.kind == LDATopicReader.kind =>
+        case (id, score) if id.kind == LDATopicReader.kind && score > 1 =>
           val topicId = id.asId[LDATopicReader]
           topicScores += topicId -> score
         case _ =>
@@ -93,6 +93,7 @@ class URIWanderingCommander @Inject() (
     val (userQuota, topicQuota) = (totalTrials * (userSum / z), totalTrials * (topicSum / z))
     val userTrials = preScoreResult.userScore.map { case (userId, s) => (userId, (userQuota * (s / userSum)).toInt) }
     val topicTrials = preScoreResult.topicScore.map { case (topicId, s) => (topicId, (topicQuota * (s / topicSum)).toInt) }
+    log.info(s"users have quota: ${userQuota}, topics have quota: ${topicQuota}")
     TrialsQuota(userTrials, topicTrials)
   }
 
@@ -143,12 +144,12 @@ class URIWanderingCommander @Inject() (
   private def edgeResolver = {
     val now = currentDateTime.getMillis
     val recency = 120 days
-    val halfLife = 7 days
+    val halfLife = 14 days
     val from = now - recency.toMillis
     val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = { case _ => true }
     val decay: TimestampEdgeReader => Double = {
       case outdatedEdge: TimestampEdgeReader if (outdatedEdge.timestamp < from) => 0
-      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis)
+      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis.toDouble)
     }
     RestrictedDestinationResolver(None, mayTraverse, decay)
   }

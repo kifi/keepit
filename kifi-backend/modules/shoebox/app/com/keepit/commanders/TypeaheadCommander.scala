@@ -360,7 +360,7 @@ class TypeaheadCommander @Inject() (
             case UserRecipient(id) =>
               val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
               UserContactResult(name = user.fullName, id = user.externalId, pictureName = user.pictureName.map(_ + ".jpg"))
-            case EmailRecipient(email) =>  // TODO: include contact name if address is in user's address book
+            case EmailRecipient(email) => // TODO: include contact name if address is in user's address book
               EmailContactResult(name = None, email = email)
           }
         }
