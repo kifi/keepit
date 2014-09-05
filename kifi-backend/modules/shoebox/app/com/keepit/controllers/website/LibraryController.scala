@@ -83,7 +83,7 @@ class LibraryController @Inject() (
   private def canView(userId: Id[User], lib: Library, authToken: Option[String], passcode: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
-        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink.get == authToken.get) || {
+        (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink == authToken.get) || {
           val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
           passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
         }
@@ -344,23 +344,5 @@ class LibraryController @Inject() (
         }
     }
   }
-
-  def setUniversalLinks(readOnly: Boolean = true) = JsonAction.authenticated { request =>
-    var c = 0
-    db.readWrite { implicit s =>
-      libraryRepo.all.map { lib =>
-        lib.universalLink match {
-          case Some(u) => {} // if link already there, great, do nothing!
-          case None => //otherwise, give it a link!
-            val newLink = RandomStringUtils.randomAlphanumeric(40)
-            log.info("Setting universal link %s for libraryId %s".format(newLink, lib.id.get.toString))
-            if (!readOnly) libraryRepo.save(lib.copy(universalLink = Some(newLink)))
-            c = c + 1
-        }
-      }
-    }
-    Ok(Json.obj("success" -> c))
-  }
-
 }
 
