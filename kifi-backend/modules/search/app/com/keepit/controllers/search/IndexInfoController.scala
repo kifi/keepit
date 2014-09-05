@@ -2,6 +2,8 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
+import com.keepit.search.graph.keep.KeepIndexerPlugin
+import com.keepit.search.graph.library.LibraryIndexerPlugin
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import com.keepit.search.article.ArticleIndexerPlugin
@@ -20,6 +22,8 @@ class IndexInfoController @Inject() (
     userGraphPlugin: UserGraphPlugin,
     searchFriendPlugin: SearchFriendGraphPlugin,
     messageIndexerPlugin: MessageIndexerPlugin,
+//    keepIndexerPlugin: KeepIndexerPlugin,
+//    libraryIndexerPlugin: LibraryIndexerPlugin,
     phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
   def listAll() = Action { implicit request =>
@@ -31,6 +35,8 @@ class IndexInfoController @Inject() (
       userGraphPlugin.indexInfos ++
       searchFriendPlugin.indexInfos ++
       messageIndexerPlugin.indexInfos ++
+//      keepIndexerPlugin.indexInfos ++
+//      libraryIndexerPlugin.indexInfos ++
       phraseIndexerPlugin.indexInfos
     )
     Ok(Json.toJson(infos))
