@@ -50,21 +50,27 @@ class ShardedKeepIndexer(
   private[keep] def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     fetchIndexables(sequenceNumber, fetchSize).map {
-      case (shardedIndexables, maxSeq, exhausted) =>
+      case Some((shardedIndexables, maxSeq, exhausted)) =>
         processShardedIndexables(shardedIndexables, maxSeq)
         exhausted
+      case None =>
+        true
     }
   }
 
-  private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[(Map[Shard[NormalizedURI], Seq[KeepIndexable]], SequenceNumber[Keep], Boolean)] = {
+  private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[KeepIndexable]], SequenceNumber[Keep], Boolean)]] = {
     shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
-      val shardedIndexables = indexShards.keys.map { shard =>
-        val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, tags) => new KeepIndexable(keep, tags, shard) }
-        shard -> indexables
-      }.toMap
-      val exhausted = changedKeepsAndTags.length < fetchSize
-      val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
-      (shardedIndexables, maxSeq, exhausted)
+      if (changedKeepsAndTags.nonEmpty) {
+        val shardedIndexables = indexShards.keys.map { shard =>
+          val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, tags) => new KeepIndexable(keep, tags, shard) }
+          shard -> indexables
+        }.toMap
+        val exhausted = changedKeepsAndTags.length < fetchSize
+        val maxSeq = changedKeepsAndTags.map(_.keep.seq).max
+        Some((shardedIndexables, maxSeq, exhausted))
+      } else {
+        None
+      }
     }
   }
 

@@ -143,12 +143,12 @@ class URIWanderingCommander @Inject() (
   private def edgeResolver = {
     val now = currentDateTime.getMillis
     val recency = 120 days
-    val halfLife = 7 days
+    val halfLife = 14 days
     val from = now - recency.toMillis
     val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = { case _ => true }
     val decay: TimestampEdgeReader => Double = {
       case outdatedEdge: TimestampEdgeReader if (outdatedEdge.timestamp < from) => 0
-      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis)
+      case decayingEdge: TimestampEdgeReader => Math.exp(-(now - decayingEdge.timestamp) / halfLife.toMillis.toDouble)
     }
     RestrictedDestinationResolver(None, mayTraverse, decay)
   }
