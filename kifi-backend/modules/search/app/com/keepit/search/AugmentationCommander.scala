@@ -140,23 +140,25 @@ class AugmentationCommanderImpl @Inject() (
         record.tags
       }
 
-      var docId = docs.nextDoc()
-      while (docId < NO_MORE_DOCS) {
+      if (docs != null) {
+        var docId = docs.nextDoc()
+        while (docId < NO_MORE_DOCS) {
 
-        val libraryId = libraryIdDocValues.get(docId)
-        val userId = userIdDocValues.get(docId)
-        val visibility = visibilityDocValues.get(docId)
+          val libraryId = libraryIdDocValues.get(docId)
+          val userId = userIdDocValues.get(docId)
+          val visibility = visibilityDocValues.get(docId)
 
-        if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
-          val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
-          keeps += RestrictedKeepInfo(Some(Id(libraryId)), userIdOpt, tags(docId))
-        } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
-          case PUBLISHED => keeps += RestrictedKeepInfo(Some(Id(libraryId)), Some(Id(userId)), tags(docId))
-          case DISCOVERABLE => keeps += RestrictedKeepInfo(None, Some(Id(userId)), Set.empty)
-          case SECRET => // ignore
-        }
-        else if (visibility == PUBLISHED) { // kept in a public library
-          //todo(Léo): define which published libraries are relevant
+          if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
+            val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
+            keeps += RestrictedKeepInfo(Some(Id(libraryId)), userIdOpt, tags(docId))
+          } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
+            case PUBLISHED => keeps += RestrictedKeepInfo(Some(Id(libraryId)), Some(Id(userId)), tags(docId))
+            case DISCOVERABLE => keeps += RestrictedKeepInfo(None, Some(Id(userId)), Set.empty)
+            case SECRET => // ignore
+          }
+          else if (visibility == PUBLISHED) { // kept in a public library
+            //todo(Léo): define which published libraries are relevant
+          }
         }
 
         docId = docs.nextDoc()
