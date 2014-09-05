@@ -21,17 +21,18 @@ class EmailRecosController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with HandleDeepLinkRequests {
 
-  def viewReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
-    val source = KeepSource.emailReco
-    val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-    implicit val context = hcb.build
-    val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-
-    curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(clicked = Some(true),
-      clientType = Some(RecommendationClientType.Email)))
-
-    Found(uri.url)
-  }
+  def viewReco(uriId: ExternalId[NormalizedURI]) = HtmlAction(
+    authenticatedAction = { request =>
+      val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
+      val feedback = UriRecommendationFeedback(clicked = Some(true), clientType = Some(RecommendationClientType.Email))
+      curator.updateUriRecommendationFeedback(request.userId, uri.id.get, feedback)
+      Found(uri.url)
+    },
+    unauthenticatedAction = { request =>
+      val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
+      Found(uri.url)
+    }
+  )
 
   def keepReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }

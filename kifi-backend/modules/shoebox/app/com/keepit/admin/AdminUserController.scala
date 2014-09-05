@@ -159,7 +159,7 @@ class AdminUserController @Inject() (
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
     request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
-      val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty)
+      val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
       val collections = db.readWrite { implicit s =>
         val bookmark = keepRepo.get(id)
         val userId = bookmark.userId

@@ -9,7 +9,8 @@ import com.keepit.common.db.{ Id, LargeString }
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail }
+import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
 import com.keepit.inject.FortyTwoConfig
@@ -23,7 +24,7 @@ import helpers.Context
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import concurrent.Future
-import scala.util.Random
+import scala.util.{ Success, Random, Failure }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -56,7 +57,7 @@ sealed case class FriendReco(basicUser: BasicUser, avatarUrl: String)
 sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], friendRecos: Seq[FriendReco], isFacebookConnected: Boolean = false)
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
-    keepers: DigestRecoKeepers, protected val config: FortyTwoConfig) {
+    keepers: DigestRecoKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) {
   val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
   val imageUrl = uriSummary.imageUrl.map(DigestEmail.toHttpsUrl)
@@ -71,9 +72,9 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
   }
 
   // todo(josh) encode urls?? add more analytics information
-  val viewPageUrl = s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}"
-  val sendPageUrl = s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
-  val keepUrl = s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
+  val viewPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}"
+  val sendPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
+  val keepUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
 }
 
 sealed case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {
@@ -124,7 +125,7 @@ class FeedDigestEmailSenderImpl @Inject() (
   val defaultUriRecommendationScores = UriRecommendationScores()
 
   def send() = {
-    userExperimentCommander.getUsersByExperiment(ExperimentType.DIGEST_EMAIl).flatMap { userSet =>
+    userExperimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).flatMap { userSet =>
       Future.sequence(userSet.map(sendToUser).toSeq)
     }
   }
@@ -142,6 +143,8 @@ class FeedDigestEmailSenderImpl @Inject() (
     val unsubUrlF = shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
     val friendRecoF = getFriendRecommendationsForUser(userId)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
+
+    // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
 
     val digestRecoMailF = for {
       recos <- recosF
@@ -184,14 +187,55 @@ class FeedDigestEmailSenderImpl @Inject() (
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    val now = currentDateTime
     shoebox.sendMail(email).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
         }
+        sendAnonymoizedEmailToQa(email, emailData, ctx)
       }
       DigestRecoMail(userId, sent, digestRecos)
+    }
+  }
+
+  private def sendAnonymoizedEmailToQa(email: ElectronicMail, emailData: AllDigestRecos, ctx: Context): Unit = {
+    val fakeUserId = Id[User](2)
+    val fakeUser = User(firstName = "Fake", lastName = "User")
+    val fakeBasicUser = BasicUser.fromUser(fakeUser)
+    val qaCtx = ctx.copy(unsubscribeUrl = "https://www.kifi.com", campaign = "digestQa")
+    val fakeFriendReco = FriendReco(fakeBasicUser, S3UserPictureConfig.defaultImage)
+    val qaEmailData = emailData.copy(
+      friendRecos = emailData.friendRecos.map(_ => fakeFriendReco),
+      toUser = fakeUser,
+      recos = emailData.recos.map { reco =>
+        reco.copy(
+          isForQa = true,
+          reco = reco.reco.copy(userId = fakeUserId),
+          keepers = reco.keepers.copy(
+            friends = reco.keepers.friends.map(_ => fakeUserId),
+            keepers = reco.keepers.keepers.map(_ => (fakeUserId, fakeBasicUser)),
+            userAvatarUrls = reco.keepers.userAvatarUrls.map(_ => (fakeUserId, S3UserPictureConfig.defaultImage))
+          )
+        )
+      }
+    )
+
+    val qaHtmlBody: LargeString = views.html.email.feedDigest(qaEmailData, qaCtx).body
+    val qaTextBody: Option[LargeString] = Some(views.html.email.feedDigestText(qaEmailData, qaCtx).body)
+    val qaEmail = ElectronicMail(
+      category = NotificationCategory.User.DIGEST_QA,
+      subject = email.subject,
+      htmlBody = qaHtmlBody,
+      textBody = qaTextBody,
+      to = Seq(SystemEmailAddress.FEED_QA),
+      from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi")
+    )
+
+    val sendMailF = shoebox.sendMail(qaEmail)
+    sendMailF.onComplete {
+      case Success(sent) => if (!sent) airbrake.notify("Failed to cc digest email to feed-qa")
+      case Failure(t) => airbrake.notify("Failed to send digest email to feed-qa", t)
     }
   }
 
@@ -246,7 +290,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     } yield Some(DigestReco(reco = reco, uri = uri, uriSummary = summaries(uriId), keepers = recoKeepers, config = config))
   } recover {
     case throwable =>
-      airbrake.notify(s"failed to load data for $reco", throwable)
+      airbrake.notify(s"failed to load uri reco details for $reco", throwable)
       None
   }
 

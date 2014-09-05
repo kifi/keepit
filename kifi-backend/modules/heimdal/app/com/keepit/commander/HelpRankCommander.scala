@@ -143,20 +143,24 @@ class HelpRankCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = timing(s"getHelpRankInfo(${uriIds.size})") {
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = timing(s"getHelpRankInfo(${uriIds.size})") {
     val uriIdSet = uriIds.toSet
     if (uriIdSet.size != uriIds.length) {
       log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
     }
-    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
-      val discMap = keepDiscoveryRepo.getDiscoveryCountsByURIs(uriIdSet)
-      log.info(s"[getHelpRankInfo] discMap(sz=${discMap.size}):$discMap")
-      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
-      log.info(s"[getHelpRankInfo] rkMap(sz=${rkMap.size}):$rkMap")
-      (discMap, rkMap)
+    val discMapF = db.readOnlyMasterAsync { implicit ro =>
+      keepDiscoveryRepo.getDiscoveryCountsByURIs(uriIdSet)
     }
-    uriIds.toSeq.map { uriId =>
-      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
+    val rkMapF = db.readOnlyMasterAsync { implicit ro =>
+      rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+    }
+    for {
+      discMap <- discMapF
+      rkMap <- rkMapF
+    } yield {
+      uriIds.toSeq.map { uriId =>
+        HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
+      }
     }
   }
 

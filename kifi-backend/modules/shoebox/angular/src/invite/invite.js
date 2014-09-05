@@ -2,17 +2,6 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider.when('/invite', {
-      templateUrl: 'invite/invite.tpl.html'
-    }).when('/friends/invite', {
-      redirectTo: '/invite'
-    });
-  }
-])
-
 .controller('InviteCtrl', [
   '$scope', '$rootScope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
   function ($scope, $rootScope, $http, profileService, routeService, $window, wtiService, socialService) {

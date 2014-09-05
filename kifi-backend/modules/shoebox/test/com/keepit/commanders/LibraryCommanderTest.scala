@@ -118,9 +118,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
+      libraryRepo.updateMemberCount(libMurica.id.get)
+      libraryRepo.updateMemberCount(libScience.id.get)
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
+      libraryRepo.get(libMurica.id.get).memberCount === 3
+      libraryRepo.get(libScience.id.get).memberCount === 2
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -151,8 +155,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
-      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
-      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
+      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
+      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
 
       keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
@@ -371,7 +375,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
 
         libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
-        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink.get)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
       }
     }
 
@@ -527,6 +531,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
           )
+          libraryMembershipRepo.count === 6
+          libraryRepo.get(libMurica.id.get).memberCount === 3 //owner + Ironman + Agent
+          libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
+          libraryRepo.get(libShield.id.get).memberCount === 1 //owner
         }
       }
     }
@@ -538,8 +546,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val libraryCommander = inject[LibraryCommander]
 
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+          libraryRepo.get(libMurica.id.get).memberCount === 3
         }
 
         libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
@@ -547,6 +555,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+          libraryRepo.get(libMurica.id.get).memberCount === 2
         }
       }
     }
@@ -704,12 +713,12 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = None))
 
-          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
 
-          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "Murica"))
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("Murica")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
@@ -724,8 +733,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val libraryCommander = inject[LibraryCommander]
-        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "Canada").isLeft === true
-        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "USA") //move keeps with "USA" to library "USA"
+        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("Canada")).isLeft === true
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("USA")) //move keeps with "USA" to library "USA"
         res1.isRight === true
         res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
@@ -733,7 +742,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.count === 9
         }
 
-        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, "Murica") //move keeps with "Murica" to library "Murica"
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
         res2.isRight === true
         res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
         db.readOnlyMaster { implicit s =>

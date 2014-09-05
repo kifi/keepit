@@ -22,6 +22,7 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
+import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -127,7 +128,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, None, context)
+    val searchFilter = getSearchFilter(filter, None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -252,7 +253,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, None, context)
+    val searchFilter = getSearchFilter(filter, None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -307,7 +308,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, library, context)
+    val searchFilter = getSearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -378,7 +379,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, library, context)
+    val searchFilter = getSearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -387,9 +388,15 @@ class SearchCommanderImpl @Inject() (
 
     timing.factory
 
-    val searches = searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+    val searches = if (userId.id >= 0) {
+      // logged in user
+      searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+    } else {
+      searchFactory.getKifiNonUserSearch(localShards, searchFilter.libraryId.get, query, firstLang, secondLang, maxHits, searchFilter, config)
+    }
+
     val future = Future.traverse(searches) { search =>
-      SafeFuture { search.search() }
+      SafeFuture { search.execute() }
     }
 
     timing.search // search start
@@ -438,22 +445,7 @@ class SearchCommanderImpl @Inject() (
       resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
     }
 
-    val acceptLangs = {
-      val langs = acceptLangCodes.toSet.flatMap { code: String =>
-        val langCode = code.substring(0, 2)
-        if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-        else {
-          val lang = Lang(langCode)
-          if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
-        }
-      }
-      if (langs.isEmpty) {
-        log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-        Set(DefaultAnalyzer.defaultLang)
-      } else {
-        langs
-      }
-    }
+    val acceptLangs = parseAcceptLangs(acceptLangCodes)
 
     val langProf = {
       val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
@@ -488,12 +480,28 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
+  private def parseAcceptLangs(acceptLangCodes: Seq[String]): Set[Lang] = {
+    val langs = acceptLangCodes.toSet.flatMap { code: String =>
+      val langCode = code.substring(0, 2)
+      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
+      else {
+        val lang = Lang(langCode)
+        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
+      }
+    }
+    if (langs.isEmpty) {
+      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
+      Set(DefaultAnalyzer.defaultLang)
+    } else {
+      langs
+    }
+  }
+
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
   private def getSearchFilter(
-    userId: Id[User],
     filter: Option[String],
     library: Option[String],
     context: Option[String]): SearchFilter = {

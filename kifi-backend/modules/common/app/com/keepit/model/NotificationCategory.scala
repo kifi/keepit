@@ -41,6 +41,7 @@ object NotificationCategory {
     val LIBRARY_INVITATION = NotificationCategory("library_invitation")
 
     val DIGEST = NotificationCategory("digest")
+    val DIGEST_QA = NotificationCategory("digest_qa")
 
     val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, FRIEND_JOINED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED)

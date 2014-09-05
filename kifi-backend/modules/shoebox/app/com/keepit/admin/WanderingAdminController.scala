@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.db.Id
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.graph.wander.{ Wanderlust }
@@ -110,5 +111,22 @@ class WanderingAdminController @Inject() (
     }
 
     promisedResult.future
+  }
+
+  def uriWandering() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val userId = request.userId
+    val steps = 100000
+    val start = clock.now()
+
+    graphClient.uriWander(userId, steps).map { uriScores =>
+      val end = clock.now()
+      val timing = end.getMillis - start.getMillis
+
+      val sortedUris = db.readOnlyReplica { implicit session =>
+        uriScores.map { case (uriId, count) => uriRepo.get(uriId) -> count }
+      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
+
+      Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
+    }
   }
 }

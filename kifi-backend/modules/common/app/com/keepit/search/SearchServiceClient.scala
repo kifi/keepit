@@ -459,6 +459,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)
 }

@@ -33,7 +33,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         )
         val collections = collKeeps.zipWithIndex.map {
           case (s, i) =>
-            val Seq(collection) = saveCollections(Collection(userId = users(i).id.get, name = s"coll $i"))
+            val Seq(collection) = saveCollections(Collection(userId = users(i).id.get, name = Hashtag(s"coll $i")))
             saveBookmarksToCollection(collection.id.get, s: _*)
             collection
         }
@@ -110,7 +110,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val expectedUriToUserEdges = uris.take(5).map(_ -> Seq(user))
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
         val collection = {
-          val Seq(collection) = saveCollections(Collection(userId = userId, name = "mutating collection"))
+          val Seq(collection) = saveCollections(Collection(userId = userId, name = Hashtag("mutating collection")))
           saveBookmarksToCollection(collection.id.get, bookmarks: _*)
           collection
         }

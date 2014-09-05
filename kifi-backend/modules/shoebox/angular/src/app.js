@@ -23,21 +23,6 @@ angular.module('kifi', [
 // http://stackoverflow.com/questions/16674279/how-to-nest-ng-view-inside-ng-include
 .run(['$route', angular.noop])
 
-.config([
-  '$routeProvider', '$locationProvider', '$httpProvider',
-  function ($routeProvider, $locationProvider, $httpProvider) {
-    $locationProvider
-      .html5Mode(true)
-      .hashPrefix('!');
-
-    $routeProvider.otherwise({
-      redirectTo: '/'
-    });
-
-    $httpProvider.defaults.withCredentials = true;
-  }
-])
-
 .constant('linkedinConfigSettings', {
   appKey: 'r11loldy9zlg'
 })
