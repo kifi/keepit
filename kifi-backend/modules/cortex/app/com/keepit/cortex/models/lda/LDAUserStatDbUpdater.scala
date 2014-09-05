@@ -11,15 +11,26 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
+import com.keepit.cortex.plugins._
 import com.keepit.model.User
 import math.abs
 import com.keepit.cortex.utils.MatrixUtils._
 import scala.concurrent.duration._
 
-class LDAUserStatDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserStatDbUpdater) extends FeatureUpdateActor(airbrake, updater)
+case class LDAUserStatUpdate(userId: Id[User])
 
-trait LDAUserStatDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA]
+class LDAUserStatDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserStatDbUpdater) extends FeatureUpdateActor(airbrake, updater) {
+  import FeaturePluginMessages._
+
+  override def receive() = {
+    case Update => updater.update()
+    case LDAUserStatUpdate(userId) => updater.updateUser(userId)
+  }
+}
+
+trait LDAUserStatDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA] {
+  def updateUser(userId: Id[User]): Unit
+}
 
 @Singleton
 class LDAUserStatDbUpdatePluginImpl @Inject() (
@@ -27,10 +38,16 @@ class LDAUserStatDbUpdatePluginImpl @Inject() (
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserStatDbUpdatePlugin {
   override val updateFrequency: FiniteDuration = 2 minutes
+
+  def updateUser(userId: Id[User]): Unit = {
+    actor.ref ! LDAUserStatUpdate(userId)
+  }
 }
 
 @ImplementedBy(classOf[LDAUserStatDbUpdaterImpl])
-trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]]
+trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]] {
+  def updateUser(userId: Id[User]): Unit
+}
 
 @Singleton
 class LDAUserStatDbUpdaterImpl @Inject() (
@@ -50,6 +67,10 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     val tasks = fetchTasks
     log.info(s"fetched ${tasks.size} tasks")
     processTasks(tasks)
+  }
+
+  def updateUser(userId: Id[User]): Unit = {
+    processUser(userId)
   }
 
   private def fetchTasks(): Seq[CortexKeep] = {
