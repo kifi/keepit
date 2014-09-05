@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.logging.Logging
 import com.keepit.model.LibraryVisibility
 import com.keepit.search.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
@@ -26,7 +27,7 @@ trait ScoreVectorSource {
   def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer): Unit
 }
 
-trait ScoreVectorSourceLike extends ScoreVectorSource {
+trait ScoreVectorSourceLike extends ScoreVectorSource with Logging {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
     val weights = new ArrayBuffer[(Weight, Float)]
     val weight = searcher.createWeight(query)
@@ -87,16 +88,20 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
 
   protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    val scorer = recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    if (scorer == null) log.warn("RecencyScorer is null")
+    scorer
   }
 
   @inline
   protected def getRecencyBoost(recencyScorer: RecencyScorer, docId: Int) = {
-    if (recencyScorer.docID() < docId) {
-      if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
-    } else {
-      if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
-    }
+    if (recencyScorer != null) {
+      if (recencyScorer.docID() < docId) {
+        if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
+      } else {
+        if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
+      }
+    } else 1.0f
   }
 }
 

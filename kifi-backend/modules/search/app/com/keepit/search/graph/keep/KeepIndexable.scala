@@ -59,7 +59,7 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep, tags)))
-    buildLongValueField(createdAtField, keep.createdAt.getMillis)
+    doc.add(buildLongValueField(createdAtField, keep.createdAt.getMillis))
 
     tags.foreach { tag =>
       val tagLang = LangDetector.detect(tag.tag)
