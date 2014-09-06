@@ -60,8 +60,8 @@ angular.module('kifi')
     Card.prototype.buildKeep = function (keptItem, isMyBookmark) {
       this.item.id = keptItem.id;
       this.item.isPrivate = keptItem.isPrivate;
+      
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
-
       this.tagList = this.tagList || [];
       this.collections = this.collections || [];
 

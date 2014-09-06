@@ -30,10 +30,10 @@
       <a ng-href="{{ card.item.url }}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage(card)" ng-src="{{ card.item.summary.imageUrl }}" ng-click="clickCallback({ 'card': card.item })"></a>
     </div>
 
-    <!-- <div class="kf-keep-who" ng-if="card.showSocial">
-      <span kf-keep-who-pics keep="keep"></span>
-      <span kf-keep-who-text keep="keep"></span>
-    </div> -->
+    <div class="kf-keep-who" ng-if="card.showSocial">
+      <span kf-keep-who-pics card="card"></span>
+      <span kf-keep-who-text card="card"></span>
+    </div>
 
     <!-- <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(card)" adding-tag="addingTag" is-shown="showTags(card)" ng-show="showTags(card)"></div> -->
   </div>

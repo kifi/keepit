@@ -75,13 +75,13 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoPics.tpl.html',
       scope: {
-        keep: '='
+        card: '='
       },
       link: function (scope) {
         scope.me = profileService.me;
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
-        scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
+        scope.isMyBookmark = scope.card && scope.card.isMyBookmark;
       }
     };
   }
