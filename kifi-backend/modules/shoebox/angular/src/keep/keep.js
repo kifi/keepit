@@ -614,7 +614,7 @@ angular.module('kifi')
           });
         };
 
-        scope.getSingleSelectedKeep = function (card) {
+        scope.getSingleSelectedCard = function (card) {
           return [card];
         };
 
