@@ -191,24 +191,26 @@ class FeedDigestEmailSenderImpl @Inject() (
   }
 
   private def sendAnonymoizedEmailToQa(module: EmailToSend, emailData: AllDigestRecos): Unit = {
-    def fakeUserId = Id[User](Random.nextInt(Int.MaxValue))
+    val userIds = Seq(1, 3, 9, 48, 61, 100, 567, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
     val fakeUser = User(firstName = "Fake", lastName = "User")
     val fakeBasicUser = BasicUser.fromUser(fakeUser)
-    val myFakeUserId = fakeUserId
+    val myFakeUserId = userIds.head
+    val otherUserIds = userIds.tail
 
     val fakeFriendReco = FriendReco(myFakeUserId, fakeBasicUser, S3UserPictureConfig.defaultImage)
     val qaEmailData = emailData.copy(
       friendRecos = emailData.friendRecos.map(_ => fakeFriendReco),
       toUser = fakeUser,
       recos = emailData.recos.map { reco =>
-        val qaFriends = reco.keepers.friends.map(_ => fakeUserId)
+        val qaFriends = otherUserIds.take(reco.keepers.friends.size).sortBy(_ => Random.nextInt())
+        val qaKeepers = qaFriends.take(reco.keepers.keepers.size)
         reco.copy(
           isForQa = true,
           reco = reco.reco.copy(userId = myFakeUserId),
           keepers = reco.keepers.copy(
             friends = qaFriends,
-            keepers = qaFriends.take(reco.keepers.keepers.size).map((_, fakeBasicUser)).toMap,
-            userAvatarUrls = qaFriends.take(reco.keepers.keepers.size).map((_, S3UserPictureConfig.defaultImage)).toMap
+            keepers = qaKeepers.map((_, fakeBasicUser)).toMap,
+            userAvatarUrls = qaKeepers.map((_, S3UserPictureConfig.defaultImage)).toMap
           )
         )
       }
