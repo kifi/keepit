@@ -42,6 +42,7 @@ var merge = require('merge');
 var outDir = 'dist';
 var tmpDir = 'tmp';
 var cdnDir = 'cdn';
+var playRefsDir = './play-refs/ng/';
 var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
 var isProdMode = false;
@@ -433,7 +434,8 @@ gulp.task('assets:local-prod:update_index', ['assets:local-prod:rev'], function 
 gulp.task('assets:release:update_index', ['assets:release:rev'], function () {
   return gulp.src(cdnDir + '/index.???????.html')
     .pipe(rename('index_cdn.html'))
-    .pipe(gulp.dest('./'));
+    .pipe(gulp.dest('./'))
+    .pipe(gulp.dest(playRefsDir));
 });
 
 gulp.task('assets:release:publish', ['assets:release:rev', 'assets:release:update_index'], function (done) {
