@@ -23,7 +23,8 @@ class LDACommander @Inject() (
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
-    userLDAStatRepo: UserLDAStatsRepo) extends Logging {
+    userLDAStatRepo: UserLDAStatsRepo,
+    userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
   val numOfTopics: Int = wordRep.lda.dimension
 
@@ -255,6 +256,17 @@ class LDACommander @Inject() (
     (feat1, feat2) match {
       case (Some(f1), Some(f2)) if (f1.numOfWords > 50 && f2.numOfWords > 50) => Some(KL_divergence(f1.feature.get.value, f2.feature.get.value))
       case _ => None
+    }
+  }
+
+  def recomputeUserLDAStats(): Unit = {
+    val users = db.readOnlyReplica { implicit s => userLDAStatRepo.getAllUsers(wordRep.version) }
+    log.info(s"recomputing user LDA Stats for ${users.size} users")
+    var n = 0
+    users.foreach { user =>
+      userStatUpdatePlugin.updateUser(user)
+      n += 1
+      if (n % 100 == 0) log.info(s"recomputed ${n} user LDA Stats")
     }
   }
 
