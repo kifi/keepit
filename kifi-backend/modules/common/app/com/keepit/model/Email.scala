@@ -116,6 +116,8 @@ object Email {
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter")
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook")
 
+    def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
+
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index)
 
