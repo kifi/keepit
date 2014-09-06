@@ -639,15 +639,9 @@
       $dropdown.data({populating: now, queued: null, q: query, mouseMoved: false})
         .removeClass(classes.dropdownSearching);
 
-      // Either preserve the selection or, if the first item represents an actual token, auto-select it.
       var els = results.map(createDropdownItemEl);
-      var selectedResult = $(selectedDropdownItem).data('tokenInput');
-      var selectedResultNewIndex = selectedResult ? results.map(getId).indexOf(selectedResult.id) : -1;
-      selectedDropdownItem = selectedResultNewIndex >= 0 && $(selectedDropdownItem).is(':nth-child(n+2)') ?
-        els[selectedResultNewIndex] : $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
+      selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
       $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
-
-      log('[populateDropdown] q:', query, 'results:', results.length, 'children:', $dropdown[0].childElementCount, 'style:', $dropdown[0].style.cssText);
 
       // We have several different techniques for transitioning from one list to the next.
       // The complexity here is unfortunate, but warranted to create a delightful user experience.

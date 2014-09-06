@@ -45,27 +45,31 @@ var initFriendSearch = (function () {
   function formatResult(res) {
     if (res.pictureName) {
       var html = [
-        '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">'];
+        '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
+        '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, res.nameParts);
-      html.push('</li>');
+      html.push('</div><div class="kifi-ti-dropdown-line-2">on kifi</div></li>');
       return html.join('');
     } else if (res.q) {
       var html = [
         '<li class="', res.isValidEmail ? 'kifi-ti-dropdown-item-token ' : '', 'kifi-ti-dropdown-email kifi-ti-dropdown-new-email">',
-        '<div class="kifi-ti-dropdown-contact-name">'];
+        '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, ['', res.q]);
-      html.push('</div></li>');
+      html.push(
+        '</div>',
+        '<div class="kifi-ti-dropdown-line-2">Keep typing the email address</div>',
+        '</li>');
       return html.join('');
     } else if (res.email) {
       var html = [
         '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">',
         '<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>'];
       if (res.nameParts) {
-        html.push('<div class="kifi-ti-dropdown-contact-name">');
+        html.push('<div class="kifi-ti-dropdown-line-1">');
         appendParts(html, res.nameParts);
-        html.push('</div><div class="kifi-ti-dropdown-contact-sub">');
+        html.push('</div><div class="kifi-ti-dropdown-line-2">');
       } else {
-        html.push('<div class="kifi-ti-dropdown-contact-name">');
+        html.push('<div class="kifi-ti-dropdown-line-1">');
       }
       appendParts(html, res.emailParts);
       html.push('</div></li>');

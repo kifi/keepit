@@ -6,6 +6,7 @@
   border: solid rgba(0,0,0,.3);
   border-width: 0 1px 1px;
   border-radius: 4px 4px 12px 12px !important;
+  background: #fff;
   text-align: left;
   -webkit-transform-origin: 40% bottom;
   transform-origin: 40% bottom;
@@ -22,7 +23,6 @@
 }
 
 .kifi-toast-other {
-  display: none;
   position: absolute;
   top: -62px;
   left: 6px;
@@ -126,9 +126,10 @@
 .kifi-toast input.kifi-compose-to, /* initial input */
 .kifi-toast .kifi-ti-list {
   border-top: none !important;
+  background: #f8f8f8;
+  padding-left: 30px !important;
 }
 .kifi-toast .kifi-compose-draft {
-  min-height: 64px;
   max-height: 142px;
 }
 .kifi-toast .kifi-compose-bar {
