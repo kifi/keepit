@@ -545,7 +545,7 @@ angular.module('kifi')
         }
 
         function updateSiteDescHtml(card) {
-          card.descHtml = formatDesc(card.item.siteName || card.item.url);
+          card.descHtml = formatDesc(card.siteName || card.url);
         }
 
         scope.showSmallImage = function (card) {
@@ -553,7 +553,7 @@ angular.module('kifi')
         };
 
         scope.showBigImage = function (card) {
-          return card.hasBigImage || (card.item.summary && useBigLayout);
+          return card.hasBigImage || (card.summary && useBigLayout);
         };
 
         scope.addingTag = { enabled: false };
@@ -571,7 +571,7 @@ angular.module('kifi')
         };
 
         scope.togglePrivate = function (card) {
-          keepActionService.togglePrivateOne(card.item);
+          keepActionService.togglePrivateOne(card);
         };
 
         scope.triggerInstall = function () {
@@ -579,13 +579,13 @@ angular.module('kifi')
         };
 
         function keepOne (card, isPrivate) {
-          keepActionService.keepOne(card.item, isPrivate).then(function (keptItem) {
+          keepActionService.keepOne(card, isPrivate).then(function (keptItem) {
              card.buildKeep(keptItem);
              tagService.addToKeepCount(1);
            });
 
           if (_.isFunction(scope.keepCallback)) {
-            scope.keepCallback({ 'item': card.item });
+            scope.keepCallback({ 'card': card });
           }
         }
 
@@ -598,7 +598,7 @@ angular.module('kifi')
         };
 
         scope.unkeep = function (card) {
-          keepActionService.unkeepOne(card.item).then(function () {
+          keepActionService.unkeepOne(card).then(function () {
             card.makeUnkept();
 
             undoService.add('Keep deleted.', function () {
@@ -618,17 +618,17 @@ angular.module('kifi')
           return [card];
         };
 
-        scope.$watch('card.item.url', function () {
+        scope.$watch('card.url', function () {
           updateSiteDescHtml(scope.card);
         });
 
         function sizeImage(card) {
-          if (!card || !card.item || !card.item.summary || !card.summary.description) {
+          if (!card || !card.summary || !card.summary.description) {
             return;
           }
 
           var $sizer = angular.element('.kf-keep-description-sizer');
-          var img = { w: card.item.summary.imageWidth, h: card.item.summary.imageHeight };
+          var img = { w: card.summary.imageWidth, h: card.summary.imageHeight };
           var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
           var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
 
@@ -655,16 +655,16 @@ angular.module('kifi')
             return desc;
           }
 
-          if (!card.item.summary.trimmedDesc) {
-            var trimmed = trimDesc(card.item.summary.description);
+          if (!card.summary.trimmedDesc) {
+            var trimmed = trimDesc(card.summary.description);
             if (trimmed === false) {
               useBigLayout = true;
               return;
             }
-            card.item.summary.trimmedDesc = trimmed;
+            card.summary.trimmedDesc = trimmed;
           }
 
-          $sizer.text(card.item.summary.trimmedDesc);
+          $sizer.text(card.summary.trimmedDesc);
 
           function calcHeightDelta(guessWidth) {
             function tryWidth(width) {
@@ -723,11 +723,11 @@ angular.module('kifi')
         }
 
         function maybeSizeImage(card) {
-          if (card && card.item && card.item.summary) {
-            var hasImage = card.item.summary.imageWidth > 50 && card.item.summary.imageHeight > 50;
-            if (hasImage && card.item.summary.description && card.item.hasSmallImage) {
-              card.item.sizeCard = null;
-              card.item.calcSizeCard = sizeImage;
+          if (card && card.summary) {
+            var hasImage = card.summary.imageWidth > 50 && card.summary.imageHeight > 50;
+            if (hasImage && card.summary.description && card.hasSmallImage) {
+              card.sizeCard = null;
+              card.calcSizeCard = sizeImage;
             }
           }
         }
@@ -736,8 +736,8 @@ angular.module('kifi')
           maybeSizeImage(scope.card);
         });
 
-        scope.$watch('card.item', function () {
-          if (scope.card.item.summary) {
+        scope.$watch('card', function () {
+          if (scope.card.summary) {
             maybeSizeImage(scope.card);
             if (scope.card.calcSizeCard) {
               scope.card.calcSizeCard();

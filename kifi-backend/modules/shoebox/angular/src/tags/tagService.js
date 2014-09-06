@@ -36,7 +36,7 @@ angular.module('kifi')
       var url = env.xhrBase + '/keeps/add';
       var payload = {
         collectionId: tag.id,
-        keeps: _.pluck(cards, 'item')
+        keeps: cards
       };
       var post = $http.post(url, payload).then(function (res) {
         if (res.data && res.data.addedToCollection) {
@@ -245,7 +245,7 @@ angular.module('kifi')
 
       removeKeepsFromTag: function (tagId, cards) {
         var url = env.xhrBase + '/collections/' + tagId + '/removeKeeps';
-        var post = $http.post(url, _.pluck(_.pluck(cards, 'item'), 'id')).then(function (res) {
+        var post = $http.post(url, _.pluck(cards, 'id')).then(function (res) {
           updateKeepCount(tagId, -cards.length);
           cards.forEach(function (card) {
             card.removeTag(tagId);

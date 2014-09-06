@@ -148,15 +148,15 @@ angular.module('kifi')
     };
 
     $scope.submitImprovement = function (reco) {
-      recoActionService.improve(reco.card.item, $scope.improvement.type);
+      recoActionService.improve(reco.card, $scope.improvement.type);
     };
 
-    $scope.trackItemKeep = function (item) {
-      recoActionService.trackKeep(item);
+    $scope.trackRecoKeep = function (card) {
+      recoActionService.trackKeep(card);
     };
 
-    $scope.trackItemClick = function (item) {
-      recoActionService.trackClick(item);
+    $scope.trackRecoClick = function (card) {
+      recoActionService.trackClick(card);
     };
   }
 ])
@@ -206,12 +206,12 @@ angular.module('kifi')
 
         scope.upVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.card.item, true);
+          recoActionService.vote(reco.card, true);
         };
 
         scope.downVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.card.item, false);
+          recoActionService.vote(reco.card, false);
         };
 
         scope.showModal = function () {

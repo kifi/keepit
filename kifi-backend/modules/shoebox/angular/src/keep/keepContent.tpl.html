@@ -5,29 +5,29 @@
     <div class="kf-keep-contents">
       <div class="kf-keep-title">
         <div class="kf-keep-loader" ng-show="false"></div><!-- ng-show="keep.isLoading" -->
-        <a class="kf-keep-title-link" ng-href="{{ card.item.url }}" target="_blank" ng-attr-title="{{ card.titleAttr }}" ng-bind-html="card.titleHtml" ng-click="clickCallback({ 'item': card.item })"></a>
+        <a class="kf-keep-title-link" ng-href="{{ card.url }}" target="_blank" ng-attr-title="{{ card.titleAttr }}" ng-bind-html="card.titleHtml" ng-click="clickCallback({ 'card': card })"></a>
       </div>
 
       <div class="kf-keep-content-line">
         <div class="kf-keep-small-image" ng-if="showSmallImage(card)">
-          <a ng-href="{{ card.item.url }}" target="_blank"><img class="kf-keep-image" ng-src="{{ card.item.summary.imageUrl }}" ng-click="clickCallback({ 'card': card.item })"></a>
+          <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-image" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'card': card })"></a>
         </div>
 
         <div class="kf-keep-info-wrap">
           <div class="kf-keep-info">
             <div class="kf-keep-subtitle">
-              <div class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{ card.item.url }}" ng-bind-html="card.descHtml"></div>
-              <span class="kf-keep-time" ng-show="card.item.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{ card.item.createdAt }}" am-time-ago="card.item.createdAt"></time></span>
-              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="card.item.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{ card.readTime }} read</div>
+              <div class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{ card.url }}" ng-bind-html="card.descHtml"></div>
+              <span class="kf-keep-time" ng-show="card.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{ card.createdAt }}" am-time-ago="card.createdAt"></time></span>
+              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="card.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{ card.readTime }} read</div>
             </div>
             <div class="kf-keep-description">
-              {{ card.item.summary.description }}
+              {{ card.summary.description }}
             </div>
           </div>
         </div>
       </div>
 
-      <a ng-href="{{ card.item.url }}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage(card)" ng-src="{{ card.item.summary.imageUrl }}" ng-click="clickCallback({ 'card': card.item })"></a>
+      <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage(card)" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'card': card })"></a>
     </div>
 
     <div class="kf-keep-who" ng-if="card.showSocial">
@@ -40,15 +40,15 @@
 
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link">
-      <a kf-min-version="3.0.7" ng-href="{{ card.item.url }}" data-locator='/messages:all#compose'>Send</a>
+      <a kf-min-version="3.0.7" ng-href="{{ card.url }}" data-locator='/messages:all#compose'>Send</a>
       <a kf-max-version="3.0.7" href="javascript:" ng-click="triggerInstall()">Send</a>
     </span>
     <span class="kf-keep-footer-link" ng-if="!hasTag(card) && card.isMyBookmark"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
-    <span class="kf-keep-footer-link" ng-if="card.isMyBookmark && !card.item.isPrivate"><a ng-click="togglePrivate(card)" href='javascript:'>Make Private</a></span>
-    <span class="kf-keep-footer-link" ng-if="card.isMyBookmark && card.item.isPrivate"><a ng-click="togglePrivate(card)" href='javascript:'>Make Public</a></span>
+    <span class="kf-keep-footer-link" ng-if="card.isMyBookmark && !card.isPrivate"><a ng-click="togglePrivate(card)" href='javascript:'>Make Private</a></span>
+    <span class="kf-keep-footer-link" ng-if="card.isMyBookmark && card.isPrivate"><a ng-click="togglePrivate(card)" href='javascript:'>Make Public</a></span>
     <span class="kf-keep-footer-link" ng-if="card.isMyBookmark"><a ng-click="unkeep(card)" href='javascript:'>Unkeep</a></span>
     <span class="kf-keep-footer-link" ng-if="!card.isMyBookmark"><a ng-click="keepPublic(card)" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!card.isMyBookmark"><a ng-click="keepPrivate(card)" href='javascript:'>Keep Privately</a></span>
-    <div class="kf-keep-private" ng-if="card.isMyBookmark && card.item.isPrivate"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
+    <div class="kf-keep-private" ng-if="card.isMyBookmark && card.isPrivate"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
 </div>

@@ -9,7 +9,7 @@ angular.module('kifi')
         return {};
       }
 
-      this.item = item;
+      _.assign(this, item);
 
       // For recommendations, the id field in the recommended page coming from the backend is 
       // actually the url id of the page. To disambiguate from a page's keep id,
@@ -17,8 +17,8 @@ angular.module('kifi')
       // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
       // This really shouldn't be happening on the client side.
       if (itemType === 'reco') {
-        item.urlId = item.id;
-        delete item.id;
+        this.urlId = this.id;
+        delete this.id;
       }
 
       // Helper functions.
@@ -48,18 +48,18 @@ angular.module('kifi')
       }
 
       // Add new properties to the keep.
-      this.titleAttr = this.item.title || this.item.url;
-      this.titleHtml = this.item.title || util.formatTitleFromUrl(this.item.url);
-      this.hasSmallImage = this.item.summary && shouldShowSmallImage(this.item.summary) && hasSaneAspectRatio(this.item.summary);
-      this.hasBigImage = this.item.summary && (!shouldShowSmallImage(this.item.summary) && hasSaneAspectRatio(this.item.summary));
-      this.readTime = getKeepReadTime(this.item.summary);
-      this.showSocial = this.item.others || (this.item.keepers && this.item.keepers.length > 0);
+      this.titleAttr = this.title || this.url;
+      this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
+      this.hasSmallImage = this.summary && shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary);
+      this.hasBigImage = this.summary && (!shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary));
+      this.readTime = getKeepReadTime(this.summary);
+      this.showSocial = this.others || (this.keepers && this.keepers.length > 0);
     }
 
     // Add properties that are specific to a really kept Keep.
     Card.prototype.buildKeep = function (keptItem, isMyBookmark) {
-      this.item.id = keptItem.id;
-      this.item.isPrivate = keptItem.isPrivate;
+      this.id = keptItem.id;
+      this.isPrivate = keptItem.isPrivate;
       
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
       this.tagList = this.tagList || [];
