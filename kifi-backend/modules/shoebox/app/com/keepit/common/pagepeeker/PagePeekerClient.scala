@@ -1,6 +1,6 @@
 package com.keepit.common.pagepeeker
 
-import play.api.libs.ws.ning.NingWSResponse
+import com.ning.http.client.providers.netty.NettyResponse
 
 import scala.concurrent._
 import play.api.libs.ws.WS
@@ -50,14 +50,14 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
     val trace = new StackTrace()
     val url = normalizedUri.url
     WS.url(screenshotUrl(url)).withRequestTimeout(120000).get().map { response =>
-      Option(response.underlying[NingWSResponse].ahcResponse.getHeader("X-PP-Error")) match {
+      Option(response.underlying[NettyResponse].getHeader("X-PP-Error")) match {
         case Some("True") =>
           log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
           statsd.incrementOne(s"screenshot.fetch.fails", ONE_IN_TEN)
           None
         case _ =>
 
-          val originalStream = response.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream
+          val originalStream = response.underlying[NettyResponse].getResponseBodyAsStream
           val rawImageTry = Try { ImageIO.read(originalStream) }
 
           val resizedImages: Seq[Try[(ByteArrayInputStream, ImageSize)]] = screenshotConfig.targetSizes.map { size =>
