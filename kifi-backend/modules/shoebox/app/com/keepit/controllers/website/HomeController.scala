@@ -250,7 +250,7 @@ class HomeController @Inject() (
 
   def install = HtmlAction.authenticated { implicit request =>
     SafeFuture {
-      userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
+      if (!hasSeenInstall) userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
 
       // Temporary event for debugging purpose
       val context = new HeimdalContextBuilder()
