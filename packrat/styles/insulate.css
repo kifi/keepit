@@ -265,7 +265,8 @@
 }
 .kifi-root.kifi-root a,
 .kifi-root.kifi-root b,
-.kifi-root.kifi-root span {
+.kifi-root.kifi-root span,
+.kifi-root.kifi-root time {
   display: inline;
 }
 .kifi-root.kifi-root img,
