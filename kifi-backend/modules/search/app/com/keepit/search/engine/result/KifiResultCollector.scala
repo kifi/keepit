@@ -96,10 +96,14 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
 
+  private[this] var numCall = 0
   private[this] var numCollected = 0
-  private[this] var numDiscarded = 0
+  private[this] var numLowScore = 0
+  private[this] var numLowMatching = 0
+  private[this] var numInvisible = 0
 
   override def collect(ctx: ScoreContext): Unit = {
+    numCall += 1
     val id = ctx.id
     val visibility = ctx.visibility
     if (visibility != Visibility.RESTRICTED) {
@@ -119,7 +123,6 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
         }
 
         if (score > 0.0f) {
-          numCollected += 1
           if ((visibility & Visibility.MEMBER) != 0) {
             myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
           } else if ((visibility & Visibility.NETWORK) != 0) {
@@ -127,18 +130,21 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
           } else {
             othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
           }
+          numCollected += 1
         } else {
-          numDiscarded += 1
+          numLowScore += 1
         }
+      } else {
+        numLowMatching += 1
       }
     } else {
-      numDiscarded += 1
+      numInvisible += 1
     }
   }
 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 
-  def logCount(): Unit = log.info(s"NE: KifiResultCollector numCollected=$numCollected numDiscarded=$numDiscarded")
+  def logCount(): Unit = log.info(s"NE: KifiResultCollector numCall=$numCall numCollected=$numCollected numLowScore=$numLowScore numLowMatching=$numLowMatching numInvisible=$numInvisible")
 }
 
 class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] {
