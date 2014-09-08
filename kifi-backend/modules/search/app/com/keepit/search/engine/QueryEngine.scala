@@ -1,18 +1,19 @@
 package com.keepit.search.engine
 
+import com.keepit.common.logging.Logging
 import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-  private[this] val matchWeight: Array[Float] = new Array[Float](totalSize)
+  private[this] val matchWeights: Array[Float] = new Array[Float](totalSize)
 
   private[this] def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = {
     var i = 0
     while (i < totalSize) {
-      matchWeight(i) += weights(i)._2
+      matchWeights(i) += weights(i)._2
       i += 1
     }
   }
@@ -20,21 +21,21 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     var sum = 0.0f
     var i = 0
     while (i < totalSize) {
-      sum += matchWeight(i)
+      sum += matchWeights(i)
       i += 1
     }
     if (sum != 0.0f) {
       i = 0
       while (i < totalSize) {
-        matchWeight(i) += matchWeight(i) / sum
+        matchWeights(i) = matchWeights(i) / sum
         i += 1
       }
     }
   }
 
-  def execute(source: ScoreVectorSource): Unit = {
+  def execute(source: ScoreVectorSource): Int = {
     // if NullExpr, no need to execute
-    if (scoreExpr.isNullExpr) return
+    if (scoreExpr.isNullExpr) return dataBuffer.size
 
     val weights = source.createWeights(query)
     if (weights.nonEmpty) {
@@ -42,11 +43,14 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       accumulateWeightInfo(weights)
 
       source.execute(weights, coreSize, dataBuffer)
+    } else {
+      log.error("no weight created")
     }
+    dataBuffer.size
   }
 
   def createScoreContext(collector: ResultCollector[ScoreContext]): ScoreContext = {
-    new ScoreContext(scoreExpr, totalSize, matchWeight, collector)
+    new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
   }
 
   def join(collector: ResultCollector[ScoreContext]): Unit = {
@@ -63,4 +67,5 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getQuery(): Query = query
   def getTotalSize(): Int = totalSize
   def getCoreSize(): Int = coreSize
+  def getMatchWeights(): Array[Float] = matchWeights
 }

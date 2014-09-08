@@ -14,11 +14,11 @@ class KifiResultCollectorTest extends Specification {
   private val exprSize = 3
 
   "MainResultCollector" should {
-    "collect hits above MIN_PERCENT_MATCH" in {
+    "collect hits above MIN_MATCHING" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
-        percentMatchThreshold = 0.0f)
+        matchingThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
@@ -42,11 +42,11 @@ class KifiResultCollectorTest extends Specification {
       hit.score === 2.0f * 0.7f
     }
 
-    "collect hits above percentMatchThreshold" in {
+    "collect hits above matchingThreshold" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
-        percentMatchThreshold = 0.7f)
+        matchingThreshold = 0.7f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
@@ -82,7 +82,7 @@ class KifiResultCollectorTest extends Specification {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
-        percentMatchThreshold = 0.9f)
+        matchingThreshold = 0.9f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
@@ -114,7 +114,7 @@ class KifiResultCollectorTest extends Specification {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
-        percentMatchThreshold = 0.0f)
+        matchingThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
@@ -147,7 +147,7 @@ class KifiResultCollectorTest extends Specification {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
-        percentMatchThreshold = 0.0f)
+        matchingThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)

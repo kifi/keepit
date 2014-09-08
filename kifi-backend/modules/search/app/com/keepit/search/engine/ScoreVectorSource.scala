@@ -2,7 +2,6 @@ package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
-import com.keepit.model.LibraryVisibility
 import com.keepit.search.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
 import com.keepit.search.article.ArticleVisibility
@@ -252,16 +251,18 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
 
       if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
         // An article hit may or may not be visible according to the restriction
-        // OTHERS may be promoted to NETWORK, MEMBER, or OWNER at the join stage according to the result from KeepIndex
-        val visibility = if (articleVisibility.isVisible(docId)) Visibility.OTHERS else Visibility.RESTRICTED
+        if (articleVisibility.isVisible(docId)) {
+          // get all scores
+          val size = pq.getTaggedScores(taggedScores)
 
-        // get all scores
-        val size = pq.getTaggedScores(taggedScores)
+          // write to the buffer
+          output.alloc(writer, Visibility.OTHERS, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
 
-        // write to the buffer
-        output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-        writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
-        docId = pq.top.doc // next doc
+          docId = pq.top.doc // next doc
+        } else {
+          docId = pq.skipCurrentDoc() // skip this doc
+        }
       } else {
         docId = pq.skipCurrentDoc() // skip this doc
       }
@@ -321,13 +322,13 @@ class UriFromKeepsScoreVectorSource(
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
-          docId = pq.top.doc // next doc
-
           val keepId = idMapper.getId(docId)
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
+
+          docId = pq.top.doc // next doc
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
         }
@@ -428,6 +429,7 @@ class LibraryScoreVectorSource(
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+
           docId = pq.top.doc // next doc
         } else {
           docId = pq.skipCurrentDoc() // skip this doc
@@ -483,11 +485,12 @@ class LibraryFromKeepsScoreVectorSource(
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
-          docId = pq.top.doc // next doc
 
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+
+          docId = pq.top.doc // next doc
         } else {
           docId = pq.skipCurrentDoc() // skip this doc
         }
