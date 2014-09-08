@@ -3,8 +3,7 @@ package com.keepit.cortex.dbmodel
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.{ Keep, KeepSource, NormalizedURI, User }
-import com.keepit.model.KeepStates
+import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -19,7 +18,9 @@ case class CortexKeep(
     isPrivate: Boolean,
     state: State[CortexKeep],
     source: KeepSource,
-    seq: SequenceNumber[CortexKeep]) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
+    seq: SequenceNumber[CortexKeep],
+    libraryId: Option[Id[Library]] = None,
+    visibility: Option[LibraryVisibility] = None) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
   def withId(id: Id[CortexKeep]): CortexKeep = copy(id = Some(id))
   def withUpdateTime(now: DateTime): CortexKeep = copy(updatedAt = now)
 }
@@ -38,7 +39,9 @@ object CortexKeep {
     (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'state).format(State.format[CortexKeep]) and
     (__ \ 'source).format(Json.format[KeepSource]) and
-    (__ \ 'seq).format(SequenceNumber.format[CortexKeep])
+    (__ \ 'seq).format(SequenceNumber.format[CortexKeep]) and
+    (__ \ 'libraryId).formatNullable(Id.format[Library]) and
+    (__ \ 'visibility).formatNullable[LibraryVisibility]
   )(CortexKeep.apply, unlift(CortexKeep.unapply))
 
   def fromKeep(keep: Keep): CortexKeep =
@@ -50,5 +53,7 @@ object CortexKeep {
       isPrivate = keep.isPrivate,
       state = keep.state,
       source = keep.source,
-      seq = keep.seq)
+      seq = keep.seq,
+      libraryId = keep.libraryId,
+      visibility = Some(keep.visibility))
 }
