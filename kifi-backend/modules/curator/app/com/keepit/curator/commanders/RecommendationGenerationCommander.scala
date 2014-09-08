@@ -21,6 +21,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceStatus
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -241,8 +242,8 @@ class RecommendationGenerationCommander @Inject() (
         }
         res.map(_ => ())
       } else {
-        airbrake.notify("Trying to run reco precomputation on non-leader!")
-        recommendationGenerationLock.clear() //no point in alerting again and again for queued up tasks
+        recommendationGenerationLock.clear()
+        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) airbrake.notify("Trying to run reco precomputation on non-leader (and it's not a shut down)!")
         Future.successful()
       }
     }
