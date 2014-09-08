@@ -55,7 +55,7 @@ class ScoreContextTest extends Specification {
       allIdx.foreach { i => weights(i) = 1.0f / numTerms.toFloat }
 
       scores.foreach { scr =>
-        buf.alloc(writer, 0, 12)
+        buf.alloc(writer, Visibility.OTHERS, 12)
         writer.putLong(123L)
         writer.putTaggedFloat(idx1.toByte, scr)
       }
@@ -87,7 +87,7 @@ class ScoreContextTest extends Specification {
     allIdx.foreach { i => weights(i) = 1.0f / numTerms.toFloat }
 
     scores.foreach { scr =>
-      buf.alloc(writer, 0, 12)
+      buf.alloc(writer, Visibility.OTHERS, 12)
       writer.putLong(123L)
       writer.putTaggedFloat(idx1.toByte, scr)
     }

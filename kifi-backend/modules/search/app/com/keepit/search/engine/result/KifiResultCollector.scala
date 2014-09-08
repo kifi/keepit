@@ -92,59 +92,55 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
 
   import KifiResultCollector._
 
+  require(matchingThreshold <= 1.0f)
+
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
 
-  private[this] var numCall = 0
   private[this] var numCollected = 0
   private[this] var numLowScore = 0
   private[this] var numLowMatching = 0
-  private[this] var numInvisible = 0
 
   override def collect(ctx: ScoreContext): Unit = {
-    numCall += 1
     val id = ctx.id
-    val visibility = ctx.visibility
-    if (visibility != Visibility.RESTRICTED) {
-      // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-      val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
 
-      if (matching > 0.0f) {
-        // compute clickBoost and score
-        var score = 0.0f
-        val clickBoost = clickBoosts(id)
+    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
 
-        if (matching >= matchingThreshold) {
-          score = ctx.score() * matching * clickBoost
-        } else {
-          // below the threshold (and above MIN_MATCHING), we save this hit if this is a clicked hit (clickBoost > 1.0f)
-          if (clickBoost > 1.0f) score = ctx.score() * matching * clickBoost // else score remains 0.0f
-        }
+    if (matching > 0.0f) {
+      // compute clickBoost and score
+      var score = 0.0f
+      val clickBoost = clickBoosts(id)
 
-        if (score > 0.0f) {
-          if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          } else if ((visibility & Visibility.NETWORK) != 0) {
-            friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          } else {
-            othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          }
-          numCollected += 1
-        } else {
-          numLowScore += 1
-        }
+      if (matching >= matchingThreshold) {
+        score = ctx.score() * matching * clickBoost
       } else {
-        numLowMatching += 1
+        // below the threshold (and above MIN_MATCHING), we save this hit if this is a clicked hit (clickBoost > 1.0f)
+        if (clickBoost > 1.0f) score = ctx.score() * matching * clickBoost // else score remains 0.0f
+      }
+
+      if (score > 0.0f) {
+        val visibility = ctx.visibility
+        if ((visibility & Visibility.MEMBER) != 0) {
+          myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
+        } else if ((visibility & Visibility.NETWORK) != 0) {
+          friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
+        } else {
+          othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
+        }
+        numCollected += 1
+      } else {
+        numLowScore += 1
       }
     } else {
-      numInvisible += 1
+      numLowMatching += 1
     }
   }
 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 
-  def logCount(): Unit = log.info(s"NE: KifiResultCollector numCall=$numCall numCollected=$numCollected numLowScore=$numLowScore numLowMatching=$numLowMatching numInvisible=$numInvisible")
+  def logCount(): Unit = log.info(s"NE: KifiResultCollector numCollected=$numCollected numLowScore=$numLowScore numLowMatching=$numLowMatching")
 }
 
 class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] {
