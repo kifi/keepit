@@ -11,15 +11,26 @@ import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater, FeaturePluginMessages }
 import com.keepit.model.User
 import math.abs
 import com.keepit.cortex.utils.MatrixUtils._
 import scala.concurrent.duration._
 
-class LDAUserStatDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserStatDbUpdater) extends FeatureUpdateActor(airbrake, updater)
+case class LDAUserStatUpdate(userId: Id[User])
 
-trait LDAUserStatDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA]
+class LDAUserStatDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserStatDbUpdater) extends FeatureUpdateActor(airbrake, updater) {
+  import FeaturePluginMessages._
+
+  override def receive() = {
+    case Update => updater.update()
+    case LDAUserStatUpdate(userId) => updater.updateUser(userId)
+  }
+}
+
+trait LDAUserStatDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA] {
+  def updateUser(userId: Id[User]): Unit
+}
 
 @Singleton
 class LDAUserStatDbUpdatePluginImpl @Inject() (
@@ -27,10 +38,16 @@ class LDAUserStatDbUpdatePluginImpl @Inject() (
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserStatDbUpdatePlugin {
   override val updateFrequency: FiniteDuration = 2 minutes
+
+  def updateUser(userId: Id[User]): Unit = {
+    actor.ref ! LDAUserStatUpdate(userId)
+  }
 }
 
 @ImplementedBy(classOf[LDAUserStatDbUpdaterImpl])
-trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]]
+trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]] {
+  def updateUser(userId: Id[User]): Unit
+}
 
 @Singleton
 class LDAUserStatDbUpdaterImpl @Inject() (
@@ -52,6 +69,10 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     processTasks(tasks)
   }
 
+  def updateUser(userId: Id[User]): Unit = {
+    processUser(userId)
+  }
+
   private def fetchTasks(): Seq[CortexKeep] = {
     val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
     if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
@@ -62,9 +83,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   }
 
   private def processTasks(keeps: Seq[CortexKeep]): Unit = {
-    //val users = keeps.map { _.userId }.distinct
-    val users0 = keeps.map { _.userId }.distinct
-    val users = if (users0.size > 0 && users0.map { _.id }.max > 100) (users0 ++ List(Id[User](6834), Id[User](1398), Id[User](6622), Id[User](4344))).distinct else users0
+    val users = keeps.map { _.userId }.distinct
     users.foreach { processUser(_) }
     log.info(s"${users.size} users processed")
     keeps.lastOption.map { keep =>
@@ -95,6 +114,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     def changedMuch(numOfEvidenceBefore: Int, numOfEvidenceNow: Int) = {
       val diff = abs(numOfEvidenceNow - numOfEvidenceBefore)
       if (model.get.state != UserLDAStatsStates.ACTIVE && numOfEvidenceNow >= min_num_evidence) true
+      else if (numOfEvidenceNow < min_num_evidence && model.get.state == UserLDAInterestsStates.ACTIVE) true
       else (diff.toFloat / numOfEvidenceBefore > 0.1f || diff > 100)
     }
 

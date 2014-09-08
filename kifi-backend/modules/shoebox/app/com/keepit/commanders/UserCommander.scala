@@ -523,9 +523,9 @@ class UserCommander @Inject() (
     elizaServiceClient.sendGlobalNotification(
       userIds = Set(recipient.id.get),
       title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
-      body = s"Enjoy ${requestingUser.firstName}'s keeps in your search results and message ${requestingUser.firstName} directly.",
-      linkText = s"Respond to ${requestingUser.firstName}'s friend request",
-      linkUrl = "https://kifi.com/friends/requests",
+      body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
+      linkText = s"Respond to ${requestingUser.firstName}’s friend request",
+      linkUrl = "https://www.kifi.com/friends",
       imageUrl = requestingUserImage,
       sticky = false,
       category = NotificationCategory.User.FRIEND_REQUEST
@@ -787,16 +787,20 @@ class UserCommander @Inject() (
         userRepo.get(userId)
       }
       val time = clock.now()
-      val from = time.minusDays(DELIGHTED_INITIAL_DELAY)
-      val to = user.createdAt
-      val shouldShowDelightedQuestionFut = if (experiments.contains(ExperimentType.DELIGHTED_SURVEY_PERMANENT))
+      val shouldShowDelightedQuestionFut = if (experiments.contains(ExperimentType.DELIGHTED_SURVEY_PERMANENT)) {
         Future.successful(true)
-      else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
-        heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+      } else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+        heimdalClient.getLastDelightedAnswerDate(userId).map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate)
+          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
+        }.recover {
+          case ex: Throwable =>
+            airbrake.notify(s"Heimdal call to get delighted pref failed for $userId", ex)
+            false
         }
-      } else Future.successful(false)
+      } else {
+        Future.successful(false)
+      }
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
         Map(UserValueName.SHOW_DELIGHTED_QUESTION -> JsBoolean(shouldShowDelightedQuestion))
       }

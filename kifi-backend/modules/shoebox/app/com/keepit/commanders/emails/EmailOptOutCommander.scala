@@ -11,7 +11,9 @@ class EmailOptOutCommander @Inject() (optoutSecret: OptoutSecret) {
   private val key = crypt.stringToKey(optoutSecret.value)
 
   def generateOptOutToken(emailAddress: EmailAddress) = {
-    crypt.crypt(key, emailAddress.address)
+    val token = crypt.crypt(key, emailAddress.address)
+    /* strip \r\n from tokens if they end with that */
+    if (token.substring(token.size - 2) == "\r\n") token.substring(0, token.size - 2) else token
   }
 
   def getEmailFromOptOutToken(optOutToken: String): Try[EmailAddress] = {

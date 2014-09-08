@@ -9,20 +9,20 @@
   vertical-align: top
 
 .kf-nav-name
+  display: inline-block
+  padding: 0 5px
   color: textDarkColor
   font-weight: 400
   font-smoothing: antialiased
-  padding: 0 5px
-  display: inline-block
-
-.allcaps
   text-transform: uppercase
 
+  .kf-nav-keeps &
+    padding-top: 2px
 
 .kf-nav-count
   font-size: 12px
   font-weight: 200
-  padding: 0 0 0 2px
+  padding: 2px 0
   color: countGreyColor
   float: right
 
@@ -31,8 +31,8 @@
 
 .kf-nav-keeps:hover
 .kf-nav-keeps.active
-  .sprite-my-keeps-library
-    sprite2x($my-keeps-library-active)
+  .sprite-cards-small
+    sprite2x($cards-small-active)
 
 .kf-nav-recos:hover
 .kf-nav-recos.active
