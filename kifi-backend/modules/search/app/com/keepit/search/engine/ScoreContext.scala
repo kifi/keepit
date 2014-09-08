@@ -73,10 +73,13 @@ class ScoreContext(
     visibility = visibility | theVisibility
   }
 
-  def flush(): Unit = collector.collect(this)
+  def flush(): Unit = {
+    if (visibility != Visibility.RESTRICTED) collector.collect(this)
+  }
 
-  // for testing
-  private[engine] def addScore(idx: Int, scr: Float) = {
+  // for testing only
+  private[engine] def addScore(idx: Int, scr: Float, theVisibility: Int = Visibility.OTHERS) = {
+    visibility = visibility | theVisibility
     if (scoreMax(idx) < scr) scoreMax(idx) = scr
     scoreSum(idx) += scr
   }
