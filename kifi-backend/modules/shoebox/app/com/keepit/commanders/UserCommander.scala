@@ -357,7 +357,7 @@ class UserCommander @Inject() (
               userConnectionRepo.getConnectedUsers(newUser.id.get)
             }
             // only notify users who are not already connected to our list of users with the contact email
-            val toNotify = contacts.diff(alreadyConnectedUsers)
+            val toNotify = contacts.diff(alreadyConnectedUsers) - newUserId
 
             log.info("sending new user contact notifications to: " + toNotify)
             sendEmailToNewUserContactsHelper(newUser, toNotify)
