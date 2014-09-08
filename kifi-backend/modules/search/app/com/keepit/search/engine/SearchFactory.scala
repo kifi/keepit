@@ -114,7 +114,7 @@ class SearchFactory @Inject() (
     }
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
-      userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
+      SafeFuture {
         val searcher = libraryIndexer.getSearcher
 
         val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
