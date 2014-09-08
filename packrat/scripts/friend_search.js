@@ -12,19 +12,9 @@ var initFriendSearch = (function () {
       classPrefix: 'kifi-ti-',
       formatResult: formatResult,
       formatToken: formatToken,
-      onSelect: onSelect.bind(null, $in, source),
-      onRemove: function (item, replaceWith) {
-        $('.kifi-ti-dropdown-item-waiting')
-          .addClass('kifi-ti-dropdown-email')
-          .css('background-image', 'url(' + api.url('images/wait.gif') + ')');
-        var query = $in.tokenInput('getQuery');
-        var items = $in.tokenInput('getItems');
-        api.port.emit('delete_contact', item.email, function (success) {
-          replaceWith(success ? null : item);
-        });
-      }
+      onSelect: onSelect,
+      onRemove: onRemove
     }, options));
-    // $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   };
 
   function search(participants, includeSelf, numTokens, query, withResults) {
@@ -57,7 +47,7 @@ var initFriendSearch = (function () {
       appendParts(html, ['', res.q]);
       html.push(
         '</div>',
-        '<div class="kifi-ti-dropdown-line-2">Keep typing the email address</div>',
+        res.isValidEmail ? '' : '<div class="kifi-ti-dropdown-line-2">Keep typing the email address</div>',
         '</li>');
       return html.join('');
     } else if (res.email) {
@@ -87,13 +77,20 @@ var initFriendSearch = (function () {
     }
   }
 
-  function onSelect($in, source, res, el) {
-    if (!res.pictureName && !res.email) {
+  function onSelect(res, el) {
+    if (res.isValidEmail) {
+      res.id = res.email = res.q;
+    } else if (!res.pictureName && !res.email) {
       return false;
     }
   }
 
-  function getId(o) {
-    return o.id;
+  function onRemove(item, replaceWith) {
+    $('.kifi-ti-dropdown-item-waiting')
+      .addClass('kifi-ti-dropdown-email')
+      .css('background-image', 'url(' + api.url('images/wait.gif') + ')');
+    api.port.emit('delete_contact', item.email, function (success) {
+      replaceWith(success ? null : item);
+    });
   }
 }());

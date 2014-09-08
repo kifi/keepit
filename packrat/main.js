@@ -838,6 +838,7 @@ api.port.on({
     data.extVersion = api.version;
     data.source = api.browser.name;
     data.eip = eip;
+    data.recipients = data.recipients.map(makeObjectsForEmailAddresses);
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
@@ -1226,7 +1227,7 @@ api.port.on({
     makeRequest('clear_tags', 'POST', '/tags/clear', {url: tab.url}, [onClearTagsResponse.bind(null, tab.nUri), respond]);
   },
   add_participants: function(data) {
-    socket.send(['add_participants_to_thread', data.threadId, data.userIds]);
+    socket.send(['add_participants_to_thread', data.threadId, data.ids.map(makeObjectsForEmailAddresses)]);
   },
   is_muted: function(threadId, respond) {
     var th = threadsById[threadId];
@@ -2265,6 +2266,9 @@ function getThreadId(n) {
 }
 function idToThread(id) {
   return threadsById[id];
+}
+function makeObjectsForEmailAddresses(id) {
+  return id.indexOf('@') < 0 ? id : {kind: 'email', email: id};
 }
 
 function devUriOr(uri) {

@@ -414,7 +414,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
 				threadId: this.parent.threadId,
-				userIds: util.pluck(users, 'id')
+				ids: util.pluck(users, 'id')
 			}, 'Could not add participants.');
 		},
 
