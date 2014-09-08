@@ -16,11 +16,12 @@ var toaster = (function () {
   var handlers = {
     page_thread_count: function (o) {
       if ($toast) {
-        $toast.find('.kifi-toast-other-n')
-          .attr('data-n', o.count || null)
-        .parent()
-          .toggleClass('kifi-showing', o.count > 0)
-          .data(o);
+        var $other = $toast.find('.kifi-toast-other').data(o);
+        $other.find('.kifi-toast-other-n')
+          .attr('data-n', o.count || null);
+        if (o.count > 0 && !$toast.data('sending')) {
+          $other.addClass('kifi-showing');
+        }
       }
     }
   };
@@ -74,7 +75,7 @@ var toaster = (function () {
     .on('click', '.kifi-toast-other', onOthersClick)
     .appendTo($parent);
 
-    var compose = initCompose($toast, {onSubmit: send});
+    var compose = initCompose($toast, {onSubmit: send.bind(null, $toast)});
     $toast.data('compose', compose);
     $(document).data('esc').add(hide);
 
@@ -123,19 +124,22 @@ var toaster = (function () {
     }
   }
 
-  function send(text, recipients, guided) {
+  function send($t, text, recipients, guided) {
+    $t.data('sending', true);
     api.port.emit(
-      'send_message',  // TODO: ensure saved draft is deleted
+      'send_message',
       withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf), guided: guided}),
       function (resp) {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {
+          $t.data('sending', false);
           pane.show({locator: '/messages/' + resp.threadId});
-          if ($toast) {
+          if ($toast === $t) {
             hide();
           }
         });
       });
+    api.require('scripts/pane.js', api.noop); // in parallel
   }
 
   function onOthersClick(e) {
