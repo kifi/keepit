@@ -44,8 +44,8 @@ object ApplicationBuild extends Build {
   )
 
   lazy val heimdalDependencies = Seq(
-    "org.reactivemongo" %% "reactivemongo" % "0.10.0",
-    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2",
+    "org.reactivemongo" %% "reactivemongo" % "0.10.5.akka23-SNAPSHOT",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.10.5.akka23-SNAPSHOT",
     "com.maxmind.geoip2" % "geoip2" % "0.5.0",
     "com.mixpanel" % "mixpanel-java" % "1.2.1"
   ) map (_.excludeAll(
