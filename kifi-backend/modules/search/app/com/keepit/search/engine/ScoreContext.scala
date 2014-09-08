@@ -23,18 +23,18 @@ class ScoreContext(
 
   def score(): Float = scoreExpr()(this)
 
-  def computePercentMatch(minThreshold: Float): Float = {
+  def computeMatching(minThreshold: Float): Float = {
     val len = scoreMax.length
-    var pct = 1.0f
+    var matching = 1.0f
     var i = 0
     while (i < len) { // using while for performance
       if (scoreMax(i) <= 0.0f) {
-        pct -= matchWeight(i)
-        if (pct < minThreshold) return 0.0f
+        matching -= matchWeight(i)
+        if (matching < minThreshold) return 0.0f
       }
       i += 1
     }
-    pct
+    matching
   }
 
   def clear(): Unit = {

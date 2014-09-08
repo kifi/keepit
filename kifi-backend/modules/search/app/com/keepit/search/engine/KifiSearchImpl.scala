@@ -71,6 +71,8 @@ class KifiSearchImpl(
     engine.join(collector)
     log.info(s"NE: KifiResultCollector joined (${System.currentTimeMillis - currentTime})")
 
+    collector.logCount()
+
     collector.getResults()
   }
 
