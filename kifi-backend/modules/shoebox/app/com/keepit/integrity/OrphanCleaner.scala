@@ -19,6 +19,7 @@ class OrphanCleaner @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     scraper: ScrapeScheduler,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     bookmarkInterner: KeepInterner,
     centralConfig: CentralConfig,
     airbrake: AirbrakeNotifier) extends Logging {
@@ -173,6 +174,15 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(bookmarks, collector) { (s, bookmark) =>
+        bookmark.libraryId match {
+          case Some(libId) =>
+            val library = libraryRepo.get(libId)(s)
+            if (library.visibility != bookmark.visibility) {
+              airbrake.notify(s"Bookmark ${bookmark.id.get} has inconsistent visibility with library ${library.id.get}. Expected: ${bookmark.visibility} Actual: ${library.visibility}")
+              keepRepo.save(bookmark.copy(visibility = library.visibility))(s)
+            }
+          case _ =>
+        }
         bookmark.state match {
           case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)(s)
           case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)(s)
