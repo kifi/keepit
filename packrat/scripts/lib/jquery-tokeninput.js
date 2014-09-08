@@ -643,9 +643,7 @@
       selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
       $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
 
-      // We have several different techniques for transitioning from one list to the next.
-      // The complexity here is unfortunate, but warranted to create a delightful user experience.
-      // An earlier transition may already be in progress when we arrive here.
+      // TODO: factor out this transition code to friend_search.js
       if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
         if (els.length) {
           $dropdown.css('height', 0).append(els);

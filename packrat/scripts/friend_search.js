@@ -6,7 +6,6 @@ var initFriendSearch = (function () {
 
   return function ($in, source, participants, includeSelf, options) {
     $in.tokenInput(search.bind(null, participants, includeSelf), $.extend({
-      resultsLimit: 4,
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
@@ -18,7 +17,8 @@ var initFriendSearch = (function () {
   };
 
   function search(participants, includeSelf, numTokens, query, withResults) {
-    api.port.emit('search_contacts', {q: query, n: 6, participants: participants, includeSelf: includeSelf(numTokens)}, withResults);
+    var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
+    api.port.emit('search_contacts', {q: query, n: n, participants: participants, includeSelf: includeSelf(numTokens)}, withResults);
   }
 
   function formatToken(item) {
