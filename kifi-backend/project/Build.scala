@@ -1,9 +1,10 @@
+import com.typesafe.sbt.less.Import.LessKeys
+import com.typesafe.sbt.web.Import.Assets
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
+import play.Play.autoImport._
+import play.PlayImport.PlayKeys._
 import sbt.Keys._
 import sbt._
-import play.Play.autoImport._
-import com.typesafe.sbt.web.SbtWeb.autoImport._
-import PlayKeys._
 
 object ApplicationBuild extends Build {
 
@@ -90,7 +91,9 @@ object ApplicationBuild extends Build {
   lazy val common = Project("common", file("modules/common")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
   ).settings(
-    javaOptions in Test += "-Dconfig.resource=application-dev.conf"
+    javaOptions in Test += "-Dconfig.resource=application-dev.conf",
+    // Only necessary for admin:
+    includeFilter in (Assets, LessKeys.less) := "*.less"
   ).dependsOn(macros)
 
   lazy val sqldb = Project("sqldb", file("modules/sqldb")).enablePlugins(play.PlayScala).settings(
@@ -105,7 +108,9 @@ object ApplicationBuild extends Build {
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/play-refs",
-    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
+    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf",
+    // Only necessary for admin:
+    includeFilter in (Assets, LessKeys.less) := "*.less"
   ).settings(
     Frontend.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
@@ -173,7 +178,9 @@ object ApplicationBuild extends Build {
   lazy val kifiBackend = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(commonSettings: _*).settings(
     version := "0.42",
     aggregate in update := false,
-    Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" }
+    Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+    // Only necessary for admin:
+    includeFilter in (Assets, LessKeys.less) := "*.less"
   ).settings(
     Frontend.gulpCommands: _*
   ).dependsOn(
