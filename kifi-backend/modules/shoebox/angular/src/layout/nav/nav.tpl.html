@@ -22,14 +22,14 @@
   </li>
   <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/') }">
     <a class="kf-nav-link" href="/">
-      <span class="sprite sprite-my-keeps-library"></span>
+      <span class="sprite sprite-cards-small"></span>
       <span class="kf-nav-name">Keep Stream</span>
       <span class="kf-nav-count" ng-class="{ empty: !counts.keepCount }">{{counts.keepCount}}</span>
     </a>
   </li>
   <li ng-repeat="library in libraries" class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive(library.url) }">
     <a class="kf-nav-link" ng-href="{{library.url}}">
-      <span class="sprite sprite-my-keeps-library"></span>
+      <span class="sprite sprite-cards-small"></span>
       <span class="kf-nav-name">{{library.name}}</span>
       <span class="kf-nav-count" ng-class="{ empty: !library.numKeeps }">{{library.numKeeps}}</span>
     </a>
