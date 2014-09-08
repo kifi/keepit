@@ -19,7 +19,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ DbInjectionHelper, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.Json
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{ FakeHeaders, FakeRequest }
 
@@ -53,7 +53,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
         val json = Json.toJson(uris)
         val input = Json.parse(s"""[{"uriId": "1"}]""".stripMargin)
         val request = FakeRequest("POST", route, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), json)
-        val result: Future[SimpleResult] = messagingController.checkUrisDiscussed(Id[User](42))(request)
+        val result: Future[Result] = messagingController.checkUrisDiscussed(Id[User](42))(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val jsonResponse: String = contentAsString(result)

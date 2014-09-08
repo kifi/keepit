@@ -9,10 +9,11 @@ import org.joda.time.DateTime
 import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Base64
+import play.api.libs.ws.ning.NingWSResponse
 
 import play.api.mvc._
-import play.api.libs.ws.Response
-import play.api.libs.ws.WS.WSRequestHolder
+import play.api.libs.ws.WSResponse
+import play.api.libs.ws.WSRequestHolder
 import com.ning.http.client.FluentCaseInsensitiveStringsMap
 import com.keepit.model.User
 
@@ -158,13 +159,13 @@ object AirbrakeError {
       headers = request.headers.toMap,
       aggregateOnly = aggregateOnly)
 
-  def outgoing(request: WSRequestHolder, response: Option[Response] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = "", aggregateOnly: Boolean = false): AirbrakeError = {
+  def outgoing(request: WSRequestHolder, response: Option[WSResponse] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = "", aggregateOnly: Boolean = false): AirbrakeError = {
     new AirbrakeError(
       exception = exception,
       message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
       url = Some(request.url.abbreviate(MaxMessageSize)),
       params = request.queryString,
-      headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap,
+      headers = response map { r => ningHeadersToMap(r.underlying[NingWSResponse].ahcResponse.getHeaders) } getOrElse request.headers.toMap,
       aggregateOnly = aggregateOnly)
   }
 

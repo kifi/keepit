@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
-import play.api.mvc.{ SimpleResult }
+import play.api.mvc.{ Result }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
@@ -71,7 +71,7 @@ class WanderingAdminController @Inject() (
 
         val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability, recency, halfLife)
 
-        val promisedResult = Promise[SimpleResult]()
+        val promisedResult = Promise[Result]()
 
         doWander(wanderlust).onComplete {
 
@@ -97,7 +97,7 @@ class WanderingAdminController @Inject() (
 
   def fromParisWithLove() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val start = clock.now()
-    val promisedResult = Promise[SimpleResult]()
+    val promisedResult = Promise[Result]()
 
     doWander(Wanderlust.discovery(request.userId)).onComplete {
       case Failure(ex) =>

@@ -73,7 +73,7 @@ object ProviderController extends Controller {
       case Some(p) => {
         try {
           p.authenticate().fold(result => result, {
-            user => completeAuthentication(user, session)
+            user => completeAuthentication(user, request.session)
           })
         } catch {
           case ex: AccessDeniedException => {
@@ -90,7 +90,7 @@ object ProviderController extends Controller {
     }
   }
 
-  def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): SimpleResult = {
+  def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): Result = {
     if (Logger.isDebugEnabled) {
       Logger.debug("[securesocial] user logged in : [" + user + "]")
     }
@@ -167,7 +167,7 @@ object LoginPage extends Controller {
     }
     val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(session))
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session))
       case None => result
     }
   }

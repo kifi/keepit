@@ -16,7 +16,7 @@ import scala.concurrent.Future
 object AngularDistAssets extends AssetsBuilder with Controller with Logging {
 
   private def index() = {
-    val fileStream = Play.resourceAsStream("angular/index_cdn.html").orElse(Play.resourceAsStream("angular/index.html")).get
+    val fileStream = Play.resourceAsStream("public/ng/index_cdn.html").orElse(Play.resourceAsStream("public/ng/index.html")).get
     val writer = new StringWriter()
     IOUtils.copy(fileStream, writer, "UTF-8")
     val fileStr = writer.toString

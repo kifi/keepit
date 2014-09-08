@@ -9,7 +9,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import play.api.http.Status
 import play.api.libs.json.Json
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
@@ -45,7 +45,7 @@ class ScraperControllerTest extends TestKitSupport with ScraperTestInjector {
         path === "/internal/scraper/getBasicArticle"
         val input = Json.parse("""{ "url": "https://www.google.com" }""")
         val request = FakeRequest("POST", path).withBody(input)
-        val result: Future[SimpleResult] = controller.getBasicArticle()(request)
+        val result: Future[Result] = controller.getBasicArticle()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val json = contentAsJson(result)

@@ -1,6 +1,7 @@
 package com.keepit.common.zookeeper
 
 import com.keepit.common.strings._
+import org.specs2.matcher.NoConcurrentExecutionContext
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode._
 import org.apache.zookeeper.KeeperException
@@ -13,7 +14,7 @@ import java.util.concurrent.TimeoutException
 
 import LockManager._
 
-class LockManagerTest extends Specification {
+class LockManagerTest extends Specification with NoConcurrentExecutionContext {
 
   args(skipAll = true)
 

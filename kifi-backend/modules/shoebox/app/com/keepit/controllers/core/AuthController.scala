@@ -67,7 +67,7 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
     authRes.map {
-      case res: SimpleResult if res.header.status == 303 =>
+      case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
@@ -87,8 +87,8 @@ class AuthController @Inject() (
       inviteCommander.markPendingInvitesAsAccepted(request.user.id.get, request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value)))
       Redirect(com.keepit.controllers.website.routes.HomeController.install())
     } else {
-      session.get(SecureSocial.OriginalUrlKey) map { url =>
-        Redirect(url).withSession(session - SecureSocial.OriginalUrlKey)
+      request.session.get(SecureSocial.OriginalUrlKey) map { url =>
+        Redirect(url).withSession(request.session - SecureSocial.OriginalUrlKey)
       } getOrElse {
         Redirect("/")
       }
@@ -126,7 +126,7 @@ class AuthController @Inject() (
   }
 
   def link(provider: String, redirect: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
-    ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
+    ProviderController.authenticate(provider)(request) map { res: Result =>
       val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
       val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
       if (redirect.isDefined && LinkRedirects.isDefinedAt(redirect.get)) {
@@ -142,14 +142,14 @@ class AuthController @Inject() (
   }
 
   def popupBeforeLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
-    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(session + (PopupKey -> "1"))
+    Ok(views.html.auth.popupBeforeLinkSocial(SocialNetworkType(provider))).withSession(request.session + (PopupKey -> "1"))
   }
 
   def popupAfterLinkSocial(provider: String) = HtmlAction.authenticated(allowPending = true) { implicit request =>
     def esc(s: String) = s.replaceAll("'", """\\'""")
     val identity = request.identityOpt.get
     Ok(s"<script>try{window.opener.afterSocialLink('${esc(identity.firstName)}','${esc(identity.lastName)}','${esc(identityPicture(identity))}')}finally{window.close()}</script>")
-      .withSession(session - PopupKey)
+      .withSession(request.session - PopupKey)
   }
 
   // --
@@ -189,7 +189,7 @@ class AuthController @Inject() (
     unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
 
-  private def doSignupPage(implicit request: Request[_]): SimpleResult = {
+  private def doSignupPage(implicit request: Request[_]): Result = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
       identity.email.flatMap { addr =>
         db.readOnlyMaster { implicit s =>
@@ -279,7 +279,7 @@ class AuthController @Inject() (
   def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
-      .withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
+      .withSession(request.session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
   def forgotPassword() = JsonAction.parseJson(allowPending = true)(
@@ -321,7 +321,7 @@ class AuthController @Inject() (
     authenticatedAction = doCancelPage(_),
     unauthenticatedAction = doCancelPage(_)
   )
-  private def doCancelPage(implicit request: Request[_]): SimpleResult = {
+  private def doCancelPage(implicit request: Request[_]): Result = {
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))

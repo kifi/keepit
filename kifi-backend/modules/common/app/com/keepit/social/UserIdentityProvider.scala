@@ -6,20 +6,17 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
-import com.keepit.common.core._
 
 import play.api.Play.current
 import play.api.mvc._
 import securesocial.core._
 import play.api.cache.Cache
 import scala.collection.JavaConversions._
-import play.api.libs.ws.{ WS, Response }
+import play.api.libs.ws.{ WS, WSResponse }
 import play.api.libs.json._
 import securesocial.core.AccessDeniedException
-import play.api.libs.ws.Response
 import securesocial.core.IdentityId
 import play.api.libs.json.JsString
-import scala.Some
 import play.api.libs.json.JsNumber
 import play.api.mvc.Call
 import securesocial.core.OAuth2Info
@@ -147,7 +144,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
     }
   }
 
-  protected def buildInfo(response: Response): OAuth2Info = {
+  protected def buildInfo(response: WSResponse): OAuth2Info = {
     val parsed = try {
       response.json.as[JsObject].value
     } catch {

@@ -13,8 +13,9 @@ import com.keepit.model.{ ImageInfo, NormalizedURI }
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import play.api.libs.ws.{ Response, WS }
+import play.api.libs.ws.{ WSResponse, WS }
 import com.keepit.common.db.Id
+import play.api.Play.current
 
 trait EmbedlyClient {
   def embedlyUrl(url: String): String
@@ -35,7 +36,7 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
-  private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
+  private def parseEmbedlyInfo(resp: WSResponse): Option[EmbedlyInfo] = {
     resp.status match {
       case Status.OK =>
         val js = Json.parse(resp.body) // resp.json has some issues
@@ -65,7 +66,7 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
 
   private val fetchExtendedInfoConsolidater = new RequestConsolidator[String, Option[EmbedlyInfo]](2 minutes)
 
-  private def fetchWithRetry(url: String, timeout: Int): Future[Response] = {
+  private def fetchWithRetry(url: String, timeout: Int): Future[WSResponse] = {
     val count = new AtomicInteger()
     val resolver: PartialFunction[Throwable, Boolean] = {
       case t: Throwable =>
