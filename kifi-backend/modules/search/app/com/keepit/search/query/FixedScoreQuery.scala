@@ -71,17 +71,9 @@ class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends 
 
 class FixedScoreScorer(weight: FixedScoreWeight, subScorer: Scorer, scoreVal: Float) extends Scorer(weight) {
   override def docID(): Int = subScorer.docID()
-  override def nextDoc(): Int = {
-    val doc = subScorer.nextDoc()
-    doc
-  }
-  override def advance(target: Int): Int = {
-    val doc = subScorer.advance(target)
-    doc
-  }
-  override def score(): Float = {
-    if (docID < DocIdSetIterator.NO_MORE_DOCS) scoreVal else 0.0f
-  }
+  override def nextDoc(): Int = subScorer.nextDoc()
+  override def advance(target: Int): Int = subScorer.advance(target)
+  override def score(): Float = scoreVal
   override def freq(): Int = 1
   override def cost(): Long = subScorer.cost()
 }
