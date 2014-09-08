@@ -128,6 +128,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   implicit val actorTimeout = Timeout(30 seconds)
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val shortTimeout = CallTimeouts(responseTimeout = Some(1000), maxWaitTime = Some(1000), maxJsonParseTime = Some(1000))
 
   override def onStop() {
     val res = actor.ref ? FlushEventQueueAndClose
@@ -182,7 +183,7 @@ class HeimdalServiceClientImpl @Inject() (
     call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
-    call(Heimdal.internal.getLastDelightedAnswerDate(userId)).map { response =>
+    call(Heimdal.internal.getLastDelightedAnswerDate(userId), callTimeouts = shortTimeout).map { response =>
       Json.parse(response.body).asOpt[DateTime]
     }
   }

@@ -45,10 +45,11 @@ class KifiSearchImpl(
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
+  def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
     log.info(s"NE: engine created (${System.currentTimeMillis - currentTime})")
+    log.info(s"NE: query ${engine.getQuery().toString()})")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     log.info(s"NE: UriFromKeepsScoreVectorSource created (${System.currentTimeMillis - currentTime})")
@@ -154,6 +155,8 @@ class KifiSearchImpl(
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
+
+    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }

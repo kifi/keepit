@@ -53,9 +53,9 @@ object EmailToSend {
   import ElectronicMail.emailCategoryFormat
 
   implicit val htmlFormat = new Format[Html] {
-    def reads(js: JsValue) = JsSuccess(Html(js.as[JsString].toString()))
+    def reads(js: JsValue) = JsSuccess(Html(js.as[JsString].value))
 
-    def writes(o: Html) = JsString(o.toString())
+    def writes(o: Html) = Json.toJson(o.body)
   }
 
   val toFormat = EitherFormat[Id[User], EmailAddress]
