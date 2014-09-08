@@ -66,10 +66,12 @@ class KifiSearchImpl(
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
     log.info(s"NE: clickBoosts created (${System.currentTimeMillis - currentTime})")
 
-    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch)
+    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime})")
     engine.join(collector)
     log.info(s"NE: KifiResultCollector joined (${System.currentTimeMillis - currentTime})")
+
+    collector.logCount()
 
     collector.getResults()
   }

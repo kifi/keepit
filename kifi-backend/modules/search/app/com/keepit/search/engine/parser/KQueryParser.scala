@@ -70,7 +70,7 @@ class KQueryParser(
             phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
             new FixedScoreQuery(hpQ)
           }
-          //engBuilder.addBoosterQuery(homePageQuery, homePageBoost)
+          engBuilder.addBoosterQuery(homePageQuery, homePageBoost)
         }
 
         engBuilder
