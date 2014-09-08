@@ -14,7 +14,7 @@ class KifiResultCollectorTest extends Specification {
   private val exprSize = 3
 
   "MainResultCollector" should {
-    "collect hits above MIN_PERCENT_MATCH" in {
+    "collect hits above MIN_MATCHING" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
@@ -42,7 +42,7 @@ class KifiResultCollectorTest extends Specification {
       hit.score === 2.0f * 0.7f
     }
 
-    "collect hits above percentMatchThreshold" in {
+    "collect hits above matchingThreshold" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         maxHitsPerCategory = 10,

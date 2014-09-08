@@ -121,5 +121,17 @@ class QueryEngineTest extends Specification {
 
       collector.hits === Set(0, 6)
     }
+
+    "normalize match weights" in {
+      val query = getParser().parse("abc def").get
+      val collector = new TstResultCollector
+      val engine = new QueryEngineBuilder(query).build
+
+      engine.execute(new TstScoreVectorSource(indexer1))
+      engine.execute(new TstScoreVectorSource(indexer2))
+      engine.join(collector)
+
+      engine.getMatchWeights().sum === 1.0f
+    }
   }
 }

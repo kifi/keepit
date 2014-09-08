@@ -131,6 +131,8 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
           numDiscarded += 1
         }
       }
+    } else {
+      numDiscarded += 1
     }
   }
 
