@@ -22,11 +22,13 @@ var initCompose = (function() {
     }
   }
 
-  function saveDraft($to, editor) {
-    api.port.emit('save_draft', {
-      to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
-      html: editor.getRaw()
-    });
+  function saveDraft($form, $to, editor) {
+    if ($form.is($forms) && !$form.data('submitted')) {
+      api.port.emit('save_draft', {
+        to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
+        html: editor.getRaw()
+      });
+    }
   }
 
   function restoreDraft($to, editor, draft) {
@@ -220,9 +222,7 @@ var initCompose = (function() {
 
     var $to = $form.find('.kifi-compose-to');
     var throttledSaveDraft = _.throttle(function () {
-      if ($form.is($forms) && !$form.data('submitted')) {
-        saveDraft($to, editor);
-      }
+      saveDraft($form, $to, editor);
     }, 2000, {leading: false});
 
     var editor = (richEditorBorked() ? newPoorEditor : newRichEditor)(
@@ -405,7 +405,7 @@ var initCompose = (function() {
       isBlank: function () {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
-      save: saveDraft.bind(null, $to, editor),
+      save: saveDraft.bind(null, $form, $to, editor),
       destroy: function() {
         $forms = $forms.not($form);
         if ($to.length) {

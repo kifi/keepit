@@ -104,8 +104,10 @@ var toaster = (function () {
     $(document).data('esc').remove(hide);
     $toast.css('overflow', '')
       .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
-      .addClass('kifi-down')
-      .data('compose').save();
+      .addClass('kifi-down');
+    if (trigger !== 'sent') {
+      $toast.data('compose').save();
+    }
     $toast = null;
     if (e) e.preventDefault();
     toaster.onHide.dispatch();
