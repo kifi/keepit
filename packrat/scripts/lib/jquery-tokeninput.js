@@ -10,18 +10,15 @@
     disabled: false,
 
     // Results (in dropdown)
-    formatResult: function (item) {
-      return '<li>' + htmlEscape(item.name) + '</li>';
-    },
+    suggestAbove: false,
+    formatResult: formatItem,
 
     // Tokens
     tokenValue: 'id',
     tokenDelimiter: ',',
     tokenLimit: Infinity,
     preventDuplicates: false,
-    formatToken: function (item) {
-      return '<li>' + htmlEscape(item.name) + '</li>';
-    },
+    formatToken: formatItem,
 
     // Callbacks
     onSelect: null,
@@ -83,6 +80,9 @@
   }
   function htmlEscapeReplace(ch) {
     return HTML_ESCAPES[ch];
+  }
+  function formatItem(item) {
+    return '<li>' + htmlEscape(item.name) + '</li>';
   }
 
   // Additional public (exposed) methods
@@ -290,7 +290,7 @@
     // The list to store the dropdown items in
     var $dropdown = $('<ul/>')
       .addClass(classes.dropdown)
-      .insertBefore($tokenList);
+      [settings.suggestAbove ? 'insertBefore' : 'insertAfter']($tokenList);
     $dropdown
       .on('mouseover', 'li', function () {
         if ($dropdown.data('mouseMoved')) {  // FF immediately triggers mouseover on element inserted under mouse cursor
@@ -667,8 +667,9 @@
       } else {  // list is changing
         // fade in overlaid as height adjusts and old fades out
         var heightInitial = $dropdown[0].clientHeight;
+        var width = $dropdown[0].clientWidth;
         $dropdown.css('height', heightInitial);
-        var $clone = $($dropdown[0].cloneNode(false)).addClass(classes.dropdown + '-clone')
+        var $clone = $($dropdown[0].cloneNode(false)).addClass(classes.dropdown + '-clone').css('width', width)
             .append(els)
           .css({visibility: 'hidden', opacity: 0, height: ''})
           .insertBefore($dropdown);

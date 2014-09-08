@@ -234,6 +234,7 @@ var initCompose = (function() {
       initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
+        suggestAbove: true,
         onAdd: function () {
           editor.writeDefaultText();
           throttledSaveDraft();
