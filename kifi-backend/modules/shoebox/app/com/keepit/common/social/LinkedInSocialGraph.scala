@@ -22,11 +22,12 @@ import com.keepit.social.{ SocialUserRawInfo, SocialNetworks, SocialId, SocialGr
 
 import play.api.http.Status._
 import play.api.libs.json._
-import play.api.libs.ws.{ Response, WS }
+import play.api.libs.ws.{ WSResponse, WS }
 
 import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.LinkedInProvider.LinkedIn
 import com.keepit.common.mail.EmailAddress
+import play.api.Play.current
 
 object LinkedInSocialGraph {
   val ProfileFields = Seq("id", "firstName", "lastName", "picture-urls::(original);secure=true", "publicProfileUrl")
@@ -93,7 +94,7 @@ class LinkedInSocialGraph @Inject() (
       case jsv if (jsv \ "id").asOpt[String].exists(_ != "private") => createSocialUserInfo(jsv)
     }
 
-  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String): Future[Response] =
+  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String): Future[WSResponse] =
     WS.url(sendMessageUrl(getAccessToken(from)))
       .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
       .post(sendMessageBody(to.socialId, subject, message))

@@ -26,6 +26,7 @@ import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.ws.ning.NingWSResponse
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -338,7 +339,7 @@ class InviteCommander @Inject() (
     log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
     linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl).map { resp =>
       db.readWrite(attempts = 2) { implicit session =>
-        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
+        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.underlying[NingWSResponse].ahcResponse.getHeaders.toString}")
         if (resp.status != Status.CREATED) { // per LinkedIn doc
           airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
           log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite): ${resp.body}")

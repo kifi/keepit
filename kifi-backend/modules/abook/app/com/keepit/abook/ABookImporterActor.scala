@@ -13,7 +13,7 @@ import play.api.Plugin
 import scala.ref.WeakReference
 import akka.actor.{ Props, ActorSystem }
 import com.keepit.common.actor.ActorInstance
-import akka.routing.SmallestMailboxRouter
+import akka.routing.SmallestMailboxPool
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
@@ -34,7 +34,7 @@ class ABookImporterActorPlugin @Inject() (
     nrOfInstances: Int) extends ABookImporterPlugin with Logging {
 
   lazy val system = sysProvider.get
-  lazy val actor = system.actorOf(Props(updaterActorProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
+  lazy val actor = system.actorOf(Props(updaterActorProvider.get).withRouter(SmallestMailboxPool(nrOfInstances)))
 
   def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit = {
     actor ! ProcessABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)

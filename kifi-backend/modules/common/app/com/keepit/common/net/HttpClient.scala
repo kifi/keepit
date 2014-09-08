@@ -8,7 +8,6 @@ import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
 import com.keepit.common.core._
@@ -25,6 +24,7 @@ import play.mvc.Http.Status
 import com.keepit.common.service.ServiceUri
 import java.util.Random
 import com.keepit.common.util.TrackingId
+import play.api.Play.current
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
     extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n", " ")}]") {
@@ -176,7 +176,7 @@ case class HttpClientImpl(
   private def await[A](future: Future[A]): A = Await.result(future, Duration(callTimeouts.responseTimeout.get, TimeUnit.MILLISECONDS))
   private def req(url: HttpUri): Request = new Request(WS.url(url.url).withRequestTimeout(callTimeouts.responseTimeout.get), url, headers, accessLog, serviceDiscovery)
 
-  private def res(request: Request, response: Response, requestBody: Option[Any] = None): ClientResponse = {
+  private def res(request: Request, response: WSResponse, requestBody: Option[Any] = None): ClientResponse = {
     val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, callTimeouts.maxJsonParseTime.get)
     val status = response.status
     if (status / 100 != validResponseClass) {
@@ -214,7 +214,7 @@ case class HttpClientImpl(
     copy(callTimeouts = this.callTimeouts.overrideWith(callTimeouts))
   }
 
-  private def report(request: Request, getResponse: Request => Future[Response], onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+  private def report(request: Request, getResponse: Request => Future[WSResponse], onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
     getResponse(request).map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request))
       f.onSuccess {

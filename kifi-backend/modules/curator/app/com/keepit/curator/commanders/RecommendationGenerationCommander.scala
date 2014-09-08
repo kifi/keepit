@@ -22,6 +22,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceStatus
+import com.keepit.common.logging.Logging
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -45,7 +46,7 @@ class RecommendationGenerationCommander @Inject() (
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
     experimentCommander: RemoteUserExperimentCommander,
-    serviceDiscovery: ServiceDiscovery) {
+    serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(10)
@@ -243,7 +244,7 @@ class RecommendationGenerationCommander @Inject() (
         res.map(_ => ())
       } else {
         recommendationGenerationLock.clear()
-        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) airbrake.notify("Trying to run reco precomputation on non-leader (and it's not a shut down)!")
+        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) log.error("Trying to run reco precomputation on non-leader (and it's not a shut down)! Aborting.")
         Future.successful()
       }
     }

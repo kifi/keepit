@@ -13,7 +13,7 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
 import com.keepit.search.sharding.{ DistributedSearchRouter, Shard }
 import play.api.libs.json._
-import play.api.templates.Html
+import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
