@@ -1093,11 +1093,11 @@ api.port.on({
         var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
         if (!data.includeSelf) {
           contacts = contacts.filter(idIsNot(me.id));
-        } else if (contacts.length < data.n && !contacts.some(hasId(me.id)) && (!data.q || sf.filter(data.q, [me], getName).length)) {
-          contacts.push(clone(me));
+        } else if (!contacts.some(hasId(me.id)) && (!data.q || sf.filter(data.q, [me], getName).length)) {
+          appendUserResult(contacts, data.n, me);
         }
-        if (contacts.length < data.n && !contacts.some(hasId(SUPPORT.id)) && (!data.q || sf.filter(data.q, [SUPPORT], getName).length)) {
-          contacts.push(clone(SUPPORT));
+        if (!contacts.some(hasId(SUPPORT.id)) && (!data.q || sf.filter(data.q, [SUPPORT], getName).length)) {
+          appendUserResult(contacts, data.n, SUPPORT);
         }
         var results = contacts.map(toContactResult, {sf: sf, q: data.q});
         if (results.length < data.n && data.q && !data.participants.some(hasId(data.q)) && !results.some(hasEmail(data.q))) {
@@ -2241,6 +2241,14 @@ function toContactResult(o) {
     }
   }
   return o;
+}
+
+function appendUserResult(contacts, n, user) {
+  if (contacts.length >= n) {
+    contacts.length = n - 1;
+  }
+  var i = contacts.filter(idIsNot(undefined)).length;
+  contacts.splice(i, 0, clone(user));
 }
 
 function reTest(s) {
