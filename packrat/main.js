@@ -1093,10 +1093,10 @@ api.port.on({
         var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
         if (!data.includeSelf) {
           contacts = contacts.filter(idIsNot(me.id));
-        } else if (!contacts.some(hasId(me.id)) && (!data.q || sf.filter(data.q, [me], getName).length)) {
+        } else if (!contacts.some(hasId(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, me);
         }
-        if (!contacts.some(hasId(SUPPORT.id)) && (!data.q || sf.filter(data.q, [SUPPORT], getName).length)) {
+        if (!contacts.some(hasId(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, SUPPORT);
         }
         var results = contacts.map(toContactResult, {sf: sf, q: data.q});
