@@ -60,6 +60,8 @@ angular.module('kifi')
         var imageWidthThreshold = 200;
 
         scope.addingTag = {enabled: false};
+        console.log('keep addingTag initialized');
+
 
         scope.getTags = function () {
           return scope.keep && scope.keep.tagList;
@@ -283,6 +285,7 @@ angular.module('kifi')
         scope.showAddTag = function () {
           scope.addingTag.enabled = true;
         };
+
 
         scope.onCheck = function (e) {
           // needed to prevent previewing
@@ -514,6 +517,9 @@ angular.module('kifi')
           return;
         }
 
+        scope.addingTag = { enabled: false };
+        console.log('keepContent addingTag initialized');
+
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
@@ -556,7 +562,6 @@ angular.module('kifi')
           return card.hasBigImage || (card.summary && useBigLayout);
         };
 
-        scope.addingTag = { enabled: false };
 
         scope.hasTag = function (card) {
           return card.tagList && card.tagList.length > 0;

@@ -35,10 +35,10 @@
       <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></a>
     </div>
     <div class="kf-keep-who" ng-if="showSocial()">
-      <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
-      <span kf-keep-who-text keep="keep"></span>
+      <span kf-keep-who-pics me="me" keepers="keep.keepers" card="keep"></span>
+      <span kf-keep-who-text card="keep"></span>
     </div>
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
+    <div kf-tag-list class="kf-keep-tag-list" get-selected-cards="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
   </div>
 
   <div class="kf-keep-footer">
@@ -54,6 +54,6 @@
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Keep Privately</a></span>
     <div class="kf-keep-private" ng-if="isMine() && isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
-  
+
   <div class="kf-keep-drag-mask"></div>
 </li>
