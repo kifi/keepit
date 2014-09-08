@@ -142,4 +142,9 @@ class LDAController @Inject() (
     Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
   }
 
+  def recomputeUserLDAStat() = Action { request =>
+    lda.recomputeUserLDAStats()
+    Ok
+  }
+
 }

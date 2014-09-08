@@ -41,4 +41,37 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
       }
     }
   }
+
+  "update a specific user" in {
+    withDb() { implicit injector =>
+      val keepRepo = inject[CortexKeepRepo]
+      val commitRepo = inject[FeatureCommitInfoRepo]
+      val uriTopicRepo = inject[URILDATopicRepo]
+      val userLDAStatsRepo = inject[UserLDAStatsRepo]
+      val time = new DateTime(2014, 1, 30, 17, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+      db.readWrite { implicit s =>
+        keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](1), uriId = Id[NormalizedURI](1L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](1L), source = KeepSource.keeper))
+        keepRepo.save(CortexKeep(keptAt = time, userId = Id[User](1), keepId = Id[Keep](2), uriId = Id[NormalizedURI](2L), isPrivate = false, state = State[CortexKeep]("active"), seq = SequenceNumber[CortexKeep](2L), source = KeepSource.keeper))
+        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](1L), uriSeq = SequenceNumber[NormalizedURI](1L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0f, 1f))), state = URILDATopicStates.ACTIVE))
+        uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(1f, 0f))), state = URILDATopicStates.ACTIVE))
+      }
+
+      val updater = new LDAUserStatDbUpdaterImpl(uriRep, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
+        override val min_num_evidence = 1
+      }
+
+      updater.updateUser(Id[User](1))
+
+      db.readOnlyReplica { implicit s =>
+        val model = userLDAStatsRepo.getByUser(Id[User](1), uriRep.version).get
+        model.numOfEvidence === 2
+        model.userTopicMean.get.mean.toList === List(0.5f, 0.5f)
+        model.userTopicVar.get.value.toList.forall(x => math.abs(x - 0.5f) < 1e-4) === true
+      }
+
+    }
+  }
+
 }
+

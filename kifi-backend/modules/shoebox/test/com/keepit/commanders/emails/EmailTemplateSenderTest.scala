@@ -71,6 +71,8 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
           email.subject === "hi"
           email.to === Seq(EmailAddress("test@gmail.com"))
           email.cc === Seq(SystemEmailAddress.ENG)
+          email.from === emailToSend.from
+          email.fromName === emailToSend.fromName
           email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
           val html = email.htmlBody.toString()
           html must contain("<title>Testing!!!</title>")

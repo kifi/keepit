@@ -175,7 +175,8 @@ class FeedDigestEmailSenderImpl @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplates = Seq(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
-      fromName = Some("Kifi")
+      fromName = Some("Kifi"),
+      campaign = Some("digest")
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
@@ -191,24 +192,30 @@ class FeedDigestEmailSenderImpl @Inject() (
   }
 
   private def sendAnonymoizedEmailToQa(module: EmailToSend, emailData: AllDigestRecos): Unit = {
-    def fakeUserId = Id[User](Random.nextInt(Int.MaxValue))
+    // these hard-coded userIds are to replace the email references to the recipient user's friends;
+    // with an attempt to maintain the same look and feel, of the original email w/o revealing the real users
+
+    // the email template requires real userIds since they used by the EmailTemplateSender to fetch attributes for that user
+    val userIds = Seq(1, 3, 9, 48, 61, 100, 567, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
     val fakeUser = User(firstName = "Fake", lastName = "User")
     val fakeBasicUser = BasicUser.fromUser(fakeUser)
-    val myFakeUserId = fakeUserId
+    val myFakeUserId = userIds.head
+    val otherUserIds = userIds.tail
 
     val fakeFriendReco = FriendReco(myFakeUserId, fakeBasicUser, S3UserPictureConfig.defaultImage)
     val qaEmailData = emailData.copy(
-      friendRecos = emailData.friendRecos.map(_ => fakeFriendReco),
+      friendRecos = otherUserIds.take(emailData.friendRecos.size).map(userId => fakeFriendReco.copy(userId = userId)),
       toUser = fakeUser,
       recos = emailData.recos.map { reco =>
-        val qaFriends = reco.keepers.friends.map(_ => fakeUserId)
+        val qaFriends = otherUserIds.take(reco.keepers.friends.size)
+        val qaKeepers = qaFriends.take(reco.keepers.keepers.size)
         reco.copy(
           isForQa = true,
           reco = reco.reco.copy(userId = myFakeUserId),
           keepers = reco.keepers.copy(
             friends = qaFriends,
-            keepers = qaFriends.take(reco.keepers.keepers.size).map((_, fakeBasicUser)).toMap,
-            userAvatarUrls = qaFriends.take(reco.keepers.keepers.size).map((_, S3UserPictureConfig.defaultImage)).toMap
+            keepers = qaKeepers.map((_, fakeBasicUser)).toMap,
+            userAvatarUrls = qaKeepers.map((_, S3UserPictureConfig.defaultImage)).toMap
           )
         )
       }
@@ -221,7 +228,8 @@ class FeedDigestEmailSenderImpl @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplates = Seq(views.html.email.feedDigest(qaEmailData)),
       senderUserId = None,
-      fromName = Some("Kifi")
+      fromName = Some("Kifi"),
+      campaign = Some("digestQA")
     )
 
     val sendMailF = shoebox.processAndSendMail(qaEmailToSend)
