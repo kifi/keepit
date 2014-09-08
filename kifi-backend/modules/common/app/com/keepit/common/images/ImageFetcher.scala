@@ -1,7 +1,7 @@
 package com.keepit.common.images
 
 import java.io.InputStream
-import play.api.libs.ws.ning.NingWSResponse
+import com.ning.http.client.providers.netty.NettyResponse
 
 import scala.util.{ Success, Failure, Try }
 import com.keepit.common.store.ImageUtils
@@ -58,7 +58,7 @@ class ImageFetcherImpl @Inject() (
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
-          withInputStream(resp.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream) { is =>
+          withInputStream(resp.underlying[NettyResponse].getResponseBodyAsStream) { is =>
             getBufferedImage(is) match {
               case Failure(ex) =>
                 log.error(s"Failed to process image: ($url)")
