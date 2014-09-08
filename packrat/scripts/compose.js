@@ -24,7 +24,7 @@ var initCompose = (function() {
 
   function saveDraft($to, editor) {
     api.port.emit('save_draft', {
-      to: $to.length ? $to.tokenInput('get').map(justIdAndName) : undefined,
+      to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
       html: editor.getRaw()
     });
   }
@@ -41,8 +41,8 @@ var initCompose = (function() {
     }
   }
 
-  function justIdAndName(o) {
-    return {id: o.id, name: o.name};
+  function justFieldsToSave(o) {
+    return {id: o.id, name: o.name, email: o.email};
   }
 
   function getSelRange() {
