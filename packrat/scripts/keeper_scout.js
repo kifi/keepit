@@ -126,7 +126,9 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 79: // o
         api.port.emit('unsilence');
-        loadAndDo('pane', 'show', {trigger: 'key'});
+        api.port.emit('pane?', function (loc) {
+          loadAndDo('pane', 'show', {trigger: 'key', locator: loc});
+        });
         e.preventDefault();
         break;
       case 83: // s

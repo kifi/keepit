@@ -972,7 +972,7 @@ api.port.on({
     }
   },
   'pane?': function (_, respond) {
-    respond(stored('unread') ? '/messages:unread' : '/messages:all');
+    respond(getDefaultPaneLocator());
   },
   pane: function(o, _, tab) {
     if (o.old) {
@@ -1556,6 +1556,10 @@ function setMuted(threadId, muted) {
   }
 }
 
+function getDefaultPaneLocator() {
+  return stored('unread') ? '/messages:unread' : '/messages:all';
+}
+
 function sendUnreadThreadCount(tab) {
   var tl = threadLists.unread;
   if (tl) {
@@ -1993,7 +1997,7 @@ api.icon.on.click.add(function (tab) {
   if (silence) {
     unsilence(tab);
   } else {
-    api.tabs.emit(tab, 'button_click', null, {queue: 1});
+    api.tabs.emit(tab, 'button_click', getDefaultPaneLocator(), {queue: 1});
   }
 });
 

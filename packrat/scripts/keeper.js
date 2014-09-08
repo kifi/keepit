@@ -273,8 +273,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
       } else {
         beginStickyPane();
         api.require('scripts/pane.js', function () {
-          endStickyPane();
-          pane.toggle('keeper');
+          api.port.emit('pane?', function (locator) {
+            endStickyPane();
+            pane.toggle('keeper', locator);
+          });
         });
       }
     }, 400, true));

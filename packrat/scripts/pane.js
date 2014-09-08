@@ -54,14 +54,6 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function showPane(locator, back, redirected) {
-    if (!locator) {
-      var deferred = Q.defer();
-      api.port.emit('pane?', function (locator) {
-        showPane(locator, back, redirected);
-        deferred.resolve();
-      });
-      return deferred.promise;
-    }
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
       log('[showPane] already at', locator);
@@ -412,19 +404,10 @@ var pane = pane || function () {  // idempotent for Chrome
         } else if (window.toaster && toaster.showing()) {
           toaster.hide();
           showPane(locator);
+        } else if (locator === paneHistory[0]) {
+          hidePane(trigger === 'keeper');
         } else {
-          var showOrHide = function (loc) {
-            if (loc === paneHistory[0]) {
-              hidePane(trigger === 'keeper');
-            } else {
-              showPane(loc);
-            }
-          };
-          if (locator) {
-            showOrHide(locator);
-          } else {
-            api.port.emit('pane?', showOrHide);
-          }
+          showPane(locator);
         }
       } else {
         showPane(locator);
@@ -446,7 +429,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     back: function (fallbackLocator) {
-      showPane(paneHistory[1] || fallbackLocator, true);
+      showPane(paneHistory[1] || fallbackLocator || '/messages:all', true);
     },
     onHide: new Listeners
   };
