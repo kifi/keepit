@@ -63,7 +63,9 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
     val subScorer = subWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
     if (subScorer == null) null else {
       val docValues = context.reader.getNumericDocValues(query.timeStampField)
-      new RecencyScorer(this, subScorer, docValues, currentTimeMillis, query.recencyBoostStrength, query.halfDecayMillis)
+      if (docValues == null) null else {
+        new RecencyScorer(this, subScorer, docValues, currentTimeMillis, query.recencyBoostStrength, query.halfDecayMillis)
+      }
     }
   }
 }

@@ -45,22 +45,31 @@ class KifiSearchImpl(
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
+  def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
+    log.info(s"NE: engine created (${System.currentTimeMillis - currentTime})")
+    log.info(s"NE: query ${engine.getQuery().toString()})")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
+    log.info(s"NE: UriFromKeepsScoreVectorSource created (${System.currentTimeMillis - currentTime})")
     engine.execute(keepScoreSource)
+    log.info(s"NE: UriFromKeepsScoreVectorSource executed (${System.currentTimeMillis - currentTime})")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
+    log.info(s"NE: UriFromArticlesScoreVectorSource created (${System.currentTimeMillis - currentTime})")
     engine.execute(articleScoreSource)
+    log.info(s"NE: UriFromArticlesScoreVectorSource executed (${System.currentTimeMillis - currentTime})")
 
     val tClickBoosts = currentDateTime.getMillis()
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
+    log.info(s"NE: clickBoosts created (${System.currentTimeMillis - currentTime}}")
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch)
+    log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime}}")
     engine.join(collector)
+    log.info(s"NE: KifiResultCollector joined (${System.currentTimeMillis - currentTime}}")
 
     collector.getResults()
   }
@@ -146,6 +155,8 @@ class KifiSearchImpl(
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
+
+    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
