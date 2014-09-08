@@ -72,7 +72,7 @@ var toaster = (function () {
         hide(e, 'x');
       }
     })
-    .on('click', '.kifi-toast-other', onOthersClick)
+    .on('click mousedown', '.kifi-toast-other', onOthersClick)
     .appendTo($parent);
 
     var compose = initCompose($toast, {onSubmit: send.bind(null, $toast)});
@@ -145,7 +145,6 @@ var toaster = (function () {
   function onOthersClick(e) {
     var data = $.data(this);
     if (e.which === 1 && data.count) {
-      hide();
       var threadId = data.id;
       api.require('scripts/pane.js', function () {
         pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
