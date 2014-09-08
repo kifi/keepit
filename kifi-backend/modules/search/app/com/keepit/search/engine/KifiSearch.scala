@@ -29,8 +29,8 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
 
   def getKeepRecord(libId: Long, uriId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
     val q = new BooleanQuery()
-    q.add(new TermQuery(new Term(KeepFields.uriField, libId.toString)), Occur.MUST)
-    q.add(new TermQuery(new Term(KeepFields.libraryField, uriId.toString)), Occur.MUST)
+    q.add(new TermQuery(new Term(KeepFields.uriField, uriId.toString)), Occur.MUST)
+    q.add(new TermQuery(new Term(KeepFields.libraryField, libId.toString)), Occur.MUST)
 
     keepSearcher.search(q) { (scorer, reader) =>
       if (scorer.nextDoc() < NO_MORE_DOCS) {
