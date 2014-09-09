@@ -11,7 +11,7 @@ import com.keepit.serializer.EitherFormat
 import org.joda.time.DateTime
 
 import play.api.mvc.PathBindable
-import play.api.templates.Html
+import play.twirl.api.Html
 
 case class ElectronicMailMessageId(id: String) {
   def toEmailHeader = s"<$id>"
