@@ -92,9 +92,10 @@ class TopUriSeedIngestionHelper @Inject() (
             }
           }
 
-          val normalizationFactor = if (uriScores.isEmpty) 0.0f else uriScores.values.max.toFloat
+          val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat)
+          val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
-          uriScores.foreach {
+          rescaledUriScores.foreach {
             case (uriId, score) =>
               log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
               processUriScores(uriId, score / normalizationFactor, userId)
