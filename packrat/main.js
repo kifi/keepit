@@ -2454,7 +2454,7 @@ function deauthenticate() {
   log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
-  ajax('GET', '/logout');
+  ajax('POST', '/ext/session/end');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

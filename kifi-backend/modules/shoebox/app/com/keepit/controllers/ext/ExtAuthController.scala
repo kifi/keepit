@@ -9,20 +9,20 @@ import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
-import com.keepit.common.net._
+import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
-import com.keepit.heimdal._
-import com.keepit.model._
-import com.keepit.model.KifiInstallation
+import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
+import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
+import com.keepit.model.{ SliderRuleGroup, SliderRuleRepo, SocialUserInfoRepo, URLPatternRepo, User, UserRepo }
 import com.keepit.social.{ BasicUser, SecureSocialClientIds }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-import securesocial.core.{ OAuth2Provider, Registry }
+import securesocial.core.{ Authenticator, Events, LogoutEvent, OAuth2Provider, Registry, SecureSocial, UserService }
 
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -139,14 +139,19 @@ class ExtAuthController @Inject() (
     } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
 
-  // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
-  def welcome = JsonAction.authenticated { implicit request =>
-    log.debug("in welcome. with user : [ %s ]".format(request.identity))
-    Redirect("/")
+  def logOut = Action { implicit request => // code mostly copied from LoginPage.logout
+    val user = for (
+      authenticator <- SecureSocial.authenticatorFromRequest;
+      user <- UserService.find(authenticator.identityId)
+    ) yield {
+      Authenticator.delete(authenticator.id)
+      user
+    }
+    val result = NoContent.discardingCookies(Authenticator.discardingCookie)
+    user match {
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session))
+      case None => result
+    }
   }
 
-  // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
-  def logOut = JsonAction.authenticated { implicit request =>
-    Ok(views.html.logOut(Some(request.identity), secureSocialClientIds.facebook)).withNewSession
-  }
 }
