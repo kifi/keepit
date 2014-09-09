@@ -200,6 +200,7 @@ this.tagbox = (function ($, win) {
 					.layout().addClass('kifi-in');
 				if (win.pane) {
 					win.pane.shade();
+					win.pane.onHide.add(this.hide.bind(this, 'pane:onHide'));
 				}
 				this.handleInput();
 				this.$input.focus();
