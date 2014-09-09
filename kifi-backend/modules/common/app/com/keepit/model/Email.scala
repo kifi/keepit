@@ -3,7 +3,7 @@ package com.keepit.model
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json._
-import play.api.templates.Html
+import play.twirl.api.Html
 
 import scala.util.matching.Regex
 
