@@ -6,15 +6,7 @@ angular.module('kifi')
   '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'tagService', 'util',
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, tagService, util) {
 
-
-    function createPageSession() {
-      return Math.random().toString(16).slice(2);
-    }
-
     var list = [],
-      lastSearchContext = null,
-      pageSession = createPageSession(),
-      refinements = -1,
       selected = {},
       before = null,
       end = false,
@@ -38,16 +30,6 @@ angular.module('kifi')
         keep.addTag(tagId);
       });
     });
-
-    function processHit(hit) {
-      _.extend(hit, hit.bookmark);
-
-      hit.keepers = hit.users;
-      hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
-      hit.summary = hit.uriSummary;
-      hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
-      buildKeep(hit, hit.isMyBookmark);
-    }
 
     function keepIdx(keep) {
       if (!keep) {
@@ -278,10 +260,6 @@ angular.module('kifi')
 
       buildKeep: buildKeep,
 
-      lastSearchContext: function () {
-      return lastSearchContext;
-      },
-
       getHighlighted: function () {
         return list[selectedIdx];
       },
@@ -358,9 +336,6 @@ angular.module('kifi')
 
       reset: function () {
         $log.log('keepService.reset()');
-        pageSession = createPageSession();
-        lastSearchContext = null;
-        refinements = -1;
         before = null;
         end = false;
         list.length = 0;
@@ -580,61 +555,6 @@ angular.module('kifi')
       },
 
       uploadBookmarkFile: uploadBookmarkFile,
-
-      find: function (query, filter, context) {
-        if (end) {
-          return $q.when([]);
-        }
-
-        var url = routeService.search,
-          reqData = {
-            params: {
-              q: query || void 0,
-              f: filter || 'm',
-              maxHits: 30,
-              context: context || void 0,
-              withUriSummary: true
-            }
-          };
-
-        $log.log('keepService.find() req', reqData);
-
-        return $http.get(url, reqData).then(function (res) {
-          var resData = res.data,
-            hits = resData.hits || [];
-
-          $log.log('keepService.find() res', resData);
-          if (!resData.mayHaveMore) {
-            end = true;
-          }
-
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'searchKifi',
-            'hits': hits.size,
-            'mayHaveMore': resData.mayHaveMore,
-            'path': $location.path()
-          });
-
-          _.forEach(hits, processHit);
-          appendKeeps(hits);
-
-          refinements++;
-          lastSearchContext = {
-            origin: $location.origin,
-            uuid: res.data.uuid,
-            experimentId: res.data.experimentId,
-            query: reqData.params.q,
-            filter: reqData.params.f,
-            maxResults: reqData.params.maxHits,
-            kifiTime: null,
-            kifiShownTime: null,
-            kifiResultsClicked: null,
-            refinements: refinements,
-            pageSession: pageSession
-          };
-          return resData;
-        });
-      },
 
       getKeepsByTagId: function (tagId, params) {
         params = params || {};
