@@ -4,12 +4,12 @@ import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
 import com.keepit.common.strings._
+import com.ning.http.client.providers.netty.NettyResponse
 import org.joda.time.DateTime
 
 import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Base64
-import play.api.libs.ws.ning.NingWSResponse
 
 import play.api.mvc._
 import play.api.libs.ws.WSResponse
@@ -165,7 +165,7 @@ object AirbrakeError {
       message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
       url = Some(request.url.abbreviate(MaxMessageSize)),
       params = request.queryString,
-      headers = response map { r => ningHeadersToMap(r.underlying[NingWSResponse].ahcResponse.getHeaders) } getOrElse request.headers.toMap,
+      headers = response map { r => ningHeadersToMap(r.underlying[NettyResponse].getHeaders) } getOrElse request.headers.toMap,
       aggregateOnly = aggregateOnly)
   }
 
