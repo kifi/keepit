@@ -45,6 +45,7 @@ trait SearchControllerUtil {
       kifiPlainResult.friendsTotal,
       kifiPlainResult.mayHaveMoreHits,
       kifiPlainResult.show,
+      kifiPlainResult.cutPoint,
       kifiPlainResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)).json
   }

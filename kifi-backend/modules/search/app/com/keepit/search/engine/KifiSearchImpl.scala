@@ -49,29 +49,23 @@ class KifiSearchImpl(
 
     val engine = engineBuilder.build()
     log.info(s"NE: engine created (${System.currentTimeMillis - currentTime})")
-    log.info(s"NE: query ${engine.getQuery().toString()})")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    log.info(s"NE: UriFromKeepsScoreVectorSource created (${System.currentTimeMillis - currentTime})")
     val numRecs1 = engine.execute(keepScoreSource)
     log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${System.currentTimeMillis - currentTime})")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    log.info(s"NE: UriFromArticlesScoreVectorSource created (${System.currentTimeMillis - currentTime})")
     val numRec2 = engine.execute(articleScoreSource)
     log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${System.currentTimeMillis - currentTime})")
 
     val tClickBoosts = currentDateTime.getMillis()
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
-    log.info(s"NE: clickBoosts created (${System.currentTimeMillis - currentTime})")
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime})")
     engine.join(collector)
     log.info(s"NE: KifiResultCollector joined (${System.currentTimeMillis - currentTime})")
-
-    collector.logCount()
 
     collector.getResults()
   }
