@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('recoDecoratorService', ['cardService', 'util',
-  function (cardService, util) {
+.factory('recoDecoratorService', ['keepDecoratorService', 'util',
+  function (keepDecoratorService, util) {
     function Recommendation(rawReco, type) {
       this.recoData = {
         type: type,
@@ -17,7 +17,7 @@ angular.module('kifi')
         }
       });
 
-      this.card = new cardService.Card(rawReco.itemInfo, 'reco');
+      this.recoKeep = new keepDecoratorService.Keep(rawReco.itemInfo, 'reco');
     }
 
     var api = {

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$location', '$routeParams', '$window', 'cardService', 'searchActionService', 
-  function ($scope, $location, $routeParams, $window, cardService, searchActionService) {
+  '$scope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 
+  function ($scope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
     //
     // Internal data.
     //
@@ -57,7 +57,7 @@ angular.module('kifi')
         var hits = result.hits;
         
         hits.forEach(function (hit) {
-          var searchKeep = new cardService.Card(hit);
+          var searchKeep = new keepDecoratorService.Keep(hit);
           if (!!searchKeep.id) {
             searchKeep.buildKeep(searchKeep);
           }

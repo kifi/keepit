@@ -9,7 +9,7 @@ angular.module('kifi')
 
     return {
       scope: {
-        'getSelectedCards': '&',
+        'getSelectedKeeps': '&',
         'addingTag': '=',
         'isShown': '&'
       },
@@ -29,7 +29,7 @@ angular.module('kifi')
           filterTags(null);
         });
 
-        scope.$watch('getSelectedCards', function () {
+        scope.$watch('getSelectedKeeps', function () {
           scope.tagFilter.name = '';
           filterTags(null);
           scope.hideAddTagDropdown();
@@ -42,7 +42,7 @@ angular.module('kifi')
         });
 
         scope.getCommonTags = function () {
-          var tagLists = _.compact(_.pluck(scope.getSelectedCards(), 'tagList'));
+          var tagLists = _.compact(_.pluck(scope.getSelectedKeeps(), 'tagList'));
           var tagIds = _.map(tagLists, function (tagList) { return _.pluck(tagList, 'id'); });
           var commonTagIds = _.union.apply(this, tagIds);
           var tagMap = _.indexBy(_.flatten(tagLists, true), 'id');
@@ -50,7 +50,7 @@ angular.module('kifi')
         };
 
         scope.$watchCollection(function () {
-          return _.flatten(_.pluck(scope.getSelectedCards(), 'tagList'));
+          return _.flatten(_.pluck(scope.getSelectedKeeps(), 'tagList'));
         }, function () {
           scope.commonTags = scope.getCommonTags();
         });
@@ -110,7 +110,7 @@ angular.module('kifi')
         }
 
         scope.addTag = function (tag) {
-          tagService.addKeepsToTag(tag, scope.getSelectedCards());
+          tagService.addKeepsToTag(tag, scope.getSelectedKeeps());
           scope.tagFilter.name = '';
           return scope.hideAddTagDropdown();
         };
@@ -271,11 +271,11 @@ angular.module('kifi')
         };
 
         scope.removeTag = function (tag) {
-          var cardsWithTag = scope.getSelectedCards().filter(function (card) {
-            var tagIds = _.pluck(card.tagList, 'id');
+          var keepsWithTag = scope.getSelectedKeeps().filter(function (keep) {
+            var tagIds = _.pluck(keep.tagList, 'id');
             return _.contains(tagIds, tag.id);
           });
-          tagService.removeKeepsFromTag(tag.id, cardsWithTag).then(function () {
+          tagService.removeKeepsFromTag(tag.id, keepsWithTag).then(function () {
             //filterTags(null);
           });
         };

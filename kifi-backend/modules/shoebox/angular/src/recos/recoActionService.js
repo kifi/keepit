@@ -60,25 +60,25 @@ angular.module('kifi')
           kifiPopularRecommendationService.get();
       },
 
-      trash: function (card) {
-        $http.post(routeService.recoFeedback(card.urlId), { trashed: true });
+      trash: function (recoKeep) {
+        $http.post(routeService.recoFeedback(recoKeep.urlId), { trashed: true });
       },
 
-      vote: function (card, vote) {
+      vote: function (recoKeep, vote) {
         // vote === true -> upvote; vote === false -> downvote
-        $http.post(routeService.recoFeedback(card.urlId), { vote: vote });
+        $http.post(routeService.recoFeedback(recoKeep.urlId), { vote: vote });
       },
 
-      trackKeep: function (card) {
-        $http.post(routeService.recoFeedback(card.urlId), { kept: true });
+      trackKeep: function (recoKeep) {
+        $http.post(routeService.recoFeedback(recoKeep.urlId), { kept: true });
       },
 
-      trackClick: function (card) {
-        $http.post(routeService.recoFeedback(card.urlId), { clicked: true });
+      trackClick: function (recoKeep) {
+        $http.post(routeService.recoFeedback(recoKeep.urlId), { clicked: true });
       },
 
-      improve: function (card, improvement) {
-        $http.post(routeService.recoFeedback(card.urlId), { comment: improvement });
+      improve: function (recoKeep, improvement) {
+        $http.post(routeService.recoFeedback(recoKeep.urlId), { comment: improvement });
       }
     };
 

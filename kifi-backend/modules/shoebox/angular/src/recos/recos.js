@@ -42,7 +42,7 @@ angular.module('kifi')
     };
 
     $scope.trash = function (reco) {
-      recoActionService.trash(reco.card.item);
+      recoActionService.trash(reco.recoKeep);
       
       var trashedRecoIndex = _.findIndex($scope.recos, reco);
       var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
@@ -148,15 +148,15 @@ angular.module('kifi')
     };
 
     $scope.submitImprovement = function (reco) {
-      recoActionService.improve(reco.card, $scope.improvement.type);
+      recoActionService.improve(reco.recoKeep, $scope.improvement.type);
     };
 
-    $scope.trackRecoKeep = function (keep) {
-      recoActionService.trackKeep(keep);
+    $scope.trackRecoKeep = function (recoKeep) {
+      recoActionService.trackKeep(recoKeep);
     };
 
-    $scope.trackRecoClick = function (card) {
-      recoActionService.trackClick(card);
+    $scope.trackRecoClick = function (recoKeep) {
+      recoActionService.trackClick(recoKeep);
     };
   }
 ])
@@ -206,12 +206,12 @@ angular.module('kifi')
 
         scope.upVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.card, true);
+          recoActionService.vote(reco.recoKeep, true);
         };
 
         scope.downVote = function (reco) {
           hideMenu();
-          recoActionService.vote(reco.card, false);
+          recoActionService.vote(reco.recoKeep, false);
         };
 
         scope.showModal = function () {

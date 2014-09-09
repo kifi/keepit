@@ -2,9 +2,9 @@
 
 angular.module('kifi')
 
-.factory('cardService', ['tagService', 'util',
+.factory('keepDecoratorService', ['tagService', 'util',
   function (tagService, util) {
-    function Card (item, itemType) {
+    function Keep (item, itemType) {
       if (!item) {
         return {};
       }
@@ -57,7 +57,7 @@ angular.module('kifi')
     }
 
     // Add properties that are specific to a really kept Keep.
-    Card.prototype.buildKeep = function (keptItem, isMyBookmark) {
+    Keep.prototype.buildKeep = function (keptItem, isMyBookmark) {
       this.id = keptItem.id;
       this.isPrivate = keptItem.isPrivate;
       
@@ -87,7 +87,7 @@ angular.module('kifi')
       };
     };
 
-    Card.prototype.makeUnkept = function () {
+    Keep.prototype.makeUnkept = function () {
       this.unkept = true;
       this.isMyBookmark = false;
 
@@ -103,7 +103,7 @@ angular.module('kifi')
     };
 
     var api = {
-      Card: Card
+      Keep: Keep
     };
 
     return api;
