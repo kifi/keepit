@@ -353,18 +353,10 @@ class UriFromKeepsScoreVectorSource(
       }
     }
 
-    myOwnLibraryIds.foreach { libId =>
-      log.info(s"NE: loading URIs in own library (id=$libId)")
-      load(libId, Visibility.OWNER)
-    }
+    myOwnLibraryIds.foreach { libId => load(libId, Visibility.OWNER) }
 
     // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryIds.foreach { libId =>
-      if (myOwnLibraryIds.findIndex(libId) < 0) {
-        log.info(s"NE: loading URIs in a member library (id=$libId)")
-        load(libId, Visibility.MEMBER)
-      }
-    }
+    memberLibraryIds.foreach { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
 
     myFriendIds.foreach { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
