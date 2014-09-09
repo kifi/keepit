@@ -151,8 +151,8 @@ angular.module('kifi')
       recoActionService.improve(reco.card, $scope.improvement.type);
     };
 
-    $scope.trackRecoKeep = function (card) {
-      recoActionService.trackKeep(card);
+    $scope.trackRecoKeep = function (keep) {
+      recoActionService.trackKeep(keep);
     };
 
     $scope.trackRecoClick = function (card) {

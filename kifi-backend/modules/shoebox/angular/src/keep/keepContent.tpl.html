@@ -5,12 +5,12 @@
     <div class="kf-keep-contents">
       <div class="kf-keep-title">
         <div class="kf-keep-loader" ng-show="false"></div><!-- ng-show="keep.isLoading" -->
-        <a class="kf-keep-title-link" ng-href="{{ card.url }}" target="_blank" ng-attr-title="{{ card.titleAttr }}" ng-bind-html="card.titleHtml" ng-click="clickCallback({ 'card': card })"></a>
+        <a class="kf-keep-title-link" ng-href="{{ card.url }}" target="_blank" ng-attr-title="{{ card.titleAttr }}" ng-bind-html="card.titleHtml" ng-click="clickCallback({ 'keep': card, event: $event })"></a>
       </div>
 
       <div class="kf-keep-content-line">
         <div class="kf-keep-small-image" ng-if="showSmallImage(card)">
-          <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-image" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'card': card })"></a>
+          <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-image" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'keep': card, event: $event })"></a>
         </div>
 
         <div class="kf-keep-info-wrap">
@@ -27,7 +27,7 @@
         </div>
       </div>
 
-      <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage(card)" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'card': card })"></a>
+      <a ng-href="{{ card.url }}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage(card)" ng-src="{{ card.summary.imageUrl }}" ng-click="clickCallback({ 'keep': card, event: $event })"></a>
     </div>
 
     <div class="kf-keep-who" ng-if="card.showSocial">
