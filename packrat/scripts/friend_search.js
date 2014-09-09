@@ -79,7 +79,6 @@ var initFriendSearch = (function () {
       return [
         '<li class="kifi-ti-dropdown-tip">',
         '<div class="kifi-ti-dropdown-line-1">Import Gmail contacts</div>',
-        '<div class="kifi-ti-dropdown-line-2">Tip</div>',
         '</li>'].join('');
     }
   }
