@@ -26,12 +26,10 @@ class URIWanderingCommander @Inject() (
   def wander(user: Id[User], trials: Int): Future[Map[Id[NormalizedURI], Int]] = {
     uriWanderLock.withLockFuture {
       val (preScoreTrials, additionalTrials) = ((0.2f * trials).toInt, (0.8f * trials).toInt)
-      val t0 = System.currentTimeMillis()
       preScore(user, preScoreTrials).map { preScoreResult =>
         if (preScoreResult.isEmpty()) {
           Map()
         } else {
-          val t1 = System.currentTimeMillis()
           val trialsQuota = distributeTrialsQuota(preScoreResult, additionalTrials)
 
           val uriScores = mutable.Map[Id[NormalizedURI], Int]().withDefaultValue(0)
@@ -40,13 +38,8 @@ class URIWanderingCommander @Inject() (
               val uriId = VertexDataId.toNormalizedUriId(uri)
               uriScores(uriId) += s
           }
-          val t2 = System.currentTimeMillis()
           sampleURIs(trialsQuota.user)(sampleURIsfromUser) foreach { case (uriId, s) => uriScores(uriId) += s }
-          val t3 = System.currentTimeMillis()
           sampleURIs(trialsQuota.topic)(sampleURIsfromTopic) foreach { case (uriId, s) => uriScores(uriId) += s }
-          val t4 = System.currentTimeMillis()
-
-          log.info(s"preScore takes ${t1 - t0} millis, assign quota takes ${t2 - t1} millis, sampling from ${trialsQuota.user.size} users takes ${t3 - t2} millis, sampling from ${trialsQuota.topic.size} topics takes ${t4 - t3} millis")
 
           uriScores.toMap
         }
@@ -111,16 +104,13 @@ class URIWanderingCommander @Inject() (
       val wanderer = reader.getNewVertexReader()
       val scout = reader.getNewVertexReader()
       wanderer.moveTo(source)
-      val t0 = System.currentTimeMillis
+
       val weights = getDestinationWeights(wanderer, scout, Component(component._1, component._2, component._3), edgeResolver)
       val density = ProbabilityDensity.normalized(weights)
-      val t1 = System.currentTimeMillis
       val scores = mutable.Map[VertexDataId[D], Int]().withDefaultValue(0)
       (0 until trials).foreach { i =>
         density.sample(Math.random()) foreach { vertex => scores(vertex.asId[D]) += 1 }
       }
-      val t2 = System.currentTimeMillis
-      if (t2 - t0 > 5) log.info(s"sampling destination for ${component}: ${t1 - t0} millis to gather edge weights, edge size: ${weights.size}, ${t2 - t1} millis to sample ${trials} times")
       scores.toMap
     }
   }
