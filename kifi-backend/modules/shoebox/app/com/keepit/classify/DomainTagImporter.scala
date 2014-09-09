@@ -1,6 +1,6 @@
 package com.keepit.classify
 
-import play.api.libs.ws.ning.NingWSResponse
+import com.ning.http.client.providers.netty.NettyResponse
 
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.collection.mutable
@@ -94,7 +94,7 @@ private[classify] class DomainTagImportActor @Inject() (
               category = NotificationCategory.System.ADMIN))
             val s = new FileOutputStream(outputPath)
             try {
-              IOUtils.copy(res.underlying[NingWSResponse].ahcResponse.getResponseBodyAsStream, s)
+              IOUtils.copy(res.underlying[NettyResponse].getResponseBodyAsStream, s)
             } finally {
               s.close()
             }
