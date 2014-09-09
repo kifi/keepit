@@ -7,11 +7,19 @@
         <div class="kf-add-keep-hint" ng-show="!state.invalidUrl">Did you know: You can easily keep any page using the kifi keeper</div>
         <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL</div>
         <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
-        <div class="kf-add-keep-private-container" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
+        <div class="kf-add-keep-private-container" ng-if="!librariesEnabled" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
+
+        <div class="kf-add-keep-to-library" ng-if="librariesEnabled">
+          <select ng-model="data.selectedLibraryId">
+            <option ng-repeat="lib in libraries" 
+                    value="{{lib.id}}">{{lib.name}}</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
   <div class="dialog-buttons">
-    <button class="kf-action-button" ng-click="keepUrl()" tabindex="0">Keep it</button>
+    <button class="kf-action-button" ng-if="!librariesEnabled" ng-click="keepUrl()" tabindex="0">Keep it</button>
+    <button class="kf-action-button" ng-if="librariesEnabled" ng-click="keepToLibrary()" tabindex="0">Keep To Library</button>
   </div>
 </div>

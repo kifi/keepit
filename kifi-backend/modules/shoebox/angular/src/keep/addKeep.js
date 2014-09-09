@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepService',
-  function ($document, $rootScope, $location, keyIndices, keepService) {
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepService', 'libraryService',
+  function ($document, $rootScope, $location, keyIndices, keepService, libraryService) {
 
     return {
       restrict: 'A',
@@ -93,6 +93,32 @@ angular.module('kifi')
             scope.state.invalidUrl = true;
           }
         };
+
+        scope.keepToLibrary = function () {
+          var url = (scope.state.input) || '';
+          if (url && keepService.validateUrl(url)) {
+            $location.path('/');
+            return keepService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
+              scope.resetAndHide();
+              if (result.failures && result.failures.length) {
+                $rootScope.$emit('showGlobalModal','genericError');
+              } else if (result.alreadyKept && result.alreadyKept.length) {
+                $location.path('/keep/' + result.alreadyKept[0].id);
+              } else {
+                keepService.fetchFullKeepInfo(result.keeps[0]);
+              }
+            });
+          } else {
+            scope.state.invalidUrl = true;
+          }
+        };
+
+        scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          return lib.access !== "read_only";
+        });
+        scope.data = scope.data || {};
+        scope.data.selectedLibraryId = scope.libraries[0].id;
+        scope.librariesEnabled = libraryService.isAllowed();
 
         scope.$watch('shown', function (shown) {
           if (shown) {
