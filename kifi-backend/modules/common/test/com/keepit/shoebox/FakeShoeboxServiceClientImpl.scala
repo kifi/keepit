@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
@@ -11,7 +12,7 @@ import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{ Map => MutableMap }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser, SocialId }
-import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import com.google.inject.util.Providers
@@ -653,7 +654,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       }),
       cc = emailToSend.cc,
       subject = emailToSend.subject,
-      htmlBody = LargeString(emailToSend.htmlTemplates.mkString("<br/>")),
+      htmlBody = LargeString(emailToSend.htmlTemplate.body),
       category = emailToSend.category,
       senderUserId = emailToSend.senderUserId
     )

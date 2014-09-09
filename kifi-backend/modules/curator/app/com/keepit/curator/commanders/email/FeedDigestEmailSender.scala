@@ -9,10 +9,12 @@ import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailToSend, SystemEmailAddress }
+import com.keepit.common.mail.template.{ EmailToSend, EmailTips }
+import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
+import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -20,7 +22,6 @@ import com.keepit.social.{ SocialNetworks, BasicUser }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.concurrent.PimpMyFuture._
-import play.api.templates.Html
 
 import concurrent.Future
 import scala.util.{ Success, Random, Failure }
@@ -52,7 +53,7 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
     keepers: DigestRecoKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) {
   val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl.map(Email.helpers.toHttpsUrl)
+  val imageUrl = uriSummary.imageUrl.map(toHttpsUrl)
   val url = uri.url
   val domain = DomainToNameMapper.getNameFromUrl(url)
   val score = reco.masterScore
@@ -105,7 +106,6 @@ class FeedDigestEmailSenderImpl @Inject() (
     uriRecommendationRepo: UriRecommendationRepo,
     shoebox: ShoeboxServiceClient,
     abook: ABookServiceClient,
-    peopleRecosTip: PeopleRecommendationsTip,
     db: Database,
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends FeedDigestEmailSender with Logging {
@@ -131,16 +131,14 @@ class FeedDigestEmailSenderImpl @Inject() (
 
     val recosF = getDigestRecommendationsForUser(userId)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
-    val tipTemplateF = peopleRecosTip.getHtml(userId)
 
     // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
 
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      tipTemplate <- tipTemplateF
     } yield {
-      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, socialInfos, tipTemplate)
+      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, socialInfos)
       else {
         log.info(s"NOT sending digest email to ${user.id.get}; 0 worthy recos")
         Future.successful(DigestRecoMail(userId = userId, mailSent = false, feed = Seq.empty))
@@ -150,7 +148,7 @@ class FeedDigestEmailSenderImpl @Inject() (
   }
 
   private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco],
-    socialInfos: Seq[SocialUserInfo], tipTemplate: Html): Future[DigestRecoMail] = {
+    socialInfos: Seq[SocialUserInfo]): Future[DigestRecoMail] = {
     val userId = user.id.get
 
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
@@ -166,10 +164,11 @@ class FeedDigestEmailSenderImpl @Inject() (
       subject = s"Kifi Digest: ${digestRecos.head.title}",
       to = Left(user.id.get),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplates = Seq(mainTemplate, tipTemplate),
+      htmlTemplate = mainTemplate,
       senderUserId = Some(userId),
       fromName = Some("Kifi"),
-      campaign = Some("digest")
+      campaign = Some("digest"),
+      tips = Seq(EmailTips.FriendRecommendations)
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
@@ -217,7 +216,7 @@ class FeedDigestEmailSenderImpl @Inject() (
       subject = s"Kifi Digest: ${emailData.recos.head.title}",
       to = Right(SystemEmailAddress.FEED_QA),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplates = Seq(views.html.email.feedDigest(qaEmailData)),
+      htmlTemplate = views.html.email.feedDigest(qaEmailData),
       senderUserId = None,
       fromName = Some("Kifi"),
       campaign = Some("digestQA")

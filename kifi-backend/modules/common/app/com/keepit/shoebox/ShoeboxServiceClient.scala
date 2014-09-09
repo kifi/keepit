@@ -1,12 +1,14 @@
 package com.keepit.shoebox
 
+import com.keepit.common.mail.template.EmailToSend
+
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator

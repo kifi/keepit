@@ -9,7 +9,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.common.mail.{ EmailToSend, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import org.joda.time.DateTime
 import com.keepit.common.time._

@@ -1,4 +1,5 @@
-@(emailData: com.keepit.curator.commanders.email.AllDigestRecos, ctx: email.helpers.Context)
+@(emailData: com.keepit.curator.commanders.email.AllDigestRecos)
+@import com.keepit.common.mail.template.helpers._
 
 Hello @emailData.toUser.firstName,
 
@@ -17,14 +18,15 @@ Send: @reco.sendPageUrl
 Keep: @reco.keepUrl
 
 @reco.keepers.message
+}
 
-Follow us on Facebook: @ctx.kifiFacebookUrl
-Follow us on Twitter: @ctx.kifiTwitterUrl
+Follow us on Facebook: @kifiFacebookUrl
+Follow us on Twitter: @kifiTwitterUrl
 
-Available on the App Store: @email.helpers.iTunesAppStoreUrl
+Available on the App Store: @iTunesAppStoreUrl
 
 Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA
-Go to @ctx.unsubscribeUrl to unsubscribe from updates like this.
+Go to @unsubscribeUrl to unsubscribe from updates like this.
 
 (c) 2014 FortyTwo, Inc. All rights reserved.
 
