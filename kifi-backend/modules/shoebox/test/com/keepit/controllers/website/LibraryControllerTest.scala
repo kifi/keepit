@@ -800,22 +800,20 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId1 = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1, true).url
-        val testPath2 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId2, true).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId2).url
 
-        val withCollection =
+        val keepsToAdd =
           RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
             RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
             RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
         val json = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
+          "keeps" -> JsArray(keepsToAdd map { k => Json.toJson(k) })
         )
         val request1 = FakeRequest("POST", testPath1).withBody(json)
-        val result1 = libraryController.addKeeps(pubId1, true)(request1)
+        val result1 = libraryController.addKeeps(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -833,14 +831,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               {"id":"${k2.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"},
               {"id":"${k3.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}],
               "failures":[],
-              "addedToCollection":3,
               "alreadyKept":[]
             }
           """.stripMargin
         ))
 
         val request2 = FakeRequest("POST", testPath2).withBody(json)
-        val result2 = libraryController.addKeeps(pubId2, true)(request2)
+        val result2 = libraryController.addKeeps(pubId2)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -855,7 +852,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             {
               "keeps":[],
               "failures":[],
-              "addedToCollection":0,
               "alreadyKept":
               [{"id":"${k4.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
               {"id":"${k5.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},

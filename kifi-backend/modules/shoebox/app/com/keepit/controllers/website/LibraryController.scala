@@ -347,31 +347,24 @@ class LibraryController @Inject() (
     }
   }
 
-  def addKeeps(pubId: PublicId[Library], separateExisting: Boolean = false) = JsonAction.authenticatedParseJson { request =>
+  def addKeeps(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
     Library.decodePublicId(pubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid id"))
       case Success(libraryId) =>
-        try {
-          Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
-            val source = KeepSource.site
-            implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+        (request.body \ "keeps").asOpt[Seq[RawBookmarkRepresentation]] map { fromJson =>
+          val source = KeepSource.site
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
-            val (keeps, addedToCollection, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection, separateExisting)
-            log.info(s"kept ${keeps.size} keeps")
-            Ok(Json.obj(
-              "keeps" -> keeps,
-              "failures" -> failures,
-              "addedToCollection" -> addedToCollection
-            ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> Json.toJson(keeps))) getOrElse Json.obj()))
-          } getOrElse {
-            log.error(s"can't parse object from request ${request.body} for user ${request.user}")
-            BadRequest(Json.obj("error" -> "Could not parse object from request body"))
-          }
-        } catch {
-          case e: Throwable =>
-            log.error(s"error keeping ${request.body}", e)
-            throw e
+          val (keeps, _, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, true)
+          log.info(s"kept ${keeps.size} keeps")
+          Ok(Json.obj(
+            "keeps" -> keeps,
+            "failures" -> failures
+          ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> Json.toJson(keeps))) getOrElse Json.obj()))
+        } getOrElse {
+          log.error(s"can't parse object from request ${request.body} for user ${request.user}")
+          BadRequest(Json.obj("error" -> "Could not parse object from request body"))
         }
     }
   }
