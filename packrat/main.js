@@ -704,7 +704,7 @@ api.port.on({
     logEvent('slider', 'sliderShown', data);
   },
   suppress_on_site: function(data, _, tab) {
-    ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
+    ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
   },
   get_suppressed: function(_, respond, tab) {
