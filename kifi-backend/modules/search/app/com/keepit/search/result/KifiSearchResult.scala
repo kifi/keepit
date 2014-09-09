@@ -62,6 +62,7 @@ object KifiSearchResult extends Logging {
     friendsTotal: Int,
     mayHaveMoreHits: Boolean,
     show: Boolean,
+    cutPoint: Int,
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String): KifiSearchResult = {
     try {
@@ -73,11 +74,12 @@ object KifiSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
+        "cutPoint" -> JsNumber(cutPoint),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize KifiPlainResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context]", e)
+        log.error(s"can't serialize KifiPlainResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][cutPoint=$cutPoint][experimentId=$experimentId][context=$context]", e)
         throw e
     }
   }
