@@ -787,16 +787,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, lib) = db.readWrite { implicit s =>
+        val (user1, lib1, lib2) = db.readWrite { implicit s =>
           val u1 = userRepo.save(User(firstName = "Mario", lastName = "Plumber"))
 
-          val lib = libraryRepo.save(Library(ownerId = u1.id.get, name = "Mario Party", visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("party"), memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
-          (u1, lib)
+          val lib1 = libraryRepo.save(Library(ownerId = u1.id.get, name = "Mario Party", visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("marioparty"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+
+          val lib2 = libraryRepo.save(Library(ownerId = u1.id.get, name = "Luigi Party", visibility = LibraryVisibility.SECRET, slug = LibrarySlug("luigiparty"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib2.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          (u1, lib1, lib2)
         }
 
-        val pubId1 = Library.publicId(lib.id.get)
-        val testPath = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1, true).url
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1, true).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId2, true).url
 
         val withCollection =
           RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
@@ -805,17 +810,18 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
-        val json1 = Json.obj(
+        val json = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        val request1 = FakeRequest("POST", testPath).withBody(json1)
+        val request1 = FakeRequest("POST", testPath1).withBody(json)
         val result1 = libraryController.addKeeps(pubId1, true)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.all
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 10, 0).sortBy(_.createdAt)
+          keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }
 
@@ -829,6 +835,31 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "failures":[],
               "addedToCollection":3,
               "alreadyKept":[]
+            }
+          """.stripMargin
+        ))
+
+        val request2 = FakeRequest("POST", testPath2).withBody(json)
+        val result2 = libraryController.addKeeps(pubId2, true)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        val (k4, k5, k6) = db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib2.id.get, 10, 0).sortBy(_.createdAt)
+          keeps.length === 3
+          (keeps(0), keeps(1), keeps(2))
+        }
+
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+            {
+              "keeps":[],
+              "failures":[],
+              "addedToCollection":0,
+              "alreadyKept":
+              [{"id":"${k4.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
+              {"id":"${k5.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},
+              {"id":"${k6.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}"}]
             }
           """.stripMargin
         ))
