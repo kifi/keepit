@@ -13,6 +13,7 @@ angular.module('kifi')
     var refinements = -1;
     var pageSession = createPageSession();
 
+
     //
     // Internal helper methods.
     //
@@ -28,6 +29,38 @@ angular.module('kifi')
       hit.summary = hit.uriSummary;
       hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
     }
+
+    function reportSearchAnalytics(endedWith, numResults) {
+      var url = routeService.searchedAnalytics;
+      if (lastSearchContext && lastSearchContext.query) {
+        var origin = $location.$$protocol + '://' + $location.$$host;
+        if ($location.$$port) {
+          origin = origin + ':' + $location.$$port;
+        }
+        var data = {
+          origin: origin,
+          uuid: lastSearchContext.uuid,
+          experimentId: lastSearchContext.experimentId,
+          query: lastSearchContext.query,
+          filter: lastSearchContext.filter,
+          maxResults: lastSearchContext.maxResults,
+          kifiExpanded: true,
+          kifiResults: numResults,
+          kifiTime: lastSearchContext.kifiTime,
+          kifiShownTime: lastSearchContext.kifiShownTime,
+          kifiResultsClicked: lastSearchContext.clicks,
+          refinements: refinements,
+          pageSession: lastSearchContext.pageSession,
+          endedWith: endedWith
+        };
+        $http.post(url, data)['catch'](function (res) {
+          $log.log('res: ', res);
+        });
+      } else {
+        $log.log('no search context to log');
+      }
+    }
+
 
     //
     // Exposed API methods.
@@ -78,12 +111,18 @@ angular.module('kifi')
       });
     }
 
-    function reportSearchAnalyticsOnUnload() {
-      reportSearchAnalytics('unload');
+    function reset() {
+      lastSearchContext = null;
+      refinements = -1;
+      pageSession = createPageSession();
     }
 
-    function reportSearchAnalyticsOnRefine() {
-      reportSearchAnalytics('refinement');
+    function reportSearchAnalyticsOnUnload(numResults) {
+      reportSearchAnalytics('unload', numResults);
+    }
+
+    function reportSearchAnalyticsOnRefine(numResults) {
+      reportSearchAnalytics('refinement', numResults);
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
@@ -132,8 +171,10 @@ angular.module('kifi')
       }
     }
 
+
     var api = {
       find: find,
+      reset: reset,
       reportSearchAnalyticsOnUnload: reportSearchAnalyticsOnUnload,
       reportSearchAnalyticsOnRefine: reportSearchAnalyticsOnRefine,
       reportSearchClickAnalytics: reportSearchClickAnalytics

@@ -8,7 +8,10 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
     //
     // Internal data.
     //
+    var query = $routeParams.q || '';
+    var filter = $routeParams.f || 'm';
     var lastResult = null;
+
 
     //
     // Scope data.
@@ -24,42 +27,21 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
     $scope.hasMore = true;
     $scope.scrollDistance = '100%';
 
+
     //
     // Internal helper methods.
     //
-
-    //either "unload" or "refinement"
-    var reportSearchAnalytics = function (endedWith) {
-      var url = routeService.searchedAnalytics;
-      var lastSearchContext = keepService.lastSearchContext();
-      if (lastSearchContext && lastSearchContext.query) {
-        var origin = $location.$$protocol + '://' + $location.$$host;
-        if ($location.$$port) {
-          origin = origin + ':' + $location.$$port;
-        }
-        var data = {
-          origin: origin,
-          uuid: lastSearchContext.uuid,
-          experimentId: lastSearchContext.experimentId,
-          query: lastSearchContext.query,
-          filter: lastSearchContext.filter,
-          maxResults: lastSearchContext.maxResults,
-          kifiExpanded: true,
-          kifiResults: keepService.list.length,
-          kifiTime: lastSearchContext.kifiTime,
-          kifiShownTime: lastSearchContext.kifiShownTime,
-          kifiResultsClicked: lastSearchContext.clicks,
-          refinements: keepService.refinements,
-          pageSession: lastSearchContext.pageSession,
-          endedWith: endedWith
-        };
-        $http.post(url, data)['catch'](function (res) {
-          $log.log('res: ', res);
-        });
-      } else {
-        $log.log('no search context to log');
+    function getFilterCount(type) {
+      switch (type) {
+      case 'm':
+        return $scope.resultTotals.myTotal;
+      case 'f':
+        return $scope.resultTotals.friendsTotal;
+      case 'a':
+        return $scope.resultTotals.othersTotal;
       }
-    };
+    }
+
 
     //
     // Scope methods.
@@ -94,58 +76,6 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
       });
     };
 
-    // Unclear what/how $scope.search is affected.
-    if ($scope.search) {
-      $scope.search.text = $routeParams.q;
-    }
-    $scope.enableSearch();
-
-
-
-    $scope.$on('$destroy', function () {
-      searchActionService.reportSearchAnalyticsOnUnload();
-      $window.removeEventListener('beforeunload', searchActionService.reportSearchAnalyticsOnUnload);
-    });
-
-    $window.addEventListener('beforeunload', searchActionService.reportSearchAnalyticsOnUnload);
-
-    if (!$routeParams.q) {
-      // No or blank query
-      $location.path('/');
-    }
-
-    var query = $routeParams.q || '',
-      filter = $routeParams.f || 'm';
-
-    $window.document.title = query === '' ? 'Kifi • Search' : 'Kifi • ' + query;
-
-    $scope.keepService = keepService;
-    // $scope.keeps = keepService.list;
-
-    
-
-    $scope.isFilterSelected = function (type) {
-      return filter === type;
-    };
-
-    function getFilterCount(type) {
-      switch (type) {
-      case 'm':
-        return $scope.resultTotals.myTotal;
-      case 'f':
-        return $scope.resultTotals.friendsTotal;
-      case 'a':
-        return $scope.resultTotals.othersTotal;
-      }
-    }
-
-    $scope.isEnabled = function (type) {
-      if ($scope.isFilterSelected(type)) {
-        return false;
-      }
-      return !!getFilterCount(type);
-    };
-
     $scope.getFilterUrl = function (type) {
       if ($scope.isEnabled(type)) {
         var count = getFilterCount(type);
@@ -156,62 +86,78 @@ function ($http, $scope, keepService, $routeParams, $location, $window, routeSer
       return '';
     };
 
-    // Still need to migrate this.
-    // $scope.getSubtitle = function () {
-    //   if ($scope.loading) {
-    //     return 'Searching…';
-    //   }
-
-    //   var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
-    //   if (subtitle) {
-    //     return subtitle;
-    //   }
-
-    //   var numShown = $scope.keeps.length;
-    //   switch (numShown) {
-    //   case 0:
-    //     return 'Sorry, no results found for “' + query + '”';
-    //   case 1:
-    //     return '1 result found';
-    //   default:
-    //     return 'Top ' + numShown + ' results';
-    //   }
-    // };
-
-    
-
-    $scope.analyticsTrack = function (keep, $event) {
-      searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
-      return [keep, $event]; // log analytics for search click here
+    $scope.isFilterSelected = function (type) {
+      return filter === type;
     };
 
-
-
-    function initKeepList() {
-      $scope.scrollDisabled = false;
-      lastResult = null;
-      $scope.getNextKeeps();
-    }
-
-    $scope.$watch('keepService.seqReset()', function () {
-      initKeepList();
-    });
+    $scope.isEnabled = function (type) {
+      return !$scope.isFilterSelected(type) && !!getFilterCount(type);
+    };
 
     $scope.allowEdit = function () {
       return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');
     };
 
-    // Sequence:
-    // keepService.reset();
-    // initKeepList();
-    // getNextKeeps();
-    // keepService.find();
-    // --------------------
-    //keepService.reset();
+    $scope.analyticsTrack = function (keep, $event) {
+      searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
+      return [keep, $event]; // log analytics for search click here
+    };
+    
+    //
+    // Watches and event listeners.
+    //
+
+    // Report search analytics on unload.
+    var onUnload = function () {
+      searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length);
+    };
+    $window.addEventListener('beforeunload', onUnload);
+
+    $scope.$on('$destroy', function () {
+      onUnload();
+      $window.removeEventListener('beforeunload', onUnload);
+    });
+
+    $scope.getSubtitle = function () {
+      if ($scope.loading) {
+        return 'Searching…';
+      }
+
+      // The following if for selecting keeps. TODO: get this to work.
+      // var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
+      // if (subtitle) {
+      //   return subtitle;
+      // }
+
+      var numShown = $scope.resultKeeps.length;
+      switch (numShown) {
+        case 0:
+          return 'Sorry, no results found for “' + query + '”';
+        case 1:
+          return '1 result found';
+        default:
+          return 'Top ' + numShown + ' results';
+      }
+    };
+
 
     //
     // On Angular load.
     //
+    if (!query) {
+      // No query or blank query.
+      $location.path('/');
+    }
+
+    $window.document.title = 'Kifi • ' + query;
+
+    // Populate search bar input with current query and display the search bar.
+    if ($scope.search) {
+      $scope.search.text = query;
+    }
+    $scope.enableSearch();
+
+    searchActionService.reset();
     $scope.getNextKeeps();
   }
 ]);

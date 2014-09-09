@@ -6,7 +6,7 @@
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ng-href="{{getFilterUrl('a')}}">All keeps</a>
     </div>
     <div class="kf-subtitle">
-      <span class="kf-subtitle-text"><!--{{getSubtitle()}}-->TBD</span>
+      <span class="kf-subtitle-text">{{getSubtitle()}}</span>
       <div class="kf-edit-keeps" ng-click="toggleEdit()" ng-show="allowEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>
         <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
