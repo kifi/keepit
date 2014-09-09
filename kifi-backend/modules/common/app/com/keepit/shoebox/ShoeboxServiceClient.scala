@@ -112,6 +112,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
   def addInteractions(userId: Id[User], actions: Seq[(Either[Id[User], EmailAddress], String)]): Unit
   def processAndSendMail(email: EmailToSend): Future[Boolean]
+  def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
+  def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembership]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -711,5 +713,13 @@ class ShoeboxServiceClientImpl @Inject() (
       case (Right(email), action) => Json.obj("email" -> email, "action" -> action)
     }
     call(Shoebox.internal.addInteractions(userId), body = Json.toJson(jsonActions))
+  }
+
+  def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = {
+    call(Shoebox.internal.getLibrariesChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryView]] }
+  }
+
+  def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembership]] = {
+    call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryMembership]] }
   }
 }

@@ -132,3 +132,11 @@ case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembe
 object LibraryAndMemberships {
   implicit val format = Json.format[LibraryAndMemberships]
 }
+
+case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
+
+object LibraryView {
+  implicit val format = Json.format[LibraryView]
+
+  def fromLibrary(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
+}
