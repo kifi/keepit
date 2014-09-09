@@ -431,11 +431,11 @@ span.kifi-compose-tip-alt {
 }
 .kifi-ti-dropdown-item-x {
   position: absolute;
-  top: 0;
-  right: 0;
-  margin: 7px;
+  top: 50%;
+  right: 10px;
   height: 18px;
   width: 18px;
+  margin-top: -9px;
   border-radius: 50%;
   .kifi-ti-dropdown-item:not(.kifi-ti-dropdown-item-selected) & {
     display: none;
@@ -448,7 +448,7 @@ span.kifi-compose-tip-alt {
     bottom: 4px;
     left: 50%;
     width: 2px;
-    background: #eee;
+    background: #ccc;
     font-size: 0;
   }
   &::before {
@@ -461,10 +461,14 @@ span.kifi-compose-tip-alt {
   }
   &:hover,
   &:focus {
-    background: #5e9ced;
-  }
-  &:active {
-    background: #438bea;
+    background: #ccc;
+    &:active {
+      background: #bbb;
+    }
+    &::before,
+    &::after {
+      background: #fff;
+    }
   }
 }
 .kifi-ti-dropdown-line-1,
