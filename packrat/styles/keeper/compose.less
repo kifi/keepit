@@ -488,39 +488,13 @@ span.kifi-compose-tip-alt {
   color: #999;
 }
 .kifi-ti-dropdown-tip {
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  height: 25px;
-  padding: 3px 10px !important;
-  line-height: 18px;
-  text-align: right;
-  vertical-align: middle;
-  background-color: #fff9e4;
-  color: #666;
   cursor: pointer;
-  &:not(:first-child) {
-    border-top: 1px solid #ccc;
+  &::before {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABe0lEQVR4AcXUP0tqcRjA8Z/gIoi1iQhy2x219+DiVEM4FAXZEFG6uF6Ee9/AbdAsBKdexZlqcE5fQRwXSUtw0c7TdzjD5eDx6O/8Ufg824Pf4fwe5ef3/tZ+wiOULu1F5GHZ8rsI6EFsvagDfmEBsS1wEGXAP4jDfVQBacwhDnOkowj4A3HxN+yAPUwgLibYDzOgAfHQCCsggRHEwwgJvwEpFFBBE88YQjY0tHeaqKCAlFtAEXW0YMCEhMSEgRbqKCrGGLIjY8U4xhISsSWOFEOhEnHEEifOj/AM3xH9+anbK7iABQmJhXOvZ3gZUoSF6qZ34DrgCAs3217CW0hA7nRPcQviUxtKN6AL8anrJ6AP8amvGxDDF8SnGWI6ATlIQHI6ASVIQEo6ATWIB8smHmo6AR3IGgYOUYQBWaOjE/AKWWGAMpRDGQPICi86AVPIf0xcIQ7lIo4qTMfudNuArOMZ/UYSakNJe2cGsWW3DfjAAzJQmjJo49Mt4AdEPwZU+7t3/gAAAABJRU5ErkJggg==);
+    background-size: 20px 20px; // scaled up from 16x16
+    background-position: center;
+    background-color: white;
   }
-  &.kifi-ti-dropdown-item-selected {
-    background-color: #fff2c5;
-    color: #000;
-  }
-  ::before {
-    position: static;
-    display: inline-block;
-    height: 16px;
-    width: 16px;
-    vertical-align: top;
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAxklEQVQ4y2NgwAOeXJlVCMTFDOQAoEZOIH4GxM9BbHIMyATi/1CcSapmFiC+i2QAiM1CigFRSJphOAqXYg0gDgXiGiBeAsSngPgrFgO+QuWWQNWC9GiADDiLRTGx+AzIADEgvkaG5qtALArzhiQQ3yBB802QHvSwkAbi20RoBqmRwRWgvkQY4Icv+vKJMCAfnwEziTBgJj4DDqMp3gfFyGKH8RnwFimKPJDEPaBiILm3uDRzA/FDIE4CYiYs8kxQOZAabpg4AHfM2MuHHzKuAAAAAElFTkSuQmCC);
-    background-size: 16px;
-    margin-right: 6px;
-    @media (min-resolution: 1.3dppx) {
-      background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABe0lEQVR4AcXUP0tqcRjA8Z/gIoi1iQhy2x219+DiVEM4FAXZEFG6uF6Ee9/AbdAsBKdexZlqcE5fQRwXSUtw0c7TdzjD5eDx6O/8Ufg824Pf4fwe5ef3/tZ+wiOULu1F5GHZ8rsI6EFsvagDfmEBsS1wEGXAP4jDfVQBacwhDnOkowj4A3HxN+yAPUwgLibYDzOgAfHQCCsggRHEwwgJvwEpFFBBE88YQjY0tHeaqKCAlFtAEXW0YMCEhMSEgRbqKCrGGLIjY8U4xhISsSWOFEOhEnHEEifOj/AM3xH9+anbK7iABQmJhXOvZ3gZUoSF6qZ34DrgCAs3217CW0hA7nRPcQviUxtKN6AL8anrJ6AP8amvGxDDF8SnGWI6ATlIQHI6ASVIQEo6ATWIB8smHmo6AR3IGgYOUYQBWaOjE/AKWWGAMpRDGQPICi86AVPIf0xcIQ7lIo4qTMfudNuArOMZ/UYSakNJe2cGsWW3DfjAAzJQmjJo49Mt4AdEPwZU+7t3/gAAAABJRU5ErkJggg==);
-    }
-  }
-}
-.kifi-ti-tip-invite {
-  text-decoration: underline;
 }
 .kifi-ti-dropdown b {
   font-weight: bold;

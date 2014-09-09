@@ -11,14 +11,19 @@ var initFriendSearch = (function () {
       classPrefix: 'kifi-ti-',
       formatResult: formatResult,
       formatToken: formatToken,
-      onSelect: onSelect,
+      onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
   };
 
   function search(participants, includeSelf, numTokens, query, withResults) {
     var n = Math.max(3, Math.min(8, Math.floor((window.innerHeight - 365) / 55)));  // quick rule of thumb
-    api.port.emit('search_contacts', {q: query, n: n, participants: participants, includeSelf: includeSelf(numTokens)}, withResults);
+    api.port.emit('search_contacts', {q: query, n: n, participants: participants, includeSelf: includeSelf(numTokens)}, function (contacts) {
+      if (contacts.length < 3) {
+        contacts.push('tip');
+      }
+      withResults(contacts);
+    });
   }
 
   function formatToken(item) {
@@ -38,7 +43,11 @@ var initFriendSearch = (function () {
         '<li class="kifi-ti-dropdown-item-token" style="background-image:url(//', cdnBase, '/users/', res.id, '/pics/100/', res.pictureName, ')">',
         '<div class="kifi-ti-dropdown-line-1">'];
       appendParts(html, res.nameParts);
-      html.push('</div><div class="kifi-ti-dropdown-line-2">on kifi</div></li>');
+      html.push(
+        '</div>',
+        '<div class="kifi-ti-dropdown-line-2">',
+        res.id === 'aa345838-70fe-45f2-914c-f27c865bdb91' ? 'Kifi team' : 'Kifi user',
+        '</div></li>');
       return html.join('');
     } else if (res.q) {
       var html = [
@@ -47,23 +56,31 @@ var initFriendSearch = (function () {
       appendParts(html, ['', res.q]);
       html.push(
         '</div>',
-        res.isValidEmail ? '' : '<div class="kifi-ti-dropdown-line-2">Keep typing the email address</div>',
-        '</li>');
+        '<div class="kifi-ti-dropdown-line-2">',
+        res.isValidEmail ? 'An email address' : 'Keep typing the email address',
+        '</div></li>');
       return html.join('');
     } else if (res.email) {
       var html = [
         '<li class="kifi-ti-dropdown-item-token kifi-ti-dropdown-email kifi-ti-dropdown-contact-email">',
-        '<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>'];
+        '<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>',
+        '<div class="kifi-ti-dropdown-line-1">'];
       if (res.nameParts) {
-        html.push('<div class="kifi-ti-dropdown-line-1">');
         appendParts(html, res.nameParts);
         html.push('</div><div class="kifi-ti-dropdown-line-2">');
+        appendParts(html, res.emailParts);
       } else {
-        html.push('<div class="kifi-ti-dropdown-line-1">');
+        appendParts(html, res.emailParts);
+        html.push('</div><div class="kifi-ti-dropdown-line-2">An email contact');
       }
-      appendParts(html, res.emailParts);
       html.push('</div></li>');
       return html.join('');
+    } else if (res === 'tip') {
+      return [
+        '<li class="kifi-ti-dropdown-tip">',
+        '<div class="kifi-ti-dropdown-line-1">Import Gmail contacts</div>',
+        '<div class="kifi-ti-dropdown-line-2">Tip</div>',
+        '</li>'].join('');
     }
   }
 
@@ -77,10 +94,13 @@ var initFriendSearch = (function () {
     }
   }
 
-  function onSelect(res, el) {
+  function onSelect(source, res, el) {
     if (res.isValidEmail) {
       res.id = res.email = res.q;
     } else if (!res.pictureName && !res.email) {
+      if (res === 'tip') {
+        api.port.emit('import_contacts', source);
+      }
       return false;
     }
   }
