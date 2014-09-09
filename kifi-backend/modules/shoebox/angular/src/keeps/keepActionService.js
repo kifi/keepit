@@ -33,7 +33,7 @@ angular.module('kifi')
           };
         })
       };
-      $log.log('keepService.keep()', data);
+      $log.log('keepActionService.keep()', data);
 
       var url = env.xhrBase + '/keeps/add';
       var config = {

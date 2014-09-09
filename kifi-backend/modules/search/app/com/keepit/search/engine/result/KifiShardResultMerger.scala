@@ -51,10 +51,10 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     results.foreach { res =>
       res.hits.foreach { hit =>
-        val queue = hit.visibility match {
-          case Visibility.MEMBER => myHits
-          case Visibility.NETWORK => friendsHits
-          case _ => othersHits
+        val queue = {
+          if ((hit.visibility & Visibility.OWNER) != 0) myHits
+          else if ((hit.visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
+          else othersHits
         }
         queue.insert(hit.score, null, hit)
       }
