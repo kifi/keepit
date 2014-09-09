@@ -80,8 +80,6 @@ POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
-POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
@@ -89,7 +87,10 @@ GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserControlle
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
-POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
+POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
+# Note: /users/slider/suppress is deprecated. Recent extensions use /ext/pref/keeperHidden instead.
+POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
 POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)

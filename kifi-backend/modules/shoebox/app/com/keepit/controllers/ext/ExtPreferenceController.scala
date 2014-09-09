@@ -8,6 +8,7 @@ import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.ElectronicMailCategory
+import com.keepit.common.net.URI
 import com.keepit.social.BasicUser
 import com.keepit.model._
 
@@ -103,7 +104,7 @@ class ExtPreferenceController @Inject() (
     }
   }
 
-  def setKeeperPosition() = JsonAction.authenticatedParseJson { request =>
+  def setKeeperPositionOnSite() = JsonAction.authenticatedParseJson { request =>
     val pos = request.body \ "pos"
     val host = (request.body \ "host").as[String]
 
@@ -122,6 +123,28 @@ class ExtPreferenceController @Inject() (
       }
     }
     Ok
+  }
+
+  def setKeeperHiddenOnSite() = JsonAction.authenticatedParseJson { request =>
+    val json = request.body
+    val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
+    val suppress: Boolean = (json \ "suppress").as[Boolean]
+    db.readWrite(attempts = 3) { implicit s =>
+      val domain = domainRepo.get(host, excludeState = None) match {
+        case Some(d) if d.isActive => d
+        case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
+        case None => domainRepo.save(Domain(hostname = host))
+      }
+      userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, excludeState = None) match {
+        case Some(utd) if (utd.isActive != suppress) =>
+          userToDomainRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
+        case Some(utd) => utd
+        case None =>
+          userToDomainRepo.save(UserToDomain(None, request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, None))
+      }
+    }
+
+    Ok(Json.obj("host" -> host, "suppressed" -> suppress))
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
