@@ -183,7 +183,7 @@ span.kifi-compose-tip-alt {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
-.kifi-compose-submit[href] {
+.kifi-compose-submit {
   display: inline-block;
   margin: 3px;
   border: 1px solid #ccc;
@@ -192,13 +192,30 @@ span.kifi-compose-tip-alt {
   color: #333 !important;
   background: linear-gradient(#fff, #f3f3f3);
   line-height: 28px;
+  position: relative;
   &:focus {
     outline: 0 !important;
-    box-shadow: 0 0 4px #5B9DD9 !important;
+    box-shadow: 0 0 4px #5b9dd9 !important;
   }
   &:active,
-  &.kifi-active {
+  &:not([href]) {
     background: #f3f3f3;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 48px;
+    height: 16px;
+    margin: -8px 0 0 -24px;
+    background: #f3f3f3 url(/images/spinner_32.gif) center no-repeat;
+    background-size: contain;
+    opacity: 0;
+  }
+  &:not([href])::after {
+    opacity: 1;
+    transition: opacity .2s linear;
   }
 }
 
@@ -290,7 +307,6 @@ span.kifi-compose-tip-alt {
   }
   &::after {
     content: '';
-    display: block;
     position: absolute;
     right: 11px;
     top: 50%;

@@ -272,8 +272,8 @@ var initCompose = (function() {
           return;
         }
       }
-      var $submit = $form.find('.kifi-compose-submit').addClass('kifi-active');
-      setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
+      var $submit = $form.find('.kifi-compose-submit').removeAttr('href');
+      setTimeout($.fn.attr.bind($submit, 'href', 'javascript:'), opts.resetOnSubmit ? 100 : 2000);  // TODO: use promise
       opts.onSubmit(text, recipients, e.originalEvent.guided);
       if (opts.resetOnSubmit) {
         editor.clear();
