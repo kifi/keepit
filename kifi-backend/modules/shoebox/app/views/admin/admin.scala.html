@@ -24,9 +24,9 @@
     @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
       <script src="@routes.Assets.at("javascripts/jquery-1.7.1" + ext)"></script>
       <script src="@routes.Assets.at("bootstrap/js/bootstrap" + ext)"></script>
-      @for(script <- scripts) {
-        <script src="@routes.Assets.at("javascripts/" + script + ext)"></script>
-      }
+    }
+    @for(script <- scripts) {
+      <script src="@routes.Assets.at("javascripts/" + script + ".js")"></script>
     }
   </head>
   <body>
