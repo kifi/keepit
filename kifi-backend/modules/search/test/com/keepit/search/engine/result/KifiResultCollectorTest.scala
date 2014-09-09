@@ -23,13 +23,13 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       ctx.set(20)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -51,23 +51,23 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(40)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -87,17 +87,17 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -139,12 +139,12 @@ class KifiResultCollectorTest extends Specification {
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
-      mHits.size === 2
-      fHits.size === 1
+      mHits.size === 1
+      fHits.size === 2
       oHits.size === 1
 
-      mHits.toSortedList.map(_.id).toSet === Set(30L, 40L)
-      fHits.pop().id === 20L
+      mHits.pop().id === 40L
+      fHits.toSortedList.map(_.id).toSet === Set(20L, 30L)
       oHits.pop().id === 10L
     }
 

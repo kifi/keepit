@@ -122,9 +122,9 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
 
       if (score > 0.0f) {
         val visibility = ctx.visibility
-        if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) {
+        if ((visibility & Visibility.OWNER) != 0) {
           myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-        } else if ((visibility & Visibility.NETWORK) != 0) {
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         } else {
           othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
