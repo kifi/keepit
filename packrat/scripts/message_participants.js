@@ -118,13 +118,20 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 
 			return function () {
+				var submitAddParticipants = this.addParticipantTokens.bind(this);
+
 				var $el = this.get$();
 				$el.on('click', '.kifi-message-participants-avatars-expand', this.toggleParticipants.bind(this));
 				$el.on('click', '.kifi-message-participant-list-hide', this.toggleParticipants.bind(this));
+				$el.on('click', '.kifi-message-participant-dialog-button', submitAddParticipants);
+				$el.on('keydown', '.kifi-message-participant-dialog', function (e) {
+					if (e.which === 13 && e.originalEvent.isTrusted !== false) {
+						submitAddParticipants();
+					}
+				});
 
 				var $parent = this.getParent$();
 				$parent.on('click', '.kifi-message-add-participant', this.toggleAddDialog.bind(this));
-				$parent.on('click', '.kifi-message-participant-dialog-button', this.addParticipantTokens.bind(this));
 
 				win.setTimeout(addDocListeners.bind(this));
 			};
@@ -414,7 +421,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
 				threadId: this.parent.threadId,
-				userIds: util.pluck(users, 'id')
+				ids: util.pluck(users, 'id')
 			}, 'Could not add participants.');
 		},
 

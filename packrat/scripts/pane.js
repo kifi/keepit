@@ -54,22 +54,17 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function showPane(locator, back, redirected) {
-    if (!locator) {
-      var deferred = Q.defer();
-      api.port.emit('pane?', function (locator) {
-        showPane(locator, back, redirected);
-        deferred.resolve();
-      });
-      return deferred.promise;
+    var paneState = $pane && $pane.data('state');
+    if (paneState && paneState !== 'open') {
+      log('[showPane] aborting', locator, back ? 'back' : '', paneState);
+      return;
+    }
+    if (window.toaster && toaster.showing()) {
+      toaster.hide(null, 'pane');
     }
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
       log('[showPane] already at', locator);
-      return;
-    }
-    var paneState = $pane && $pane.data('state');
-    if (paneState && paneState !== 'open') {
-      log('[showPane] aborting', locator, back ? 'back' : '', paneState);
       return;
     }
     // TODO: have a state for pane-to-pane transitions and avoid interrupting
@@ -409,44 +404,14 @@ var pane = pane || function () {  // idempotent for Chrome
       } else if ($pane) {
         if ($pane.data('state') === 'closing') {
           log('[pane.toggle] ignoring, hiding');
-        } else if (window.toaster && toaster.showing()) {
-          toaster.hide();
-          showPane(locator);
+        } else if (locator === paneHistory[0] && !(window.toaster && toaster.showing())) {
+          hidePane(trigger === 'keeper');
         } else {
-          var showOrHide = function (loc) {
-            if (loc === paneHistory[0]) {
-              hidePane(trigger === 'keeper');
-            } else {
-              showPane(loc);
-            }
-          };
-          if (locator) {
-            showOrHide(locator);
-          } else {
-            api.port.emit('pane?', showOrHide);
-          }
+          showPane(locator);
         }
       } else {
         showPane(locator);
       }
-    },
-    compose: function (trigger, locator, recipient) {
-      log('[pane:compose]', trigger);
-      api.require('scripts/compose_toaster.js', function () {
-        Q.when($pane || showPane(locator)).done(function () {
-          if ($pane.data('state') !== 'closing') {
-            if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form
-            toaster.toggle($pane).done(function (compose) {
-              if (compose) {
-                if (recipient) {
-                  compose.prefill(recipient);
-                }
-                compose.snapSelection() || compose.focus();
-              }
-            });
-          }
-        });
-      });
     },
     shade: function () {
       if ($pane) {
@@ -464,7 +429,7 @@ var pane = pane || function () {  // idempotent for Chrome
       }
     },
     back: function (fallbackLocator) {
-      showPane(paneHistory[1] || fallbackLocator, true);
+      showPane(paneHistory[1] || fallbackLocator || '/messages:all', true);
     },
     onHide: new Listeners
   };

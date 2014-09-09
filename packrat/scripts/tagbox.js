@@ -269,11 +269,7 @@ this.tagbox = (function ($, win) {
 		handleEsc: function () {
 			log('[handleEsc]');
 
-			if (this.currentSuggestion) {
-				this.navigateTo(null, 'esc');
-			} else {
-				this.hide('key:esc');
-			}
+			this.hide('key:esc');
 			return false;
 		},
 
@@ -1011,30 +1007,12 @@ this.tagbox = (function ($, win) {
 		 * @return {jQuery} newly highlighted suggestion
 		 */
 		navigate: function (dir) {
-			var $prev = this.currentSuggestion,
-				$next = null;
-			switch (dir) {
-			case 'up':
-				if ($prev) {
-					$next = $prev.prev();
-				}
-				else {
-					$next = this.$suggest.children(':last');
-				}
-				break;
-			case 'down':
-				if ($prev) {
-					$next = $prev.next();
-				}
-				else {
-					$next = this.$suggest.children(':first');
-				}
-				break;
-			default:
-				return;
-			}
+			var $prev = this.currentSuggestion;
+			var to = dir === 'up' ?
+				($prev ? $prev.prev() : 'last') :
+				($prev ? $prev.next() : 'first');
 			this.ignoreMouseover = true;
-			return this.navigateTo($next, dir);
+			return this.navigateTo(to, dir);
 		},
 
 		navigateTo: function ($suggestion, src) {

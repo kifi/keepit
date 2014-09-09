@@ -143,12 +143,12 @@
     height: 100%;
   }
 
-  .kifi-message-participant-email-image{
+  .kifi-message-participant-email-image {
     display: table-cell;
     width: @picSize;
     line-height: 29px;
     text-align: center;
-    font-size: 24px;
+    font-size: 20px;
     color: white;
   }
 
@@ -247,7 +247,8 @@
   font-size: 12px;
   font-weight: 500;
 
-  img, .kifi-message-participant-email-image {
+  img,
+  .kifi-message-participant-email-image {
     width: @listPicSize;
     height: @listPicSize;
     border: 0;
@@ -262,7 +263,7 @@
   .kifi-message-participant-email-image {
     line-height: 34px;
     text-align: center;
-    font-size: 30px;
+    font-size: 24px;
     font-weight: 400;
     color: white;
   }
@@ -354,7 +355,6 @@
 
 .kifi-message-participant-dialog {
   position: absolute;
-  display: none;
   top: -1px;
   left: 0;
   width: 100%;
@@ -363,14 +363,19 @@
   -moz-box-sizing: border-box;
   color: white;
   background: @dotBgColor;
-  //opacity: 0;
-  //transition: opacity @duration ease;
 
-  .kifi-ti-list {
+  :not(.kifi-dialog-opened)>& {
+    display: none;
+  }
+
+  &>.kifi-ti-list {
     padding: 3px !important;
     padding-top: 6px !important;
     border: 0 !important;
     border-radius: 0 !important;
+    &::before {
+      content: none;
+    }
   }
 
   .kifi-ti-token {
@@ -381,17 +386,17 @@
   }
 
   input {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 300;
     letter-spacing: .5px;
-    line-height: 16px;
-    border: 0;
-    padding: 0;
+    line-height: 18px !important;
+    border: 0 !important;
+    padding: 3px 0 !important;
   }
 
-  .kifi-message-participants.kifi-dialog-opened & {
-    display: block;
-    //opacity: 1;
+  &>.kifi-ti-dropdown {
+    // border: 1px solid @buttonBgColor;
+    // border-bottom-width: 2px;
   }
 }
 
@@ -422,13 +427,4 @@
     color: white;
     background: shade(@buttonBgColor, 20%);
   }
-}
-
-.kifi-clear {
-  clear: both;
-}
-
-.kifi-root .kifi-ti-dropdown {
-  border: 1px solid @buttonBgColor;
-  border-bottom-width: 2px;
 }
