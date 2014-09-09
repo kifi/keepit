@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log', 'searchActionService', 'cardService',
-function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log, searchActionService, cardService) {
+  '$scope', '$location', '$routeParams', '$window', 'cardService', 'searchActionService', 
+  function ($scope, $location, $routeParams, $window, cardService, searchActionService) {
     //
     // Internal data.
     //
