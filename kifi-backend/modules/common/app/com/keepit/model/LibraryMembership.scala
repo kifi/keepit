@@ -40,6 +40,9 @@ object LibraryMembership {
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
+
+  def toLibraryMembershipView(libMem: LibraryMembership): LibraryMembershipView =
+    LibraryMembershipView(id = libMem.id, libraryId = libMem.libraryId, userId = libMem.userId, access = libMem.access, createdAt = libMem.createdAt, state = libMem.state, seq = libMem.seq)
 }
 
 case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
@@ -84,6 +87,4 @@ case class LibraryMembershipView(
 
 object LibraryMembershipView {
   implicit val format = Json.format[LibraryMembershipView]
-  def fromLibraryMembership(libMem: LibraryMembership): LibraryMembershipView =
-    LibraryMembershipView(id = libMem.id, libraryId = libMem.libraryId, userId = libMem.userId, access = libMem.access, createdAt = libMem.createdAt, state = libMem.state, seq = libMem.seq)
 }

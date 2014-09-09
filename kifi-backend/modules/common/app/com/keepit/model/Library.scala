@@ -64,6 +64,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     val usernameString = if (ownerUsername.isEmpty) ownerExternalId.id else ownerUsername.get.value
     s"/$usernameString/${slug.value}"
   }
+
+  def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -137,6 +139,4 @@ case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[
 
 object LibraryView {
   implicit val format = Json.format[LibraryView]
-
-  def fromLibrary(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
