@@ -335,7 +335,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         db.readOnlyMaster { implicit session =>
           val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user1))
-          seedItem1.get.priorScore === Some(0.795f)
+          seedItem1.get.priorScore === Some(1.0f)
           seedItem1.get.userId === Some(Id[User](42))
           seedItem1.get.uriId === Id[NormalizedURI](1)
 

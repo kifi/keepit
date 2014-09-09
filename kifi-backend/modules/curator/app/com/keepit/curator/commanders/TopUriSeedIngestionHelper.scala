@@ -24,37 +24,36 @@ class TopUriSeedIngestionHelper @Inject() (
     db: Database,
     graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
 
-  //re-ingest top uris for a user should be more than 12 hours later.
-  val uriIngestionFreq = 4
+  val uriIngestionFreq = 4 //hours
 
   private def updateUserTrackItem(userTrackItem: LastTopUriIngestion, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     lastTopUriIngestionRepo.save(userTrackItem.copy(
       lastIngestionTime = lastSeen))
   }
 
-  def processUriScores(uriScore: ConnectedUriScore, userId: Id[User])(implicit session: RWSession): Unit = {
-    rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, Some(userId)) match {
+  def processUriScores(uriId: Id[NormalizedURI], score: Float, userId: Id[User])(implicit session: RWSession): Unit = {
+    rawSeedsRepo.getByUriIdAndUserId(uriId, Some(userId)) match {
       case Some(seedItem) => {
         rawSeedsRepo.save(seedItem.copy(
-          priorScore = Some(uriScore.score.toFloat),
+          priorScore = Some(score),
           lastSeen = currentDateTime))
       }
       case None => {
-        rawSeedsRepo.getFirstByUriId(uriScore.uriId) match {
+        rawSeedsRepo.getFirstByUriId(uriId) match {
           case Some(anotherRawSeedItem) => rawSeedsRepo.save(RawSeedItem(
-            uriId = uriScore.uriId,
+            uriId = uriId,
             url = anotherRawSeedItem.url,
             userId = Some(userId),
             firstKept = anotherRawSeedItem.firstKept,
             lastKept = anotherRawSeedItem.lastKept,
             lastSeen = currentDateTime,
-            priorScore = Some(uriScore.score.toFloat),
+            priorScore = Some(score),
             timesKept = anotherRawSeedItem.timesKept,
             discoverable = anotherRawSeedItem.discoverable
           ))
 
           case None => {
-            log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriScore.uriId}")
+            log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriId}")
           }
         }
 
@@ -79,7 +78,7 @@ class TopUriSeedIngestionHelper @Inject() (
     val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
-      graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>
+      graph.uriWander(userId, 100000).flatMap { uriScores =>
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
@@ -93,9 +92,13 @@ class TopUriSeedIngestionHelper @Inject() (
             }
           }
 
-          uriScores.foreach { uriScore =>
-            log.debug(s"ingesting uri score is: ${uriScore.score.toFloat}, related user id is: ${uriScore.uriId.toString}")
-            processUriScores(uriScore, userId)
+          val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat)
+          val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
+
+          rescaledUriScores.foreach {
+            case (uriId, score) =>
+              log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
+              processUriScores(uriId, score / normalizationFactor, userId)
           }
 
           false
