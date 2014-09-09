@@ -295,6 +295,24 @@ a.kifi-compose-submit.kifi-active {
     top: 18px;
     left: 10px;
   }
+  &::after {
+    content: '';
+    display: block;
+    position: absolute;
+    right: 11px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    background: url(/images/spinner_32.gif) no-repeat;
+    background-size: contain;
+    opacity: 0;
+    transition: opacity .2s linear;
+  }
+  &.kifi-ti-searching::after {
+    opacity: .5;
+    transition-delay: .4s;
+  }
 }
 .kifi-ti-token-for-input { /* input wrapper */
   float: left;
@@ -341,9 +359,6 @@ a.kifi-compose-submit.kifi-active {
   transition-delay: 0s, .08s;
   &:not(:empty) {
     border-bottom: 1px solid #d2d2d2;
-  }
-  &:not(.kifi-ti-dropdown-searching) {
-    background-image: none !important;
   }
 }
 .kifi-ti-dropdown-clone {
@@ -480,9 +495,6 @@ a.kifi-compose-submit.kifi-active {
   &.kifi-ti-dropdown-item-selected {
     background-color: #fff2c5;
     color: #000;
-  }
-  .kifi-ti-dropdown-searching & {
-    display: none;
   }
   ::before {
     position: static;

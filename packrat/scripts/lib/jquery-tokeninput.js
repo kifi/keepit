@@ -36,12 +36,12 @@
     tokenSelected: 'token-selected',
     tokenX: 'token-x',
     dropdown: 'dropdown',
-    dropdownSearching: 'dropdown-searching',
     dropdownItem: 'dropdown-item',
     dropdownItemToken: 'dropdown-item-token',
     dropdownItemSelected: 'dropdown-item-selected',
     dropdownItemX: 'dropdown-item-x',
-    dropdownItemWaiting: 'dropdown-item-waiting'
+    dropdownItemWaiting: 'dropdown-item-waiting',
+    searching: 'searching'
   };
 
   // Input box position "enum"
@@ -636,8 +636,8 @@
         $dropdown.data('queued', [query, results]);
         return;
       }
-      $dropdown.data({populating: now, queued: null, q: query, mouseMoved: false})
-        .removeClass(classes.dropdownSearching);
+      $dropdown.data({populating: now, queued: null, q: query, mouseMoved: false});
+      $dropdown.add($tokenList).removeClass(classes.searching);
 
       var els = results.map(createDropdownItemEl);
       selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
@@ -718,13 +718,12 @@
       resizeInput();
 
       var query = getCurrentQuery();
-      $dropdown.addClass(classes.dropdownSearching);
+      $dropdown.add($tokenList).addClass(classes.searching);
       findItems(tokens.length, query, receiveResults.bind(null, query));
     }
 
     function receiveResults(query, results) {
-      if ($tokenInput.val().trim() === query && $dropdown.data('q') !== query &&
-          $dropdown.hasClass(classes.dropdownSearching)) {
+      if ($tokenInput.val().trim() === query && $dropdown.data('q') !== query) {
         populateDropdown(query, results);
       }
     }
