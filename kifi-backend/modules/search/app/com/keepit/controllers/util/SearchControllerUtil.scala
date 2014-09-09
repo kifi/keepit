@@ -30,8 +30,12 @@ trait SearchControllerUtil {
   def uriSummaryInfoFuture(shoeboxClient: ShoeboxServiceClient, plainResultFuture: Future[KifiPlainResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
-      shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
-        KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+      if (uriIds.nonEmpty) {
+        shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
+          KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+        }
+      } else {
+        Future.successful(KifiSearchResult.uriSummaryInfoV2(Seq()).toString)
       }
     }
   }
