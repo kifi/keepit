@@ -86,7 +86,7 @@ POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthControlle
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
-GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
+
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
