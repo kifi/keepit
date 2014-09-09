@@ -156,10 +156,7 @@ class ShoeboxDataPipeController @Inject() (
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
     val keepAndTagsChanged = db.readOnlyReplica(2) { implicit session =>
       val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-      val collectionIdsByKeepIds = changedKeeps.map { keep => (keep.id.get -> keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet) }.toMap
-      val uniqueCollectionIds = collectionIdsByKeepIds.values.flatten.toSet
-      val tagsByCollectionIds = uniqueCollectionIds.map { collectionId => (collectionId -> collectionRepo.get(collectionId).name) }.toMap
-      changedKeeps.map { keep => KeepAndTags(keep, collectionIdsByKeepIds(keep.id.get).map(tagsByCollectionIds(_))) }
+      changedKeeps.map { keep => KeepAndTags(keep, collectionRepo.getTagsByKeepId(keep.id.get)) }
     }
     Ok(Json.toJson(keepAndTagsChanged))
   }
