@@ -179,7 +179,7 @@
   table-layout: initial;
   text-align: initial;
   text-anchor: initial;
-  text-decoration: initial;
+  text-decoration: initial !important;
   text-indent: initial;
   text-orientation: initial;
   text-overflow: initial;
