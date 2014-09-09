@@ -340,6 +340,8 @@ class SearchCommanderImpl @Inject() (
     timing.search
 
     Future.sequence(resultFutures).map { results =>
+      log.info("NE: merging result")
+
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits)
 
