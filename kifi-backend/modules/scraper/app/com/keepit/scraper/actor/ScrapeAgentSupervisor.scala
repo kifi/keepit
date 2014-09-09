@@ -58,17 +58,11 @@ class ScrapeAgentSupervisor @Inject() (
   lazy val system = sysProvider.get
   log.info(s"[Supervisor.<ctr>] config=${system.settings.config}")
 
-  val scrapers = (0 until config.numWorkers).map { i =>
-    context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
-  }
-  val scraperRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = scrapers)), "scraper-router")
-  log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
+  val scraperRouter = context.actorOf(Props({ scrapeAgentProvider.get }).withRouter(SmallestMailboxPool(nrOfInstances = config.numWorkers)), "scraper-router")
+  log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter")
 
-  val fetchers = (0 until config.numWorkers / 2).map { i =>
-    context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
-  }
-  val fetcherRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = fetchers)), "fetcher-router")
-  log.info(s"[Supervisor.<ctr>] fetcherRouter=$fetcherRouter fetchers(sz=${fetchers.size}):${fetchers.mkString(",")}")
+  val fetcherRouter = context.actorOf(Props({ fetcherAgentProvider.get }).withRouter(SmallestMailboxPool(nrOfInstances = config.numWorkers / 2)), "fetcher-router")
+  log.info(s"[Supervisor.<ctr>] fetcherRouter=$fetcherRouter")
 
   log.info(s"[Supervisor.<ctr>] children(sz=${context.children.size}):${context.children.map(_.path.name).mkString(",")}")
 
