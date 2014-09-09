@@ -83,7 +83,7 @@ angular.module('util', [])
           fileNameIdx += fileNameMatch.index;
           fileName = fileNameMatch[0];
         }
-        fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight().trimLeft();
+        fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
         return domain + (fileName ? ' · ' + fileName : '');
       }
