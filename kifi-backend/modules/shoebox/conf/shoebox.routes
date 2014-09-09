@@ -81,9 +81,9 @@ POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
+POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
