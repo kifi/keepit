@@ -595,24 +595,27 @@ var keeper = keeper || function () {  // idempotent for Chrome
         showSlider();
       }
       beginStickyToaster();
-      api.require('scripts/compose_toaster.js', function () {
-        if (opts.trigger !== 'deepLink' || !toaster.showing()) {  // don't clobber form
-          if (window.pane) {
-            pane.shade();
-          }
-          toaster.show($slider, opts.to);
-          toaster.onHide.add(function () {
-            endStickyToaster();
+      keeper.moveToBottom(function () {
+        api.require('scripts/compose_toaster.js', function () {
+          if (opts.trigger !== 'deepLink' || !toaster.showing()) {  // don't clobber form
             if (window.pane) {
-              pane.unshade();
+              pane.shade();
             }
-          });
-          toaster.onHidden.add(function (trigger) {
-            if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
-              hideSlider('toaster');
-            }
-          });
-        }
+            toaster.show($slider, opts.to);
+            toaster.onHide.add(function () {
+              endStickyToaster();
+              if (window.pane) {
+                pane.unshade();
+              }
+            });
+            toaster.onHidden.add(function (trigger) {
+              keeper.moveBackFromBottom();
+              if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+                hideSlider('toaster');
+              }
+            });
+          }
+        });
       });
     },
     onPaneChange: function (locator) {
