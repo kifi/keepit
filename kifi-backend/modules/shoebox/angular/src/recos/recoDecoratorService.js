@@ -29,7 +29,7 @@ angular.module('kifi')
         fileNameIdx += fileNameMatch.index;
         fileName = fileNameMatch[0];
       }
-      fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight().trimLeft();
+      fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
       return domain + (fileName ? ' · ' + fileName : '');
     }
@@ -74,7 +74,7 @@ angular.module('kifi')
           fileNameIdx += fileNameMatch.index;
           fileName = fileNameMatch[0];
         }
-        fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight().trimLeft();
+        fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
         return domain + (fileName ? ' · ' + fileName : '');
       }
@@ -126,7 +126,7 @@ angular.module('kifi')
       };
 
       this.recoData.reasons.forEach(function (reason) {
-        if (!reason.name) {
+        if (!reason.name && reason.url) {
           reason.name = formatTitleFromUrl(reason.url);
         }
       });
