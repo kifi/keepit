@@ -143,7 +143,7 @@ html[kifi-with-pane] .kifi-knp-box {
   line-height: 18px;
   color: #6fa6ef !important;
   -webkit-font-smoothing: antialiased;
-  text-decoration: underline;
+  text-decoration: underline !important;
 }
 .kifi-knp-box::after {
   content: ' ';
