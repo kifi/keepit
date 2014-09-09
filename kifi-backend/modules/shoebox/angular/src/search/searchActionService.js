@@ -6,8 +6,20 @@ angular.module('kifi')
   '$analytics', '$http', '$location', '$log', '$q', 'routeService',
 
   function ($analytics, $http, $location, $log, $q, routeService) {
+    //
+    // Internal data.
+    //
+    var lastSearchContext = null;
+    var refinements = -1;
+    var pageSession = createPageSession();
 
+    //
     // Internal helper methods.
+    //
+    function createPageSession() {
+      return Math.random().toString(16).slice(2);
+    }
+
     function processHit(hit) {
       _.extend(hit, hit.bookmark);
 
@@ -17,7 +29,9 @@ angular.module('kifi')
       hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
     }
 
+    //
     // Exposed API methods.
+    //
     function find(query, filter, context) {
       var url = routeService.search,
         reqData = {
@@ -45,30 +59,84 @@ angular.module('kifi')
           'mayHaveMore': resData.mayHaveMore,
           'path': $location.path()
         });
-        
-        // appendKeeps(hits);
 
-        // refinements++;
-        // lastSearchContext = {
-        //   origin: $location.origin,
-        //   uuid: res.data.uuid,
-        //   experimentId: res.data.experimentId,
-        //   query: reqData.params.q,
-        //   filter: reqData.params.f,
-        //   maxResults: reqData.params.maxHits,
-        //   kifiTime: null,
-        //   kifiShownTime: null,
-        //   kifiResultsClicked: null,
-        //   refinements: refinements,
-        //   pageSession: pageSession
-        // };
+        lastSearchContext = {
+          origin: $location.origin,
+          uuid: res.data.uuid,
+          experimentId: res.data.experimentId,
+          query: reqData.params.q,
+          filter: reqData.params.f,
+          maxResults: reqData.params.maxHits,
+          kifiTime: null,
+          kifiShownTime: null,
+          kifiResultsClicked: null,
+          refinements: ++refinements,
+          pageSession: pageSession
+        };
 
         return resData;
       });
     }
 
+    function reportSearchAnalyticsOnUnload() {
+      reportSearchAnalytics('unload');
+    }
+
+    function reportSearchAnalyticsOnRefine() {
+      reportSearchAnalytics('refinement');
+    }
+
+    function reportSearchClickAnalytics(keep, resultPosition, numResults) {
+      var url = routeService.searchResultClicked;
+      if (lastSearchContext && lastSearchContext.query) {
+        var origin = $location.$$protocol + '://' + $location.$$host;
+        if ($location.$$port) {
+          origin = origin + ':' + $location.$$port;
+        }
+        var matches = keep.bookmark.matches || (keep.bookmark.matches = {});
+        var hitContext = {
+          isMyBookmark: keep.isMyBookmark,
+          isPrivate: keep.isPrivate,
+          count: numResults,
+          keepers: keep.keepers.map(function (elem) {
+            return elem.id;
+          }),
+          tags: keep.tags,
+          title: keep.bookmark.title,
+          titleMatches: (matches.title || []).length,
+          urlMatches: (matches.url || []).length
+        };
+        var data = {
+          origin: origin,
+          uuid: lastSearchContext.uuid,
+          experimentId: lastSearchContext.experimentId,
+          query: lastSearchContext.query,
+          filter: lastSearchContext.filter,
+          maxResults: lastSearchContext.maxResults,
+          kifiExpanded: true,
+          kifiResults: numResults,
+          kifiTime: lastSearchContext.kifiTime,
+          kifiShownTime: lastSearchContext.kifiShownTime,
+          kifiResultsClicked: lastSearchContext.clicks,
+          refinements: refinements,
+          pageSession: lastSearchContext.pageSession,
+          resultPosition: resultPosition,
+          resultUrl: keep.url,
+          hit: hitContext
+        };
+        $http.post(url, data)['catch'](function (res) {
+          $log.log('res: ', res);
+        });
+      } else {
+        $log.log('no search context to log');
+      }
+    }
+
     var api = {
-      find: find
+      find: find,
+      reportSearchAnalyticsOnUnload: reportSearchAnalyticsOnUnload,
+      reportSearchAnalyticsOnRefine: reportSearchAnalyticsOnRefine,
+      reportSearchClickAnalytics: reportSearchClickAnalytics
     };
 
     return api;
