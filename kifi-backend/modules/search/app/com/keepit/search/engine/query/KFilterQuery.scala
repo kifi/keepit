@@ -6,10 +6,12 @@ import org.apache.lucene.util.{ Bits, ToStringUtils }
 
 import scala.collection.mutable.ArrayBuffer
 
-trait KFilterQuery { self: Query =>
+abstract class KFilterQuery extends Query {
+
+  val subQuery: Query
 
   override def createWeight(searcher: IndexSearcher): Weight = {
-    val underlying = this.createWeight(searcher)
+    val underlying = subQuery.createWeight(searcher)
 
     new Weight with KWeight {
 
@@ -43,7 +45,8 @@ object KSiteQuery {
   }
 }
 
-class KSiteQuery(term: Term) extends TermQuery(term) with KFilterQuery {
+class KSiteQuery(term: Term) extends KFilterQuery {
+  override val subQuery = new TermQuery(term)
   override def toString(s: String) = "site(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }
 
@@ -58,7 +61,8 @@ object KMediaQuery {
   }
 }
 
-class KMediaQuery(term: Term) extends TermQuery(term) with KFilterQuery {
+class KMediaQuery(term: Term) extends KFilterQuery {
+  override val subQuery = new TermQuery(term)
   override def toString(s: String) = "media(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }
 
@@ -73,6 +77,7 @@ object KTagQuery {
   }
 }
 
-class KTagQuery(term: Term) extends TermQuery(term) with KFilterQuery {
+class KTagQuery(term: Term) extends KFilterQuery {
+  override val subQuery = new TermQuery(term)
   override def toString(s: String) = "tag(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }

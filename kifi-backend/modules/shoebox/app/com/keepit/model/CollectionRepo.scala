@@ -6,7 +6,6 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import scala.Some
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
@@ -29,6 +28,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def modelChanged(c: Collection, isActive: Boolean = false)(implicit session: RWSession)
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
+  def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
 }
 
 @Singleton
@@ -159,5 +159,12 @@ class CollectionRepoImpl @Inject() (
   }
 
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
+
+  def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
+    import StaticQuery.interpolation
+    val query = sql"select c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id"
+
+    query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
 }
 

@@ -14,7 +14,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
-import play.api.templates.Html
+import play.twirl.api.Html
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration

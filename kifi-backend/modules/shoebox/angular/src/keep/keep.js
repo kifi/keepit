@@ -128,7 +128,7 @@ angular.module('kifi')
             fileNameIdx += fileNameMatch.index;
             fileName = fileNameMatch[0];
           }
-          fileName = fileName.replace(fileNameToSpaceRe, ' ').trimRight();
+          fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
           for (var i = matches && matches.length; i--;) {
             var match = matches[i];

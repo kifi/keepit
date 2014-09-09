@@ -30,7 +30,7 @@ case class MessageSearchHistory(
 
   def withNewEmails(es: Seq[String]): MessageSearchHistory = { //Really inefficient, but it should do for a while -Stephen
     this.copy(
-      emails = (es ++ emails.filter(!es.contains(_))).take(MessageSearchHistory.MAX_HISTORY_LENGTH) //ZZZ contains check
+      emails = (es ++ emails.filter(!es.contains(_))).take(MessageSearchHistory.MAX_HISTORY_LENGTH)
     )
   }
 

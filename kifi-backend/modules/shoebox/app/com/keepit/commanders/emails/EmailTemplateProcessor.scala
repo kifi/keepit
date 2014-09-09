@@ -11,8 +11,8 @@ import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
-import play.api.templates.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 

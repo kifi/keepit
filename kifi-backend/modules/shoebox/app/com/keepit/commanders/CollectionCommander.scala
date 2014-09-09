@@ -187,7 +187,7 @@ class CollectionCommander @Inject() (
     searchClient.updateURIGraph()
   }
 
-  def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = { //ZZZ needs a cache for he basic collection by id
+  def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = {
     db.readOnlyMaster { implicit session =>
       ids.map { id =>
         basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)) {

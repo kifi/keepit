@@ -4,7 +4,7 @@ import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model.NotificationCategory
 import play.api.libs.json.{ JsSuccess, Json }
-import play.api.templates.Html
+import play.twirl.api.Html
 
 class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 

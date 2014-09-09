@@ -103,6 +103,7 @@ trait KQueryExpansion extends QueryParser {
       val query = if (quoted) q else mayConvertQuery(q, lang)
       textQuery.addQuery(query)
       textQuery.addQuery(copyFieldQuery(query, "c"))
+      textQuery.addQuery(copyFieldQuery(query, "h"))
       addSiteQuery(textQuery, queryText)
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
@@ -114,6 +115,7 @@ trait KQueryExpansion extends QueryParser {
           val boost = if (textQuery.isEmpty) 0.1f else 1.0f
           textQuery.addQuery(query)
           textQuery.addQuery(copyFieldQuery(query, "c"))
+          textQuery.addQuery(copyFieldQuery(query, "h"))
           textQuery.setBoost(textQuery.getBoost * boost)
         }
       }
@@ -125,6 +127,7 @@ trait KQueryExpansion extends QueryParser {
         val query = mayConvertQuery(q, lang)
         textQuery.addQuery(query)
         textQuery.addQuery(copyFieldQuery(query, "cs"))
+        textQuery.addQuery(copyFieldQuery(query, "hs"))
       }
     }
 
@@ -136,6 +139,7 @@ trait KQueryExpansion extends QueryParser {
             val boost = if (textQuery.isEmpty) 0.1f else 1.0f
             textQuery.addQuery(query)
             textQuery.addQuery(copyFieldQuery(query, "cs"))
+            textQuery.addQuery(copyFieldQuery(query, "hs"))
             textQuery.setBoost(textQuery.getBoost * boost)
           }
         }
@@ -197,9 +201,11 @@ object KConcatQueryAdder {
 
     textQuery.addQuery(new TermQuery(new Term("t", t1)), concatBoost)
     textQuery.addQuery(new TermQuery(new Term("c", t1)), concatBoost)
+    textQuery.addQuery(new TermQuery(new Term("h", t1)), concatBoost)
 
     textQuery.addQuery(new TermQuery(new Term("ts", t2)), concatBoost)
     textQuery.addQuery(new TermQuery(new Term("cs", t2)), concatBoost)
+    textQuery.addQuery(new TermQuery(new Term("hs", t2)), concatBoost)
   }
 
   private def concat(q1: KTextQuery, q2: KTextQuery): (String, String) = {

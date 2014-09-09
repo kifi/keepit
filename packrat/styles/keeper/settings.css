@@ -158,7 +158,7 @@
 }
 .kifi-settings-scroll a[href]:hover,
 .kifi-settings-scroll a[href]:focus {
-  text-decoration: underline;
+  text-decoration: underline !important;
 }
 .kifi-settings-play-alert {
   margin-left: 4px;

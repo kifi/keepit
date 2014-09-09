@@ -340,11 +340,18 @@ class SearchCommanderImpl @Inject() (
     timing.search
 
     Future.sequence(resultFutures).map { results =>
+      log.info("NE: merging result")
+
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits)
 
       timing.decoration
       timing.end
+
+      val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
+      val plainResult = KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+
+      log.info("NE: plain result created")
 
       SafeFuture {
         // stash timing information
@@ -352,12 +359,16 @@ class SearchCommanderImpl @Inject() (
 
         // TODO: save ArticleSearchResult
 
-        // TODO: check slow query
+        // search is a little slow after service restart. allow some grace period
+        val timeLimit = 1000
+        if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000 * 60 * 8) {
+          val link = "https://admin.kifi.com/admin/search/results/" + plainResult.uuid.id
+          val msg = s"search time exceeds limit! searchUUID = ${plainResult.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
+          airbrake.notify(msg)
+        }
       }
 
-      val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-
-      KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+      plainResult
     }
   }
 

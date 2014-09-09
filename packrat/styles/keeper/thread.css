@@ -91,7 +91,7 @@ span.kifi-message-pic-email {
   margin-top: 6px;
 }
 .kifi-message-p>a[href] {
-  text-decoration: underline;
+  text-decoration: underline !important;
 }
 .kifi-image-in-message {
   max-width: 100%;
@@ -141,7 +141,7 @@ span.kifi-message-pic-email {
 .kifi-message-email-view,
 .kifi-message-email-learn {
   color: inherit;
-  text-decoration: underline;
+  text-decoration: underline !important;
 }
 .kifi-message-email-view:hover,
 .kifi-message-email-learn:hover {

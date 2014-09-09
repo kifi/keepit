@@ -20,10 +20,10 @@ guide.step3 = guide.step3 || function () {
       substep: true
     },
     {
-      lit: {bottom: 65, right: 10, width: 302, height: 177},
-      pad: [0, 30, 60, 30],
+      lit: {bottom: 64, right: 10, width: 302, height: 339},
+      pad: [10, 0, 20],
       afterTransition: '.kifi-toast',
-      arrow: {dx: 160, dy: 80, from: {angle: -80, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
+      arrow: {dx: 130, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-compose>.kifi-ti-list'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},
         {type: /^key/, target: '.kifi-compose-draft', unless: isEsc},
@@ -31,9 +31,10 @@ guide.step3 = guide.step3 || function () {
       ]
     },
     {
-      lit: {bottom: 65, right: 10, width: 302, height: 177},
-      pad: [0, 30, 60, 30],
-      arrow: {dx: 290, dy: 180, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
+      lit: {bottom: 64, right: 10, width: 302, height: 173},
+      pad: [30, 0, 20],
+      afterTransition: '.kifi-ti-dropdown',
+      arrow: {dx: 360, dy: 70, from: {angle: -50, gap: 12, along: [.8, 1]}, to: {angle: 0, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},
         {type: /^key/, target: '.kifi-compose-draft,.kifi-compose-submit', unless: isEsc},
@@ -42,9 +43,9 @@ guide.step3 = guide.step3 || function () {
       substep: true
     },
     {
-      afterTransition: '.kifi-pane-box-cart',
+      afterTransition: '.kifi-pane',
       litFor: 1000,
-      pos: {bottom: 300, right: 390},
+      pos: {bottom: 200, right: 400},
       transition: 'opacity'
     },
     {
@@ -111,13 +112,13 @@ guide.step3 = guide.step3 || function () {
         break;
       case 3:
         observer = new MutationObserver(function (records) {
-          if (classAdded(records, 'kifi-active')) {
+          if (attrRemoved(records, 'href')) {
             observer.disconnect();
             observer = null;
             step.show(4);
           }
         });
-        observer.observe(document.querySelector('.kifi-compose-submit'), {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
+        observer.observe(document.querySelector('.kifi-compose-submit'), {attributes: true, attributeFilter: ['href']});
         break;
     }
   }
@@ -150,10 +151,10 @@ guide.step3 = guide.step3 || function () {
     }
   }
 
-  function classAdded(records, cssClass) {
+  function attrRemoved(records, name) {
     for (var i = 0; i < records.length; i++) {
       var rec = records[i];
-      if (rec.target.classList.contains(cssClass) && rec.oldValue.split(' ').indexOf(cssClass) < 0) {
+      if (!rec.target.hasAttribute(name)) {
         return rec.target;
       }
     }

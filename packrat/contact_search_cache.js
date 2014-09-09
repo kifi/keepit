@@ -1,18 +1,18 @@
 'use strict';
 
-function FriendSearchCache(lifeSec) {
+function ContactSearchCache(lifeSec) {
   this.cache = {};
   this.putAt = {};
   this.lifeSec = lifeSec;
 }
-FriendSearchCache.prototype = {
+ContactSearchCache.prototype = {
   key: function (o) {
     return (o.includeSelf ? '+' : '-') + o.q;
   },
-  put: function (o, friends) {
+  put: function (o, results) {
     this.prune();
     var key = this.key(o);
-    this.cache[key] = friends;
+    this.cache[key] = results;
     this.putAt[key] = Date.now();
   },
   get: function (o) {
@@ -31,5 +31,5 @@ FriendSearchCache.prototype = {
 };
 
 if (this.exports) {
-  this.exports.FriendSearchCache = FriendSearchCache;
+  this.exports.ContactSearchCache = ContactSearchCache;
 }

@@ -1,34 +1,25 @@
-.kifi-toaster {
-  position: absolute;
-  z-index: 1;
-  top: 8px;
-  bottom: 64px;
-  left: 6px;
-  right: 6px;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  background: rgba(255,255,255,.94);
-  transition: background-color .2s linear, visibility 0s;
-  overflow: hidden;
-}
-.kifi-toaster.kifi-down {
-  background: rgba(255,255,255,0);
-  visibility: hidden;
-  transition-delay: 0s, .2s;
-}
 .kifi-toast {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  transition: -webkit-transform .2s ease-out, opacity .2s linear;
-  transition: transform .2s ease-out, opacity .2s linear;
+  bottom: 56px;
+  right: 2px;
+  width: 302px;
+  border: solid rgba(0,0,0,.3);
+  border-width: 0 1px 1px;
+  border-radius: 4px 4px 12px 12px !important;
+  background: #fff;
+  text-align: left;
+  -webkit-transform-origin: 40% bottom;
+  transform-origin: 40% bottom;
+  transition: opacity linear, -webkit-transform ease-out;
+  transition: opacity linear, transform ease-out;
+  transition-duration: .2s;
 }
-.kifi-down>.kifi-toast {
-  -webkit-transform: translateY(100%);
-  transform: translateY(100%);
+.kifi-toast.kifi-down {
   opacity: 0;
+  -webkit-transform: scale(.1);
+  transform: scale(.1);
   transition-timing-function: ease-in;
+  /*transition-duration: .16s;*/
 }
 
 .kifi-toast-other {
@@ -87,6 +78,7 @@
 }
 
 .kifi-toast-top {
+  margin: 0 -1px;
   border-radius: 4px 4px 0 0 !important;
   padding-left: 16px;
   line-height: 37px;
@@ -134,8 +126,12 @@
 .kifi-toast input.kifi-compose-to, /* initial input */
 .kifi-toast .kifi-ti-list {
   border-top: none !important;
+  background: #f8f8f8;
+  padding-left: 30px !important;
 }
 .kifi-toast .kifi-compose-draft {
-  min-height: 64px;
   max-height: 142px;
+}
+.kifi-toast .kifi-compose-bar {
+  border-radius: 0 0 12px 12px !important;
 }

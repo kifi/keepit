@@ -459,7 +459,7 @@ div.kifi-res-menu-item {
 }
 a.kifi-res-friends {
   color: inherit !important;
-  text-decoration: none !important; /* FF */
+  text-decoration: none !important;
   position: relative;
 }
 .kifi-res-friends-hover {
@@ -560,7 +560,7 @@ a.kifi-res-more-a {
   -webkit-user-select: none;
   -moz-user-select: none;
   user-select: none;
-  text-decoration: none;
+  text-decoration: none !important;
   color: #999 !important;
 }
 a.kifi-res-more-a:hover {

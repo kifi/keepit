@@ -23,13 +23,13 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       ctx.set(20)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -51,23 +51,23 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(40)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -87,17 +87,17 @@ class KifiResultCollectorTest extends Specification {
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.MEMBER
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -115,31 +115,36 @@ class KifiResultCollectorTest extends Specification {
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
+      ctx.set(1)
+      ctx.addScore(0, 1.0f)
+      ctx.visibility = Visibility.RESTRICTED
+      ctx.flush()
       ctx.set(10)
       ctx.addScore(0, 1.0f)
-      ctx.addScore(1, 1.0f)
       ctx.visibility = Visibility.OTHERS
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
-      ctx.addScore(2, 1.0f)
       ctx.visibility = Visibility.NETWORK
       ctx.flush()
       ctx.set(30)
-      ctx.addScore(1, 1.0f)
-      ctx.addScore(2, 1.0f)
+      ctx.addScore(0, 1.0f)
       ctx.visibility = Visibility.MEMBER
+      ctx.flush()
+      ctx.set(40)
+      ctx.addScore(0, 1.0f)
+      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
       mHits.size === 1
-      fHits.size === 1
+      fHits.size === 2
       oHits.size === 1
 
-      mHits.pop().id === 30L
-      fHits.pop().id === 20L
+      mHits.pop().id === 40L
+      fHits.toSortedList.map(_.id).toSet === Set(20L, 30L)
       oHits.pop().id === 10L
     }
 
@@ -148,21 +153,18 @@ class KifiResultCollectorTest extends Specification {
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(10)
       ctx.addScore(0, 1.0f)
-      ctx.addScore(1, 1.0f)
       ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
-      ctx.addScore(2, 1.0f)
       ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
       ctx.set(30)
-      ctx.addScore(1, 1.0f)
-      ctx.addScore(2, 1.0f)
+      ctx.addScore(0, 1.0f)
       ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
 

@@ -51,7 +51,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
-    if ($slider && (e.closeKeeper || $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *')) && e.isTrusted !== false) {
+    if ($slider && (e.closeKeeper || !isClickSticky() && !$(e.target).is('.kifi-root,.kifi-root *')) && e.isTrusted !== false) {
       hideSlider('clickout');
     }
   }
@@ -81,9 +81,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }));
 
     var data = $slider.data();
-    data.stickiness = locator ? 2 : 0;  // >= 1 means stay on mouseout, >= 2 means stay on click elsewhere
-    function isSticky() {
-      return data.stickiness > 0;
+    if (locator) {
+      beginStickyPane();
     }
 
     // attach event bindings
@@ -230,9 +229,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (this.classList.contains('kifi-keep-tag')) {
         keepPage('public', e, true);
       }
+      if (window.toaster && toaster.showing()) {
+        toaster.hide();
+      }
       api.require('scripts/tagbox.js', function () {
-        tagbox.onShow.add(beginStickyTime);
-        tagbox.onHide.add(endStickyTime);
+        tagbox.onShow.add(beginStickyTagbox);
+        tagbox.onHide.add(endStickyTagbox);
         tagbox.toggle($slider, 'click:tagIcon');
       });
     }, 400, true))
@@ -262,14 +264,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if ($btn.hasClass('kifi-dock-site')) {
         e.preventDefault();
         api.port.emit('open_tab', {path: '', source: 'keeper'});
+      } else if ($btn.hasClass('kifi-dock-compose')) {
+        if (window.toaster && toaster.showing()) {
+          toaster.hideIfBlank($slider);
+        } else {
+          keeper.compose('keeper');
+        }
       } else {
-        $slider.data().stickiness |= 2;
+        beginStickyPane();
         api.require('scripts/pane.js', function () {
-          if ($btn.hasClass('kifi-dock-compose')) {
-            pane.compose('keeper');
-          } else {
-            pane.toggle('keeper');
-          }
+          api.port.emit('pane?', function (locator) {
+            endStickyPane();
+            pane.toggle('keeper', locator);
+          });
         });
       }
     }, 400, true));
@@ -279,8 +286,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     e.stopPropagation();
   }
 
-  function showSlider(trigger) {
-    log('[showSlider]', trigger);
+  function showSlider() {
+    log('[showSlider]');
 
     createSlider();
     $slider.addClass('kifi-hidden kifi-transit')
@@ -294,10 +301,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       .removeClass('kifi-hidden');
     $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
 
-    api.port.emit('keeper_shown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)}));
+    api.port.emit('keeper_shown', withUrls({}));
   }
 
-  // trigger is for the event log (e.g. 'key', 'icon')
   function hideSlider(trigger) {
     log('[hideSlider]', trigger);
     $slider
@@ -366,11 +372,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how, guided: e.originalEvent.guided}));
     if (!title && !suppressNamePrompt) {
-      beginStickyTime();
+      beginStickyTitle();
       api.require('scripts/keep_name_prompt.js', function () {
         keeper.moveToBottom(function () {
           promptForKeepName($slider, function () {
-            endStickyTime();
+            endStickyTitle();
             keeper.moveBackFromBottom();
           });
         });
@@ -412,23 +418,42 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function beginStickyTime() {
+  function isSticky() {
+    return $slider && $slider.data('stickiness') > 0;
+  }
+  function isClickSticky() {
+    return $slider && $slider.data('stickiness') >= 4;
+  }
+  function beginSticky(kind) {
     if ($slider) {
-      $slider.data().stickiness |= 1;
+      var data = $slider.data();
+      if (!data.stickiness) {
+        window.removeEventListener('mousemove', onMouseMove, true);
+      }
+      data.stickiness |= kind;
     }
   }
-
-  function endStickyTime() {
+  function endSticky(kind) {
     if ($slider) {
-      var stickiness = $slider.data().stickiness &= ~1;
+      var stickiness = $slider.data().stickiness &= ~kind;
       if (!stickiness) {
-        document.addEventListener('mousemove', function f(e) {
-          this.removeEventListener('mousemove', f, true);
-          if ($slider && !$slider.data().stickiness && !$slider[0].contains(e.target) && e.isTrusted !== false) {
-            hideSlider('mouseout');
-          }
-        }, true);
+        window.addEventListener('mousemove', onMouseMove, true);
       }
+    }
+  }
+  var beginStickyTitle = beginSticky.bind(null, 1);
+  var endStickyTitle = endSticky.bind(null, 1);
+  var beginStickyTagbox = beginSticky.bind(null, 2);
+  var endStickyTagbox = endSticky.bind(null, 2);
+  var beginStickyToaster = beginSticky.bind(null, 4);
+  var endStickyToaster = endSticky.bind(null, 4);
+  var beginStickyPane = beginSticky.bind(null, 8);
+  var endStickyPane = endSticky.bind(null, 8);
+
+  function onMouseMove(e) {
+    window.removeEventListener('mousemove', onMouseMove, true);
+    if ($slider && !isSticky() && !$slider[0].contains(e.target) && e.isTrusted !== false) {
+      hideSlider('mouseout');
     }
   }
 
@@ -494,28 +519,28 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   // the keeper API
   return {
-    showing: function() {
+    showing: function () {
       return !!$slider;
     },
-    show: function (trigger) {  // trigger is for event log (e.g. 'tile')
+    show: function () {
       if ($slider) {
-        log('[show] ignored, already showing');
+        log('[keeper.show] ignored, already showing');
       } else {
-        log('[show]', trigger);
+        log('[keeper.show]');
         $(tile).hoverfu('destroy');
-        showSlider(trigger);
+        showSlider();
       }
     },
     create: function(locator) {
       createSlider(locator);
       return $slider;
     },
-    discard: function() {
+    discard: function () {
       $slider.off();
       $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-keep-tag,.kifi-kept-tag,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
-    appendTo: function(parent) {
+    appendTo: function (parent) {
       $slider.appendTo(parent);
     },
     moveToBottom: function (callback) {
@@ -540,10 +565,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
         $(tile).css('transform', '');
       }
     },
-    engage: function (trigger, type) {
+    engage: function () {
       if (lastCreatedAt) return;
       var $tile = $(tile);
-      if (type === 'keepers') {
         api.port.emit('get_keepers', function (o) {
           if (o.keepers.length && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
@@ -564,16 +588,49 @@ var keeper = keeper || function () {  // idempotent for Chrome
             setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
           }
         });
+    },
+    compose: function (opts) {
+      log('[keeper:compose]', opts.trigger || '');
+      if (!$slider) {
+        showSlider();
       }
+      beginStickyToaster();
+      keeper.moveToBottom(function () {
+        api.require('scripts/compose_toaster.js', function () {
+          if (opts.trigger !== 'deepLink' || !toaster.showing()) {  // don't clobber form
+            if (window.pane) {
+              pane.shade();
+            }
+            toaster.show($slider, opts.to);
+            toaster.onHide.add(function () {
+              endStickyToaster();
+              if (window.pane) {
+                pane.unshade();
+              }
+            });
+            toaster.onHidden.add(function (trigger) {
+              keeper.moveBackFromBottom();
+              if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+                hideSlider('toaster');
+              }
+            });
+          }
+        });
+      });
     },
     onPaneChange: function (locator) {
       $slider.find('.kifi-at').removeClass('kifi-at');
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
-        $slider.data().stickiness |= 2;
+        beginStickyPane();
+        if (window.tagbox && tagbox.active) {
+          tagbox.hide('keeper:onPaneChange');
+        } else if (window.toaster && toaster.showing()) {
+          toaster.hide();
+        }
       } else {  // dislodge from pane and prepare for x transition
         $slider.prependTo(tile).layout();
-        $slider.data().stickiness &= ~2;
+        endStickyPane();
       }
     }};
 }();

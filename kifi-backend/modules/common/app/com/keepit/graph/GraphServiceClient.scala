@@ -93,7 +93,7 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]] = {
-    call(Graph.internal.uriWandering(userId, steps)).map { r => (r.json).as[Map[Id[NormalizedURI], Int]] }
+    call(Graph.internal.uriWandering(userId, steps), callTimeouts = longTimeout).map { r => (r.json).as[Map[Id[NormalizedURI], Int]] }
   }
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {

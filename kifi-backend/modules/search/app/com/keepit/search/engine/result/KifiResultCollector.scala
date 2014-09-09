@@ -98,10 +98,6 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
 
-  private[this] var numCollected = 0
-  private[this] var numLowScore = 0
-  private[this] var numLowMatching = 0
-
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id
 
@@ -122,25 +118,18 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
 
       if (score > 0.0f) {
         val visibility = ctx.visibility
-        if ((visibility & Visibility.MEMBER) != 0) {
+        if ((visibility & Visibility.OWNER) != 0) {
           myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-        } else if ((visibility & Visibility.NETWORK) != 0) {
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         } else {
           othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         }
-        numCollected += 1
-      } else {
-        numLowScore += 1
       }
-    } else {
-      numLowMatching += 1
     }
   }
 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
-
-  def logCount(): Unit = log.info(s"NE: KifiResultCollector numCollected=$numCollected numLowScore=$numLowScore numLowMatching=$numLowMatching")
 }
 
 class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] {
