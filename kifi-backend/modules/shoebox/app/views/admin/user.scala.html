@@ -267,7 +267,7 @@
         if (typeof input.origVal === 'undefined') input.origVal = input.value;
         input.disabled = 'disabled';
         var req = $.post(form.action, $(form).serialize(), function () {
-          alert("Refresh has been triggered");
+          alert("Refresh has been triggered. This is a somewhat expensive operation. Please don't click this too often.");
         });
         req.fail(function (r, c, m) {
           alert("An error ocurrect: " + m);
