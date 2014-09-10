@@ -97,36 +97,4 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       recs.size === 0
     }
   }
-
-  "re-compute recos for user" in {
-    withDb(modules: _*) { implicit injector =>
-
-      val (user1, user2, shoebox) = setup()
-      val user1Keeps = makeKeeps(user1, 5, shoebox)
-      val user2Keeps = makeKeeps(user2, 5, shoebox)
-      val seedCommander = inject[SeedIngestionCommander]
-      val seedItemRepo = inject[RawSeedItemRepo]
-      val commander = inject[RecommendationGenerationCommander]
-      Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
-      db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
-      val futUnit = commander.precomputeRecommendations()
-      Await.result(futUnit, Duration(10, "seconds"))
-      val result = commander.getTopRecommendations(Id[User](42), 1)
-      val recs = Await.result(result, Duration(10, "seconds"))
-      recs.size === 0
-
-      val resetFut = commander.resetUser(Id[User](42))
-      Await.result(resetFut, Duration(10, "seconds"))
-
-      val genStateRepo = inject[UserRecommendationGenerationStateRepo]
-      val re = db.readOnlyMaster { implicit session =>
-        genStateRepo.getByUserId(Id[User](42))
-      }
-      re.get.seq === SequenceNumber.ZERO
-      val newResult = commander.getTopRecommendations(Id[User](42), 1)
-      val newRecs = Await.result(newResult, Duration(10, "seconds"))
-      newRecs.size === 0
-      1 === 1
-    }
-  }
 }
