@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.curator.commanders.email.FeedDigestEmailSender
-import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander }
+import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander, SeedIngestionCommander }
 import com.keepit.curator.model.RecommendationClientType
 import com.keepit.model.{ User, UriRecommendationScores, NormalizedURI, UriRecommendationFeedback }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -19,6 +19,7 @@ class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
     curatorAnalytics: CuratorAnalytics,
     recoGenCommander: RecommendationGenerationCommander,
+    seedCommander: SeedIngestionCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
     recoRetrievalCommander: RecommendationRetrievalCommander,
     engagaementFeedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
@@ -75,7 +76,8 @@ class CuratorController @Inject() (
     }
   }
 
-  def resetUserRecoGenState(userId: Id[User]) = Action.async { request =>
-    recoGenCommander.resetUser(userId).map { u => Ok }
+  def refreshUserRecos(userId: Id[User]) = Action { request =>
+    SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
+    Ok
   }
 }

@@ -12,6 +12,8 @@ import com.keepit.graph.GraphServiceClient
 import com.keepit.graph.model.ConnectedUriScore
 import com.keepit.model._
 import org.joda.time.{ Seconds, Hours, DateTime }
+import com.keepit.common.concurrent.ReactiveLock
+
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -24,7 +26,9 @@ class TopUriSeedIngestionHelper @Inject() (
     db: Database,
     graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
 
-  val uriIngestionFreq = 4 //hours
+  val uriIngestionFreq = 48 //hours
+
+  val graphCallLimiterLock = new ReactiveLock(8)
 
   private def updateUserTrackItem(userTrackItem: LastTopUriIngestion, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     lastTopUriIngestionRepo.save(userTrackItem.copy(
@@ -63,7 +67,7 @@ class TopUriSeedIngestionHelper @Inject() (
 
   //triggers ingestions of up to maxItem RawSeedItems for the given user. Returns true if there might be more items to be ingested, false otherwise
   //maxItems not used for getListOfUriAndScorePair API, always return false
-  def apply(userId: Id[User], maxItems: Int): Future[Boolean] = {
+  def apply(userId: Id[User], force: Boolean = false): Future[Boolean] = graphCallLimiterLock.withLockFuture {
     var firstTimeIngesting = false
     val lastIngestionTime = db.readOnlyMaster { implicit session =>
       lastTopUriIngestionRepo.getByUserId(userId) match {
@@ -77,8 +81,13 @@ class TopUriSeedIngestionHelper @Inject() (
 
     val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
-    if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
-      graph.uriWander(userId, 100000).flatMap { uriScores =>
+    if (betweenHours > uriIngestionFreq || firstTimeIngesting || force) {
+      graph.uriWander(userId, 50000).flatMap { uriScores =>
+        val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat).toSeq.sortBy {
+          case (uriId, score) => -1 * score
+        }.take(2000).toMap //Last part (sort + take) is a stop gap
+        val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
+
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
@@ -91,9 +100,6 @@ class TopUriSeedIngestionHelper @Inject() (
               }
             }
           }
-
-          val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat)
-          val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
           rescaledUriScores.foreach {
             case (uriId, score) =>

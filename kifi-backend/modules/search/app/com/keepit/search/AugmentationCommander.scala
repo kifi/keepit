@@ -27,7 +27,7 @@ object AugmentationCommander {
 
 @ImplementedBy(classOf[AugmentationCommanderImpl])
 trait AugmentationCommander {
-  def augment(userId: Id[User], context: AugmentationContext, items: Item*): Future[Seq[AugmentedItem]]
+  def augmentation(itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse]
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 }
 
@@ -37,13 +37,10 @@ class AugmentationCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     val searchClient: SearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
-  def augment(userId: Id[User], context: AugmentationContext, items: Item*): Future[Seq[AugmentedItem]] = {
-    val uris = (context.corpus.keySet ++ items).map(_.uri)
-    val restrictedPlan = getRestrictedDistributionPlan(userId, uris)
-    getAugmentationInfosAndScores(restrictedPlan, userId, items.toSet, context).map {
-      case (infos, scores) =>
-        items.map { item => augmentItem(item, infos(item), scores) }
-    }
+  def augmentation(itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
+    val uris = (itemAugmentationRequest.context.corpus.keySet ++ itemAugmentationRequest.items).map(_.uri)
+    val restrictedPlan = getRestrictedDistributionPlan(itemAugmentationRequest.context.userId, uris)
+    plannedAugmentation(restrictedPlan, itemAugmentationRequest)
   }
 
   private def getRestrictedDistributionPlan(userId: Id[User], uris: Set[Id[NormalizedURI]]): DistributionPlan = {
@@ -54,69 +51,39 @@ class AugmentationCommanderImpl @Inject() (
     (relevantLocalShards, relevantRemotePlan)
   }
 
-  private def getAugmentationInfosAndScores(plan: DistributionPlan, userId: Id[User], items: Set[Item], context: AugmentationContext): Future[(Map[Item, AugmentationInfo], ContextualAugmentationScores)] = {
+  private def plannedAugmentation(plan: DistributionPlan, request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     val (localShards, remotePlan) = plan
-    val request = ItemAugmentationRequest(userId, items, context)
     val futureRemoteAugmentationResponses = searchClient.distAugmentation(remotePlan, request)
     val futureLocalAugmentationResponse = distAugmentation(localShards, request)
     Future.sequence(futureRemoteAugmentationResponses :+ futureLocalAugmentationResponse).map { augmentationResponses =>
-      val mergedResponse = augmentationResponses.reduceLeft { (mergedResponse, nextResponse) =>
+      augmentationResponses.reduceLeft { (mergedResponse, nextResponse) =>
         ItemAugmentationResponse(mergedResponse.infos ++ nextResponse.infos, mergedResponse.scores merge nextResponse.scores)
       }
-      (mergedResponse.infos, mergedResponse.scores)
     }
-  }
-
-  private def augmentItem(item: Item, info: AugmentationInfo, augmentationScores: ContextualAugmentationScores): AugmentedItem = {
-    val kept = item.keptIn.flatMap { libraryId =>
-      info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
-        val sortedTags = keepInfo.tags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
-        val userIdOpt = keepInfo.keptBy
-        (libraryId, userIdOpt, sortedTags)
-      }
-    }
-
-    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
-      case ((moreKeeps, moreTags), RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
-    }
-
-    val (moreKeeps, moreTags) = kept match {
-      case Some((libraryId, userIdOpt, tags)) => (allKeeps - ((Some(libraryId), userIdOpt)), allTags -- tags)
-      case None => (allKeeps, allTags)
-    }
-
-    val moreSortedKeeps = moreKeeps.toSeq.sortBy {
-      case (libraryIdOpt, userIdOpt) => (
-        libraryIdOpt.flatMap(augmentationScores.libraryScores.get) getOrElse 0f,
-        userIdOpt.flatMap(augmentationScores.userScores.get) getOrElse 0f
-      )
-    }
-    val moreSortedTags = moreTags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
-    AugmentedItem(item.uri, kept, moreSortedKeeps, moreSortedTags)
   }
 
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     if (shards.isEmpty) Future.successful(ItemAugmentationResponse.empty)
     else {
-      val ItemAugmentationRequest(userId, items, context) = itemAugmentationRequest
+      val ItemAugmentationRequest(items, context) = itemAugmentationRequest
 
-      val keptInFuture = context.keptIn match {
+      val futureLibraryFilter = context.libraryFilter match {
         case Some(libraryIds) => Future.successful(libraryIds)
-        case None => searchFactory.getLibraryIdsFuture(userId, None).imap {
+        case None => searchFactory.getLibraryIdsFuture(context.userId, None).imap {
           case (ownedLibraries, followedLibraries, trustedLibraries) =>
             (ownedLibraries ++ followedLibraries ++ trustedLibraries).map(Id[Library](_))
         }
       }
 
-      val keptByFuture = context.keptBy match {
+      val futureUserFilter = context.userFilter match {
         case Some(userIds) => Future.successful(userIds)
-        case None => searchFactory.getFriendIdsFuture(userId).imap(_.map(Id[User](_)) + userId)
+        case None => searchFactory.getFriendIdsFuture(context.userId).imap(_.map(Id[User](_)) + context.userId)
       }
 
       for {
-        keptIn <- keptInFuture
-        keptBy <- keptByFuture
-        allAugmentationInfos <- getShardedAugmentationInfos(shards, userId, keptIn, keptBy, items ++ context.corpus.keySet)
+        libraryFilter <- futureLibraryFilter
+        userFilter <- futureUserFilter
+        allAugmentationInfos <- getShardedAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -126,9 +93,9 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getShardedAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], keptIn: Set[Id[Library]], keptBy: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
-    val userIdFilter = LongArraySet.fromSet(keptBy.map(_.id))
-    val libraryIdFilter = LongArraySet.fromSet(keptIn.map(_.id))
+  private def getShardedAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
+    val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
+    val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[Item, AugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
       case (Some(shard), itemsInShard) =>
         SafeFuture {
@@ -142,6 +109,7 @@ class AugmentationCommanderImpl @Inject() (
   private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: Item): AugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
+    var publishedKeeps = 0
 
     (keepSearcher.indexReader.getContext.leaves()).foreach { atomicReaderContext =>
       val reader = atomicReaderContext.reader().asInstanceOf[WrappedSubReader]
@@ -175,6 +143,7 @@ class AugmentationCommanderImpl @Inject() (
             case SECRET => // ignore
           }
           else if (visibility == PUBLISHED) { // kept in a public library
+            publishedKeeps += 1
             //todo(Léo): define which published libraries are relevant
           }
 
@@ -182,10 +151,10 @@ class AugmentationCommanderImpl @Inject() (
         }
       }
     }
-    AugmentationInfo(keeps.toList)
+    AugmentationInfo(keeps.toList, publishedKeeps)
   }
 
-  private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): ContextualAugmentationScores = {
+  private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): AugmentationScores = {
     val libraryScores = MutableMap[Id[Library], Float]() withDefaultValue 0f
     val userScores = MutableMap[Id[User], Float]() withDefaultValue 0f
     val tagScores = MutableMap[Hashtag, Float]() withDefaultValue 0f
@@ -201,6 +170,6 @@ class AugmentationCommanderImpl @Inject() (
             }
         }
     }
-    ContextualAugmentationScores(libraryScores.toMap, userScores.toMap, tagScores.toMap)
+    AugmentationScores(libraryScores.toMap, userScores.toMap, tagScores.toMap)
   }
 }
