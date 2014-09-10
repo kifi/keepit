@@ -75,6 +75,6 @@ trait SearchControllerUtil {
     val items = kifiPlainResult.hits.map { hit => Item(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(Item(_, None))
     val context = AugmentationContext.uniform(items ++ previousItems)
-    augmentationCommander.augment(userId, items: _*)(context).map(Json.toJson(_))
+    augmentationCommander.augment(userId, context, items: _*).map(Json.toJson(_))
   }
 }
