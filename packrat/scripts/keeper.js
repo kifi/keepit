@@ -76,8 +76,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       'isKept': kept,
       'isPrivate': kept === 'private',
       'boxCount': count,
-      'boxOpen': /^\/messages(?:$|:)/.test(locator),
-      'isTagged': tags.length
+      'boxOpen': /^\/messages(?:$|:)/.test(locator)
     }));
 
     var data = $slider.data();
@@ -204,39 +203,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
       }
-    }, 400, true))
-    .hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
-      var btn = this;
-      var kept = this.classList.contains('kifi-kept-tag');
-      render('html/keeper/titled_tip', {
-        cssClass: 'kifi-tag-tip',
-        title: 'Tags', //'Tags (' + CO_KEY + '+Shift+A)', TODO: key binding
-        html: 'You can tag a keep to<br/>make it easier to find.'
-      }, function (html) {
-        configureHover(html, {
-          suppressed: isSticky,
-          mustHoverFor: 700,
-          hideAfter: 4000,
-          click: 'hide',
-          position: {my: 'right+10 bottom-13', at: 'right top', of: btn, collision: 'none'}
-        });
-      });
-    })
-    .on('click', '.kifi-keep-tag,.kifi-kept-tag', _.debounce(function (e) {
-      if (e.originalEvent.closedTagbox || e.originalEvent.isTrusted === false) {
-        return;
-      }
-      if (this.classList.contains('kifi-keep-tag')) {
-        keepPage('public', e, true);
-      }
-      if (window.toaster && toaster.showing()) {
-        toaster.hide();
-      }
-      api.require('scripts/tagbox.js', function () {
-        tagbox.onShow.add(beginStickyTagbox);
-        tagbox.onHide.add(endStickyTagbox);
-        tagbox.toggle($slider, 'click:tagIcon');
-      });
     }, 400, true))
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
@@ -443,8 +409,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
   var beginStickyTitle = beginSticky.bind(null, 1);
   var endStickyTitle = endSticky.bind(null, 1);
-  var beginStickyTagbox = beginSticky.bind(null, 2);
-  var endStickyTagbox = endSticky.bind(null, 2);
+  // var beginStickyKeep = beginSticky.bind(null, 2);
+  // var endStickyKeep = endSticky.bind(null, 2);
   var beginStickyToaster = beginSticky.bind(null, 4);
   var endStickyToaster = endSticky.bind(null, 4);
   var beginStickyPane = beginSticky.bind(null, 8);
@@ -509,11 +475,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       $slider.find('.kifi-count')
         .text(n || '')
         .css('display', n ? '' : 'none');
-    },
-    tagged: function (o) {
-      if ($slider) {
-        $slider.find('.kifi-keep-card').toggleClass('kifi-tagged', o.tagged ? true : false);
-      }
     }
   });
 
@@ -537,7 +498,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     discard: function () {
       $slider.off();
-      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-keep-tag,.kifi-kept-tag,.kifi-dock-btn').hoverfu('destroy');
+      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
     appendTo: function (parent) {
@@ -623,9 +584,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
         beginStickyPane();
-        if (window.tagbox && tagbox.active) {
-          tagbox.hide('keeper:onPaneChange');
-        } else if (window.toaster && toaster.showing()) {
+        if (window.toaster && toaster.showing()) {
           toaster.hide();
         }
       } else {  // dislodge from pane and prepare for x transition

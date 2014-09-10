@@ -197,9 +197,6 @@ if (searchUrlRe.test(document.URL)) !function () {
       $arrow[0].href = 'javascript:';
       if (inDoc) {
         tKifiResultsShown = Date.now();
-        if (showAny) {
-          $res.find('.kifi-res-sub').each(makeDescAndTagsFit);
-        }
       }
       if (showAny) {
         onFirstShow();
@@ -290,7 +287,6 @@ if (searchUrlRe.test(document.URL)) !function () {
     if ((ires = ires || document.getElementById('ires'))) {
       if ($res[0].nextElementSibling !== ires) {
         $res.insertBefore(ires);
-        $res.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
         if (!boundResHandlers) {
           setTimeout(bindResHandlers);
           boundResHandlers = true;
@@ -411,40 +407,6 @@ if (searchUrlRe.test(document.URL)) !function () {
       matches[i][0] -= strippedSchemeLen;
     }
     return boldSearchTerms(url, matches);
-  }
-
-  var pathSegmentRe = /(?:\/\.\.\.)?\/[^\/?#]*[^\/?#.]\//;
-  function makeDescAndTagsFit() {  // this is a .kifi-res-sub
-    var targetWidth = this.parentNode.offsetWidth;
-    var actualWidth = this.offsetWidth;
-    log('[makeDescAndTagsFit]', actualWidth, targetWidth, this.textContent);
-    if (!actualWidth || !targetWidth) {
-      return;
-    }
-    this.classList.add('kifi-fitted');
-    if (actualWidth <= targetWidth) {
-      return;
-    }
-    var tagsCell = this.lastElementChild;
-    var descCell = this.firstElementChild;
-    var tagsCellWidth = tagsCell.offsetWidth;
-    var descCellWidth = descCell.offsetWidth;
-    var descCellWidthTarget = targetWidth - tagsCellWidth;
-    for (var ch = descCell.firstElementChild.lastChild; ch; ch = ch.previousSibling) {
-      if (ch.nodeType === 3) {
-        var text = ch.textContent, text2;
-        while ((text2 = text.replace(pathSegmentRe, '/.../')) !== text) {
-          ch.textContent = text = text2;
-          descCellWidth = descCell.offsetWidth;
-          if (descCellWidth <= descCellWidthTarget) {
-            return;
-          }
-        }
-      }
-    }
-    descCell.style.width = descCellWidthTarget + 'px';
-    this.style.width = targetWidth + 'px';
-    this.style.tableLayout = 'fixed';
   }
 
   var boundResHandlers;
@@ -576,13 +538,9 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   function expandResults() {
-    var $box = $res.find('.kifi-res-box').css({visibility: 'hidden', height: 0});
-
     $bar.removeClass('kifi-collapsed');
     $status.removeAttr('data-n');
-
-    $box.find('.kifi-res-sub:not(.kifi-fitted)').each(makeDescAndTagsFit);
-    $box.css({visibility: '', height: '', display: 'none'}).slideDown(200);
+    $res.find('.kifi-res-box').css('display', 'none').slideDown(200);
 
     var onFirstShow = $res.data('onFirstShow');
     if (onFirstShow) {
@@ -680,7 +638,6 @@ if (searchUrlRe.test(document.URL)) !function () {
     $(hitHtml.join(''))
     .css({visibility: 'hidden', height: 0, margin: 0})
     .appendTo($res.find('#kifi-res-list'))
-    .find('.kifi-res-sub').each(makeDescAndTagsFit).end()
     .css({visibility: '', height: '', margin: '', display: 'none'})
     .slideDown(200, function () {
       this.style.overflow = '';  // slideDown clean-up
@@ -703,9 +660,6 @@ if (searchUrlRe.test(document.URL)) !function () {
       formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
     hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
     hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
-    if (hit.tags && hit.tags.length > 0) {
-      hit.tags[hit.tags.length - 1].last = true;
-    }
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;

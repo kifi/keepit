@@ -343,20 +343,6 @@ div.kifi-res-menu-item {
   line-height: 12px;
   color: #bda874;
 }
-.kifi-res-sub {
-  display: table;
-  border-collapse: collapse;
-  height: 20px;
-}
-.kifi-res-sub-1 {
-  display: table-cell;
-  vertical-align: middle;
-}
-.kifi-res-sub-2 {
-  display: table-cell;
-  vertical-align: middle;
-  max-width: 312px;
-}
 .kifi-res-type-icon {
   height: 15px;
   width: 15px;
@@ -370,30 +356,6 @@ div.kifi-res-menu-item {
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: ellipsis;
-}
-.kifi-res-tags {
-  white-space: nowrap;
-  overflow-x: hidden;
-  text-overflow: ellipsis;
-  height: 16px;
-  line-height: 16px;
-  font-size: 12px;
-  color: #929496;
-  background: 8px top/15px 15px no-repeat;
-  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAABDklEQVR4AZWTwUrDQBRFg5/SfFXzTYoLXbhxJbgSF7roTqsgVGPBkCKiEas1KW20FmmREMv1XZhIvKjohUOYzBwyefPGq+cgXl4ymsaeMTbgnhw33bxX4dUGDeOcwi9wvqEyX4x+koSRW/+51VAXHcYr6N5u42bYRjqJ0O6t1udDepQDFUkyPAIzeOpiOk9xcbejawLKLRWPL9dRvr+BCZMt3OdnSJ8jlVuUc5X741NoXmYDlTNPxZOrDSwWJTRRf1flQr8Mbk8znT+qSDL9Z2STGBpWXWV631a797CPopyByV8TlSqC2jlrxdescB10rje/SnLOxP9nh/na2/6fetuJKuutSo3CyNw40Fv1ASZEoLaT6fGlAAAAAElFTkSuQmCC);
-  padding-left: 28px;
-}
-@media (min-resolution: 1.3dppx) {
-  .kifi-res-tags {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAACFUlEQVR42sWXW0sCURDHg6hnP5g958ex94i8EAW9VFBR9FIUVNCNNsEou2mKlZhp7qZL5v2205k4GxXlzNkeHPmz7HFmfsw57JxzBvauxzkaEnIL+YROhPJCDam8HPNJnyFOTsrBJeQVMoSAqRcZ43IK9shqwKEw1qMCHhSaYgNoTWFOCowOa04AhNYwdy9wgEziXMG/wKNOkx5EJ+HsfklokfId/Ql2Celc0GHUB9HMJmQK51CqPYNldQENn9rtdK9YHVlfwV6VCvXXONhmid9rNQvtTh3Q4tkdKt5rg4dVvtPTuwX4asnc/se4Fp+BTrcFxXKKymEgE8FulWrNcvobOJyc+/yvXDega3XgKBag8rgR7OdCL1Kr8NOeihHYv5mA84dlsCwL0G4eN6hcAQQfc8FvtTz8Zl2r/e09Z15RubQB7vpiFVy7fdom1xnBTQqKU1lrmixotVFEfwrcZIET2V3g2nV6HWNYYINqFs12hQUt1XJ2HGuqtV5Od8+HwLXIwwoXrJGfk1FKsKCycXAVIBtIKDELZiVNgsPJeRXwiN0yC5RzLLMl1rr6GxN7Nx8qW6bSJnEUC0LWvLR59o6Es6IC9jreFnHvrdRfkItbo2q1LuIgQDeVSGoFnypgz19Hn2Afjj59OOz14XhLHuh1p0AZ6/nPFWZMqKAALGAMdYVRvbT5hUKympaULsf80meYk/Md6HeeeP8MV9EAAAAASUVORK5CYII=);
-  }
-}
-.kifi-res-tag {
-  color: inherit;
-}
-.kifi-res-tag:hover,
-.kifi-res-tag:focus {
-  color: #555;
 }
 
 .kifi-who {

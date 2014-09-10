@@ -2,7 +2,7 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-var me, tags = [];
+var me;
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
@@ -58,7 +58,6 @@ var tile = tile || function() {  // idempotent for Chrome
       } else {
         tile.removeAttribute('data-kept');
       }
-      tags = o.tags || [];
       window.addEventListener('resize', onResize);
       onResize.bound = true;
       api.require(['styles/insulate.css', 'styles/keeper/tile.css'], function() {

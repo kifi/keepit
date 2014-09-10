@@ -15,7 +15,6 @@ var emailRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,6
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
-var tabsTagging = []; // [tab]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
 var timeouts = {}; // tabId => timeout identifier
 
@@ -28,15 +27,12 @@ var messageData = {}; // threadId => [message, ...]; TODO: evict old threads fro
 var contactSearchCache;
 var ruleSet = {rules: {}};
 var urlPatterns;
-var tags;
-var tagsById;
 var guidePages;
 
 function clearDataCache() {
   log('[clearDataCache]');
   tabsByUrl = {};
   tabsByLocator = {};
-  tabsTagging = [];
   threadReadAt = {};
   for (var tabId in timeouts) {
     api.timers.clearTimeout(timeouts[tabId]);
@@ -50,8 +46,6 @@ function clearDataCache() {
   contactSearchCache = null;
   ruleSet = {rules: {}};
   urlPatterns = null;
-  tags = null;
-  tagsById = null;
   guidePages = null;
 }
 
@@ -104,7 +98,6 @@ PageData.prototype = {
   update: function (o) {
     this.kept = o.kept;
     this.keepId = o.keepId;
-    this.tags = o.tags || [];
     this.position = o.position;
     this.neverOnSite = o.neverOnSite;
     this.sensitive = o.sensitive;
@@ -116,35 +109,6 @@ PageData.prototype = {
     return this.keeps - this.keepers.length - (this.kept === 'public');
   }
 };
-
-function indexOfTag(tags, tagId) {
-  for (var i = 0, len = tags.length; i < len; i++) {
-    if (tags[i].id === tagId) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function addTag(tags, tag) {
-  var index = indexOfTag(tags, tag.id);
-  if (index === -1) {
-    return tags.push(tag);
-  }
-
-  if (tag.name) {
-    tags[index].name = tag.name;
-  }
-  return 0;
-}
-
-function removeTag(tags, tagId) {
-  var index = indexOfTag(tags, tagId);
-  if (index === -1) {
-    return null;
-  }
-  return tags.splice(index, 1)[0];
-}
 
 function insertUpdateChronologically(arr, o, timePropName) {
   var time = o[timePropName];
@@ -297,7 +261,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs.bind(null, getTags));
+  getRules(getPrefs);
 }
 
 function onSocketDisconnect(why, sec) {
@@ -425,9 +389,6 @@ var socketHandlers = {
     log('[socket:lost_friends]', fr);
     contactSearchCache = null;
   },
-  create_tag: onTagChangeFromServer.bind(null, 'create'),
-  rename_tag: onTagChangeFromServer.bind(null, 'rename'),
-  remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
     log('[socket:thread_participants]', threadId, participants);
     var thread = threadsById[threadId];
@@ -522,55 +483,6 @@ function emitSettings(tab) {
     search: enabled('search'),
     maxResults: prefs ? prefs.maxResults : 1
   }, {queue: 1});
-}
-
-function onAddTagResponse(nUri, result) {
-  log('[onAddTagResponse]', result);
-  if (result.success) {
-    var tag = result.response;
-    if (tags && addTag(tags, tag)) {
-      tagsById[tag.id] = tag;
-    }
-    var d = pageData[nUri];
-    if (d) {
-      addTag(d.tags, tag);
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'add_tag', tag);
-        api.tabs.emit(tab, 'tagged', {tagged: true});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
-}
-
-function onRemoveTagResponse(nUri, tagId, result) {
-  log('[onRemoveTagResponse]', tagId, result);
-  if (result.success) {
-    var d = pageData[nUri];
-    if (d) {
-      removeTag(d.tags, tagId);
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'remove_tag', {id: tagId});
-        api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
-}
-
-function onClearTagsResponse(nUri, result) {
-  log('[onClearTagsResponse]', result);
-  if (result.success) {
-    var d = pageData[nUri];
-    if (d) {
-      d.tags.length = 0;
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'clear_tags');
-        api.tabs.emit(tab, 'tagged', {tagged: false});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
 }
 
 function makeRequest(name, method, url, data, callbacks) {
@@ -1195,37 +1107,6 @@ api.port.on({
       }
     }
   },
-  get_tags: function(_, respond, tab) {
-    var d = pageData[tab.nUri],
-      success = d ? true : false,
-      response = null;
-
-    if (success) {
-      response = {all: tags, page: d.tags};
-
-      if (tabsTagging.length) {
-        tabsTagging = tabsTagging.filter(idIsNot(tab.id));
-      }
-      tabsTagging.push(tab);
-    }
-
-    respond({
-      success: success,
-      response: response
-    });
-  },
-  create_and_add_tag: function(name, respond, tab) {
-    makeRequest('create_and_add_tag', 'POST', '/tags/add', {name: name, url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
-  },
-  add_tag: function(tagId, respond, tab) {
-    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
-  },
-  remove_tag: function(tagId, respond, tab) {
-    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {url: tab.url}, [onRemoveTagResponse.bind(null, tab.nUri, tagId), respond]);
-  },
-  clear_tags: function(tagId, respond, tab) {
-    makeRequest('clear_tags', 'POST', '/tags/clear', {url: tab.url}, [onClearTagsResponse.bind(null, tab.nUri), respond]);
-  },
   add_participants: function(data) {
     socket.send(['add_participants_to_thread', data.threadId, data.ids.map(makeObjectsForEmailAddresses)]);
   },
@@ -1309,28 +1190,6 @@ function unsilence(tab) {
       api.tabs.emit(tab, 'unsilenced');
     }
   }
-}
-
-function onTagChangeFromServer(op, tag) {
-  if (!tags || !tagsById) return;
-  var tagId = tag.id;
-  switch (op) {
-    case 'create':
-    case 'rename':
-      if (tagId in tagsById) {
-        tagsById[tagId].name = tag.name;
-      } else {
-        tags.push(tag);
-        tagsById[tagId] = tag;
-      }
-      break;
-    case 'remove':
-      tags = tags.filter(idIsNot(tagId));
-      delete tagsById[tagId];
-  }
-  tabsTagging.forEach(function (tab) {
-    api.tabs.emit(tab, 'tag_change', this);
-  }, {op: op, tag: tag});
 }
 
 function standardizeUser(u) {
@@ -1740,24 +1599,10 @@ function pimpSearchResponse(o, filter, noMore) {
   o.admBaseUri = admBaseUri();
   o.myTotal = o.myTotal || 0;
   o.friendsTotal = o.friendsTotal || 0;
-  o.hits.forEach(pimpSearchHit);
   if (noMore) {
     o.mayHaveMore = false;
   }
   return o;
-}
-
-function pimpSearchHit(hit) {
-  var tagIds = hit.bookmark && hit.bookmark.tags;
-  if (tagIds && tagIds.length && tagsById) {
-    var tags = hit.tags = [];
-    for (var i = 0; i < tagIds.length; i++) {
-      var tag = tagsById[tagIds[i]];
-      if (tag) {
-        tags.push(tag);
-      }
-    }
-  }
 }
 
 function kifify(tab) {
@@ -1835,7 +1680,6 @@ function kififyWithPageData(tab, d) {
     kept: d.kept,
     position: d.position,
     hide: hide,
-    tags: d.tags,
     showKeeperIntro: prefs && prefs.showKeeperIntro
   }, {queue: 1});
 
@@ -2048,9 +1892,6 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     } else {
       api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
-  }
-  if (tabsTagging.length) {
-    tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
   clearAutoEngageTimer(tab, 'keepers');
   delete tab.nUri;
@@ -2306,17 +2147,6 @@ var elizaBaseUri = devUriOr.bind(null, apiUri('eliza'));
 
 var webBaseUri = devUriOr.bind(null, 'https://www.kifi.com');
 var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
-
-function getTags() {
-  ajax('GET', '/tags', function gotTags(arr) {
-    log('[gotTags]', arr);
-    tags = arr;
-    tagsById = tags.reduce(function(o, tag) {
-      o[tag.id] = tag;
-      return o;
-    }, {});
-  });
-}
 
 function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {

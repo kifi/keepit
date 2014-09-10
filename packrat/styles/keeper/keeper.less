@@ -242,8 +242,7 @@
   }
 }
 .kifi-keep-lock,
-.kifi-kept-lock,
-.kifi-kept-tag {
+.kifi-kept-lock {
   position: absolute;
   border: 1px solid rgba(51,51,51,.3);
   border-radius: 50% !important;
@@ -293,45 +292,10 @@
     background-color: shade(@bg-color, 4%);
   }
 }
-.kifi-kept-tag {
-  right: 9px;
-  @url: %(@svgTagDataUrl, #464646);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  background-size: 12px 12px, auto;
-  background-position: 9px center, 0;
-  &:hover,
-  &:focus {
-    @url: %(@svgTagDataUrl, #6fa6ef);
-    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  }
-  &:active {
-    @url: %(@svgTagDataUrl, #6fa6ef);
-    background-image: url(@url);
-    background-color: #f3f3f3;
-  }
-  .kifi-tagged & {
-    top: 8px;
-    right: 8px;
-    @bg-color: #6fa6ef;
-    @url: %(@svgTagDataUrl, #fff);
-    background-image: url(@url);
-    background-color: @bg-color;
-    border-color: #5490df;
-    border-width: 2px;
-    &:hover,
-    &:focus {
-      background-color: tint(@bg-color, 6%);
-    }
-    &:active {
-      background-color: shade(@bg-color, 4%);
-    }
-  }
-}
 
 /* ::after for invisible expansion */
 .kifi-keep-lock::after,
-.kifi-kept-lock::after,
-.kifi-kept-tag::after {
+.kifi-kept-lock::after {
   content: '';
   display: block;
   height: 100%;
@@ -343,15 +307,6 @@
   border-radius: 24.5px 0 0 24.5px !important;
   border-right-width: 0;
   margin-right: 0;
-}
-.kifi-kept-tag::after {
-  border-radius: 0 24.5px 24.5px 0 !important;
-  border-left-width: 0;
-  margin-left: 0;
-}
-.kifi-tag-tip::before {
-  left: auto;
-  right: 19px;
 }
 
 .kifi-keepers-box {
