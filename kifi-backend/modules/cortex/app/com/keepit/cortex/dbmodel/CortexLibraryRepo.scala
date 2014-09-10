@@ -31,7 +31,6 @@ class CortexLibraryRepoImpl @Inject() (
     def libraryId = column[Id[Library]]("library_id")
     def ownerId = column[Id[User]]("owner_id")
     def kind = column[LibraryKind]("kind", O.NotNull)
-
     def * = (id.?, createdAt, updatedAt, libraryId, ownerId, kind, state, seq) <> ((CortexLibrary.apply _).tupled, CortexLibrary.unapply)
   }
 
