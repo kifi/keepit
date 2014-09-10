@@ -56,7 +56,9 @@ class PublicFeedGenerationCommander @Inject() (
 
   private def savePublicScoredSeedItems(items: Seq[PublicScoredSeedItem], newSeqNum: SequenceNumber[PublicSeedItem]) =
     db.readWrite { implicit s =>
+      log.info(s"public feed: saving items")
       items foreach { item =>
+        log.info(s"public feed: saving $item")
         val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
         feedOpt.map { feed =>
           publicFeedRepo.save(feed.copy(
@@ -69,7 +71,9 @@ class PublicFeedGenerationCommander @Inject() (
             publicAllScores = item.publicUriScores))
         }
       }
+      log.info(s"public feed: saving new seq num: $newSeqNum")
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
+      log.info(s"public feed: saved new seq num: $newSeqNum")
     }
 
   private def getPrecomputationFeedsResult(
@@ -93,7 +97,7 @@ class PublicFeedGenerationCommander @Inject() (
               case _ => false
             }
           }
-          log.info("public feed: filtered items ${cleanedItems.length}, now scoring")
+          log.info(s"public feed: filtered items ${cleanedItems.length}, now scoring")
           val weightedItems = publicUriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             log.info("public feed: got scores, now saving")
