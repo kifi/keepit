@@ -11,6 +11,8 @@ angular.module('kifi')
     var query = $routeParams.q || '';
     var filter = $routeParams.f || 'm';
     var lastResult = null;
+    var selectedCount = 0;
+
 
     //
     // Scope data.
@@ -49,7 +51,6 @@ angular.module('kifi')
       if ($scope.loading) {
         return;
       }
-      // reportSearchAnalytics('refinement'); // Gotta move the stuff we need into SearchActionService first.
 
       $scope.loading = true;
       searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
@@ -102,32 +103,26 @@ angular.module('kifi')
       return [keep, $event]; // log analytics for search click here
     };
     
-    //
-    // Watches and event listeners.
-    //
-
-    // Report search analytics on unload.
-    var onUnload = function () {
-      searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length);
-    };
-    $window.addEventListener('beforeunload', onUnload);
-
-    $scope.$on('$destroy', function () {
-      onUnload();
-      $window.removeEventListener('beforeunload', onUnload);
-    });
-
     $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Searching…';
       }
 
-      // The following if for selecting keeps. TODO: get this to work.
-      // var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
-      // if (subtitle) {
-      //   return subtitle;
-      // }
+      // If there are selected keeps, display the number of keeps
+      // in the subtitle.
+      if (selectedCount > 0) {
+        switch (selectedCount) {
+          case 0:
+            return null;
+          case 1:
+            return selectedCount + ' Keep selected';
+          default:
+            return selectedCount + ' Keeps selected';
+        }
+      }
 
+      // If there are no selected keep, the display the number of
+      // search results in the subtitle.
       var numShown = $scope.resultKeeps.length;
       switch (numShown) {
         case 0:
@@ -139,6 +134,30 @@ angular.module('kifi')
       }
     };
 
+    $scope.updateSelectedCount = function (numSelected) {
+      selectedCount = numSelected;
+    };
+
+
+    //
+    // Watches and event listeners.
+    //
+
+    // Report search analytics on unload.
+    var onUnload = function () {
+      searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length);
+    };
+    $window.addEventListener('beforeunload', onUnload);
+
+    $scope.$on('$destroy', function () {
+    onUnload();
+      $window.removeEventListener('beforeunload', onUnload);
+    });
+
+    
+    //
+    // On SearchCtrl initialization.
+    //
     if (!query) {
       // No query or blank query.
       $location.path('/');

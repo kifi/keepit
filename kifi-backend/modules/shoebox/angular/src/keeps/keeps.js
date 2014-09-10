@@ -50,7 +50,8 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         editMode: '=',
-        toggleEdit: '='
+        toggleEdit: '=',
+        updateSelectedCount: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -185,8 +186,9 @@ angular.module('kifi')
 
         scope.$watch(function () {
           return selection.getSelected(scope.keeps).length;
-        }, function () {
+        }, function (numSelected) {
           scope.disableEditTags();
+          scope.updateSelectedCount({ numSelected: numSelected });
         });
 
         var lastSizedAt = $window.innerWidth;

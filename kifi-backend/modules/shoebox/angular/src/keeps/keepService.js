@@ -438,24 +438,16 @@ angular.module('kifi')
         return !!end;
       },
 
-      getSubtitle: function (mouseover) {
-        var selectedCount = api.getSelectedLength(),
-          numShown = list.length;
-
-        if (mouseover) {
-          if (selectedCount === numShown) {
-            return 'Deselect all ' + numShown + ' Keeps below';
-          }
-          return 'Select all ' + numShown + ' Keeps below';
-        }
+      getSubtitle: function () {
+        var selectedCount = api.getSelectedLength();
 
         switch (selectedCount) {
-        case 0:
-          return null;
-        case 1:
-          return selectedCount + ' Keep selected';
-        default:
-          return selectedCount + ' Keeps selected';
+          case 0:
+            return null;
+          case 1:
+            return selectedCount + ' Keep selected';
+          default:
+            return selectedCount + ' Keeps selected';
         }
       },
 
