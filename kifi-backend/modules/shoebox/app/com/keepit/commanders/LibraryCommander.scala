@@ -78,8 +78,7 @@ class LibraryCommander @Inject() (
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
-      if (!libAddReq.collaborators.intersect(libAddReq.followers).isEmpty) { Some("collaborators & followers overlap!") }
-      else if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid library name") }
+      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid library name") }
       else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid library slug") }
       else { None }
     }
@@ -91,11 +90,11 @@ class LibraryCommander @Inject() (
           case Some(lib) if lib.state == LibraryStates.ACTIVE => Left(LibraryFail("library name already exists for user"))
           case _ => {
             val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
-              val collabs = libAddReq.collaborators.map { x =>
+              val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
                 val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
                 inviteeIdOpt.get
               }
-              val follows = libAddReq.followers.map { x =>
+              val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
                 val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
                 inviteeIdOpt.get
               }
@@ -520,8 +519,8 @@ case class LibraryFail(message: String) extends AnyVal
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  collaborators: Seq[ExternalId[User]],
-  followers: Seq[ExternalId[User]])
+  collaborators: Option[Seq[ExternalId[User]]],
+  followers: Option[Seq[ExternalId[User]]])
 
 case class LibraryInfo(
   id: PublicId[Library],
