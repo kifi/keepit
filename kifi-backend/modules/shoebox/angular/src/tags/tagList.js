@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  'keepService', 'keyIndices', 'tagService', '$filter', '$sce', '$document',
-  function (keepService, keyIndices, tagService, $filter, $sce, $document) {
+  '$document', '$sce', 'keyIndices', 'tagService',
+  function ($document, $sce, keyIndices, tagService) {
     var dropdownSuggestionCount = 5;
 
     return {
