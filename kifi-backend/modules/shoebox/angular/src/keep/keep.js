@@ -496,11 +496,10 @@ angular.module('kifi')
   '$document',
   '$rootScope',
   'keepActionService',
-  'keepService',
   'recoActionService',
   'tagService',
   'undoService',
-  function ($document, $rootScope, keepActionService, keepService, recoActionService, tagService, undoService) {
+  function ($document, $rootScope, keepActionService, recoActionService, tagService, undoService) {
     return {
       restrict: 'A',
       scope: {
