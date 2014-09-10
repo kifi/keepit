@@ -23,19 +23,19 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnLeader(system, 2 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 5 minutes, 5 minutes, "complete data ingestion") {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 3 minutes, 2 minutes, "recommendation precomputation") {
       generationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 5 minutes, 5 minutes, "public feed precomputation") {
       feedCommander.precomputePublicFeeds()
     }
-    scheduleTaskOnLeader(system, 1 hours, 5 hours) {
+    scheduleTaskOnLeader(system, 1 hours, 5 hours, "recommendation reaper") {
       cleanupCommander.cleanupLowMasterScoreRecos()
     }
-    scheduleTaskOnLeader(system, 1 hours, 10 hours) {
+    scheduleTaskOnLeader(system, 1 hours, 5 hours, "public feed reaper") {
       cleanupCommander.cleanupLowMasterScoreFeeds()
     }
 

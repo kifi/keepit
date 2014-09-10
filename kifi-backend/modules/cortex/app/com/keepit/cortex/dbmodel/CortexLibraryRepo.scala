@@ -10,7 +10,7 @@ import com.keepit.model.{ LibraryKind, User, Library }
 
 import scala.slick.jdbc.StaticQuery
 
-@ImplementedBy(classOf[CortexLibrary])
+@ImplementedBy(classOf[CortexLibraryRepoImpl])
 trait CortexLibraryRepo extends DbRepo[CortexLibrary] with SeqNumberFunction[CortexLibrary] {
   def getSince(seq: SequenceNumber[CortexLibrary], limit: Int)(implicit session: RSession): Seq[CortexLibrary]
   def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexLibrary]

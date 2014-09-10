@@ -2,17 +2,18 @@
   <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/recommendations') }">
     <a class="kf-nav-link" href="/recommendations" ng-if="inRecoExperiment()">
       <span class="sprite sprite-clover-small"></span>
-      <span class="kf-nav-name">Recommendations</span>
+      <span class="kf-nav-name pre-libraries-style">Recommendations</span>
     </a>
   </li>
   <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/') }">
     <a class="kf-nav-link" href="/">
       <span class="sprite sprite-cards-small"></span>
-      <span class="kf-nav-name">Keeps Library</span>
+      <span class="kf-nav-name pre-libraries-style">Keeps Library</span>
       <span class="kf-nav-count" ng-class="{ empty: !counts.keepCount }">{{counts.keepCount}}</span>
     </a>
   </li>
 </ul>
+
 <ul class="kf-nav-group" ng-if="librariesEnabled">
   <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/recommendations') }">
     <a class="kf-nav-link" href="/recommendations" ng-if="inRecoExperiment()">
@@ -32,6 +33,12 @@
       <span class="sprite sprite-cards-small"></span>
       <span class="kf-nav-name">{{library.name}}</span>
       <span class="kf-nav-count" ng-class="{ empty: !library.numKeeps }">{{library.numKeeps}}</span>
+    </a>
+  </li>
+  <li class="kf-nav-item kf-nav-keeps">
+    <span class="kf-nav-link">
+      <span class="sprite sprite-cards-small"></span>
+      <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
     </a>
   </li>
 </ul>

@@ -18,7 +18,9 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val cortexURIRepo = inject[CortexURIRepo]
         val cortexKeepRepo = inject[CortexKeepRepo]
-        val updater = new CortexDataIngestionUpdater(db, shoebox, cortexURIRepo, cortexKeepRepo)
+        val cortexLibRepo = inject[CortexLibraryRepo]
+        val cortexLibMemRepo = inject[CortexLibraryMembershipRepo]
+        val updater = new CortexDataIngestionUpdater(db, shoebox, cortexURIRepo, cortexKeepRepo, cortexLibRepo, cortexLibMemRepo)
 
         val savedURIs = shoebox.saveURIs(
           NormalizedURI(url = "url1", urlHash = UrlHash("h1"), seq = SequenceNumber[NormalizedURI](1L)),
@@ -61,6 +63,33 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
           cortexKeepRepo.all.map { _.source } === List(KeepSource.keeper, KeepSource.bookmarkImport)
         }
 
+        val library = Library(name = "foo", ownerId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("foo"), memberCount = 1)
+        shoebox.saveLibraries(
+          library,
+          library.copy(name = "bar", slug = LibrarySlug("bar"))
+        )
+
+        Await.result(updater.updateLibraryRepo(100), FiniteDuration(5, SECONDS)) === 2
+
+        db.readOnlyReplica { implicit s =>
+          cortexLibRepo.getByLibraryId(Id[Library](1)).get.seq.value === 1
+          cortexLibRepo.getByLibraryId(Id[Library](2)).get.seq.value === 2
+        }
+
+        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER, showInSearch = true)
+        shoebox.saveLibraryMemberships(
+          libMem,
+          libMem.copy(libraryId = Id[Library](2)),
+          libMem.copy(libraryId = Id[Library](2), userId = Id[User](2), access = LibraryAccess.READ_ONLY)
+        )
+
+        Await.result(updater.updateLibraryMembershipRepo(100), FiniteDuration(5, SECONDS)) === 3
+        Await.result(updater.updateLibraryRepo(100), FiniteDuration(5, SECONDS)) === 2
+
+        db.readOnlyReplica { implicit s =>
+          cortexLibRepo.getByLibraryId(Id[Library](1)).get.seq.value === 3
+          cortexLibRepo.getByLibraryId(Id[Library](2)).get.seq.value === 5
+        }
       }
     }
   }

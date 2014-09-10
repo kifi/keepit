@@ -1,6 +1,6 @@
 package com.keepit.cortex.dbmodel
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, SeqNumberDbFunction }
@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 
 import scala.slick.jdbc.StaticQuery
 
+@ImplementedBy(classOf[CortexLibraryMembershipRepoImpl])
 trait CortexLibraryMembershipRepo extends DbRepo[CortexLibraryMembership] with SeqNumberDbFunction[CortexLibraryMembership] {
   def getSince(seq: SequenceNumber[CortexLibraryMembership], limit: Int)(implicit session: RSession): Seq[CortexLibraryMembership]
   def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexLibraryMembership]

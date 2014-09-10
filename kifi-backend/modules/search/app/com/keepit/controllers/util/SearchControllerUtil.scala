@@ -12,7 +12,10 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{ JsValue, Json, JsObject }
 
 import scala.concurrent.Future
-import com.keepit.search.{ AugmentationContext, Item, AugmentationCommander }
+import com.keepit.search._
+import com.keepit.search.result.DecoratedResult
+import play.api.libs.json.JsObject
+import com.keepit.common.akka.SafeFuture
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -20,11 +23,13 @@ object SearchControllerUtil {
 
 trait SearchControllerUtil {
 
+  @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
+
   @inline
   def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(str => Enumerator(", " + str))(immediate))
+      safelyFlatten(future.map(str => Enumerator(", " + str))(immediate))
     })
   }
 
@@ -74,7 +79,12 @@ trait SearchControllerUtil {
   def augment(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
     val items = kifiPlainResult.hits.map { hit => Item(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(Item(_, None))
-    val context = AugmentationContext.uniform(items ++ previousItems)
-    augmentationCommander.augment(userId, context, items: _*).map(Json.toJson(_))
+    val context = AugmentationContext.uniform(userId, items ++ previousItems)
+    val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
+    augmentationCommander.augmentation(augmentationRequest).map { augmentationResponse =>
+      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
+      val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
+      Json.toJson(augmentedItems)
+    }
   }
 }
