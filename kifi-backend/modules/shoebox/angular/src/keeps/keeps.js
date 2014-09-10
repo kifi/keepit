@@ -144,7 +144,7 @@ angular.module('kifi')
 
             undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
               keepActionService.keepMany(selectedKeeps);
-              keeps = originalKeeps;
+              scope.keeps = originalKeeps;  // Why is scope.keeps needed here? (vs. just keeps)
               tagService.addToKeepCount(selectedKeeps.length);
             });
 
@@ -170,6 +170,17 @@ angular.module('kifi')
 
         scope.disableEditTags = function () {
           scope.editingTags = false;
+        };
+
+        scope.toggleEdit = function (moveWindow) {
+          if (!scope.editMode.enabled) {
+            if (moveWindow) {
+              $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
+            }
+          } else {
+            selection.unselectAll();
+          }
+          scope.editMode.enabled = !scope.editMode.enabled;
         };
 
         scope.$watch(function () {
@@ -209,6 +220,8 @@ angular.module('kifi')
           $window.removeEventListener('resize', lazyResizeListener);
           scope.editMode.enabled = false;
         });
+
+        
 
       }
     };

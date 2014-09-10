@@ -271,6 +271,7 @@ angular.module('kifi')
       }
     };
 
+    // TODO: not depend on keepService.
     $scope.toggleEdit = function (moveWindow) {
       if (!$scope.editMode.enabled) {
         if (moveWindow) {
