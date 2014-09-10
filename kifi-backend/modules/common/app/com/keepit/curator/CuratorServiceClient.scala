@@ -22,7 +22,7 @@ trait CuratorServiceClient extends ServiceClient {
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
   def triggerEmail(code: String): Future[String]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
-  def resetUserRecoGenState(userId: Id[User]): Future[Unit]
+  def refreshUserRecos(userId: Id[User]): Future[Unit]
 }
 
 class CuratorServiceClientImpl(
@@ -73,7 +73,7 @@ class CuratorServiceClientImpl(
     }
   }
 
-  def resetUserRecoGenState(userId: Id[User]): Future[Unit] = {
-    callLeader(Curator.internal.resetUserRecoGenState(userId)).map { x => }
+  def refreshUserRecos(userId: Id[User]): Future[Unit] = {
+    callLeader(Curator.internal.refreshUserRecos(userId), callTimeouts = longTimeout).map { x => }
   }
 }

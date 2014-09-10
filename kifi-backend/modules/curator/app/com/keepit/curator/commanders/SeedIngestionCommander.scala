@@ -55,7 +55,7 @@ class SeedIngestionCommander @Inject() (
     log.info("Ingested one batch of keeps.")
   }
 
-  def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId, INGESTION_BATCH_SIZE).map(_ => ())
+  def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId).map(_ => ())
 
   private def cookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
@@ -154,6 +154,10 @@ class SeedIngestionCommander @Inject() (
       }
 
     }
+  }
+
+  def forceIngestGraphData(userId: Id[User]): Future[Unit] = {
+    topUrisIngestor(userId, force = true).map(_ => ())
   }
 
 }
