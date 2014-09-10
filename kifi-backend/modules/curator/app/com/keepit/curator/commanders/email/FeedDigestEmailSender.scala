@@ -4,27 +4,26 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.slick.Database
+import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.{ EmailToSend, EmailTips }
 import com.keepit.common.mail.SystemEmailAddress
+import com.keepit.common.mail.template.helpers.toHttpsUrl
+import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.curator.commanders.RecommendationGenerationCommander
-import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
-import com.keepit.common.mail.template.helpers.toHttpsUrl
+import com.keepit.curator.model.{ UriRecommendation, UriRecommendationRepo }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ SocialNetworks, BasicUser }
+import com.keepit.social.{ BasicUser, SocialNetworks }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.concurrent.PimpMyFuture._
 
-import concurrent.Future
-import scala.util.{ Success, Random, Failure }
+import scala.concurrent.Future
+import scala.util.{ Failure, Random, Success }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -110,7 +109,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends FeedDigestEmailSender with Logging {
 
-  import DigestEmail._
+  import com.keepit.curator.commanders.email.DigestEmail._
 
   val defaultUriRecommendationScores = UriRecommendationScores()
 

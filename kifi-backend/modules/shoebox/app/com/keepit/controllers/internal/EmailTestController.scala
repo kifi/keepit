@@ -1,17 +1,21 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-
+import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.mail.{ LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
+import com.keepit.model.{ NotificationCategory, User }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
 import play.api.mvc.Action
-
 import play.twirl.api.Html
-import com.keepit.model.NotificationCategory
 
-class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) extends ShoeboxServiceController {
+class EmailTestController @Inject() (
+    postOffice: LocalPostOffice,
+    db: Database,
+    resetPasswordSender: ResetPasswordEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -52,4 +56,16 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
     templates(name)
   }
 
+  def testEmailSender(name: String) = Action.async { request =>
+    def userId = Id[User](request.getQueryString("userId").get.toLong)
+    def sendTo = EmailAddress(request.getQueryString("sendTo").get)
+
+    name match {
+      case "resetPassword" =>
+        resetPasswordSender.sendToUser(userId, sendTo).map { email =>
+          Ok(email.htmlBody.value)
+        }
+    }
+  }
 }
+
