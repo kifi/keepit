@@ -80,6 +80,12 @@ angular.module('kifi')
       getKeepsInLibrary: function (libraryId, offset, authToken) {
         return keepsInLibraryService.get(libraryId, 10, offset, authToken);
       },
+      addToLibraryCount: function (libraryId, val) {
+        var lib = _.find(librarySummaries, function (librarySummary) {
+          return librarySummary.id === libraryId;
+        });
+        lib.numKeeps += val;
+      },
       createLibrary: function (opts) {
         var required = ['name', 'visibility', 'description', 'slug'];
         var missingFields = _.filter(required, function (v) {

@@ -473,6 +473,33 @@ angular.module('kifi')
         return processKeepAction(data);
       },
 
+      keepToLibrary: function (keepUrls, libraryId) {
+        var data = {
+          keeps: keepUrls.map(function (keepUrl) {
+            return {
+              url: sanitizeUrl(keepUrl)
+            };
+          })
+        };
+
+        $log.log('keepService.keepToLibrary()', data);
+        var url = env.xhrBase + '/libraries/' + libraryId + '/keeps';
+        return $http.post(url, data, {}).then(function (res) {
+          var keeps = res.data.keeps || [];
+          keeps = _.uniq(keeps, function (keep) {
+            return keep.url;
+          });
+          _.forEach(keeps, buildKeep);
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'keep',
+            'path': $location.path()
+          });
+          tagService.addToKeepCount(res.data.keeps.length);
+          prependKeeps(keeps);
+          return res.data;
+        });
+      },
+
       keep: function (keeps, isPrivate) {
         if (!(keeps && keeps.length)) {
           return $q.when(keeps || []);
