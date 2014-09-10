@@ -124,15 +124,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        keepPage('public', e);
+        if (this.parentNode.classList.contains('kifi-keep-side')) {
+          keepPage('public', e);
+        } else {
+          // TODO: open library list
+        }
       }
     }, 400, true))
-    .on('click', '.kifi-kept-btn', _.debounce(function (e) {
-      if (e.target === this && e.originalEvent.isTrusted !== false) {
-        // TODO: open library list
-      }
-    }, 400, true))
-    .hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
+    .hoverfu('.kifi-keep-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
@@ -458,7 +457,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     discard: function () {
       $slider.off();
-      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-dock-btn').hoverfu('destroy');
+      $slider.find('.kifi-keep-btn,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
     appendTo: function (parent) {
