@@ -180,9 +180,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryRepo.count === 0
         }
 
-        val noInvites = Seq.empty[ExternalId[User]]
-        val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
-        val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
+        val noInvites = None
+        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
+        val inv3 = Some(userHulk.externalId :: Nil)
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
