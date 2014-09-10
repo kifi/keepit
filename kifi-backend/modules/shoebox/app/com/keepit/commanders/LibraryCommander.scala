@@ -244,9 +244,8 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = {
+  def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
     db.readWrite { implicit session =>
-      val user = userRepo.get(userId);
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
       val allLibs = libraryRepo.getByUser(userId, None)
 
@@ -287,7 +286,7 @@ class LibraryCommander @Inject() (
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
         val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
-        if (mainLib.createdAt.isBefore(user.createdAt.plusSeconds(30)))
+        if (!generateNew)
           airbrake.notify(s"${userId} missing main library")
         Some(mainLib)
       } else None
@@ -295,7 +294,7 @@ class LibraryCommander @Inject() (
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
         val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
-        if (secretLib.createdAt.isBefore(user.createdAt.plusSeconds(30)))
+        if (!generateNew)
           airbrake.notify(s"${userId} missing secret library")
         Some(secretLib)
       } else None
