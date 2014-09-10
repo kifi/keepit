@@ -6,7 +6,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.model.{ User, DeepLocator, NormalizedURI }
 import play.api.mvc.{ Result, Request }
 
-trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
+protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
 
   def handleAuthenticatedDeepLink(request: AuthenticatedRequest[_], uri: NormalizedURI, locator: DeepLocator, recipientUserId: Option[Id[User]]) = {
     val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
