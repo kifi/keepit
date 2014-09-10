@@ -12,7 +12,7 @@ angular.module('kifi')
       };
 
       this.recoData.reasons.forEach(function (reason) {
-        if (!reason.name) {
+        if (!reason.name && reason.url) {
           reason.name = util.formatTitleFromUrl(reason.url);
         }
       });
