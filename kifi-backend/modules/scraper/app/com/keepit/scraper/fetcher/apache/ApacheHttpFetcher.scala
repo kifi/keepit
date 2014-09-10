@@ -41,10 +41,11 @@ import org.apache.http.util.EntityUtils
 import org.joda.time.DateTime
 import play.api.Play
 import sun.security.validator.ValidatorException
+import views.html.helper.input
 
 import scala.concurrent.Future
 import scala.ref.WeakReference
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
@@ -209,6 +210,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       thread
     }
   })
+
   val ENFORCER_FREQ: Int = scraperHttpConfig.httpFetcherEnforcerFreq
   if (schedulingProperties.enabled) {
     scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
@@ -275,35 +277,23 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
         // If the response does not enclose an entity, there is no need to bother about connection release
         if (entity != null) {
-
-          val input = new HttpInputStream(entity.getContent)
-
-          Option(response.getHeaders(CONTENT_TYPE)).foreach { headers =>
-            if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
-          }
-
           try {
-            statusCode match {
-              case HttpStatus.SC_OK =>
-                f(input)
-                HttpFetchStatus(statusCode, None, httpContext)
-              case HttpStatus.SC_NOT_MODIFIED =>
-                HttpFetchStatus(statusCode, None, httpContext)
-              case _ =>
-                log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
-                HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+            Try(new HttpInputStream(entity.getContent)) match {
+              case Success(input) =>
+                try {
+                  Option(response.getHeaders(CONTENT_TYPE)).foreach { headers =>
+                    if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
+                  }
+                  consumeInput(statusCode, input, httpContext, url, response, httpGet, entity, f)
+                } finally {
+                  Try(input.close())
+                }
+              case Failure(error) =>
+                log.error(s"error getting content for $url", error)
+                HttpFetchStatus(-1, Some(error.toString), httpContext)
             }
-          } catch {
-            case ex: IOException =>
-              // in case of an IOException the connection will be released back to the connection manager automatically
-              throw ex
-            case ex: Exception =>
-              // unexpected exception. abort the request in order to shut down the underlying connection immediately.
-              httpGet.abort()
-              throw ex
           } finally {
             Try(EntityUtils.consumeQuietly(entity))
-            Try(input.close())
           }
         } else {
           httpGet.abort()
@@ -319,6 +309,30 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           }
         }
       }
+    }
+  }
+
+  private def consumeInput(statusCode: Int, input: HttpInputStream, httpContext: HttpContext, url: URI,
+    response: CloseableHttpResponse, httpGet: HttpGet, entity: HttpEntity, f: HttpInputStream => Unit): HttpFetchStatus = {
+    try {
+      statusCode match {
+        case HttpStatus.SC_OK =>
+          f(input)
+          HttpFetchStatus(statusCode, None, httpContext)
+        case HttpStatus.SC_NOT_MODIFIED =>
+          HttpFetchStatus(statusCode, None, httpContext)
+        case _ =>
+          log.info("request failed: [%s][%s]".format(response.getStatusLine().toString(), url))
+          HttpFetchStatus(statusCode, Some(response.getStatusLine.toString), httpContext)
+      }
+    } catch {
+      case ex: IOException =>
+        // in case of an IOException the connection will be released back to the connection manager automatically
+        throw ex
+      case ex: Exception =>
+        // unexpected exception. abort the request in order to shut down the underlying connection immediately.
+        httpGet.abort()
+        throw ex
     }
   }
 
