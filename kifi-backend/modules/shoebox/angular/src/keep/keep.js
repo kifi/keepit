@@ -495,11 +495,13 @@ angular.module('kifi')
 .directive('kfKeepContent', [
   '$document',
   '$rootScope',
+  '$rootElement',
   'keepActionService',
   'recoActionService',
   'tagService',
   'undoService',
-  function ($document, $rootScope, keepActionService, recoActionService, tagService, undoService) {
+  'util',
+  function ($document, $rootScope, $rootElement, keepActionService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -508,7 +510,9 @@ angular.module('kifi')
         toggleSelect: '&',
         isSelected: '&',
         keepCallback: '&',
-        clickCallback: '&'
+        clickCallback: '&',
+        dragKeeps: '&',
+        stopDraggingKeeps: '&'
       },
       replace: true,
       templateUrl: 'keep/keepContent.tpl.html',
@@ -761,6 +765,56 @@ angular.module('kifi')
         });
 
         updateSiteDescHtml(scope.keep);
+
+        // For dragging.
+        var tagDragMask = element.find('.kf-tag-drag-mask');
+        scope.isDragTarget = false;
+
+        // TODO: bind to 'drop' event
+        scope.onTagDrop = function (tag) {
+          tagService.addKeepToTag(tag, scope.keep);
+          scope.isDragTarget = false;
+        };
+
+        tagDragMask.on('dragenter', function () {
+          scope.$apply(function () { scope.isDragTarget = true; });
+        });
+
+        tagDragMask.on('dragleave', function () {
+          scope.$apply(function () { scope.isDragTarget = false; });
+        });
+
+        scope.isDragging = false;
+        var mouseX, mouseY;
+        element.on('mousemove', function (e) {
+          mouseX = e.pageX - util.offset(element).left;
+          mouseY = e.pageY - util.offset(element).top;
+        })
+        .on('dragstart', function (e) {
+          scope.$apply(function () {
+            $rootScope.DRAGGING_KEEP = true;
+            $rootElement.find('html').addClass('kf-dragging-keep');
+            element.addClass('kf-dragged');
+            scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
+            scope.isDragging = true;
+          });
+        })
+        .on('dragend', function () {
+          scope.$apply(function () {
+            $rootScope.DRAGGING_KEEP = false;
+            $rootElement.find('html').removeClass('kf-dragging-keep');
+            element.removeClass('kf-dragged');
+            scope.stopDraggingKeeps();
+            scope.isDragging = false;
+          });
+        })
+        .on('drop', function (e) {
+          e.preventDefault();
+        });
+
+        scope.$watch('editMode.enabled', function () {
+          element.attr('draggable', true);
+        });
       }
     };
   }

@@ -16,8 +16,8 @@ angular.module('kifi')
       }
     });
 
-    $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = keepService.getSelected();  // need to revise this.
+    $scope.dragKeeps = function (keep, event, mouseX, mouseY, selection) {
+      var draggedKeeps = selection.getSelected($scope.keeps);
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
@@ -37,8 +37,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$window', '$timeout', 'keepActionService', 'selectionService', 'tagService', 'undoService',
-  function (keepService, $window, $timeout, keepActionService, selectionService, tagService, undoService) {
+  '$window', '$timeout', 'keepActionService', 'selectionService', 'tagService', 'undoService',
+  function ($window, $timeout, keepActionService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
@@ -60,9 +60,6 @@ angular.module('kifi')
         // Internal data.
         //
         var lastSizedAt = $window.innerWidth;
-
-        // 'selection' keeps track of which keeps have been selected.
-        var selection = new selectionService.Selection();
 
 
         //
@@ -99,34 +96,31 @@ angular.module('kifi')
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
 
+        // 'selection' keeps track of which keeps have been selected.
+        scope.selection = new selectionService.Selection();
+
 
         //
         // Scope methods.
         //
-        scope.toggleSelect = function (keep) { return selection.toggleSelect(keep); };
-        scope.getSelected = function (keeps) { return selection.getSelected(keeps); };
-        scope.isSelected = function (keep) { return selection.isSelected(keep); };
-        scope.toggleSelectAll = function (keeps) { return selection.toggleSelectAll(keeps); };
-        scope.isSelectedAll = function (keeps) { return selection.isSelectedAll(keeps); };
-
         scope.keepClickAction = function (event, keep) {
           if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
             if (!scope.editMode.enabled) {
               scope.toggleEdit(true);
             }
             scope.editMode.enabled = true;
-            selection.toggleSelect(keep);
+            scope.selection.toggleSelect(keep);
           } else if (event.target.href && scope.keepClick) {
             scope.keepClick(keep, event);
           }
         };
 
         scope.isMultiChecked = function (keeps) {
-          return selection.getSelectedLength() > 0 && !selection.isSelectedAll(keeps);
+          return scope.selection.getSelectedLength() > 0 && !scope.selection.isSelectedAll(keeps);
         };
 
         scope.isUnchecked = function (keeps) {
-          return !scope.isSelectedAll(keeps) && !scope.isMultiChecked(keeps);
+          return !scope.selection.isSelectedAll(keeps) && !scope.isMultiChecked(keeps);
         };
 
         scope.isShowMore = function () {
@@ -160,7 +154,7 @@ angular.module('kifi')
         };
 
         scope.unkeep = function (keeps) {
-          var selectedKeeps = selection.getSelected(keeps);
+          var selectedKeeps = scope.selection.getSelected(keeps);
 
           keepActionService.unkeepMany(selectedKeeps).then(function () {
             _.forEach(selectedKeeps, function (selectedKeep) {
@@ -179,11 +173,11 @@ angular.module('kifi')
         };
 
         scope.togglePrivate = function (keeps) {
-          keepActionService.togglePrivateMany(selection.getSelected(keeps));
+          keepActionService.togglePrivateMany(scope.selection.getSelected(keeps));
         };
 
         scope.selectionPrivacyState = function (keeps) {
-          if (_.every(selection.getSelected(keeps), 'isPrivate')) {
+          if (_.every(scope.selection.getSelected(keeps), 'isPrivate')) {
             return 'Public';
           } else {
             return 'Private';
@@ -207,7 +201,7 @@ angular.module('kifi')
               $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
             }
           } else {
-            selection.unselectAll();
+            scope.selection.unselectAll();
           }
           scope.editMode.enabled = !scope.editMode.enabled;
         };
@@ -217,7 +211,7 @@ angular.module('kifi')
         // Watches and listeners.
         //
         scope.$watch(function () {
-          return selection.getSelected(scope.keeps).length;
+          return scope.selection.getSelected(scope.keeps).length;
         }, function (numSelected) {
           scope.disableEditTags();
           scope.updateSelectedCount({ numSelected: numSelected });

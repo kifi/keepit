@@ -1,6 +1,6 @@
 <!-- This is copied mostly from keep.tpl.html -->
 <!-- TODO: refactor/modularize so that we are DRY. -->
-<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected" ng-class="{ 'editing': editMode.enabled }">
+<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected" ng-class="{ 'editing': editMode.enabled, 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget }">
   <div class="kf-keep-edit-tools">
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
@@ -59,4 +59,6 @@
     <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPrivate(keep)" href='javascript:'>Keep Privately</a></span>
     <div class="kf-keep-private" ng-if="keep.isMyBookmark && keep.isPrivate"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
+
+  <div class="kf-keep-drag-mask"></div>
 </div>
