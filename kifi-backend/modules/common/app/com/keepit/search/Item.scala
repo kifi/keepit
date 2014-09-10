@@ -92,11 +92,11 @@ case class AugmentationScores(
   }
 }
 
-case class AugmentationContext(userId: Id[User], corpus: Map[Item, Float], libraryFilter: Option[Set[Id[Library]]], userFilter: Option[Set[Id[User]]])
+case class AugmentationContext(userId: Id[User], corpus: Map[Item, Float])
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], items: Seq[Item]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap, None, None)
+  def uniform(userId: Id[User], items: Seq[Item]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
