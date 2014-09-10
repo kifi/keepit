@@ -6,15 +6,12 @@ angular.module('kifi')
   '$scope',
   '$rootScope',
   '$analytics',
-  '$timeout',
   '$window',
-  'keepActionService',
   'recoActionService',
   'recoDecoratorService',
-  'tagService',
   'undoService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService,
-    recoActionService, recoDecoratorService, tagService, undoService) {
+  function ($scope, $rootScope, $analytics, $window,
+    recoActionService, recoDecoratorService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = [];
