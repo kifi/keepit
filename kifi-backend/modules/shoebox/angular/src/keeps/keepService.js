@@ -7,10 +7,8 @@ angular.module('kifi')
   function ($http, env, $q, $timeout, $document, $rootScope, undoService, $log, Clutch, $analytics, routeService, $location, tagService, util) {
 
     var list = [],
-      selected = {},
       before = null,
       end = false,
-      selectedIdx = 0,
       limit = 10,
       smallLimit = 4,
       previewUrls = {},
@@ -30,23 +28,6 @@ angular.module('kifi')
         keep.addTag(tagId);
       });
     });
-
-    function keepIdx(keep) {
-      if (!keep) {
-        return -1;
-      }
-      var givenId = keep.id;
-
-      for (var i = 0, l = list.length; i < l; i++) {
-        if (givenId && list[i].id === givenId) {
-          return i;
-        } else if (!givenId && list[i] === keep) {
-          // No id, do object comparison. todo: have a better way to track keeps when they have no ids.
-          return i;
-        }
-      }
-      return -1;
-    }
 
     function expiredConversationCount(keep) {
       if (!keep.conversationUpdatedAt) {
@@ -260,87 +241,11 @@ angular.module('kifi')
 
       buildKeep: buildKeep,
 
-      getHighlighted: function () {
-        return list[selectedIdx];
-      },
-
-      isSelected: function (keep) {
-        return keep && keep.id && !!selected[keep.id];
-      },
-
-      select: function (keep) {
-        var id = keep.id;
-        if (id) {
-          selected[id] = keep;
-          selectedIdx = keepIdx(keep);
-          return true;
-        }
-        return false;
-      },
-
-      unselect: function (keep) {
-        var id = keep.id;
-        if (id) {
-          delete selected[id];
-          selectedIdx = keepIdx(keep);
-          return true;
-        }
-        return false;
-      },
-
-      toggleSelect: function (keep) {
-        if (keep === undefined) {
-          return api.toggleSelect(list[selectedIdx]);
-        } else if (api.isSelected(keep)) {
-          return api.unselect(keep);
-        } else if (keep) {
-          return api.select(keep);
-        }
-      },
-
-      getFirstSelected: function () {
-        return _.values(selected)[0];
-      },
-
-      getSelectedLength: function () {
-        return _.keys(selected).length;
-      },
-
-      getSelected: function () {
-        return list.filter(function (keep) {
-          return keep.id in selected;
-        }) || [];
-      },
-
-      selectAll: function () {
-        selected = _.reduce(list, function (map, keep) {
-          map[keep.id] = true;
-          return map;
-        }, {});
-      },
-
-      unselectAll: function () {
-        selected = {};
-      },
-
-      isSelectedAll: function () {
-        return list.length && list.length === api.getSelectedLength();
-      },
-
-      toggleSelectAll: function () {
-        if (api.isSelectedAll()) {
-          return api.unselectAll();
-        }
-        return api.selectAll();
-      },
-
       reset: function () {
         $log.log('keepService.reset()');
         before = null;
         end = false;
         list.length = 0;
-        selected = {};
-        api.unselectAll();
         keepList.expireAll();
         seqReset++;
       },

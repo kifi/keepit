@@ -64,7 +64,7 @@ angular.module('kifi')
       return togglePrivateMany([keep]);
     }
 
-    function unkeep(keeps) {
+    function unkeepMany(keeps) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'unkeep',
         'path': $location.path()
@@ -88,19 +88,22 @@ angular.module('kifi')
         });
       }
 
-      $log.log('keepService.unkeep()', url, data);
+      $log.log('keepActionService.unkeep()', url, data);
 
       return $http.post(url, data);
     }
 
     function unkeepOne(keep) {
-      return unkeep([keep]);
+      return unkeepMany([keep]);
     }
 
     var api = {
       keepOne: keepOne,
+      keepMany: keepMany,
       togglePrivateOne: togglePrivateOne,
-      unkeepOne: unkeepOne
+      togglePrivateMany: togglePrivateMany,
+      unkeepOne: unkeepOne,
+      unkeepMany: unkeepMany
     };
 
     return api;

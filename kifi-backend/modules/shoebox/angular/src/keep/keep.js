@@ -60,8 +60,6 @@ angular.module('kifi')
         var imageWidthThreshold = 200;
 
         scope.addingTag = {enabled: false};
-        console.log('keep addingTag initialized');
-
 
         scope.getTags = function () {
           return scope.keep && scope.keep.tagList;
@@ -287,10 +285,10 @@ angular.module('kifi')
         };
 
 
-        scope.onCheck = function (e) {
+        scope.onCheck = function (e, keep) {
           // needed to prevent previewing
           e.stopPropagation();
-          return scope.toggleSelect();
+          return scope.toggleSelect(keep);
         };
 
         var read_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
@@ -507,6 +505,10 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
+        showEditTools: '=',
+        editMode: '=',
+        toggleSelect: '&',
+        isSelected: '&',
         keepCallback: '&',
         clickCallback: '&'
       },
@@ -518,7 +520,6 @@ angular.module('kifi')
         }
 
         scope.addingTag = { enabled: false };
-        console.log('keepContent addingTag initialized');
 
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
@@ -621,6 +622,12 @@ angular.module('kifi')
 
         scope.getSingleSelectedKeep = function (keep) {
           return [keep];
+        };
+
+        scope.onCheck = function (e, keep) {
+          // needed to prevent previewing
+          e.stopPropagation();
+          return scope.toggleSelect(keep);
         };
 
         scope.$watch('keep.url', function () {

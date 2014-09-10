@@ -17,7 +17,7 @@ angular.module('kifi')
     });
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = keepService.getSelected();
+      var draggedKeeps = keepService.getSelected();  // need to revise this.
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
@@ -37,8 +37,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$window', '$timeout',
-  function (keepService, $window, $timeout) {
+  'keepService', '$window', '$timeout', 'keepActionService', 'selectionService', 'tagService', 'undoService',
+  function (keepService, $window, $timeout, keepActionService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
@@ -54,12 +54,29 @@ angular.module('kifi')
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
-      link: function (scope, element /*, attrs*/ ) {
-        scope.toggleSelect = keepService.toggleSelect;
-        scope.getSelected = keepService.getSelected;
-        scope.isSelected = keepService.isSelected;
-        scope.toggleSelectAll = keepService.toggleSelectAll;
-        scope.isSelectedAll = keepService.isSelectedAll;
+      link: function (scope, element /*, attrs*/) {
+        var selection = new selectionService.Selection();
+
+        scope.toggleSelect = function (keep) {
+          return selection.toggleSelect(keep);
+        };
+
+        scope.getSelected = function (keeps) {
+          return selection.getSelected(keeps);
+        };
+
+        scope.isSelected = function (keep) {
+          return selection.isSelected(keep);
+        };
+
+        scope.toggleSelectAll = function (keeps) {
+          return selection.toggleSelectAll(keeps);
+        };
+
+        scope.isSelectedAll = function (keeps) {
+          return selection.isSelectedAll(keeps);
+        };
+
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
 
@@ -69,18 +86,18 @@ angular.module('kifi')
               scope.toggleEdit(true);
             }
             scope.editMode.enabled = true;
-            scope.toggleSelect(keep);
+            selection.toggleSelect(keep);
           } else if (event.target.href && scope.keepClick) {
             scope.keepClick(keep, event);
           }
         };
 
         scope.isMultiChecked = function () {
-          return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+          return selection.getSelectedLength() > 0 && !selection.isSelectedAll(scope.keeps);
         };
 
         scope.isUnchecked = function () {
-          return !scope.isSelectedAll() && !scope.isMultiChecked();
+          return !scope.isSelectedAll(scope.keeps) && !scope.isMultiChecked();
         };
 
         scope.isShowMore = function () {
@@ -115,16 +132,32 @@ angular.module('kifi')
 
         scope.scrollDistance = '100%';
 
-        scope.unkeep = function () {
-          keepService.unkeep(keepService.getSelected());
+        scope.unkeep = function (keeps) {
+          var selectedKeeps = selection.getSelected(keeps);
+          var originalKeeps = keeps.slice(0);
+
+          keepActionService.unkeepMany(selectedKeeps).then(function () {
+            _.forEach(selectedKeeps, function (selectedKeep){
+              selectedKeep.makeUnkept();
+              _.remove(keeps, function (keep) { return keep.id === selectedKeep.id; });
+            });
+
+            undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+              keepActionService.keepMany(selectedKeeps);
+              keeps = originalKeeps;
+              tagService.addToKeepCount(selectedKeeps.length);
+            });
+
+            tagService.addToKeepCount(-1 * selectedKeeps.length);
+          });
         };
 
-        scope.togglePrivate = function () {
-          keepService.togglePrivate(keepService.getSelected());
+        scope.togglePrivate = function (keeps) {
+          keepActionService.togglePrivateMany(selection.getSelected(keeps));
         };
 
         scope.selectionPrivacyState = function () {
-          if (_.every(keepService.getSelected(), 'isPrivate')) {
+          if (_.every(selection.getSelected(scope.keeps), 'isPrivate')) {
             return 'Public';
           } else {
             return 'Private';
@@ -140,7 +173,7 @@ angular.module('kifi')
         };
 
         scope.$watch(function () {
-          return scope.getSelected().length;
+          return selection.getSelected(scope.keeps).length;
         }, function () {
           scope.disableEditTags();
         });

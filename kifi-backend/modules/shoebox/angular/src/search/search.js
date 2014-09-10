@@ -3,7 +3,7 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService', 
+  '$scope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService',
   function ($scope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
     //
     // Internal data.
@@ -11,7 +11,6 @@ angular.module('kifi')
     var query = $routeParams.q || '';
     var filter = $routeParams.f || 'm';
     var lastResult = null;
-
 
     //
     // Scope data.
@@ -140,10 +139,6 @@ angular.module('kifi')
       }
     };
 
-
-    //
-    // On Angular load.
-    //
     if (!query) {
       // No query or blank query.
       $location.path('/');
