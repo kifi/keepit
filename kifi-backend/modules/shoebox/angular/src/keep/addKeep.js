@@ -97,10 +97,6 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && keepService.validateUrl(url)) {
-            var libUrl = _.find(scope.libraries, function(lib) {
-                return lib.id === scope.data.selectedLibraryId
-              }).url;
-            $location.path(libUrl);
             return keepService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               scope.resetAndHide();
               if (result.failures && result.failures.length) {
