@@ -83,7 +83,7 @@ class AugmentationCommanderImpl @Inject() (
       for {
         libraryFilter <- futureLibraryFilter
         userFilter <- futureUserFilter
-        allAugmentationInfos <- getShardedAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
+        allAugmentationInfos <- getAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -93,7 +93,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getShardedAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[Item, AugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
