@@ -101,7 +101,7 @@ angular.module('kifi')
               scope.resetAndHide();
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
-              } else if (result.alreadyKept && result.alreadyKept.length) {
+              } else if (result.alreadyKept.length > 0) {
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
                 libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
