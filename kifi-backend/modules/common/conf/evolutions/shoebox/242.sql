@@ -14,6 +14,7 @@ create table cortex_library(
 
   Primary KEY (id),
   INDEX cortex_library_i_library_id (library_id),
+  INDEX cortex_library_i_owner (owner_id),
   INDEX cortex_library_i_seq (seq)
 );
 
@@ -26,7 +27,7 @@ create table cortex_library_membership(
   user_id bigint(20) NOT NULL,
   access varchar(20) NOT NULL,
   member_since datetime NOT NULL,
-  state varchar(20) NOT NULL
+  state varchar(20) NOT NULL,
   seq bigint(20) NOT NULL,
 
   Primary KEY (id),
