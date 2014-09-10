@@ -9,7 +9,7 @@ create table cortex_library(
   library_id bigint(20) NOT NULL,
   owner_id bigint(20) NOT NULL,
   kind varchar(64) NOT NULL,
-  state varchar(20) NOT NULL
+  state varchar(20) NOT NULL,
   seq bigint(20) NOT NULL,
 
   Primary KEY (id),

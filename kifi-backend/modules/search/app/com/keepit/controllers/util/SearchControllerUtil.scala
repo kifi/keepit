@@ -24,7 +24,7 @@ trait SearchControllerUtil {
   def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(r => Enumerator(", ").andThen(Enumerator(r)))(immediate))
+      Enumerator.flatten(future.map(str => Enumerator(", " + str))(immediate))
     })
   }
 

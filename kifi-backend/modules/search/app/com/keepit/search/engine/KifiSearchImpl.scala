@@ -93,8 +93,7 @@ class KifiSearchImpl(
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
           val boost = myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.score = hit.score * dampFunc(rank, dampingHalfDecayMine) * boost
-          hit.normalizedScore = hit.score / highScore
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) * boost
           hits.insert(hit)
       }
     }
@@ -106,8 +105,7 @@ class KifiSearchImpl(
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
           val boost = (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.score = hit.score * dampFunc(rank, dampingHalfDecayFriends) * boost
-          hit.normalizedScore = hit.score / highScore
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) * boost
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }
@@ -129,8 +127,8 @@ class KifiSearchImpl(
             othersHighScore = hit.score
             othersNorm = max(highScore, hit.score)
           }
-          hit.score = hit.score * dampFunc(rank, dampingHalfDecayOthers) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = hit.score / othersNorm
+          val boost = (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) * boost
           queue.insert(hit)
           rank += 1
         } else {

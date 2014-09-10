@@ -4,7 +4,8 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.LargeString
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ LocalPostOffice, ElectronicMailRepo, ElectronicMail, EmailToSend }
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ LocalPostOffice, ElectronicMailRepo, ElectronicMail }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.UserEmailAddressRepo
 
