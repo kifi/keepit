@@ -8,13 +8,16 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ WebsiteController, SearchServiceController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.SearchCommander
+import com.keepit.search.{ AugmentationCommander, SearchCommander }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import play.api.libs.json.Json
 
 class WebsiteSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     shoeboxClient: ShoeboxServiceClient,
+    augmentationCommander: AugmentationCommander,
     searchCommander: SearchCommander) extends WebsiteController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
@@ -58,8 +61,9 @@ class WebsiteSearchController @Inject() (
 
     var decorationFutures: List[Future[String]] = Nil
 
-    // TODO: augmentation
-    // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
+    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander)(userId, _).map(Json.stringify)(immediate))
+
+    decorationFutures = augmentationFuture :: decorationFutures
 
     if (withUriSummary) {
       decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
