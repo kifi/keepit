@@ -69,9 +69,7 @@ angular.module('kifi')
         $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
 
         $scope.hasMore = !!result.mayHaveMore;
-
         lastResult = result;
-
         $scope.loading = false;
       });
     };
