@@ -56,30 +56,58 @@ angular.module('kifi')
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope, element /*, attrs*/) {
+        //
+        // Internal data.
+        //
+        var lastSizedAt = $window.innerWidth;
+
+        // 'selection' keeps track of which keeps have been selected.
         var selection = new selectionService.Selection();
 
-        scope.toggleSelect = function (keep) {
-          return selection.toggleSelect(keep);
-        };
 
-        scope.getSelected = function (keeps) {
-          return selection.getSelected(keeps);
-        };
+        //
+        // Internal methods.
+        //
+        function sizeKeeps() {
+          scope.$broadcast('resizeImage');
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard();
+              }
+            });
+            scope.keeps.forEach(function (keep) {
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
+            });
+          });
+        }
 
-        scope.isSelected = function (keep) {
-          return selection.isSelected(keep);
-        };
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            sizeKeeps();
+          }
+        }
 
-        scope.toggleSelectAll = function (keeps) {
-          return selection.toggleSelectAll(keeps);
-        };
 
-        scope.isSelectedAll = function (keeps) {
-          return selection.isSelectedAll(keeps);
-        };
-
+        //
+        // Scope data.
+        //
+        scope.scrollDistance = '100%';
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
+
+
+        //
+        // Scope methods.
+        //
+        scope.toggleSelect = function (keep) { return selection.toggleSelect(keep); };
+        scope.getSelected = function (keeps) { return selection.getSelected(keeps); };
+        scope.isSelected = function (keep) { return selection.isSelected(keep); };
+        scope.toggleSelectAll = function (keeps) { return selection.toggleSelectAll(keeps); };
+        scope.isSelectedAll = function (keeps) { return selection.isSelectedAll(keeps); };
 
         scope.keepClickAction = function (event, keep) {
           if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
@@ -93,12 +121,12 @@ angular.module('kifi')
           }
         };
 
-        scope.isMultiChecked = function () {
-          return selection.getSelectedLength() > 0 && !selection.isSelectedAll(scope.keeps);
+        scope.isMultiChecked = function (keeps) {
+          return selection.getSelectedLength() > 0 && !selection.isSelectedAll(keeps);
         };
 
-        scope.isUnchecked = function () {
-          return !scope.isSelectedAll(scope.keeps) && !scope.isMultiChecked();
+        scope.isUnchecked = function (keeps) {
+          return !scope.isSelectedAll(keeps) && !scope.isMultiChecked(keeps);
         };
 
         scope.isShowMore = function () {
@@ -131,8 +159,6 @@ angular.module('kifi')
           return scope.scrollDisabled;
         };
 
-        scope.scrollDistance = '100%';
-
         scope.unkeep = function (keeps) {
           var selectedKeeps = selection.getSelected(keeps);
           var originalKeeps = keeps.slice(0);
@@ -145,7 +171,7 @@ angular.module('kifi')
 
             undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
               keepActionService.keepMany(selectedKeeps);
-              scope.keeps = originalKeeps;  // Why is scope.keeps needed here? (vs. just keeps)
+              scope.keeps = originalKeeps;  // TODO: figure out why scope.keeps is needed here (vs. just keeps)
               tagService.addToKeepCount(selectedKeeps.length);
             });
 
@@ -157,8 +183,8 @@ angular.module('kifi')
           keepActionService.togglePrivateMany(selection.getSelected(keeps));
         };
 
-        scope.selectionPrivacyState = function () {
-          if (_.every(selection.getSelected(scope.keeps), 'isPrivate')) {
+        scope.selectionPrivacyState = function (keeps) {
+          if (_.every(selection.getSelected(keeps), 'isPrivate')) {
             return 'Public';
           } else {
             return 'Private';
@@ -173,6 +199,9 @@ angular.module('kifi')
           scope.editingTags = false;
         };
 
+        // Currently, this overrides the toggleEdit in MainCtrl,
+        // which is broken because it depends on keepService.
+        // Fix this with that.
         scope.toggleEdit = function (moveWindow) {
           if (!scope.editMode.enabled) {
             if (moveWindow) {
@@ -183,37 +212,17 @@ angular.module('kifi')
           }
           scope.editMode.enabled = !scope.editMode.enabled;
         };
+        
 
+        //
+        // Watches and listeners.
+        //
         scope.$watch(function () {
           return selection.getSelected(scope.keeps).length;
         }, function (numSelected) {
           scope.disableEditTags();
           scope.updateSelectedCount({ numSelected: numSelected });
         });
-
-        var lastSizedAt = $window.innerWidth;
-        function resizeWindowListener() {
-          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
-            lastSizedAt = $window.innerWidth;
-            sizeKeeps();
-          }
-        }
-
-        function sizeKeeps() {
-          scope.$broadcast('resizeImage');
-          $timeout(function () {
-            scope.keeps.forEach(function (keep) {
-              if (keep.calcSizeCard) {
-                keep.calcSizeCard();
-              }
-            });
-            scope.keeps.forEach(function (keep) {
-              if (keep.sizeCard) {
-                keep.sizeCard();
-              }
-            });
-          });
-        }
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);
         $window.addEventListener('resize', lazyResizeListener);
@@ -222,9 +231,6 @@ angular.module('kifi')
           $window.removeEventListener('resize', lazyResizeListener);
           scope.editMode.enabled = false;
         });
-
-        
-
       }
     };
   }
