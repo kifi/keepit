@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTips }
+import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.mail.template.Tag._
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
@@ -80,7 +81,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
-        case tags.avatarUrl => input.imageUrls(userId)
+        case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
             case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }

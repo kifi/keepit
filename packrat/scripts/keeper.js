@@ -179,7 +179,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var kept = !$card.hasClass('kifi-unkept');
       var publicly = kept && $card.hasClass('kifi-public');
       var title = !kept ?
-        'Keep Privately' : publicly ?
+        'Keep Privately (' + CO_KEY + '+Shift+Alt+K)' : publicly ?
         'Make Private' :
         'Make Public';
       var html = !kept ?
