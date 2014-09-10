@@ -97,7 +97,10 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && keepService.validateUrl(url)) {
-            $location.path('/');
+            var libUrl = _.find(scope.libraries, function(lib) {
+                return lib.id === scope.data.selectedLibraryId
+              }).url;
+            $location.path(libUrl);
             return keepService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               scope.resetAndHide();
               if (result.failures && result.failures.length) {
@@ -105,6 +108,7 @@ angular.module('kifi')
               } else if (result.alreadyKept && result.alreadyKept.length) {
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
+                libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
                 keepService.fetchFullKeepInfo(result.keeps[0]);
               }
             });
@@ -117,7 +121,9 @@ angular.module('kifi')
           return lib.access !== "read_only";
         });
         scope.data = scope.data || {};
-        scope.data.selectedLibraryId = scope.libraries[0].id;
+        scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
+          return lib.name === "Main Library"
+        }).id;
         scope.librariesEnabled = libraryService.isAllowed();
 
         scope.$watch('shown', function (shown) {
