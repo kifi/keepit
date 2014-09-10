@@ -73,10 +73,10 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         output must contain("privacy?utm_source=footerPrivacy&utm_medium=email&utm_campaign=tester")
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
-        output must contain("""<img src="http://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
-        output must contain("""<img src="http://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
-        output must contain("""<img src="http://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
-        output must contain("""<img src="http://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
+        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
+        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
+        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
+        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
       }
     }
   }

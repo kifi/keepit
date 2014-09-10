@@ -48,7 +48,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
       val expectedJson = """
           |{"title":"Kifi","from":"eng@42go.com","to":"josh@kifi.com","cc":[],"subject":"Test",
-          |"htmlTemplate":"this is <b>html</b>","category":"digest",
+          |"htmlTemplate":"this is <b>html</b>","category":"digest","fromName":"Kifi",
           |"campaign":"testing","tips":[]}
         """.stripMargin
       val jsVal = Json.parse(expectedJson)
