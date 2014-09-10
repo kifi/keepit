@@ -18,13 +18,10 @@ var tile = tile || function() {  // idempotent for Chrome
   tile.id = 'kifi-tile';
   tile.className = 'kifi-tile kifi-root';
   tile.style.display = "none";
-  tile.innerHTML =
-    '<div class="kifi-tile-card">' +
-    '<div class="kifi-tile-keep"></div>' +
-    '<div class="kifi-tile-kept"></div></div>';
+  tile.innerHTML = '<div class="kifi-tile-card"></div>';
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
-    if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
+    if ((e.target === tileCard || e.target === tileCount) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show');
     }
   });
@@ -52,7 +49,7 @@ var tile = tile || function() {  // idempotent for Chrome
         tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
-      tileCard.classList.add('kifi-0s');
+      // tileCard.classList.add('kifi-0s');
       if (o.kept) {
         tile.dataset.kept = o.kept;
       } else {
@@ -67,8 +64,8 @@ var tile = tile || function() {  // idempotent for Chrome
             setTimeout(api.require.bind(api, 'scripts/keeper_intro.js', api.noop), 5000);
           }
         }
-        tile.offsetHeight;
-        tileCard.classList.remove('kifi-0s');
+        // tile.offsetHeight;
+        // tileCard.classList.remove('kifi-0s');
       });
     },
     show_keeper: function(show) {
