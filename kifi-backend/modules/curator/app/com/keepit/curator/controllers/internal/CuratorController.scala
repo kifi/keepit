@@ -76,7 +76,8 @@ class CuratorController @Inject() (
     }
   }
 
-  def refreshUserRecos(userId: Id[User]) = Action.async { request =>
-    seedCommander.forceIngestGraphData(userId).map { u => Ok }
+  def refreshUserRecos(userId: Id[User]) = Action { request =>
+    SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
+    Ok
   }
 }
