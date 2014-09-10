@@ -73,7 +73,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
   }
 
   private def formatStacktrace(error: ErrorWithStack) = {
-    <line method={ error.toString } file={ error.stack.head.getFileName } number={ error.stack.head.getLineNumber.toString }/> ++ {
+    <line method={ error.toString() } file={ error.stack.headOption.map(_.getFileName).getOrElse("unknown") } number={ error.stack.headOption.map(_.getLineNumber).getOrElse(0).toString }/> ++ {
       error.stack.map(e => {
         <line method={ ignoreAnonfun(e.getClassName) + "#" + e.getMethodName } file={ e.getFileName } number={ e.getLineNumber.toString }/>
       })

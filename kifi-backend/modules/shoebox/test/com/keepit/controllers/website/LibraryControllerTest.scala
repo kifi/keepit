@@ -850,14 +850,33 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
             {
-              "keeps":[],
+              "keeps":[
+                {"id":"${k4.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
+                {"id":"${k5.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},
+                {"id":"${k6.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}"}
+                ],
               "failures":[],
-              "alreadyKept":
-              [{"id":"${k4.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
-              {"id":"${k5.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},
-              {"id":"${k6.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}"}]
+              "alreadyKept":[]
             }
           """.stripMargin
+        ))
+
+        val request3 = FakeRequest("POST", testPath2).withBody(
+          Json.obj(
+            "keeps" -> Json.toJson(Seq(RawBookmarkRepresentation(title = Some("title 11zzz"), url = "http://www.hi.com11", isPrivate = None)))
+          ))
+        val result3 = libraryController.addKeeps(pubId2)(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+
+        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
+          s"""
+              {
+                "keeps":[],
+                "failures":[],
+                "alreadyKept":[{"id":"${k4.externalId}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"}]
+              }
+            """.stripMargin
         ))
       }
     }

@@ -37,7 +37,7 @@ class LibraryChecker @Inject() (
       // makes sure user has active ownership of Library (if not, airbrake)
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
-      libraryCommander.internSystemGeneratedLibraries(u.id.get)
+      libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
     }
   }
 

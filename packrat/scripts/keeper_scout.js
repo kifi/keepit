@@ -114,7 +114,7 @@ var tile = tile || function() {  // idempotent for Chrome
           } else if (tile && tile.dataset.kept) {
             api.port.emit('unkeep', withUrls({}));
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), how: 'public'}));
+            api.port.emit('keep', withUrls({title: authoredTitle(), how: e.altKey ? 'private' : 'public'}));
           }
           e.preventDefault();
         }
