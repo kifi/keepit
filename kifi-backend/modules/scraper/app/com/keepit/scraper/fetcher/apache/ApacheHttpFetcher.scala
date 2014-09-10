@@ -2,6 +2,7 @@ package com.keepit.scraper.fetcher.apache
 
 import java.io.{ EOFException, IOException }
 import java.net._
+import java.security.GeneralSecurityException
 import java.security.cert.CertPathBuilderException
 import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
 import java.util.concurrent.{ ConcurrentLinkedQueue, Executors, ThreadFactory, TimeUnit }
@@ -254,21 +255,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       Some(response)
     } catch {
       case e: ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
+
       else fetchHandler(uri, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
-      case e: ConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: ValidatorException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: SSLException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: SSLHandshakeException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: NoHttpResponseException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: EOFException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: HttpHostConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: ClientProtocolException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: NoRouteToHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: UnknownHostException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: ConnectTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: SocketException => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: SocketTimeoutException => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e @ (_: IOException | _: GeneralSecurityException) => logAndSet(fetchInfo, None)(e, "fetch", url)
+      case e: NullPointerException => logAndSet(fetchInfo, None)(e, "fetch", url) //can happen on BrowserCompatSpec.formatCookies
       case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
   }
