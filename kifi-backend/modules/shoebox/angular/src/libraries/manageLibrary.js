@@ -41,15 +41,12 @@ angular.module('kifi')
 
 
     $scope.createLibrary = function () {
-      if ($scope.submitting) {
-        return;
-      }
       var newError = false;
       if ($scope.library.name.length < 3) {
         $scope.$error.name = ' Try a longer name';
         newError = true;
       }
-      if (newError) {
+      if (newError || $scope.submitting) {
         return;
       }
       $scope.submitting = true;
@@ -70,6 +67,10 @@ angular.module('kifi')
         switch (error) {
           case 'library name already exists for user': // deprecated
           case 'library_name_exists':
+            $scope.$error.general = 'You already have a library with this name. Pick another.';
+            break;
+          case 'invalid library name': // deprecated
+          case 'invalid_name':
             $scope.$error.general = 'You already have a library with this name. Pick another.';
             break;
           case 'library_slug_exists':
