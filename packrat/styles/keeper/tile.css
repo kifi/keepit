@@ -26,17 +26,47 @@
   bottom: 0;
   left: 0;
   right: 0;
+  transition: -webkit-transform .25s ease-in-out;
+  transition: transform .25s ease-in-out;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+}
+.kifi-tile[data-kept] .kifi-tile-card {
+  -webkit-transform: rotateX(-180deg);
+  transform: rotateX(-180deg);
+}
+.kifi-tile-card.kifi-0s,
+.kifi-tile-card.kifi-0s>.kifi-tile-keep,
+.kifi-tile-card.kifi-0s>.kifi-tile-kept {
+  transition: none;
+}
+.kifi-tile-keep,
+.kifi-tile-kept {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   border: 3px solid rgba(255,255,255,.7);
   border-radius: 50% !important;
   box-shadow: inset 0 0 1px 1px rgba(0,0,0,.15);
   background: rgba(51,51,51,.4) url(/images/keeper/tile_logo.svg) center no-repeat padding-box;
   background-size: 30px auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transition: visibility 0s .125s; /* broken backface-visibility workaround */
 }
-[data-kept]>.kifi-tile-card {
+.kifi-tile-kept {
   background-color: #4daf7c;
+  -webkit-transform: rotateX(180deg);
+  transform: rotateX(180deg);
 }
-[data-kept=private]>.kifi-tile-card {
+.kifi-tile[data-kept=private] .kifi-tile-kept {
   background-color: #e65b45;
+}
+.kifi-tile[data-kept] .kifi-tile-keep,
+.kifi-tile:not([data-kept]) .kifi-tile-kept {
+  visibility: hidden;
 }
 .kifi-count {
   position: absolute;
