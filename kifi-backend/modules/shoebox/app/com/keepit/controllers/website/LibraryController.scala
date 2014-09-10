@@ -356,12 +356,18 @@ class LibraryController @Inject() (
           val source = KeepSource.site
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
-          val (keeps, _, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, true)
+          val existingKeeps = db.readOnlyMaster { implicit s =>
+            keepRepo.getByLibrary(libraryId, Int.MaxValue, 0).map(_.externalId).toSet
+          }
+          val (keeps, _, failures, _) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, false)
+          val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
+
           log.info(s"kept ${keeps.size} keeps")
           Ok(Json.obj(
-            "keeps" -> keeps,
-            "failures" -> failures
-          ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> Json.toJson(keeps))) getOrElse Json.obj()))
+            "keeps" -> newKeeps,
+            "failures" -> failures,
+            "alreadyKept" -> alreadyKept
+          ))
         } getOrElse {
           log.error(s"can't parse object from request ${request.body} for user ${request.user}")
           BadRequest(Json.obj("error" -> "Could not parse object from request body"))

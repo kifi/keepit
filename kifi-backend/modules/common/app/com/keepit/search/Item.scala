@@ -5,6 +5,8 @@ import com.keepit.model.{ Hashtag, User, Library, NormalizedURI }
 import play.api.libs.json._
 import com.keepit.serializer.TupleFormat
 
+case class Item(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
+
 object Item {
   implicit val format = Json.format[Item]
   implicit def itemMapFormat[T](implicit tFormat: Format[T]) = {
@@ -16,13 +18,20 @@ object Item {
   }
 }
 
-case class Item(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
-
 case class AugmentedItem(
   uri: Id[NormalizedURI],
-  kept: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
+  keep: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
   moreKeeps: Seq[(Option[Id[Library]], Option[Id[User]])],
-  moreTags: Seq[Hashtag])
+  moreTags: Seq[Hashtag],
+  otherPublishedKeeps: Int)
+
+object AugmentedItem {
+  implicit val format = {
+    implicit val keptFormat = TupleFormat.tuple3Format[Id[Library], Option[Id[User]], Seq[Hashtag]]
+    implicit val moreKeepsFormat = TupleFormat.tuple2Format[Option[Id[Library]], Option[Id[User]]]
+    Json.format[AugmentedItem]
+  }
+}
 
 case class RestrictedKeepInfo(keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
 
@@ -36,7 +45,7 @@ object RestrictedKeepInfo {
   }
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo])
+case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int)
 object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }
@@ -60,16 +69,22 @@ case class ContextualAugmentationScores(
   }
 }
 
+case class AugmentationContext(corpus: Map[Item, Float], keptIn: Option[Set[Id[Library]]], keptBy: Option[Set[Id[User]]])
+
+object AugmentationContext {
+  implicit val format = Json.format[AugmentationContext]
+  def uniform(items: Seq[Item]): AugmentationContext = AugmentationContext(items.map(_ -> 1f).toMap, None, None)
+}
+
 object ContextualAugmentationScores {
   implicit val format = Json.format[ContextualAugmentationScores]
+  val empty = ContextualAugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
 case class ItemAugmentationRequest(
   userId: Id[User],
-  keptIn: Set[Id[Library]],
-  keptBy: Set[Id[User]],
   items: Set[Item],
-  context: Map[Item, Float])
+  context: AugmentationContext)
 
 object ItemAugmentationRequest {
   implicit val format = Json.format[ItemAugmentationRequest]
@@ -79,4 +94,5 @@ case class ItemAugmentationResponse(infos: Map[Item, AugmentationInfo], scores: 
 
 object ItemAugmentationResponse {
   implicit val format = Json.format[ItemAugmentationResponse]
+  val empty = ItemAugmentationResponse(Map.empty, ContextualAugmentationScores.empty)
 }

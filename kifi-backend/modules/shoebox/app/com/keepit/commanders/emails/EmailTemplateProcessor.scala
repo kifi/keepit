@@ -4,9 +4,10 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ EmailToSend, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.Email.{ TagWrapper, tags }
+import com.keepit.common.mail.template.{ TipTemplate, EmailToSend, TagWrapper, Tag, tags, EmailTips }
+import com.keepit.common.mail.template.Tag._
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
@@ -27,8 +28,8 @@ class EmailTemplateProcessorImpl @Inject() (
     userCommander: UserCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
+    peopleRecommendationsTip: FriendRecommendationsEmailTip,
     emailOptOutCommander: EmailOptOutCommander) extends EmailTemplateProcessor {
-  import com.keepit.model.Email.tagRegex
 
   /* for the lack of a better name, this is just a trait that encapsulates
      the type of object(s) needed to replace a placeholder */
@@ -43,21 +44,27 @@ class EmailTemplateProcessorImpl @Inject() (
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String])
 
   def process(emailToSend: EmailToSend) = {
-    val html = views.html.email.black.layout(emailToSend.htmlTemplates)
-    val needs = getNeededObjects(html, emailToSend)
+    val tipHtmlF = getTipHtml(emailToSend)
+    val templatesF = tipHtmlF.map(_.map(tipHtml => Seq(emailToSend.htmlTemplate, tipHtml))).
+      getOrElse(Future.successful(Seq(emailToSend.htmlTemplate)))
 
-    val userIds = needs.collect { case UserNeeded(id) => id }
-    val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
+    templatesF.flatMap[Html] { templates =>
+      val html = views.html.email.black.layout(templates)
+      val needs = getNeededObjects(html, emailToSend)
 
-    val usersF = getUsers(userIds.toSeq)
-    val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
+      val userIds = needs.collect { case UserNeeded(id) => id }
+      val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
 
-    for {
-      users <- usersF
-      userImageUrls <- userImageUrlsF
-    } yield {
-      val input = DataNeededResult(users = users, imageUrls = userImageUrls)
-      evalHtml(html, input, emailToSend)
+      val usersF = getUsers(userIds.toSeq)
+      val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
+
+      for {
+        users <- usersF
+        userImageUrls <- userImageUrlsF
+      } yield {
+        val input = DataNeededResult(users = users, imageUrls = userImageUrls)
+        evalHtml(html, input, emailToSend)
+      }
     }
   }
 
@@ -91,6 +98,15 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.campaign => emailToSend.campaign.getOrElse("unknown")
       }
     }))
+  }
+
+  private def getTipHtml(emailToSend: EmailToSend) = {
+    // get the first available Tip for this email that returns Some
+    val tipStream = emailToSend.tips.toStream.collect {
+      case EmailTips.FriendRecommendations => peopleRecommendationsTip.render(emailToSend)
+      case _ => None
+    }
+    tipStream.find(_.isDefined).flatten
   }
 
   // used to gather the types of objects we need to replace the tags with real values

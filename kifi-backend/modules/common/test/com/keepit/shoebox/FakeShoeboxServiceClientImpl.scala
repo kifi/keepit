@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
@@ -11,7 +12,7 @@ import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{ Map => MutableMap }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser, SocialId }
-import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import com.google.inject.util.Providers
@@ -126,6 +127,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val searchFriendIdCounter = new AtomicInteger(0)
   private def nextSearchFriendId = Id[SearchFriend](searchFriendIdCounter.incrementAndGet())
 
+  private val libraryIdCounter = new AtomicInteger(0)
+  private def nextLibraryId = Id[Library](libraryIdCounter.incrementAndGet())
+
+  private val libraryMembershipIdCounter = new AtomicInteger(0)
+  private def nextLibraryMembershipId = Id[LibraryMembership](libraryMembershipIdCounter.incrementAndGet())
+
   // Fake sequence counters
 
   private val userSeqCounter = new AtomicInteger(0)
@@ -145,6 +152,12 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   private val searchFriendSeqCounter = new AtomicInteger(0)
   private def nextSearchFriendSeqNum() = SequenceNumber[SearchFriend](searchFriendSeqCounter.incrementAndGet())
+
+  private val librarySeqCounter = new AtomicInteger(0)
+  private def nextLibrarySeq() = SequenceNumber[Library](librarySeqCounter.incrementAndGet())
+
+  private val libraryMembershipSeqCounter = new AtomicInteger(0)
+  private def nextLibraryMembershipSeq() = SequenceNumber[LibraryMembership](libraryMembershipSeqCounter.incrementAndGet())
 
   // Fake repos
 
@@ -170,6 +183,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val sentMail = mutable.MutableList[ElectronicMail]()
   val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
+  val allLibraries = MutableMap[Id[Library], Library]()
+  val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
 
   // Fake data initialization methods
 
@@ -331,6 +346,21 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       val requestWithId = request.copy(id = Some(id))
       allFriendRequests(id) = requestWithId
       allUserFriendRequests(requestWithId.senderId) = allUserFriendRequests.getOrElse(requestWithId.senderId, Nil) :+ requestWithId
+    }
+  }
+
+  def saveLibraries(libs: Library*) = {
+    libs.foreach { lib =>
+      val id = lib.id.getOrElse(nextLibraryId)
+      allLibraries(id) = lib.withId(id).copy(seq = nextLibrarySeq())
+    }
+  }
+
+  def saveLibraryMemberships(libMems: LibraryMembership*) = {
+    libMems.foreach { libMem =>
+      val id = libMem.id.getOrElse(nextLibraryMembershipId)
+      saveLibraries(allLibraries(libMem.libraryId))
+      allLibraryMemberships(id) = libMem.withId(id).copy(seq = nextLibraryMembershipSeq())
     }
   }
 
@@ -653,7 +683,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       }),
       cc = emailToSend.cc,
       subject = emailToSend.subject,
-      htmlBody = LargeString(emailToSend.htmlTemplates.mkString("<br/>")),
+      htmlBody = LargeString(emailToSend.htmlTemplate.body),
       category = emailToSend.category,
       senderUserId = emailToSend.senderUserId
     )
@@ -661,6 +691,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(true)
   }
 
-  def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = ???
-  def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = ???
+  def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]] = {
+    val changed = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { Library.toLibraryView(_) }
+    Future.successful(changed)
+  }
+
+  def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
+    val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { LibraryMembership.toLibraryMembershipView(_) }
+    Future.successful(changed)
+  }
 }
