@@ -82,8 +82,9 @@ class URIWanderingCommander @Inject() (
   // each node has a sampling quota, proportionally to the probability estimated by preScore
   private def distributeTrialsQuota(preScoreResult: PreScoreResult, totalTrials: Int): TrialsQuota = {
     val (userSum, topicSum) = (preScoreResult.userScore.values.sum.toFloat, preScoreResult.topicScore.values.sum.toFloat)
-    val z = userSum + topicSum
-    val (userQuota, topicQuota) = (totalTrials * (userSum / z), totalTrials * (topicSum / z))
+    val (adjUserSum, adjTopicSum) = (userSum, topicSum * 2) // adjusted sums, compensate to the fact that topic vertexes are naturally harder to reach from a user (given current graph structure)
+    val z = adjUserSum + adjTopicSum
+    val (userQuota, topicQuota) = (totalTrials * (adjUserSum / z), totalTrials * (adjTopicSum / z))
     val userTrials = preScoreResult.userScore.map { case (userId, s) => (userId, (userQuota * (s / userSum)).toInt) }
     val topicTrials = preScoreResult.topicScore.map { case (topicId, s) => (topicId, (topicQuota * (s / topicSum)).toInt) }
     log.info(s"users have quota: ${userQuota}, topics have quota: ${topicQuota}")
