@@ -161,18 +161,17 @@ angular.module('kifi')
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = selection.getSelected(keeps);
-          var originalKeeps = keeps.slice(0);
 
           keepActionService.unkeepMany(selectedKeeps).then(function () {
-            _.forEach(selectedKeeps, function (selectedKeep){
+            _.forEach(selectedKeeps, function (selectedKeep) {
               selectedKeep.makeUnkept();
-              _.remove(keeps, function (keep) { return keep.id === selectedKeep.id; });
             });
 
             undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
               keepActionService.keepMany(selectedKeeps);
-              scope.keeps = originalKeeps;  // TODO: figure out why scope.keeps is needed here (vs. just keeps)
-              tagService.addToKeepCount(selectedKeeps.length);
+              _.forEach(selectedKeeps, function (selectedKeep) {
+                selectedKeep.makeKept();
+              });
             });
 
             tagService.addToKeepCount(-1 * selectedKeeps.length);

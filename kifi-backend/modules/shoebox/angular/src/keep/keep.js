@@ -585,6 +585,7 @@ angular.module('kifi')
         function keepOne (keep, isPrivate) {
           keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
              keep.buildKeep(keptItem);
+             keep.makeKept();
              tagService.addToKeepCount(1);
            });
 

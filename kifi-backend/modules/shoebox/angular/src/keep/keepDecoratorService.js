@@ -102,6 +102,19 @@ angular.module('kifi')
       }
     };
 
+    Keep.prototype.makeKept = function () {
+      this.unkept = false;
+      this.isMyBookmark = true;
+      if (this.tagList) {
+        this.tagList.forEach(function (tag) {
+          var existingTag = tagService.getById(tag.id);
+          if (existingTag) {
+            existingTag.keeps++;
+          }
+        });
+      }
+    };
+
     var api = {
       Keep: Keep
     };
