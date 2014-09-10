@@ -105,10 +105,6 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
-GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
-GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
-GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
-
 ##########################################
 # Mobile
 ##########################################
@@ -330,6 +326,10 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 ##########################################
 # Email-Link API
 ##########################################
+
+GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.email.EmailDeepLinkController.handle(token: String)
+GET     /mr/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleMobile(token: String)
+GET     /ir/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleIPhoneTempForDev(token: String)
 
 GET     /r/e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
 GET     /r/e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
@@ -685,8 +685,8 @@ GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.cont
 GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 
-POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
-POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
+POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
+POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.internal.ShoeboxDeepLinkController.getDeepUrl()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
