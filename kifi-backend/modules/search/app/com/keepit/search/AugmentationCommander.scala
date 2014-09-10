@@ -27,7 +27,7 @@ object AugmentationCommander {
 
 @ImplementedBy(classOf[AugmentationCommanderImpl])
 trait AugmentationCommander {
-  def augment(userId: Id[User], items: Item*)(implicit context: AugmentationContext = AugmentationContext.uniform(items)): Future[Seq[AugmentedItem]]
+  def augment(userId: Id[User], context: AugmentationContext, items: Item*): Future[Seq[AugmentedItem]]
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 }
 
@@ -37,7 +37,7 @@ class AugmentationCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     val searchClient: SearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
-  def augment(userId: Id[User], items: Item*)(implicit context: AugmentationContext = AugmentationContext.uniform(items)): Future[Seq[AugmentedItem]] = {
+  def augment(userId: Id[User], context: AugmentationContext, items: Item*): Future[Seq[AugmentedItem]] = {
     val uris = (context.corpus.keySet ++ items).map(_.uri)
     val restrictedPlan = getRestrictedDistributionPlan(userId, uris)
     getAugmentationInfosAndScores(restrictedPlan, userId, items.toSet, context).map {
@@ -110,7 +110,7 @@ class AugmentationCommanderImpl @Inject() (
 
       val keptByFuture = context.keptBy match {
         case Some(userIds) => Future.successful(userIds)
-        case None => searchFactory.getFriendIdsFuture(userId).imap(_.map(Id[User](_)))
+        case None => searchFactory.getFriendIdsFuture(userId).imap(_.map(Id[User](_)) + userId)
       }
 
       for {
