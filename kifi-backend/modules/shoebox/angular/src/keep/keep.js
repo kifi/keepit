@@ -505,7 +505,6 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
-        showEditTools: '=',
         editMode: '=',
         toggleSelect: '&',
         isSelected: '&',
