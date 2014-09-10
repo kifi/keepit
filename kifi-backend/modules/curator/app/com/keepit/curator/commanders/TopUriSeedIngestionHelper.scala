@@ -82,7 +82,12 @@ class TopUriSeedIngestionHelper @Inject() (
     val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting || force) {
-      graph.uriWander(userId, 100000).flatMap { uriScores =>
+      graph.uriWander(userId, 50000).flatMap { uriScores =>
+        val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat).toSeq.sortBy {
+          case (uriId, score) => -1 * score
+        }.take(2000).toMap //Last part (sort + take) is a stop gap
+        val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
+
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
@@ -95,9 +100,6 @@ class TopUriSeedIngestionHelper @Inject() (
               }
             }
           }
-
-          val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat)
-          val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
           rescaledUriScores.foreach {
             case (uriId, score) =>
