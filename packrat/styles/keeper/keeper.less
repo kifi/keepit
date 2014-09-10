@@ -178,7 +178,7 @@
   bottom: 0;
   line-height: 43px;
   color: #333;
-  font-weight: 500;
+  font-weight: 300;
   text-align: center;
   cursor: pointer;
   .kifi-pane & {
@@ -192,39 +192,46 @@
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
+  &::before {
+    content: 'Keep in ';
+    font-weight: bold;
+  }
 }
 .kifi-keep-btn {
   background-image: linear-gradient(#fff, #f3f3f3);
-  &:hover,
-  &:focus {
+  &:hover::before,
+  &:focus::before {
     color: #3f9f65;
   }
   &:active {
     background-image: none;
     background-color: #f3f3f3;
   }
-  &::before {
-    content: 'Keep it';
-  }
 }
 .kifi-kept-btn {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,.3);
   @bg-color: #4daf7c;
   background-color: @bg-color;
-  color: #fff;
-  font-weight: 500;
-  text-shadow: 0 0 2px rgba(0,0,0,.3);
   &:hover,
   &:focus {
     background-color: tint(@bg-color, 6%);
   }
-  &:active {
+  &:hover:active,
+  &:focus:active {
     background-color: shade(@bg-color, 4%);
   }
-  &::before {
-    content: 'Kept';
-  }
-  .kifi-private &::before {
-    content: 'Kept (private)';
+  .kifi-private & {
+    @bg-color: #e65b45;
+    background-color: @bg-color;
+    &:hover,
+    &:focus {
+      background-color: tint(@bg-color, 6%);
+    }
+    &:hover:active,
+    &:focus:active {
+      background-color: shade(@bg-color, 4%);
+    }
   }
 }
 
