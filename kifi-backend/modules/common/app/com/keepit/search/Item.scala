@@ -1,9 +1,10 @@
 package com.keepit.search
 
-import com.keepit.common.db.Id
-import com.keepit.model.{ Hashtag, User, Library, NormalizedURI }
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.model._
 import play.api.libs.json._
 import com.keepit.serializer.TupleFormat
+import scala.Some
 
 case class Item(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
 
@@ -42,7 +43,7 @@ object AugmentedItem {
     }
 
     val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
-      case ((moreKeeps, moreTags), RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
+      case ((moreKeeps, moreTags), RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
     }
 
     val (moreKeeps, moreTags) = kept match {
@@ -61,16 +62,10 @@ object AugmentedItem {
   }
 }
 
-case class RestrictedKeepInfo(keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: ExternalId[Keep], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
-  implicit val format = new Format[RestrictedKeepInfo] {
-    def reads(json: JsValue) = json.validate[Seq[JsValue]].map {
-      case Seq(keptIn, keptBy, tags) =>
-        RestrictedKeepInfo(keptIn.as[Option[Id[Library]]], keptBy.as[Option[Id[User]]], tags.as[Set[Hashtag]])
-    }
-    def writes(keep: RestrictedKeepInfo) = Json.arr(keep.keptIn, keep.keptBy, keep.tags)
-  }
+  implicit val format = Json.format[RestrictedKeepInfo]
 }
 
 case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int)
