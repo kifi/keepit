@@ -7,14 +7,6 @@ angular.module('kifi')
 
   function ($analytics, $http, $location, $log, $q, routeService) {
     //
-    // Internal data.
-    //
-    var lastSearchContext = null;
-    var refinements = -1;
-    var pageSession = createPageSession();
-
-
-    //
     // Internal helper methods.
     //
     function createPageSession() {
@@ -60,6 +52,14 @@ angular.module('kifi')
         $log.log('no search context to log');
       }
     }
+
+
+    //
+    // Internal data.
+    //
+    var lastSearchContext = null;
+    var refinements = -1;
+    var pageSession = createPageSession();
 
 
     //
