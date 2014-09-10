@@ -293,7 +293,7 @@ angular.module('kifi')
         };
 
         scope.addTagLabel = function () {
-          if (scope.getSelectedCards().length === 1) {
+          if (scope.getSelectedKeeps().length === 1) {
             return 'Add a tag to this keep';
           } else {
             return 'Add a tag to these keeps';
