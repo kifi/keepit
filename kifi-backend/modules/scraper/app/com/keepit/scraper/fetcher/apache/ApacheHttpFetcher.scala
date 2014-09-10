@@ -333,6 +333,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   }
 
   def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = SafeFuture {
-    fetch(url, ifModifiedSince, proxy)(f)
+    try {
+      fetch(url, ifModifiedSince, proxy)(f)
+    } catch {
+      case e: Exception => throw new Exception(s"on fetching url $url if modified since $ifModifiedSince using proxy $proxy", e)
+    }
   }(ExecutionContext.fj)
 }
