@@ -15,6 +15,7 @@ import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
+import com.keepit.common.akka.SafeFuture
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -22,11 +23,13 @@ object SearchControllerUtil {
 
 trait SearchControllerUtil {
 
+  @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
+
   @inline
   def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(str => Enumerator(", " + str))(immediate))
+      safelyFlatten(future.map(str => Enumerator(", " + str))(immediate))
     })
   }
 
