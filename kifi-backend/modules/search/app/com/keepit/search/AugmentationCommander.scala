@@ -92,7 +92,7 @@ class AugmentationCommanderImpl @Inject() (
       )
     }
     val moreSortedTags = moreTags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
-    AugmentedItem(item.uri, kept, moreSortedKeeps, moreSortedTags)
+    AugmentedItem(item.uri, kept, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps)
   }
 
   def distAugmentation(shards: Set[Shard[NormalizedURI]], itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
@@ -142,6 +142,7 @@ class AugmentationCommanderImpl @Inject() (
   private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: Item): AugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
+    var publishedKeeps = 0
 
     (keepSearcher.indexReader.getContext.leaves()).foreach { atomicReaderContext =>
       val reader = atomicReaderContext.reader().asInstanceOf[WrappedSubReader]
@@ -175,6 +176,7 @@ class AugmentationCommanderImpl @Inject() (
             case SECRET => // ignore
           }
           else if (visibility == PUBLISHED) { // kept in a public library
+            publishedKeeps += 1
             //todo(Léo): define which published libraries are relevant
           }
 
@@ -182,7 +184,7 @@ class AugmentationCommanderImpl @Inject() (
         }
       }
     }
-    AugmentationInfo(keeps.toList)
+    AugmentationInfo(keeps.toList, publishedKeeps)
   }
 
   private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): ContextualAugmentationScores = {

@@ -20,9 +20,10 @@ object Item {
 
 case class AugmentedItem(
   uri: Id[NormalizedURI],
-  kept: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
+  keep: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
   moreKeeps: Seq[(Option[Id[Library]], Option[Id[User]])],
-  moreTags: Seq[Hashtag])
+  moreTags: Seq[Hashtag],
+  otherPublishedKeeps: Int)
 
 object AugmentedItem {
   implicit val format = {
@@ -44,7 +45,7 @@ object RestrictedKeepInfo {
   }
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo])
+case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int)
 object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }
