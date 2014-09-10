@@ -179,7 +179,7 @@
   table-layout: initial;
   text-align: initial;
   text-anchor: initial;
-  text-decoration: initial;
+  text-decoration: initial !important;
   text-indent: initial;
   text-orientation: initial;
   text-overflow: initial;
@@ -304,4 +304,10 @@
   .kifi-root.kifi-root.kifi-root {
     display: none !important;
   }
+}
+.kifi-root input:not([type]),
+.kifi-root input[type=text] {
+  background: #fff !important;
+  color: #2d2d2d !important;
+  box-shadow: none !important;
 }

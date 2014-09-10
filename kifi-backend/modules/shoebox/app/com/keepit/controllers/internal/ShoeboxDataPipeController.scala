@@ -32,14 +32,14 @@ class ShoeboxDataPipeController @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnlyReplica(2) { implicit s =>
+    val uris = db.readOnlyReplica { implicit s =>
       normUriRepo.getIndexable(seqNum, fetchSize)
     }
     Ok(Json.toJson(uris))
   }
 
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnlyReplica(2) { implicit s =>
+    val uris = db.readOnlyReplica { implicit s =>
       normUriRepo.getIndexable(seqNum, fetchSize)
     }
     val indexables = uris map { u => IndexableUri(u) }
@@ -48,7 +48,7 @@ class ShoeboxDataPipeController @Inject() (
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = db.readOnlyReplica(2) { implicit s =>
+    val uris = db.readOnlyReplica { implicit s =>
       normUriRepo.getChanged(seqNum, includeStates = scrapedStates, limit = fetchSize)
     }
     val indexables = uris map { u => IndexableUri(u) }
@@ -56,41 +56,41 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getHighestUriSeq() = Action { request =>
-    val seq = db.readOnlyReplica(2) { implicit s =>
+    val seq = db.readOnlyReplica { implicit s =>
       normUriRepo.getCurrentSeqNum()
     }
     Ok(SequenceNumber.format.writes(seq))
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = Action { request =>
-    Ok(Json.toJson(db.readOnlyReplica(2) { implicit s =>
+    Ok(Json.toJson(db.readOnlyReplica { implicit s =>
       collectionRepo.getCollectionsChanged(seqNum, fetchSize)
     }))
   }
 
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = Action { request =>
-    val phrases = db.readOnlyReplica(2) { implicit s =>
+    val phrases = db.readOnlyReplica { implicit s =>
       phraseRepo.getPhrasesChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(phrases))
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val bookmarks = db.readOnlyReplica(2) { implicit session =>
+    val bookmarks = db.readOnlyReplica { implicit session =>
       keepRepo.getBookmarksChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(bookmarks))
   }
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int) = Action { request =>
-    val users = db.readOnlyReplica(2) { implicit s =>
+    val users = db.readOnlyReplica { implicit s =>
       userRepo.getUsersSince(seqNum, fetchSize)
     }
     Ok(JsArray(users.map { u => Json.toJson(u) }))
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = Action { request =>
-    val changes = db.readOnlyReplica(2) { implicit s =>
+    val changes = db.readOnlyReplica { implicit s =>
       changedUriRepo.getChangesBetween(lowSeq, highSeq).map { change =>
         (change.oldUriId, normUriRepo.get(change.newUriId))
       }
@@ -103,21 +103,21 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int) = Action { request =>
-    val changes = db.readOnlyReplica(2) { implicit s =>
+    val changes = db.readOnlyReplica { implicit s =>
       userConnRepo.getUserConnectionChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
   }
 
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = Action { request =>
-    val changes = db.readOnlyReplica(2) { implicit s =>
+    val changes = db.readOnlyReplica { implicit s =>
       searchFriendRepo.getSearchFriendsChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
   }
 
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = Action { request =>
-    val indexableSocialConnections = db.readOnlyReplica(2) { implicit session =>
+    val indexableSocialConnections = db.readOnlyReplica { implicit session =>
       socialConnectionRepo.getConnAndNetworkBySeqNumber(seqNum, fetchSize).map {
         case (firstUserId, secondUserId, state, seq, networkType) =>
           IndexableSocialConnection(firstUserId, secondUserId, networkType, state, seq)
@@ -128,13 +128,13 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = Action { request =>
-    val socialUserInfos = db.readOnlyReplica(2) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
+    val socialUserInfos = db.readOnlyReplica { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
     val json = Json.toJson(socialUserInfos)
     Ok(json)
   }
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = Action { request =>
-    val modifiedEmails = db.readOnlyReplica(2) { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
+    val modifiedEmails = db.readOnlyReplica { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
     val updates = modifiedEmails.map { email =>
       EmailAccountUpdate(email.address, email.userId, email.verified, email.state == UserEmailAddressStates.INACTIVE, SequenceNumber(email.seq.value))
     }
@@ -143,7 +143,7 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action { request =>
-    val librariesWithMembersChanged = db.readOnlyReplica(2) { implicit session =>
+    val librariesWithMembersChanged = db.readOnlyReplica { implicit session =>
       val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
       changedLibraries.map { library =>
         val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
@@ -154,10 +154,20 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val keepAndTagsChanged = db.readOnlyReplica(2) { implicit session =>
+    val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
       val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
       changedKeeps.map { keep => KeepAndTags(keep, collectionRepo.getTagsByKeepId(keep.id.get)) }
     }
     Ok(Json.toJson(keepAndTagsChanged))
+  }
+
+  def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action { request =>
+    val libs = db.readOnlyReplica { implicit s => libraryRepo.getBySequenceNumber(seqNum, fetchSize) } map { Library.toLibraryView(_) }
+    Ok(Json.toJson(libs))
+  }
+
+  def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = Action { request =>
+    val mem = db.readOnlyReplica { implicit s => libraryMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map { LibraryMembership.toLibraryMembershipView(_) }
+    Ok(Json.toJson(mem))
   }
 }

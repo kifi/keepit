@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
@@ -28,6 +29,7 @@ class LibraryController @Inject() (
   libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   actionAuthenticator: ActionAuthenticator,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
   implicit val config: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
@@ -344,5 +346,28 @@ class LibraryController @Inject() (
         }
     }
   }
+
+  def addKeeps(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
+    Library.decodePublicId(pubId) match {
+      case Failure(ex) =>
+        BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(libraryId) =>
+        (request.body \ "keeps").asOpt[Seq[RawBookmarkRepresentation]] map { fromJson =>
+          val source = KeepSource.site
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+
+          val (keeps, _, failures, alreadyKeptOpt) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, true)
+          log.info(s"kept ${keeps.size} keeps")
+          Ok(Json.obj(
+            "keeps" -> keeps,
+            "failures" -> failures
+          ) ++ (alreadyKeptOpt map (keeps => Json.obj("alreadyKept" -> Json.toJson(keeps))) getOrElse Json.obj()))
+        } getOrElse {
+          log.error(s"can't parse object from request ${request.body} for user ${request.user}")
+          BadRequest(Json.obj("error" -> "Could not parse object from request body"))
+        }
+    }
+  }
+
 }
 

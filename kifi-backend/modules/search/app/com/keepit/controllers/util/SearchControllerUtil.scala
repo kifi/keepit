@@ -20,18 +20,22 @@ object SearchControllerUtil {
 trait SearchControllerUtil {
 
   @inline
-  def reactiveEnumerator[T](futureSeq: Seq[Future[T]]) = {
+  def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(r => Enumerator(r))(immediate))
+      Enumerator.flatten(future.map(r => Enumerator(", ").andThen(Enumerator(r)))(immediate))
     })
   }
 
   def uriSummaryInfoFuture(shoeboxClient: ShoeboxServiceClient, plainResultFuture: Future[KifiPlainResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
-      shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
-        KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+      if (uriIds.nonEmpty) {
+        shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
+          KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+        }
+      } else {
+        Future.successful(KifiSearchResult.uriSummaryInfoV2(Seq()).toString)
       }
     }
   }
