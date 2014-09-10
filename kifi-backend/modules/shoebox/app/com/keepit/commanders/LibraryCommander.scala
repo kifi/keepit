@@ -78,8 +78,8 @@ class LibraryCommander @Inject() (
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
-      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid library name") }
-      else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid library slug") }
+      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid_name") }
+      else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid_slug") }
       else { None }
     }
     badMessage match {
@@ -87,7 +87,7 @@ class LibraryCommander @Inject() (
       case _ => {
         val exists = db.readOnlyReplica { implicit s => libraryRepo.getByNameAndUserId(ownerId, libAddReq.name) }
         exists match {
-          case Some(lib) if lib.state == LibraryStates.ACTIVE => Left(LibraryFail("library name already exists for user"))
+          case Some(lib) if lib.state == LibraryStates.ACTIVE => Left(LibraryFail("library_name_exists"))
           case _ => {
             val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
               val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
