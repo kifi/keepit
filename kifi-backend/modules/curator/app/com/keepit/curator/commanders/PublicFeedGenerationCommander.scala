@@ -59,16 +59,24 @@ class PublicFeedGenerationCommander @Inject() (
       log.info(s"public feed: saving items")
       items foreach { item =>
         log.info(s"public feed: saving $item")
-        val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
-        feedOpt.map { feed =>
-          publicFeedRepo.save(feed.copy(
-            publicMasterScore = computePublicMasterScore(item.publicUriScores),
-            publicAllScores = item.publicUriScores))
-        } getOrElse {
-          publicFeedRepo.save(PublicFeed(
-            uriId = item.uriId,
-            publicMasterScore = computePublicMasterScore(item.publicUriScores),
-            publicAllScores = item.publicUriScores))
+        try {
+          val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
+          feedOpt.map { feed =>
+            publicFeedRepo.save(feed.copy(
+              publicMasterScore = computePublicMasterScore(item.publicUriScores),
+              publicAllScores = item.publicUriScores))
+          } getOrElse {
+            publicFeedRepo.save(PublicFeed(
+              uriId = item.uriId,
+              publicMasterScore = computePublicMasterScore(item.publicUriScores),
+              publicAllScores = item.publicUriScores))
+          }
+        } catch {
+          case t: Throwable => {
+            log.info(s"public feed: something went wrong here: $t")
+            t.printStackTrace()
+            throw t
+          }
         }
       }
       log.info(s"public feed: saving new seq num: $newSeqNum")
