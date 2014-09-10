@@ -9,9 +9,10 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.JsObject
+import play.api.libs.json.{ JsValue, Json, JsObject }
 
 import scala.concurrent.Future
+import com.keepit.search.{ AugmentationContext, Item, AugmentationCommander }
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -68,5 +69,12 @@ trait SearchControllerUtil {
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
       Nil,
       decoratedResult.experts).json
+  }
+
+  def augment(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
+    val items = kifiPlainResult.hits.map { hit => Item(Id(hit.id), hit.libraryId.map(Id(_))) }
+    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(Item(_, None))
+    val context = AugmentationContext.uniform(items ++ previousItems)
+    augmentationCommander.augment(userId, items: _*)(context).map(Json.toJson(_))
   }
 }
