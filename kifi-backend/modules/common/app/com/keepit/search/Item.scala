@@ -31,6 +31,34 @@ object AugmentedItem {
     implicit val moreKeepsFormat = TupleFormat.tuple2Format[Option[Id[Library]], Option[Id[User]]]
     Json.format[AugmentedItem]
   }
+
+  def withScores(augmentationScores: AugmentationScores)(item: Item, info: AugmentationInfo): AugmentedItem = {
+    val kept = item.keptIn.flatMap { libraryId =>
+      info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
+        val sortedTags = keepInfo.tags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
+        val userIdOpt = keepInfo.keptBy
+        (libraryId, userIdOpt, sortedTags)
+      }
+    }
+
+    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
+      case ((moreKeeps, moreTags), RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
+    }
+
+    val (moreKeeps, moreTags) = kept match {
+      case Some((libraryId, userIdOpt, tags)) => (allKeeps - ((Some(libraryId), userIdOpt)), allTags -- tags)
+      case None => (allKeeps, allTags)
+    }
+
+    val moreSortedKeeps = moreKeeps.toSeq.sortBy {
+      case (libraryIdOpt, userIdOpt) => (
+        libraryIdOpt.flatMap(augmentationScores.libraryScores.get) getOrElse 0f,
+        userIdOpt.flatMap(augmentationScores.userScores.get) getOrElse 0f
+      )
+    }
+    val moreSortedTags = moreTags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
+    AugmentedItem(item.uri, kept, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps)
+  }
 }
 
 case class RestrictedKeepInfo(keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
@@ -50,12 +78,12 @@ object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }
 
-case class ContextualAugmentationScores(
+case class AugmentationScores(
     libraryScores: Map[Id[Library], Float],
     userScores: Map[Id[User], Float],
     tagScores: Map[Hashtag, Float]) {
 
-  def merge(moreScores: ContextualAugmentationScores): ContextualAugmentationScores = {
+  def merge(moreScores: AugmentationScores): AugmentationScores = {
     val addedLibraryScores = (libraryScores.keySet ++ moreScores.libraryScores.keySet).map { id =>
       id -> (libraryScores.getOrElse(id, 0f) + moreScores.libraryScores.getOrElse(id, 0f))
     }.toMap
@@ -65,34 +93,31 @@ case class ContextualAugmentationScores(
     val addedTagScores = (tagScores.keySet ++ moreScores.tagScores.keySet).map { id =>
       id -> (tagScores.getOrElse(id, 0f) + moreScores.tagScores.getOrElse(id, 0f))
     }.toMap
-    ContextualAugmentationScores(addedLibraryScores, addedUserScores, addedTagScores)
+    AugmentationScores(addedLibraryScores, addedUserScores, addedTagScores)
   }
 }
 
-case class AugmentationContext(corpus: Map[Item, Float], keptIn: Option[Set[Id[Library]]], keptBy: Option[Set[Id[User]]])
+case class AugmentationContext(userId: Id[User], corpus: Map[Item, Float], libraryFilter: Option[Set[Id[Library]]], userFilter: Option[Set[Id[User]]])
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(items: Seq[Item]): AugmentationContext = AugmentationContext(items.map(_ -> 1f).toMap, None, None)
+  def uniform(userId: Id[User], items: Seq[Item]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap, None, None)
 }
 
-object ContextualAugmentationScores {
-  implicit val format = Json.format[ContextualAugmentationScores]
-  val empty = ContextualAugmentationScores(Map.empty, Map.empty, Map.empty)
+object AugmentationScores {
+  implicit val format = Json.format[AugmentationScores]
+  val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(
-  userId: Id[User],
-  items: Set[Item],
-  context: AugmentationContext)
+case class ItemAugmentationRequest(items: Set[Item], context: AugmentationContext)
 
 object ItemAugmentationRequest {
   implicit val format = Json.format[ItemAugmentationRequest]
 }
 
-case class ItemAugmentationResponse(infos: Map[Item, AugmentationInfo], scores: ContextualAugmentationScores)
+case class ItemAugmentationResponse(infos: Map[Item, AugmentationInfo], scores: AugmentationScores)
 
 object ItemAugmentationResponse {
   implicit val format = Json.format[ItemAugmentationResponse]
-  val empty = ItemAugmentationResponse(Map.empty, ContextualAugmentationScores.empty)
+  val empty = ItemAugmentationResponse(Map.empty, AugmentationScores.empty)
 }
