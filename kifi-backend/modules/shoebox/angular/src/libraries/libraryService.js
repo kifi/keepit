@@ -6,7 +6,8 @@ angular.module('kifi')
   '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q',
   function ($http, util, profileService, routeService, Clutch, $q) {
     var librarySummaries = [],
-        invitedSummaries = [];
+        invitedSummaries = [],
+        libraryState = {}; // This is a variable to pass state from different library components of the system
 
     // var fuseOptions = {
     //   keys: ['name'],
@@ -54,12 +55,16 @@ angular.module('kifi')
     };
 
     var api = {
+      libraryState: libraryState,
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
       },
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
-      fetchLibrarySummaries: function () {
+      fetchLibrarySummaries: function (invalidateCache) {
+        if (invalidateCache) {
+          librarySummariesService.expireAll();
+        }
         return librarySummariesService.get();
       },
       getLibraryById: function (libraryId) {
@@ -91,6 +96,11 @@ angular.module('kifi')
         var missingFields = _.filter(required, function (v) {
           return opts[v] === undefined;
         });
+
+        // Andrew: remove these:
+        opts.followers = opts.followers || [];
+        opts.collaborators = opts.collaborators || [];
+
         if (missingFields.length > 0) {
           return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
         }
