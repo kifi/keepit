@@ -57,10 +57,13 @@
         </td>
       </tr>
       <tr>
-        <th>Send email</th>
+        <th>Recommendations</th>
         <td>
-          <form action="@com.keepit.controllers.admin.routes.AdminUserController.sendEmail(user.id.get, "feed")" class="form-inline send-email" method="POST">
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.sendEmail(user.id.get, "feed")" class="form-inline send-email" method="POST" style="display: inline-block;">
             <input type="submit" value="Send Feed Digest">
+          </form>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.refreshRecos(user.id.get)" class="form-inline refresh-recos" method="POST" style="display: inline-block;">
+            <input type="submit" value="Refresh Recommendations">
           </form>
         </td>
       </tr>
@@ -252,6 +255,22 @@
             form.sent = false;
             input.removeAttribute('disabled');
           }, 10000);
+        });
+        return false;
+      });
+
+      $('.refresh-recos').submit(function () {
+        var form = this;
+        if (form.sent) return false;
+        form.sent = true;
+        var input =  $(form).find('input:submit').get(0);
+        if (typeof input.origVal === 'undefined') input.origVal = input.value;
+        input.disabled = 'disabled';
+        var req = $.post(form.action, $(form).serialize(), function () {
+          alert("Refresh has been triggered");
+        });
+        req.fail(function (r, c, m) {
+          alert("An error ocurrect: " + m);
         });
         return false;
       });
