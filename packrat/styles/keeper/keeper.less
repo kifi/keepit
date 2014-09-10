@@ -205,7 +205,6 @@
   }
   &::before {
     content: 'Keep it';
-    padding-left: 16px;
   }
 }
 .kifi-kept-btn {
@@ -224,89 +223,9 @@
   &::before {
     content: 'Kept';
   }
-  &:not(.kifi-hoverless):hover::before {
-    content: 'Unkeep';
+  .kifi-private &::before {
+    content: 'Kept (private)';
   }
-  .kifi-private &:not(:hover)::before,
-  .kifi-private &.kifi-hoverless::before {
-    display: block;
-    line-height: 32px;
-  }
-  .kifi-private &:not(:hover)::after,
-  .kifi-private &.kifi-hoverless::after {
-    content: '(private)';
-    display: block;
-    margin-top: -5px;
-    font-size: 9px;
-    line-height: 0;
-  }
-}
-.kifi-keep-lock,
-.kifi-kept-lock {
-  position: absolute;
-  border: 1px solid rgba(51,51,51,.3);
-  border-radius: 50% !important;
-  cursor: pointer;
-  background-clip: content-box;
-  background-color: inherit;
-  background-repeat: no-repeat;
-  top: 9px;
-  width: 29px;
-  height: 29px;
-}
-.kifi-keep-lock,
-.kifi-kept-lock {
-  left: 9px;
-  @url: %(@svgLockDataUrl, #464646);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  background-size: 9px 12px, auto;
-  background-position: center 8px, 0;
-}
-.kifi-keep-lock:hover,
-.kifi-keep-lock:focus,
-.kifi-kept-lock:hover,
-.kifi-kept-lock:focus {
-  @url: %(@svgLockDataUrl, #e65b45);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-keep-lock:active,
-.kifi-kept-lock:active {
-  @url: %(@svgLockDataUrl, #e65b45);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-private .kifi-kept-lock {
-  top: 8px;
-  left: 8px;
-  @bg-color: #e65b45;
-  @url: %(@svgLockDataUrl, #fff);
-  background-color: @bg-color;
-  background-image: url(@url);
-  border-color: #d13a22;
-  border-width: 2px;
-  &:hover,
-  &:focus {
-    background-color: tint(@bg-color, 6%);
-  }
-  &:active {
-    background-color: shade(@bg-color, 4%);
-  }
-}
-
-/* ::after for invisible expansion */
-.kifi-keep-lock::after,
-.kifi-kept-lock::after {
-  content: '';
-  display: block;
-  height: 100%;
-  margin: -10px;
-  border: 10px solid transparent;
-}
-.kifi-keep-lock::after,
-.kifi-kept-lock::after {
-  border-radius: 24.5px 0 0 24.5px !important;
-  border-right-width: 0;
-  margin-right: 0;
 }
 
 .kifi-keepers-box {

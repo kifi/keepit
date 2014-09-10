@@ -129,13 +129,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }, 400, true))
     .on('click', '.kifi-kept-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        unkeepPage();
-        this.classList.add('kifi-hoverless');
+        // TODO: open library list
       }
     }, 400, true))
-    .on('mouseover', '.kifi-kept-btn>.kifi-tip', function () {
-      this.parentNode.classList.add('kifi-hoverless');
-    })
     .hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
@@ -155,9 +151,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
           });
         } else {
           render('html/keeper/titled_tip', {
-            title: (o.kept ? 'Unkeep' : 'Keep') + ' (' + CO_KEY + '+Shift+K)',
-            html: o.kept ? 'Click to remove this<br/>page from your keeps.' :
-              'Keeping this page helps<br/>you easily find it later.'
+            title: 'Keep (' + CO_KEY + '+Shift+K)',
+            html: 'Keeping this page helps<br/>you easily find it later.'
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -169,41 +164,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     })
-    .on('mouseout', '.kifi-kept-btn', function () {
-      this.classList.remove('kifi-hoverless');
-    })
-    .hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
-      var $a = $(this);
-      var $card = $(this).closest('.kifi-keep-card');
-      var kept = !$card.hasClass('kifi-unkept');
-      var publicly = kept && $card.hasClass('kifi-public');
-      var title = !kept ?
-        'Keep Privately' : publicly ?
-        'Make Private' :
-        'Make Public';
-      var html = !kept ?
-        'Keeping privately allows you<br/>to find this page easily without<br/>letting anyone know you kept it.' : publicly ?
-        'This keep is public. Making it private<br/>allows you to find it easily without<br/>letting anyone know you kept it.' :
-        'This keep is private. Making it<br/>public allows your friends to<br/>discover that you kept it.';
-      render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
-        configureHover(html, {
-          suppressed: isSticky,
-          mustHoverFor: 700,
-          hideAfter: 4000,
-          click: 'hide',
-          position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
-      });
-    })
-    .on('click', '.kifi-keep-lock', _.debounce(function (e) {
-      if (e.target === this && e.originalEvent.isTrusted !== false) {
-        keepPage('private', e);
-      }
-    }, 400, true))
-    .on('click', '.kifi-kept-lock', _.debounce(function (e) {
-      if (e.target === this && e.originalEvent.isTrusted !== false) {
-        toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
-      }
-    }, 400, true))
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
@@ -498,7 +458,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     discard: function () {
       $slider.off();
-      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-dock-btn').hoverfu('destroy');
+      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
     appendTo: function (parent) {
