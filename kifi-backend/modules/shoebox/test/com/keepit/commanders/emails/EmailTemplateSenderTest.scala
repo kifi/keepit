@@ -97,11 +97,11 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
           val email = inject[ElectronicMailRepo].all().head
           val html = email.htmlBody.value
           html must contain("Find friends on Kifi to benefit from their keeps")
-          html must contain("http://cloudfront/users/1/pics/100/0.jpg")
+          html must contain("https://cloudfront/users/1/pics/100/0.jpg")
           html must contain("alt=\"Aaron\"")
-          html must contain("http://cloudfront/users/2/pics/100/0.jpg")
+          html must contain("https://cloudfront/users/2/pics/100/0.jpg")
           html must contain("alt=\"Bryan\"")
-          html must contain("http://cloudfront/users/4/pics/100/0.jpg")
+          html must contain("https://cloudfront/users/4/pics/100/0.jpg")
           html must contain("alt=\"Dean\"")
         }
       }
