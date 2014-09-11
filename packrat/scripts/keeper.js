@@ -307,22 +307,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function keepPage(how, guided, suppressNamePrompt) {
+  function keepPage(how, guided) {
     log('[keepPage]', how, guided ? 'guided' : '');
     justKept = true;
     var title = authoredTitle();
     api.port.emit('keep', withUrls({title: title, how: how, guided: guided}));
-    if (!title && !suppressNamePrompt) {
-      beginStickyTitle();
-      api.require('scripts/keep_name_prompt.js', function () {
-        keeper.moveToBottom(function () {
-          promptForKeepName($slider, function () {
-            endStickyTitle();
-            keeper.moveBackFromBottom();
-          });
-        });
-      });
-    }
   }
 
   function unkeepPage() {
@@ -407,8 +396,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     }
   }
-  var beginStickyTitle = beginSticky.bind(null, 1);
-  var endStickyTitle = endSticky.bind(null, 1);
   var beginStickyKeepBox = beginSticky.bind(null, 2);
   var endStickyKeepBox = endSticky.bind(null, 2);
   var beginStickyToaster = beginSticky.bind(null, 4);

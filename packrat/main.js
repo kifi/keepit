@@ -608,9 +608,6 @@ api.port.on({
       api.tabs.emit(tab, 'kept', {kept: how});
     });
   },
-  set_title: function(data, respond) {
-    ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
-  },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data);
