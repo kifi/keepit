@@ -1,7 +1,6 @@
 package com.keepit.search.util.join
 
 import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 
 abstract class Joiner {
   private[this] var _id: Long = -1
@@ -16,14 +15,21 @@ abstract class Joiner {
 abstract class JoinerManager(initialCapacity: Int) {
 
   private[this] val overflowSize = 2
-  private[this] val pool: ArrayBuffer[Joiner] = new ArrayBuffer[Joiner]() // pool Joiners for reuse
+  private[this] var pool: Array[Joiner] = new Array[Joiner](16) // pool Joiners for reuse
   private[this] var activeCount: Int = 0
-
   private[this] var table = new mutable.HashMap[Long, Joiner]()
 
-  private def createNewJoiner(): Joiner = {
-    if (activeCount >= pool.size) pool += create()
-    val joiner = pool(activeCount)
+  private def getJoiner(): Joiner = {
+    if (activeCount >= pool.length) {
+      val arr = new Array[Joiner](pool.length * 2)
+      System.arraycopy(pool, 0, arr, 0, pool.length)
+      pool = arr
+    }
+    var joiner = pool(activeCount)
+    if (joiner == null) {
+      joiner = create()
+      pool(activeCount) = joiner
+    }
     activeCount += 1
     joiner
   }
@@ -32,7 +38,7 @@ abstract class JoinerManager(initialCapacity: Int) {
 
   def get(id: Long): Joiner = {
     table.getOrElse(id, {
-      val joiner = createNewJoiner().set(id)
+      val joiner = getJoiner().set(id)
       table.put(id, joiner)
       joiner
     })
