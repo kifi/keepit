@@ -85,6 +85,7 @@ class LibraryController @Inject() (
   private def canView(userId: Id[User], lib: Library, authToken: Option[String], passcode: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
+        lib.visibility == LibraryVisibility.PUBLISHED ||
         (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink == authToken.get) || {
           val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
           passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
