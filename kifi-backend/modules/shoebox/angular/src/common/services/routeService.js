@@ -112,7 +112,10 @@ angular.module('kifi')
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
         return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
       },
-      createLibrary: route('/libraries/add')
+      createLibrary: route('/libraries/add'),
+      modifyLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/modify');
+      }
     };
   }
 ]);

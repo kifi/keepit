@@ -1,12 +1,22 @@
-# SHOEBOX
+# CORTEX
 
 # --- !Ups
 
-alter table raw_keep
-    add column library_id bigint(20) default null;
-alter table raw_keep
-    add constraint `raw_keep_f_library` foreign key (`library_id`) references `library` (`id`);
+create table library_lda_topic (
+  id bigint(20) NOT NULL AUTO_INCREMENT,
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  library_id bigint(20) NOT NULL,
+  version tinyint(3) unsigned NOT NULL,
+  num_of_evidence int unsigned NOT NULL,
+  topic blob DEFAULT NULL,
+  state varchar(20) NOT NULL,
 
-insert into evolutions (name, description) values('243.sql', 'add library id to raw keep table');
+  PRIMARY KEY (id),
+  Unique Index library_lda_topic_i_library_version (library_id, version)
+
+);
+
+insert into evolutions (name, description) values('243.sql', 'adding library lda topic');
 
 # --- !Downs

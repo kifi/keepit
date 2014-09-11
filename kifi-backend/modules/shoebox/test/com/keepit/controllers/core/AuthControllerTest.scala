@@ -22,6 +22,9 @@ import play.api.libs.json.{ JsArray, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class AuthControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(FakeShoeboxServiceModule(),
@@ -63,6 +66,7 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
         val ctrl = inject[AuthController]
         // test 2 calls for the same user with different valid emails
         val result1 = ctrl.forgotPassword()(FakeRequest(call).withBody(Json.obj("email" -> "elaine@gmail.com")))
+        Await.ready(result1, Duration(5, "seconds"))
 
         outbox.size === 1
         outbox(0).to === Seq(EmailAddress("elaine@gmail.com"))
@@ -70,6 +74,7 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) === OK
 
         val result2 = ctrl.forgotPassword()(FakeRequest(call).withBody(Json.obj("email" -> "dancing@gmail.com")))
+        Await.ready(result2, Duration(5, "seconds"))
 
         outbox.size === 2
         outbox(1).to === Seq(EmailAddress("dancing@gmail.com"))

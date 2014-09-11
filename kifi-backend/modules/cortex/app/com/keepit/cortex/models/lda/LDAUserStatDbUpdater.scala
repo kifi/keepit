@@ -37,7 +37,6 @@ class LDAUserStatDbUpdatePluginImpl @Inject() (
     actor: ActorInstance[LDAUserStatDbUpdateActor],
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserStatDbUpdatePlugin {
-  override val updateFrequency: FiniteDuration = 2 minutes
 
   def updateUser(userId: Id[User]): Unit = {
     actor.ref ! LDAUserStatUpdate(userId)

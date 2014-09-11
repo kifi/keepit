@@ -10,12 +10,13 @@ import com.keepit.serializer.TraversableFormat
 import com.keepit.common.logging.Logging
 import scala.math._
 
-case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
+case class ArticleHit(uriId: Id[NormalizedURI], score: Float, textScore: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
 object ArticleHit {
   implicit val format = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'score).format[Float] and
+    (__ \ 'textScore).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and
     (__ \ 'isMyBookmark).format[Boolean] and
     (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'users).format(TraversableFormat.seq(Id.format[User])) and
@@ -31,17 +32,17 @@ case class ArticleSearchResult(
   friendsTotal: Int,
   othersTotal: Int,
   mayHaveMoreHits: Boolean,
-  scorings: Seq[Scoring],
+  scorings: Seq[Scoring], // TODO: remove
   filter: Set[Long],
   millisPassed: Int,
   pageNumber: Int,
   previousHits: Int,
   uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = -1.0f, // semantic vector variance
-  svExistenceVar: Float = -1.0f,
+  svVariance: Float = -1.0f, // TODO: remove
+  svExistenceVar: Float = -1.0f, // TODO: remove
   toShow: Boolean = true,
-  collections: Set[Long] = Set.empty[Long],
+  collections: Set[Long] = Set.empty[Long], // TODO: remove
   lang: String = "en")
 
 object ArticleSearchResult extends Logging {
@@ -53,17 +54,17 @@ object ArticleSearchResult extends Logging {
     (__ \ 'friendsTotal).format[Int] and
     (__ \ 'othersTotal).format[Int] and
     (__ \ 'mayHaveMoreHits).format[Boolean] and
-    (__ \ 'scorings).format(TraversableFormat.seq[Scoring]) and
+    (__ \ 'scorings).formatNullable(TraversableFormat.seq[Scoring]).inmap(_.getOrElse(Seq.empty[Scoring]), Some.apply[Seq[Scoring]]) and // TODO: remove
     (__ \ 'filter).format[Set[Long]] and
     (__ \ 'millisPassed).format[Int] and
     (__ \ 'pageNumber).format[Int] and
     (__ \ 'previousHits).format[Int] and
     (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
     (__ \ 'time).format[DateTime] and
-    (__ \ 'svVariance).format[Float] and
-    (__ \ 'svExistenceVar).format[Float] and
+    (__ \ 'svVariance).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and // TODO: remove
+    (__ \ 'svExistenceVar).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and // TODO: remove
     (__ \ 'toShow).formatNullable[Boolean].inmap(_.getOrElse(true), Some.apply[Boolean]) and
-    (__ \ 'collections).format[Set[Long]] and
+    (__ \ 'collections).formatNullable[Set[Long]].inmap(_.getOrElse(Set.empty[Long]), Some.apply[Set[Long]]) and // TODO: remove
     (__ \ 'lang).format[String]
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))
 }

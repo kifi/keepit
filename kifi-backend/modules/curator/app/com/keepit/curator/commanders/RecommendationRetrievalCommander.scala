@@ -30,7 +30,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
       uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000)
     } map { reco =>
       (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
-    } filter (_._1 > 1.0f) sortBy (-1 * _._1) take 10
+    } filter (_._1 > 4.0f) sortBy (-1 * _._1) take 10
 
     SafeFuture {
       analytics.trackDeliveredItems(recos.map(_._2), Some(clientType))

@@ -24,15 +24,15 @@ angular.module('kifi')
         }, function (n) {
           scope.librariesEnabled = n || false;
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function (summaries) {
-              scope.libraries = summaries.libraries;
-              scope.invited = summaries.invited;
+            libraryService.fetchLibrarySummaries().then(function () {
+              scope.libraries = libraryService.librarySummaries;
+              scope.invited = libraryService.invitedSummaries;
             });
           }
         });
 
         scope.addLibrary = function () {
-          $rootScope.$emit('showGlobalModal', 'createLibrary');
+          $rootScope.$emit('showGlobalModal', 'manageLibrary');
         };
 
         scope.$watch(function () {
