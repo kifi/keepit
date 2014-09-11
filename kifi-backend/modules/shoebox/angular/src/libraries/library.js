@@ -3,12 +3,27 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', 'keepService', '$routeParams', 'libraryService', 'util',
-  function ($scope, keepService, $routeParams, libraryService, util) {
+  '$scope', 'keepService', '$routeParams', 'libraryService', 'util', '$rootScope', '$location',
+  function ($scope, keepService, $routeParams, libraryService, util, $rootScope, $location) {
     $scope.keeps = [];
     $scope.library = {};
     var username = $routeParams.username;
     var librarySlug = $routeParams.librarySlug;
+
+    $scope.manageLibrary = function () {
+      libraryService.libraryState = {
+        library: $scope.library,
+        returnAction: function (resp) {
+          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
+            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
+            if (data.library.slug !== librarySlug) {
+              $location.path('/' + username + '/' + data.library.slug);
+            }
+          });
+        }
+      };
+      $rootScope.$emit('showGlobalModal', 'manageLibrary');
+    };
 
     var libraryP = libraryService.getLibraryByUserSlug(username, librarySlug);
 
@@ -26,7 +41,7 @@ angular.module('kifi')
     $scope.loading = true;
     libraryP.then(function (library) {
       _.forEach(library.keeps, keepService.buildKeep);
-      util.replaceObjectInPlace($scope.library, library);
+      $scope.library = library;
       $scope.keeps.push.apply($scope.keeps, library.keeps);
       $scope.loading = false;
     });
