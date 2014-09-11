@@ -3,19 +3,50 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window', 'installService', '$rootScope',
-  function ($scope, tagService, keepService, $q, $timeout, $window, installService, $rootScope) {
-    keepService.reset();
+  '$scope', 'tagService', 'keepDecoratorService', 'keepActionService', '$q', '$timeout', '$window', 'installService', '$rootScope',
+  function ($scope, tagService, keepDecoratorService, keepActionService, $q, $timeout, $window, installService, $rootScope) {
+    //
+    // Internal data.
+    //
+    var selectedCount = 0;
+    
 
-    $window.document.title = 'Kifi • Your Keeps';
-
-    $scope.keepService = keepService;
-    $scope.keeps = keepService.list;
-    $scope.enableSearch();
+    //
+    // Scope data.
+    //
+    $scope.keeps = [];
     $scope.hasLoaded = false;
+    $scope.hasMore = true;
 
-    $scope.hasMore = function () {
-      return !keepService.isEnd();
+
+    //
+    // Scope methods.
+    //
+    $scope.getNextKeeps = function () {
+      if ($scope.loading) {
+        return $q.when([]);
+      }
+
+      $scope.loading = true;
+
+      var lastKeepId = $scope.keeps.length ? _.last($scope.keeps).id : null;
+      return keepActionService.getKeeps(lastKeepId).then(function (result) {
+        var rawKeeps = result.keeps;
+
+        rawKeeps.forEach(function (rawKeep) {
+          var keep = new keepDecoratorService.Keep(rawKeep);
+          keep.buildKeep(keep);
+          keep.makeKept();
+
+          $scope.keeps.push(keep);
+        });        
+
+        $scope.hasMore = !!result.mayHaveMore;
+        $scope.loading = false;
+        $scope.hasLoaded = true;
+
+        return result.keeps;
+      });
     };
 
     $scope.getSubtitle = function () {
@@ -23,9 +54,17 @@ angular.module('kifi')
         return 'Loading...';
       }
 
-      var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
-      if (subtitle) {
-        return subtitle;
+      // If there are selected keeps, display the number of keeps
+      // in the subtitle.
+      if (selectedCount > 0) {
+        switch (selectedCount) {
+          case 0:
+            return null;
+          case 1:
+            return selectedCount + ' Keep selected';
+          default:
+            return selectedCount + ' Keeps selected';
+        }
       }
 
       var numShown = $scope.keeps.length;
@@ -37,43 +76,16 @@ angular.module('kifi')
       case 2:
         return 'Showing both of your keeps';
       default:
-        if (keepService.isEnd()) {
+        if (!$scope.hasMore) {
           return 'Showing all ' + numShown + ' of your keeps';
         }
         return 'Showing your ' + numShown + ' latest keeps';
       }
     };
 
-    $scope.getNextKeeps = function () {
-      if ($scope.loading) {
-        return $q.when([]);
-      }
-
-      $scope.loading = true;
-
-      return keepService.getList().then(function (list) {
-        $scope.loading = false;
-        $scope.hasLoaded = true;
-
-        if (keepService.isEnd()) {
-          $scope.scrollDisabled = true;
-        }
-
-        return list;
-      });
+    $scope.updateSelectedCount = function (numSelected) {
+      selectedCount = numSelected;
     };
-
-    function initKeepList() {
-      $scope.scrollDisabled = false;
-      $scope.getNextKeeps().then(function () {
-        return $scope.getNextKeeps();
-      });
-    }
-
-    $scope.$watch('keepService.seqReset()', function () {
-      initKeepList();
-    });
-
     $scope.showEmptyState = function () {
       return tagService.getTotalKeepCount() === 0;
     };
@@ -102,5 +114,15 @@ angular.module('kifi')
     $scope.addKeeps = function () {
       $rootScope.$emit('showGlobalModal', 'addKeeps');
     };
+
+
+    //
+    // On HomeCtrl initialization.
+    //
+    $window.document.title = 'Kifi • Your Keeps';
+    $scope.enableSearch();
+
+    keepActionService.reset();
+    $scope.getNextKeeps();
   }
 ]);

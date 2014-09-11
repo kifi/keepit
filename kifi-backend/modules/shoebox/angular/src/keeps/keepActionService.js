@@ -10,8 +10,48 @@ angular.module('kifi')
   '$q',
   'env',
   'routeService',
-  function ($analytics, $http, $location, $log, $q, env, routeService) {
-    
+  'Clutch',
+  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
+    var before = null;
+    var limit = 10;
+    var smallLimit = 4;
+
+    var keepList = new Clutch(function (url, config) {
+      $log.log('keepActionService.getList()', config && config.params);
+
+      return $http.get(url, config).then(function (res) {
+        return res && res.data;
+      });
+    });
+
+    function reset() {
+      before = null;
+    }
+
+    function getKeeps(lastKeepId, params) {  // TODO: what are these params?
+      var url = env.xhrBase + '/keeps/all';
+
+      params = params || {};
+      params.count = before ? params.count || limit : smallLimit;
+      params.before = before || void 0;
+      params.withPageInfo = true;
+
+      var config = {
+        params: params
+      };
+
+      return keepList.get(url, config).then(function (data) {
+        var result = {};
+
+        result.keeps =  data.keeps;
+        result.mayHaveMore = (data.keeps.length > 0) && (data.keeps.length >= params.count - 1);
+          
+        before = data.before ? lastKeepId || null : null;
+
+        return result;
+      });
+    }
+
     function keepMany(keeps, isPrivate) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'keep',
@@ -98,6 +138,8 @@ angular.module('kifi')
     }
 
     var api = {
+      reset: reset,
+      getKeeps: getKeeps,
       keepOne: keepOne,
       keepMany: keepMany,
       togglePrivateOne: togglePrivateOne,

@@ -25,10 +25,11 @@
   <div ng-if="!showEmptyState()" kf-keeps
     keeps="keeps"
     keeps-loading="loading"
-    keeps-has-more="hasMore()"
-    scroll-disabled="scrollDisabled"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
     scroll-next="getNextKeeps()"
     edit-mode="editMode"
     toggle-edit="toggleEdit"
+    update-selected-count="updateSelectedCount(numSelected)"
   ></div>
 </div>
