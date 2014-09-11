@@ -20,7 +20,6 @@ class LDACommander @Inject() (
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo,
@@ -45,10 +44,6 @@ class LDACommander @Inject() (
 
   def docTopic(doc: Document): Option[Array[Float]] = {
     docRep(doc).map { _.vectorize }
-  }
-
-  def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
-    ldaRetriever.getByKeys(ids, wordRep.version)
   }
 
   def userTopicMean(userId: Id[User]): Option[UserLDAInterests] = {

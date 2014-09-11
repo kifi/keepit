@@ -20,13 +20,6 @@ case class CommitInfoProdStoreModule() extends CommitInfoStoreModule {
 
   @Singleton
   @Provides
-  def denseLDACommitInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAURIFeatureCommitStore = {
-    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
-    new S3LDAURIFeatureCommitStore(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
   def word2vecCommitInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureCommitStore = {
     val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3Word2VecURIFeatureCommitStore(bucketName, amazonS3Client, accessLog)
@@ -36,14 +29,6 @@ case class CommitInfoProdStoreModule() extends CommitInfoStoreModule {
 
 case class CommitInfoDevStoreModule() extends ProdOrElseDevStoreModule(CommitInfoProdStoreModule()) with CommitInfoStoreModule {
   def configure() {}
-
-  @Singleton
-  @Provides
-  def denseLDACommitInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog) = {
-    whenConfigured(S3_CORTEX_BUCKET)(
-      prodStoreModule.denseLDACommitInfoStore(amazonS3Client, accessLog)
-    ) getOrElse (new InMemoryLDAURIFeatureCommitStore)
-  }
 
   @Singleton
   @Provides

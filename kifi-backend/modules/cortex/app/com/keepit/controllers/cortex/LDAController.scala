@@ -58,16 +58,6 @@ class LDAController @Inject() (
     Ok(Json.toJson(infoCommander.ldaConfigurations))
   }
 
-  def getLDAFeatures() = Action.async(parse.tolerantJson) { request =>
-    implicit val format = Id.format[NormalizedURI]
-    val ids = (request.body).as[Seq[Id[NormalizedURI]]]
-    Future {
-      val feats = lda.getLDAFeatures(ids)
-      val vecs = feats.flatMap { featOpt => featOpt.map { _.vectorize } }
-      Ok(Json.toJson(vecs))
-    }
-  }
-
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     val scores1 = lda.userUriInterest(userId, uriId)
     val scores2 = lda.gaussianUserUriInterest(userId, uriId)
