@@ -256,7 +256,11 @@ class TypeaheadCommander @Inject() (
           fb ++ lnkd
         }
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-        val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
+        val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits =>
+          val nonUsers = hits.filter(_.info.userId.isEmpty)
+          val distinctEmails = nonUsers.groupBy(_.info.email.address).map(_._2.head).toSeq.sortBy(_.score)
+          distinctEmails.map { SocialNetworks.EMAIL -> _ }
+        }
         val nf: Future[Seq[NetworkTypeAndHit]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[NetworkTypeAndHit]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)
