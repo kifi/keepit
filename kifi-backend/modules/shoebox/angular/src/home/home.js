@@ -69,18 +69,18 @@ angular.module('kifi')
 
       var numShown = $scope.keeps.length;
       switch (numShown) {
-      case 0:
-        return 'You have no keeps';
-      case 1:
-        return 'Showing your only keep';
-      case 2:
-        return 'Showing both of your keeps';
-      default:
-        if (!$scope.hasMore) {
-          return 'Showing all ' + numShown + ' of your keeps';
+        case 0:
+          return 'You have no keeps';
+        case 1:
+          return 'Showing your only keep';
+        case 2:
+          return 'Showing both of your keeps';
+        default:
+          if (!$scope.hasMore) {
+            return 'Showing all ' + numShown + ' of your keeps';
+          }
+          return 'Showing your ' + numShown + ' latest keeps';
         }
-        return 'Showing your ' + numShown + ' latest keeps';
-      }
     };
 
     $scope.updateSelectedCount = function (numSelected) {
@@ -121,8 +121,6 @@ angular.module('kifi')
     //
     $window.document.title = 'Kifi • Your Keeps';
     $scope.enableSearch();
-
-    keepActionService.reset();
     $scope.getNextKeeps();
   }
 ]);
