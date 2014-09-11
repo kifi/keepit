@@ -2,13 +2,10 @@ package com.keepit.search.result
 
 import play.api.libs.json._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.search.ArticleHit
 import com.keepit.search.ArticleSearchResult
-import com.keepit.search.Lang
 import com.keepit.search.Scoring
-import com.keepit.search.SearchConfig
 import com.keepit.model.URISummary
 
 object ResultUtil {
@@ -65,7 +62,7 @@ object ResultUtil {
       previousHits,
       res.uuid,
       time,
-      mergedResult.svVariance,
+      -1.0f,
       -1.0f,
       mergedResult.show,
       Set.empty[Long],
