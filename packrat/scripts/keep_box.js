@@ -1,6 +1,8 @@
 // @require styles/keeper/keep_box.css
 // @require scripts/html/keeper/keep_box.js
+// @require scripts/html/keeper/keep_box_keep.js
 // @require scripts/html/keeper/keep_box_lib.js
+// @require scripts/html/keeper/keep_box_libs.js
 // @require scripts/render.js
 // @require scripts/listen.js
 
@@ -42,6 +44,7 @@ var keepBox = (function () {
       recentLibs: partitionedLibs[1],
       otherLibs: partitionedLibs[2]
     }, {
+      view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib'
     }))
     .on('click mousedown', '.kifi-keep-box-x', function (e) {
@@ -51,8 +54,9 @@ var keepBox = (function () {
     })
     .on('click', '.kifi-keep-box-lib', function (e) {
       if (e.which === 1) {
-        keepPage(this.classList.contains('kifi-secret') ? 'private' : 'public');
-        hide(e, 'action');
+        // keepPage(this.classList.contains('kifi-secret') ? 'private' : 'public');
+        // hide(e, 'action');
+        swipe('keep');
       }
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
@@ -98,6 +102,21 @@ var keepBox = (function () {
       $(this).remove();
       keepBox.onHidden.dispatch(trigger);
     }
+  }
+
+  function swipe(name, left) {
+    var $cart = $box.find('.kifi-keep-box-cart').addClass(left ? 'kifi-back' : 'kifi-forward');
+    var $old = $cart.find('.kifi-keep-box-view');
+    var $new = $(render('html/keeper/keep_box_' + name))[left ? 'prependTo' : 'appendTo']($cart).layout();
+    $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
+    .on('transitionend', function end(e) {
+      if (e.target === this) {
+        if (!left) $cart.removeClass('kifi-animated kifi-back kifi-forward');
+        $old.remove();
+        $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
+          .off('transitionend', end);
+      }
+    });
   }
 
   function partitionLibs(libs, howKept) {
