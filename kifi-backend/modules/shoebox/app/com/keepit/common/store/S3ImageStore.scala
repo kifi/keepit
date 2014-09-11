@@ -9,12 +9,13 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
-import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.{ BasicUser, SocialNetworks }
+import com.ning.http.client.providers.netty.NettyResponse
 
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Weeks
@@ -29,6 +30,7 @@ import javax.imageio.ImageIO
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
+import play.api.Play.current
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
@@ -157,7 +159,7 @@ class S3ImageStoreImpl @Inject() (
           case (response, usedDefault) =>
             val usedImage = if (usedDefault) S3UserPictureConfig.defaultName else pictureName
             val key = keyByExternalId(sizeName, externalId, usedImage)
-            val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
+            val putObj = uploadToS3(key, response.underlying[NettyResponse].getResponseBodyAsStream, label = originalImageUrl)
             (usedImage, putObj)
         }
       })

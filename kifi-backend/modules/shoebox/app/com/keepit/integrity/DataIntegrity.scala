@@ -25,11 +25,13 @@ class DataIntegrityPluginImpl @Inject() (
 private[integrity] case object CleanOrphans
 private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
+private[integrity] case object SystemLibrariesCheck
 
 private[integrity] class DataIntegrityActor @Inject() (
   airbrake: AirbrakeNotifier,
   orphanCleaner: OrphanCleaner,
-  elizaSequenceNumberChecker: ElizaSequenceNumberChecker)
+  elizaSequenceNumberChecker: ElizaSequenceNumberChecker,
+  libraryChecker: LibraryChecker)
     extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
@@ -37,9 +39,12 @@ private[integrity] class DataIntegrityActor @Inject() (
       orphanCleaner.clean(false)
     case SequenceNumberCheck =>
       elizaSequenceNumberChecker.check()
+    case SystemLibrariesCheck =>
+      libraryChecker.check()
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck
+      self ! SystemLibrariesCheck
     case m => throw new UnsupportedActorMessage(m)
   }
 }

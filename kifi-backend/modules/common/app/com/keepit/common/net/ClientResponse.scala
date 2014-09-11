@@ -5,6 +5,7 @@ import com.google.inject.Provider
 import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.ning.http.client.providers.netty.NettyResponse
 
 import com.ning.http.util.AsyncHttpProviderUtils.parseCharset
 
@@ -16,7 +17,6 @@ import org.apache.commons.io.IOUtils
 
 import play.api.libs.json._
 import play.api.libs.ws._
-import play.mvc.Http.Status
 
 import scala.util.Try
 import scala.xml._
@@ -27,7 +27,7 @@ case class SlowJsonParsingException(request: Request, response: ClientResponse, 
 }
 
 trait ClientResponse {
-  def res: Response
+  def res: WSResponse
   def request: Request
   def isUp: Boolean
   def bytes: Array[Byte]
@@ -40,13 +40,13 @@ trait ClientResponse {
 
 class ClientResponseException(message: String, cause: Throwable) extends Exception(message, cause)
 
-class ClientResponseImpl(val request: Request, val res: Response, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, maxJsonParseTime: Int) extends ClientResponse with Logging {
+class ClientResponseImpl(val request: Request, val res: WSResponse, airbrake: Provider[AirbrakeNotifier], jsonParser: FastJsonParser, maxJsonParseTime: Int) extends ClientResponse with Logging {
 
   override def toString: String = s"ClientResponse with [status: $status, body: $body]"
 
   lazy val status: Int = res.status
 
-  lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
+  lazy val bytes: Array[Byte] = res.underlying[NettyResponse].getResponseBodyAsBytes
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime
 
@@ -55,7 +55,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
    */
   def isUp = res.header(CommonHeaders.IsUP).map(_ != "N").getOrElse(true)
 
-  lazy val ahcResponse = res.ahcResponse
+  lazy val ahcResponse = res.underlying[NettyResponse]
 
   // the following is copied from play.api.libs.ws.WS
   // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not

@@ -26,7 +26,7 @@ case class Library(
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
-    universalLink: Option[String] = Some(RandomStringUtils.randomAlphanumeric(40)),
+    universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
@@ -51,7 +51,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'universalLink).formatNullable[String] and
+    (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int]
   )(Library.apply, unlift(Library.unapply))
 
@@ -64,6 +64,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     val usernameString = if (ownerUsername.isEmpty) ownerExternalId.id else ownerUsername.get.value
     s"/$usernameString/${slug.value}"
   }
+
+  def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -131,4 +133,10 @@ case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembe
 
 object LibraryAndMemberships {
   implicit val format = Json.format[LibraryAndMemberships]
+}
+
+case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
+
+object LibraryView {
+  implicit val format = Json.format[LibraryView]
 }

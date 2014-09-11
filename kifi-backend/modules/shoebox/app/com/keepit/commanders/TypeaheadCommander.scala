@@ -256,7 +256,11 @@ class TypeaheadCommander @Inject() (
           fb ++ lnkd
         }
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-        val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
+        val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits =>
+          val nonUsers = hits.filter(_.info.userId.isEmpty)
+          val distinctEmails = nonUsers.groupBy(_.info.email.address).map(_._2.head).toSeq.sortBy(_.score)
+          distinctEmails.map { SocialNetworks.EMAIL -> _ }
+        }
         val nf: Future[Seq[NetworkTypeAndHit]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[NetworkTypeAndHit]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)
@@ -352,15 +356,18 @@ class TypeaheadCommander @Inject() (
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
     val q = query.trim
     if (q.length == 0) {
-      val contacts = interactionCommander.getRecentInteractions(userId).map { interaction =>
-        interaction.recipient match {
-          case UserRecipient(id) =>
-            val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
-            UserContactResult(name = user.fullName, id = user.externalId, pictureName = user.pictureName.map(_ + ".jpg"))
-          case EmailRecipient(email) =>
-            EmailContactResult(name = None, email = email)
+      val contacts = interactionCommander.getRecentInteractions(userId)
+        .take(limit.getOrElse(Int.MaxValue))
+        .sortBy(_.recipient.isInstanceOf[EmailRecipient])
+        .map { interaction =>
+          interaction.recipient match {
+            case UserRecipient(id) =>
+              val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
+              UserContactResult(name = user.fullName, id = user.externalId, pictureName = user.pictureName.map(_ + ".jpg"))
+            case EmailRecipient(email) => // TODO: include contact name if address is in user's address book
+              EmailContactResult(name = None, email = email)
+          }
         }
-      }
       Future.successful(contacts)
     } else {
       aggregate(userId, q, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) map { top =>

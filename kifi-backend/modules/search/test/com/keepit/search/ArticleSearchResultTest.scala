@@ -22,8 +22,8 @@ class ArticleSearchResultTest extends Specification {
     previousHits = 13,
     millisPassed = 23,
     collections = Set(1L, 10L, 100L),
-    svVariance = 1.0f,
-    svExistenceVar = 1.0f,
+    svVariance = -1.0f,
+    svExistenceVar = -1.0f,
     toShow = false,
     lang = "fr"
   )
@@ -43,8 +43,8 @@ class ArticleSearchResultTest extends Specification {
     previousHits = 13,
     millisPassed = 23,
     collections = Set(1L, 10L, 100L),
-    svVariance = 1.0f,
-    svExistenceVar = 1.0f,
+    svVariance = -1.0f,
+    svExistenceVar = -1.0f,
     lang = "fr"
   )
 
@@ -62,11 +62,18 @@ class ArticleSearchResultTest extends Specification {
       nextDeserialized === nextResult
     }
 
-    "deal with legacy articles missing toShow" in {
+    "deal with legacy ArticleSearchResult missing toShow" in {
       val fullJson = Json.toJson(initialResult)
       val legacyJson = JsObject((fullJson.as[JsObject].value - "toShow").toSeq)
       val legacyDeserialized = legacyJson.as[ArticleSearchResult]
       legacyDeserialized === initialResult.copy(toShow = true)
+    }
+
+    "deal with new ArticleSearchResult missing svVariance and svExistenceVar" in {
+      val fullJson = Json.toJson(initialResult)
+      val newJson = fullJson.as[JsObject] - "svVariance" - "svExistenceVar"
+      val newDeserialized = newJson.as[ArticleSearchResult]
+      newDeserialized === initialResult
     }
 
     "be stored and retrieved" in {

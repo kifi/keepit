@@ -22,11 +22,13 @@ var initCompose = (function() {
     }
   }
 
-  function saveDraft($to, editor) {
-    api.port.emit('save_draft', {
-      to: $to.length ? $to.tokenInput('get').map(justIdAndName) : undefined,
-      html: editor.getRaw()
-    });
+  function saveDraft($form, $to, editor) {
+    if ($form.is($forms) && !$form.data('submitted')) {
+      api.port.emit('save_draft', {
+        to: $to.length ? $to.tokenInput('get').map(justFieldsToSave) : undefined,
+        html: editor.getRaw()
+      });
+    }
   }
 
   function restoreDraft($to, editor, draft) {
@@ -41,8 +43,8 @@ var initCompose = (function() {
     }
   }
 
-  function justIdAndName(o) {
-    return {id: o.id, name: o.name};
+  function justFieldsToSave(o) {
+    return {id: o.id, name: o.name, email: o.email};
   }
 
   function getSelRange() {
@@ -220,9 +222,7 @@ var initCompose = (function() {
 
     var $to = $form.find('.kifi-compose-to');
     var throttledSaveDraft = _.throttle(function () {
-      if ($form.is($forms) && !$form.data('submitted')) {
-        saveDraft($to, editor);
-      }
+      saveDraft($form, $to, editor);
     }, 2000, {leading: false});
 
     var editor = (richEditorBorked() ? newPoorEditor : newRichEditor)(
@@ -234,19 +234,15 @@ var initCompose = (function() {
       initFriendSearch($to, 'composePane', [], function includeSelf(numTokens) {
         return numTokens === 0;
       }, {
-        placeholder: 'To',
+        suggestAbove: true,
         onAdd: function () {
           editor.writeDefaultText();
-          if ($to.tokenInput('get').length === 1) {
-            $to.tokenInput('flushCache');
-          }
           throttledSaveDraft();
         },
         onDelete: function () {
           if (!$form.is($forms)) return;
           if ($to.tokenInput('get').length === 0) {
             editor.eraseDefaultText();
-            $to.tokenInput('flushCache');
           }
           throttledSaveDraft();
         }
@@ -276,8 +272,8 @@ var initCompose = (function() {
           return;
         }
       }
-      var $submit = $form.find('.kifi-compose-submit').addClass('kifi-active');
-      setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
+      var $submit = $form.find('.kifi-compose-submit').removeAttr('href');
+      setTimeout($.fn.attr.bind($submit, 'href', 'javascript:'), opts.resetOnSubmit ? 100 : 2000);  // TODO: use promise
       opts.onSubmit(text, recipients, e.originalEvent.guided);
       if (opts.resetOnSubmit) {
         editor.clear();
@@ -410,7 +406,7 @@ var initCompose = (function() {
       isBlank: function () {
         return $form.hasClass('kifi-empty') && !($to.length && $to.tokenInput('get').length);
       },
-      save: saveDraft.bind(null, $to, editor),
+      save: saveDraft.bind(null, $form, $to, editor),
       destroy: function() {
         $forms = $forms.not($form);
         if ($to.length) {

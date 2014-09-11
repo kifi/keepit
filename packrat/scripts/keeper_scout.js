@@ -18,7 +18,6 @@ var tile = tile || function() {  // idempotent for Chrome
   tile.id = 'kifi-tile';
   tile.className = 'kifi-tile kifi-root';
   tile.style.display = "none";
-  tile.dataset.t0 = Date.now();
   tile.innerHTML =
     '<div class="kifi-tile-card">' +
     '<div class="kifi-tile-keep"></div>' +
@@ -26,7 +25,7 @@ var tile = tile || function() {  // idempotent for Chrome
   tile["kifi:position"] = positionTile;
   tile.addEventListener('mouseover', function (e) {
     if ((e.target === tileCount || tileCard.contains(e.target)) && e.isTrusted !== false) {
-      loadAndDo('keeper', 'show', 'tile');
+      loadAndDo('keeper', 'show');
     }
   });
 
@@ -41,9 +40,10 @@ var tile = tile || function() {  // idempotent for Chrome
   api.port.on({
     me_change: onMeChange,
     guide: loadAndDo.bind(null, 'guide', 'show'),
-    open_to: loadAndDo.bind(null, 'pane', 'show'),
+    show_pane: loadAndDo.bind(null, 'pane', 'show'),
     button_click: loadAndDo.bind(null, 'pane', 'toggle', 'button'),
-    auto_engage: loadAndDo.bind(null, 'keeper', 'engage', 'auto'),
+    compose: loadAndDo.bind(null, 'keeper', 'compose'),
+    auto_engage: loadAndDo.bind(null, 'keeper', 'engage'),
     init: function(o) {
       var pos = o.position;
       if (pos) {
@@ -115,7 +115,7 @@ var tile = tile || function() {  // idempotent for Chrome
           } else if (tile && tile.dataset.kept) {
             api.port.emit('unkeep', withUrls({}));
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), how: 'public'}));
+            api.port.emit('keep', withUrls({title: authoredTitle(), how: e.altKey ? 'private' : 'public'}));
           }
           e.preventDefault();
         }
@@ -126,12 +126,14 @@ var tile = tile || function() {  // idempotent for Chrome
         break;
       case 79: // o
         api.port.emit('unsilence');
-        loadAndDo('pane', 'show', {trigger: 'key'});
+        api.port.emit('pane?', function (loc) {
+          loadAndDo('pane', 'show', {trigger: 'key', locator: loc});
+        });
         e.preventDefault();
         break;
       case 83: // s
         api.port.emit('unsilence');
-        loadAndDo('pane', 'compose', 'key');
+        loadAndDo('keeper', 'compose', 'key');
         e.preventDefault();
         break;
       case 49: case 50: case 51: case 52: // 1,2,3,4

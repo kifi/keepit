@@ -13,7 +13,7 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
 import com.keepit.search.sharding.{ DistributedSearchRouter, Shard }
 import play.api.libs.json._
-import play.api.templates.Html
+import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
@@ -106,8 +106,6 @@ trait SearchServiceClient extends ServiceClient {
     debug: Option[String]): Seq[Future[JsValue]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
-
-  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]]
 
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
@@ -437,22 +435,12 @@ class SearchServiceClientImpl(
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
 
-    distRouter.dispatch(plan, Search.internal.distSearch, request).map { f => f.map(_.json) }
+    distRouter.dispatch(plan, path, request).map { f => f.map(_.json) }
   }
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {
     distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
       f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
-    }
-  }
-
-  def distLangDetect(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], query: String, prior: Map[Lang, Double]): Seq[Future[Map[Lang, Double]]] = {
-    var builder = new SearchRequestBuilder(new ListBuffer)
-    builder += ("query", query)
-    builder += ("prior", Json.toJson(prior.map { case (k, v) => k.lang -> v }))
-    val request = builder.build
-    distRouter.dispatch(plan, Search.internal.distLangDetect, request).map { f =>
-      f.map { r => r.json.as[Map[String, Double]].map { case (k, v) => Lang(k) -> v } }
     }
   }
 

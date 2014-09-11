@@ -14,7 +14,7 @@ class RecencyQuery(val subQuery: Query, val timeStampField: String, val recencyB
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenSubQuery = subQuery.rewrite(reader)
-    if (this eq rewrittenSubQuery) this else new RecencyQuery(rewrittenSubQuery, timeStampField, recencyBoostStrength, halfDecayMillis)
+    if (subQuery eq rewrittenSubQuery) this else new RecencyQuery(rewrittenSubQuery, timeStampField, recencyBoostStrength, halfDecayMillis)
   }
 
   override def extractTerms(out: JSet[Term]): Unit = subQuery.extractTerms(out)
@@ -63,7 +63,9 @@ class RecencyWeight(query: RecencyQuery, subWeight: Weight) extends Weight {
     val subScorer = subWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs)
     if (subScorer == null) null else {
       val docValues = context.reader.getNumericDocValues(query.timeStampField)
-      new RecencyScorer(this, subScorer, docValues, currentTimeMillis, query.recencyBoostStrength, query.halfDecayMillis)
+      if (docValues == null) null else {
+        new RecencyScorer(this, subScorer, docValues, currentTimeMillis, query.recencyBoostStrength, query.halfDecayMillis)
+      }
     }
   }
 }

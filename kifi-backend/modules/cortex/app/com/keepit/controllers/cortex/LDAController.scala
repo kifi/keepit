@@ -69,8 +69,9 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val scores = lda.userUriInterest(userId, uriId)
-    Ok(Json.toJson(scores))
+    val scores1 = lda.userUriInterest(userId, uriId)
+    val scores2 = lda.gaussianUserUriInterest(userId, uriId)
+    Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency)))
   }
 
   def batchUserURIsInterests() = Action(parse.tolerantJson) { request =>
@@ -139,6 +140,11 @@ class LDAController @Inject() (
 
   def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
     Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
+  }
+
+  def recomputeUserLDAStat() = Action { request =>
+    lda.recomputeUserLDAStats()
+    Ok
   }
 
 }

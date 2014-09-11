@@ -1,24 +1,45 @@
 .kf-recos-view-header
-  padding: 25px 25px 40px 30px
+  padding: 25px 25px 10px 30px
   min-height: 50px
 
   .kf-recos-clover-icon
-  .kf-main-title
-    display: inline-block
-
-  .kf-recos-clover-icon
+    float: left
     margin-right: 8px
 
-  .kf-subtitle
-    margin: -8px 0 0 50px
+  .kf-main-title
+    position: relative
+    &::after
+      content: 'beta';
+      position: absolute;
+      bottom: -8px;
+      right: -30px;
+      padding: 2px 40px 0;
+      background: radial-gradient(#fff 30%, rgba(255,255,255,0) 80%);
+      font: 11px Helvetica,Arial,sans-serif;
+      text-align: center;
+      color: #c00;
+
+  &::after
+    content: ''
+    display: block
+    clear: both
+
+  &::after
+    content: ''
+    display: block
+    clear: both
 
 .kf-recos-title
-  display: inline-block
+  float: left
+  margin-bottom: 20px
+  min-width: 260px
 
 .kf-reco-recency
   position: relative
-  float: right
-  width: calc(100% - 280px)
+  float: left
+  margin-left: 60px
+  width: calc(100% - 330px)
+  min-width: 240px
 
 .kf-reco-refresh-btn
   position: absolute
@@ -38,9 +59,9 @@
 
 .kf-reco-recency-slider
   position: relative
-  width: calc(100% - 85px)
+  width: calc(100% - 95px)
   height: 50px
-  
+
 .kf-reco-recency-all-time
 .kf-reco-recency-recent
   position: absolute
@@ -258,7 +279,7 @@
 // Dropdown menu
 .kf-reco-dropdown-menu-container
   position: relative
-  
+
   .kf-dropdown-menu
     display: none
     top: 10px
@@ -279,7 +300,7 @@
 
       &:active
         background: #ccc
-  
+
 // Modal
 .kf-reco-improve-modal
   p

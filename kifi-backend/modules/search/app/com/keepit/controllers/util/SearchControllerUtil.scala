@@ -9,9 +9,13 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.JsObject
+import play.api.libs.json.{ JsValue, Json, JsObject }
 
 import scala.concurrent.Future
+import com.keepit.search._
+import com.keepit.search.result.DecoratedResult
+import play.api.libs.json.JsObject
+import com.keepit.common.akka.SafeFuture
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -19,19 +23,25 @@ object SearchControllerUtil {
 
 trait SearchControllerUtil {
 
+  @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
+
   @inline
-  def reactiveEnumerator[T](futureSeq: Seq[Future[T]]) = {
+  def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(r => Enumerator(r))(immediate))
+      safelyFlatten(future.map(str => Enumerator(", " + str))(immediate))
     })
   }
 
   def uriSummaryInfoFuture(shoeboxClient: ShoeboxServiceClient, plainResultFuture: Future[KifiPlainResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
-      shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
-        KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+      if (uriIds.nonEmpty) {
+        shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
+          KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+        }
+      } else {
+        Future.successful(KifiSearchResult.uriSummaryInfoV2(Seq()).toString)
       }
     }
   }
@@ -45,6 +55,7 @@ trait SearchControllerUtil {
       kifiPlainResult.friendsTotal,
       kifiPlainResult.mayHaveMoreHits,
       kifiPlainResult.show,
+      kifiPlainResult.cutPoint,
       kifiPlainResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)).json
   }
@@ -63,5 +74,17 @@ trait SearchControllerUtil {
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
       Nil,
       decoratedResult.experts).json
+  }
+
+  def augment(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
+    val items = kifiPlainResult.hits.map { hit => Item(Id(hit.id), hit.libraryId.map(Id(_))) }
+    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(Item(_, None))
+    val context = AugmentationContext.uniform(userId, items ++ previousItems)
+    val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
+    augmentationCommander.augmentation(augmentationRequest).map { augmentationResponse =>
+      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
+      val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
+      Json.toJson(augmentedItems)
+    }
   }
 }

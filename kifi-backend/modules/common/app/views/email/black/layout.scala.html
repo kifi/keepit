@@ -1,11 +1,10 @@
-@(ctx: email.helpers.Context)(content: Html)
-@import email.helpers.black
+@(contents: Seq[Html])
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>@ctx.title</title>
+<title>@h.title</title>
 @email.black.headCss()
 </head>
 <body marginwidth="0" marginheight="0" style="margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;" offset="0" topmargin="0" leftmargin="0" bgcolor="#f3f3f3">
@@ -14,27 +13,32 @@
     <td valign="top">
         <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="main_table" bgcolor="#f3f3f3">
             <tr>
-                <td class="hide" bgcolor="#ffffff" height="1" style="line-height:0px;font-size:0px;"><img src="@black.assetUrl("spacer.gif")" height="1"  width="625" style="display:block; width:625px; min-width:625px;" border="0" /></td>
+                <td class="hide" bgcolor="#ffffff" height="1" style="line-height:0px;font-size:0px;"><img src="@h.assetUrl("spacer.gif")" height="1"  width="625" style="display:block; width:625px; min-width:625px;" border="0" /></td>
             </tr>
             <tr>
                 <td height="30">&nbsp;</td>
             </tr>
             <tr>
                 <td bgcolor="#333333">
-                    @email.black.header(ctx)
+                    @email.black.header()
+                </td>
+            </tr>
+            @for(html <- contents) {
+            <tr>
+                <td bgcolor="#ffffff">
+                    @html
                 </td>
             </tr>
             <tr>
-                <td bgcolor="#ffffff">
-                    @content
-                </td>
+                <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
             </tr>
+            }
             <tr>
                 <td height="40">&nbsp;</td>
             </tr>
             <tr>
                 <td valign="top">
-                    @email.black.footer(ctx)
+                    @email.black.footer()
                 </td>
             </tr>
         </table>

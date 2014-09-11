@@ -21,6 +21,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.service.ServiceStatus
+import com.keepit.common.logging.Logging
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -44,7 +46,7 @@ class RecommendationGenerationCommander @Inject() (
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
     experimentCommander: RemoteUserExperimentCommander,
-    serviceDiscovery: ServiceDiscovery) {
+    serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(10)
@@ -112,7 +114,7 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 6.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
@@ -241,8 +243,8 @@ class RecommendationGenerationCommander @Inject() (
         }
         res.map(_ => ())
       } else {
-        airbrake.notify("Trying to run reco precomputation on non-leader!")
-        recommendationGenerationLock.clear() //no point in alerting again and again for queued up tasks
+        recommendationGenerationLock.clear()
+        if (serviceDiscovery.myStatus.exists(_ != ServiceStatus.STOPPING)) log.error("Trying to run reco precomputation on non-leader (and it's not a shut down)! Aborting.")
         Future.successful()
       }
     }
@@ -256,34 +258,6 @@ class RecommendationGenerationCommander @Inject() (
           Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
         } else {
           Future.successful()
-        }
-      }
-    }
-  }
-
-  def resetUser(userId: Id[User]): Future[Unit] = {
-    getPerUserGenerationLock(userId).withLockFuture {
-      db.readWriteAsync { implicit s =>
-        val stateOpt = genStateRepo.getByUserId(userId)
-        stateOpt.foreach { state =>
-          genStateRepo.save(state.copy(seq = SequenceNumber.ZERO))
-        }
-      }.flatMap { _ =>
-
-        val state = getStateOfUser(userId)
-
-        val seedsFuture = getRescoreSeedsForUser(userId)
-        specialCurators().flatMap { boostedKeepersSeq =>
-          val res: Future[Unit] = seedsFuture.flatMap { seeds =>
-            val batches = seeds.grouped(200)
-            FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, boostedKeepersSeq.toSet))
-          }
-
-          res.onFailure {
-            case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
-          }
-
-          res
         }
       }
     }

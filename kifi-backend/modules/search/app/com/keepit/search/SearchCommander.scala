@@ -81,10 +81,6 @@ trait SearchCommander {
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
 
-  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang]
-
-  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]]
-
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
@@ -330,8 +326,6 @@ class SearchCommanderImpl @Inject() (
       }
     }
 
-    val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
-
     // do the local part
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
@@ -344,11 +338,19 @@ class SearchCommanderImpl @Inject() (
     timing.search
 
     Future.sequence(resultFutures).map { results =>
+      log.info("NE: merging result")
+
+      val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits)
 
       timing.decoration
       timing.end
+
+      val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
+      val plainResult = KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+
+      log.info("NE: plain result created")
 
       SafeFuture {
         // stash timing information
@@ -356,12 +358,16 @@ class SearchCommanderImpl @Inject() (
 
         // TODO: save ArticleSearchResult
 
-        // TODO: check slow query
+        // search is a little slow after service restart. allow some grace period
+        val timeLimit = 1000
+        if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000 * 60 * 8) {
+          val link = "https://admin.kifi.com/admin/search/results/" + plainResult.uuid.id
+          val msg = s"search time exceeds limit! searchUUID = ${plainResult.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
+          airbrake.notify(msg)
+        }
       }
 
-      val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-
-      KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+      plainResult
     }
   }
 
@@ -505,54 +511,6 @@ class SearchCommanderImpl @Inject() (
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
-  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = {
-    val (localShards, dispatchPlan) = distributionPlan(Id[User](-1), shards)
-    langDetect(localShards, dispatchPlan, query, acceptLangs)
-  }
-
-  private def langDetect(
-    localShards: Set[Shard[NormalizedURI]],
-    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    query: String,
-    acceptLangCodes: Seq[String]): Future[Lang] = {
-
-    val prior = {
-      val acceptLangs = parseAcceptLangs(acceptLangCodes)
-      val weight = 5.0
-      val allLangs = DefaultAnalyzer.languages
-
-      val eachLangProb = (1.0 / (acceptLangs.size.toDouble * weight + allLangs.size.toDouble))
-      allLangs.map { lang =>
-        if (acceptLangs.contains(lang)) (lang -> math.log(eachLangProb * weight)) else (lang -> math.log(eachLangProb))
-      }.toMap
-    }
-
-    val resultFutures = new ListBuffer[Future[Map[Lang, Double]]]()
-
-    if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangDetect(dispatchPlan, query, prior)
-    }
-    if (localShards.nonEmpty) {
-      resultFutures += searchFactory.distLangDetect(localShards, query, prior)
-    }
-
-    Future.sequence(resultFutures).map { results =>
-      var mergedResult: Map[Lang, Double] = Map()
-      results.foreach { r =>
-        if (mergedResult.isEmpty) {
-          mergedResult ++= r
-        } else {
-          r.foreach { case (lang, logProb) => mergedResult += (lang -> (mergedResult(lang) + logProb)) }
-        }
-      }
-      mergedResult.maxBy(_._2)._1
-    }
-  }
-
-  def distLangDetect(localShards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = {
-    searchFactory.distLangDetect(localShards, query, prior)
-  }
-
   private def getSearchFilter(
     filter: Option[String],
     library: Option[String],
@@ -693,7 +651,7 @@ class SearchCommanderBackwardCompatibilitySupport(
             isPrivate,
             sharingUserIds,
             score,
-            null
+            new Scoring(score, 0.0f, 0.0f, 0.0f, false)
           )
 
         case None =>
@@ -707,6 +665,6 @@ class SearchCommanderBackwardCompatibilitySupport(
       toDetailedSearchHit(h, friendStats)
     }
 
-    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, -1.0f, result.show)
+    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show)
   }
 }

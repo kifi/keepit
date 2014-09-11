@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
@@ -12,13 +13,14 @@ import com.keepit.search.SearchCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{ JsNumber, JsString, JsObject }
+import play.api.libs.json.JsString
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     shoeboxClient: ShoeboxServiceClient,
-    searchCommander: SearchCommander) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
+    searchCommander: SearchCommander,
+    amazonInstanceInfo: AmazonInstanceInfo) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -62,7 +64,7 @@ class ExtSearchController @Inject() (
 
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
 
-    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     var decorationFutures: List[Future[String]] = Nil
 
@@ -82,21 +84,18 @@ class ExtSearchController @Inject() (
 
   private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
 
-  def langDetect(query: String) = JsonAction.authenticatedAsync { request =>
-    val startTime = System.currentTimeMillis()
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-    searchCommander.langDetect(query, acceptLangs).map { lang =>
-      Ok(JsObject(List(
-        "elapsedMillis" -> JsNumber(System.currentTimeMillis() - startTime),
-        "lang" -> JsString(lang.lang)
-      )))
-    }
-  }
-
   //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
+  }
+
+  def instance() = HtmlAction.authenticated { request =>
+    if (request.experiments.contains(ADMIN)) {
+      Ok(amazonInstanceInfo.name.getOrElse(""))
+    } else {
+      NotFound
+    }
   }
 }
 

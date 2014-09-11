@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.db.Id
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.graph.wander.{ Wanderlust }
@@ -9,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
-import play.api.mvc.{ SimpleResult }
+import play.api.mvc.{ Result }
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
@@ -70,7 +71,7 @@ class WanderingAdminController @Inject() (
 
         val wanderlust = Wanderlust(startingVertexKind, startingVertexDataId, preferredCollisions, avoidTrivialCollisions, steps, restartProbability, recency, halfLife)
 
-        val promisedResult = Promise[SimpleResult]()
+        val promisedResult = Promise[Result]()
 
         doWander(wanderlust).onComplete {
 
@@ -96,7 +97,7 @@ class WanderingAdminController @Inject() (
 
   def fromParisWithLove() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val start = clock.now()
-    val promisedResult = Promise[SimpleResult]()
+    val promisedResult = Promise[Result]()
 
     doWander(Wanderlust.discovery(request.userId)).onComplete {
       case Failure(ex) =>
@@ -110,5 +111,22 @@ class WanderingAdminController @Inject() (
     }
 
     promisedResult.future
+  }
+
+  def uriWandering() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val userId = request.userId
+    val steps = 100000
+    val start = clock.now()
+
+    graphClient.uriWander(userId, steps).map { uriScores =>
+      val end = clock.now()
+      val timing = end.getMillis - start.getMillis
+
+      val sortedUris = db.readOnlyReplica { implicit session =>
+        uriScores.map { case (uriId, count) => uriRepo.get(uriId) -> count }
+      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
+
+      Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
+    }
   }
 }

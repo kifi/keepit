@@ -29,8 +29,8 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
 
   def getKeepRecord(libId: Long, uriId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
     val q = new BooleanQuery()
-    q.add(new TermQuery(new Term(KeepFields.uriField, libId.toString)), Occur.MUST)
-    q.add(new TermQuery(new Term(KeepFields.libraryField, uriId.toString)), Occur.MUST)
+    q.add(new TermQuery(new Term(KeepFields.uriField, uriId.toString)), Occur.MUST)
+    q.add(new TermQuery(new Term(KeepFields.libraryField, libId.toString)), Occur.MUST)
 
     keepSearcher.search(q) { (scorer, reader) =>
       if (scorer.nextDoc() < NO_MORE_DOCS) {
@@ -58,7 +58,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
     } else {
       // only a primary id (uri id)
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url, null)
+      KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
     }
   }
 

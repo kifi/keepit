@@ -1,12 +1,13 @@
 package com.keepit.search.engine.result
 
+import com.keepit.common.logging.Logging
 import com.keepit.search.engine.ScoreContext
 import com.keepit.search.engine.Visibility
 import com.keepit.search.tracker.ResultClickBoosts
 import org.apache.lucene.util.PriorityQueue
 
 object KifiResultCollector {
-  val MIN_PERCENT_MATCH = 0.5f
+  val MIN_MATCHING = 0.5f
 
   class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var keepId: Long, var libId: Long)
 
@@ -87,9 +88,11 @@ object KifiResultCollector {
   def createQueue(sz: Int) = new HitQueue(sz)
 }
 
-class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
 
   import KifiResultCollector._
+
+  require(matchingThreshold <= 1.0f)
 
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
@@ -97,31 +100,30 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
 
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id
-    val visibility = ctx.visibility
-    if (visibility != Visibility.RESTRICTED) {
-      // compute the percent match value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-      val percentMatch = ctx.computePercentMatch(KifiResultCollector.MIN_PERCENT_MATCH)
 
-      if (percentMatch > 0.0f) {
-        // compute clickBoost and score
-        var score = 0.0f
-        val clickBoost = clickBoosts(id)
+    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
 
-        if (percentMatch >= percentMatchThreshold) {
-          score = ctx.score() * percentMatch * clickBoost
+    if (matching > 0.0f) {
+      // compute clickBoost and score
+      var score = 0.0f
+      val clickBoost = clickBoosts(id)
+
+      if (matching >= matchingThreshold) {
+        score = ctx.score() * matching * clickBoost
+      } else {
+        // below the threshold (and above MIN_MATCHING), we save this hit if this is a clicked hit (clickBoost > 1.0f)
+        if (clickBoost > 1.0f) score = ctx.score() * matching * clickBoost // else score remains 0.0f
+      }
+
+      if (score > 0.0f) {
+        val visibility = ctx.visibility
+        if ((visibility & Visibility.OWNER) != 0) {
+          myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+          friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         } else {
-          // below the threshold (and above MIN_PERCENT_MATCH), we save this hit if this is a clicked hit (clickBoost > 1.0f)
-          if (clickBoost > 1.0f) score = ctx.score() * percentMatch * clickBoost // else score remains 0.0f
-        }
-
-        if (score > 0.0f) {
-          if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          } else if ((visibility & Visibility.NETWORK) != 0) {
-            friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          } else {
-            othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
-          }
+          othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         }
       }
     }
@@ -130,7 +132,7 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class KifiNonUserResultCollector(maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] {
 
   import KifiResultCollector._
 
@@ -140,15 +142,15 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, percentMatchThreshold:
     val id = ctx.id
     val visibility = ctx.visibility
     if (visibility != Visibility.RESTRICTED) {
-      // compute the percent match value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-      val percentMatch = ctx.computePercentMatch(KifiResultCollector.MIN_PERCENT_MATCH)
+      // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+      val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
 
-      if (percentMatch > 0.0f) {
+      if (matching > 0.0f) {
         // compute score
         var score = 0.0f
 
-        if (percentMatch >= percentMatchThreshold) {
-          score = ctx.score() * percentMatch
+        if (matching >= matchingThreshold) {
+          score = ctx.score() * matching
         }
 
         if (score > 0.0f && visibility != Visibility.RESTRICTED) {

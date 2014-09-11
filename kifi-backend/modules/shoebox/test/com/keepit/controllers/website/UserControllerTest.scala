@@ -11,7 +11,7 @@ import com.keepit.model._
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 
 import play.api.libs.json.{ JsArray, Json }
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -103,7 +103,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "username" -> "GDubs"
         )
         val request = FakeRequest("POST", path).withBody(inputJson1)
-        val result: Future[SimpleResult] = inject[UserController].updateUsername()(request)
+        val result: Future[Result] = inject[UserController].updateUsername()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val expected = Json.parse(s"""{"username":"GDubs"}""")
@@ -129,7 +129,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "lastName" -> "Lincoln"
         )
         val request1 = FakeRequest("POST", pathName).withBody(inputJson1)
-        val result1: Future[SimpleResult] = userController.updateName()(request1)
+        val result1: Future[Result] = userController.updateName()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         db.readOnlyMaster { implicit s =>
@@ -142,7 +142,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "description" -> "USA #1"
         )
         val request2 = FakeRequest("POST", pathDescription).withBody(inputJson2)
-        val result2: Future[SimpleResult] = userController.updateDescription()(request2)
+        val result2: Future[Result] = userController.updateDescription()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         db.readOnlyMaster { implicit s =>
@@ -176,19 +176,19 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
         // add email1
         val request1 = FakeRequest("POST", path).withBody(inputJson1)
-        val result1: Future[SimpleResult] = userController.addEmail()(request1)
+        val result1: Future[Result] = userController.addEmail()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         // add email2 as primary
         val request2 = FakeRequest("POST", path).withBody(inputJson2)
-        val result2: Future[SimpleResult] = userController.addEmail()(request2)
+        val result2: Future[Result] = userController.addEmail()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
         // add email2 again (but already added)
         val request3 = FakeRequest("POST", path).withBody(inputJson2)
-        val result3: Future[SimpleResult] = userController.addEmail()(request3)
+        val result3: Future[Result] = userController.addEmail()(request3)
         status(result3) must equalTo(BAD_REQUEST)
 
         // verify emails
@@ -202,19 +202,19 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
         // change primary to email1
         val request4 = FakeRequest("PUT", path).withBody(Json.obj("email" -> address1))
-        val result4: Future[SimpleResult] = userController.changePrimaryEmail()(request4)
+        val result4: Future[Result] = userController.changePrimaryEmail()(request4)
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
 
         // remove email2
         val request5 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address2))
-        val result5: Future[SimpleResult] = userController.removeEmail()(request5)
+        val result5: Future[Result] = userController.removeEmail()(request5)
         status(result5) must equalTo(OK)
         contentType(result5) must beSome("application/json")
 
         // remove email1 (but can't since it's primary)
         val request6 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address1))
-        val result6: Future[SimpleResult] = userController.removeEmail()(request6)
+        val result6: Future[Result] = userController.removeEmail()(request6)
         status(result6) must equalTo(BAD_REQUEST) // cannot delete primary email
       }
     }

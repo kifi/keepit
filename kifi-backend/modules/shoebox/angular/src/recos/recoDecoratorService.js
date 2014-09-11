@@ -4,6 +4,7 @@ angular.module('kifi')
 
 .factory('recoDecoratorService', ['keepDecoratorService', 'util',
   function (keepDecoratorService, util) {
+
     function Recommendation(rawReco, type) {
       this.recoData = {
         type: type,

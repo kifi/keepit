@@ -1,8 +1,11 @@
 package com.keepit.common.mail
 
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model.NotificationCategory
+import play.api.libs.json.{ JsSuccess, Json }
+import play.twirl.api.Html
 
 class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
@@ -31,6 +34,33 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
           }
         }
       }
+    }
+
+    "EmailToSend is JSONable" in {
+      val em = EmailToSend(
+        from = SystemEmailAddress.ENG,
+        to = Right(SystemEmailAddress.JOSH),
+        subject = "Test",
+        campaign = Some("testing"),
+        category = NotificationCategory.User.DIGEST,
+        htmlTemplate = Html("this is <b>html</b>")
+      )
+
+      val expectedJson = """
+          |{"title":"Kifi","from":"eng@42go.com","to":"josh@kifi.com","cc":[],"subject":"Test",
+          |"htmlTemplate":"this is <b>html</b>","category":"digest","fromName":"Kifi",
+          |"campaign":"testing","tips":[]}
+        """.stripMargin
+      val jsVal = Json.parse(expectedJson)
+      Json.toJson(em) === jsVal
+
+      val result = jsVal.as[EmailToSend]
+      result.from === em.from
+      result.to === em.to
+      result.subject === em.subject
+      result.campaign === em.campaign
+      result.category === em.category
+      result.htmlTemplate.body === em.htmlTemplate.body
     }
   }
 }

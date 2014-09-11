@@ -6,10 +6,12 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import com.keepit.model.User
+import com.keepit.serializer.EitherFormat
 
 import org.joda.time.DateTime
 
 import play.api.mvc.PathBindable
+import play.twirl.api.Html
 
 case class ElectronicMailMessageId(id: String) {
   def toEmailHeader = s"<$id>"

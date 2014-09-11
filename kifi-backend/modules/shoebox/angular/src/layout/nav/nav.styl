@@ -8,19 +8,23 @@
   line-height: 26px
   vertical-align: top
 
+.pre-libraries-style
+  text-transform: uppercase
+
 .kf-nav-name
+  display: inline-block
+  padding: 0 5px
   color: textDarkColor
   font-weight: 400
   font-smoothing: antialiased
-  padding: 0 5px
-  text-transform: uppercase
-  display: inline-block
 
+  .kf-nav-keeps &
+    padding-top: 2px
 
 .kf-nav-count
   font-size: 12px
   font-weight: 200
-  padding: 0 0 0 2px
+  padding: 2px 0
   color: countGreyColor
   float: right
 
@@ -28,10 +32,12 @@
     display: none
 
 .kf-nav-keeps:hover
-  .sprite-my-keeps-library
-    sprite2x($my-keeps-library-active)
+.kf-nav-keeps.active
+  .sprite-cards-small
+    sprite2x($cards-small-active)
 
 .kf-nav-recos:hover
+.kf-nav-recos.active
   .sprite-clover-small
     sprite2x($clover-small-active)
 

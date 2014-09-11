@@ -22,6 +22,7 @@ import com.keepit.common.core._
 
 import java.net.URLEncoder
 
+import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -36,7 +37,6 @@ import akka.actor.Scheduler
 import org.joda.time.DateTime
 import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString
-import scala.Some
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.SecureSocialClientIds
 import com.keepit.common.mail.EmailAddress
@@ -338,7 +338,7 @@ class InviteCommander @Inject() (
     log.info(s"[sendInvitationForLinkedIn($userId,${socialUserInfo.id})] subject=$subject message=$messageWithUrl")
     linkedIn.sendMessage(me, socialUserInfo, subject, messageWithUrl).map { resp =>
       db.readWrite(attempts = 2) { implicit session =>
-        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.getAHCResponse.getHeaders.toString}")
+        log.info(s"[sendInvitationForLinkedin($userId,${socialUserInfo.id})] resp=${resp.statusText} resp.body=${resp.body} cookies=${resp.cookies.mkString(",")} headers=${resp.underlying[NettyResponse].getHeaders.toString}")
         if (resp.status != Status.CREATED) { // per LinkedIn doc
           airbrake.notify(s"Failed to send LinkedIn invite for $userId; resp=${resp.statusText} resp.body=${resp.body} invite=$invite; socialUser=$socialUserInfo")
           log.error(s"[sendInvitationForLinkedIn($userId)] Cannot send invitation ($invite): ${resp.body}")

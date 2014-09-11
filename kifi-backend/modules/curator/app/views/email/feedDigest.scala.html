@@ -1,7 +1,5 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos, ctx: email.helpers.Context)
-@import email.helpers.black.assetUrl
-
-@email.black.layout(ctx) {
+@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
+@import com.keepit.common.mail.template.helpers._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
 <tr>
@@ -27,7 +25,7 @@
                                         <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">
                                             This digest is a recommended list based on your interests and recent activity on Kifi.
                                             @if(!allRecos.isFacebookConnected) {
-                                            You can also <a href="@{ctx.baseUrl}/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
+                                            You can also <a href="@baseUrl/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
                                             }
                                             <br/>
                                         </td>
@@ -47,7 +45,7 @@
 </tr>
 
 @allRecos.recos.map { reco =>
-<tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco, ctx)</td></tr>
+<tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
 }
 
 <tr>
@@ -60,7 +58,7 @@
                 <td align="center">
                     <table border="0" cellspacing="0" cellpadding="0" align="center">
                         <tr>
-                            <td><a href="@{ctx.baseUrl}/recommendations" target="_blank"><img src="@assetUrl("digest/viewfulllist.png")" alt="View Full list" width="174" height="46" style="display:block;" border="0" /></a></td>
+                            <td><a href="@baseUrl/recommendations" target="_blank"><img src="@assetUrl("digest/viewfulllist.png")" alt="View Full list" width="174" height="46" style="display:block;" border="0" /></a></td>
                         </tr>
                     </table>
                 </td>
@@ -71,16 +69,4 @@
         </table>
     </td>
 </tr>
-
-@if(allRecos.friendRecos.size > 0) {
-<tr>
-    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
-</tr>
-<tr><td>@partials.friendRecommendations(allRecos.friendRecos, ctx)</td></tr>
-}
-<tr>
-    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
-</tr>
 </table>
-
-}

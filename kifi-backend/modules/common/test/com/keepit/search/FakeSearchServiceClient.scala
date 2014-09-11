@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
-import play.api.templates.Html
+import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
@@ -29,10 +29,17 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] =
     Future.successful(SharingUserInfo(sharingUserIds = Set(Id[User](1)), keepersEdgeSetSize = 1))
 
-  var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq(SharingUserInfo(Set(Id[User](1)), 1))
+  val sharingUserInfoDataOriginal = SharingUserInfo(Set(Id[User](1)), 1)
+  var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq(sharingUserInfoDataOriginal)
   def sharingUserInfoData(data: Seq[SharingUserInfo]): Unit = sharingUserInfoDataFix = data
 
-  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = Future.successful(sharingUserInfoDataFix)
+  override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
+    if (sharingUserInfoDataFix.headOption == Some(sharingUserInfoDataOriginal)) {
+      Future.successful(uriIds.map(_ => sharingUserInfoDataOriginal))
+    } else {
+      Future.successful(sharingUserInfoDataFix)
+    }
+  }
 
   override def articleIndexerSequenceNumber(): Future[Int] = ???
 

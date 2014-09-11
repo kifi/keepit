@@ -15,6 +15,7 @@ case class DummyRequestHeader(id: Long, path: String) extends RequestHeader {
   def version = ""
   def queryString = Map()
   def remoteAddress = ""
+  def secure: Boolean = false
   lazy val headers = new Headers { val data = Seq() }
 }
 

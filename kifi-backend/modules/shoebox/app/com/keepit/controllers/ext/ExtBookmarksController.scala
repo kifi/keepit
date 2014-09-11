@@ -43,7 +43,6 @@ class ExtBookmarksController @Inject() (
   db: Database,
   bookmarkInterner: KeepInterner,
   keepRepo: KeepRepo,
-  uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   collectionRepo: CollectionRepo,
   healthcheck: HealthcheckPlugin,
@@ -75,7 +74,7 @@ class ExtBookmarksController @Inject() (
     val libraryId = {
       db.readWrite { implicit session =>
         val libIdOpt = for {
-          uri <- uriRepo.getByNormalizedUrl(url)
+          uri <- normalizedURIInterner.getByUri(url)
           keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
           libraryId <- keep.libraryId
         } yield libraryId
@@ -100,7 +99,7 @@ class ExtBookmarksController @Inject() (
     val libraryId = {
       db.readWrite { implicit session =>
         val libIdOpt = for {
-          uri <- uriRepo.getByNormalizedUrl(url)
+          uri <- normalizedURIInterner.getByUri(url)
           keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
           libraryId <- keep.libraryId
         } yield libraryId

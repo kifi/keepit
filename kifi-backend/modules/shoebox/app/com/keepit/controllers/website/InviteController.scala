@@ -1,28 +1,25 @@
 package com.keepit.controllers.website
 
-import scala.concurrent.{ Future, Promise }
-import scala.concurrent.duration._
-
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
-import com.keepit.common.db.slick._
-import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model._
-import com.keepit.social._
-import com.keepit.common.akka.TimeoutFuture
-import com.keepit.heimdal._
-import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc._
-import play.api.templates.Html
 import com.keepit.abook.ABookServiceClient
-import play.api.mvc.Cookie
-import com.keepit.model.Invitation
-import com.keepit.commanders.{ FailedInvitationException, InviteStatus, FullSocialId, InviteCommander }
-import com.keepit.inject.FortyTwoConfig
+import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus }
+import com.keepit.common.akka.TimeoutFuture
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
+import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.{ Success, Failure, Try }
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.{ Invitation, _ }
+import com.keepit.social._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+import play.api.mvc.{ Cookie, _ }
+import play.twirl.api.Html
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.{ Failure, Success, Try }
 
 class InviteController @Inject() (db: Database,
     userRepo: UserRepo,

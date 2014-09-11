@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.templates.Html
+import play.twirl.api.Html
 
 import java.net.URLDecoder
 
@@ -53,7 +53,7 @@ class ElizaEmailCommander @Inject() (
   def getSummarySmall(thread: MessageThread) = {
     val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
       url = thread.nUrl.get,
-      imageType = ImageType.ANY,
+      imageType = ImageType.IMAGE,
       minSize = ImageSize(183, 96),
       withDescription = true,
       waiting = true,
@@ -102,7 +102,7 @@ class ElizaEmailCommander @Inject() (
     ThreadEmailInfo(
       pageUrl = thread.nUrl.get,
       pageName = pageName,
-      pageTitle = uriSummary.title.getOrElse(thread.nUrl.get).abbreviate(80),
+      pageTitle = thread.pageTitle.orElse(uriSummary.title).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
       heroImageUrl = uriSummary.imageUrl,
       pageDescription = uriSummary.description.map(_.take(190) + "..."),
@@ -186,7 +186,7 @@ class ElizaEmailCommander @Inject() (
       else views.html.discussionEmail(threadInfoSmall, threadItems, false, false, true),
       views.html.discussionEmail(threadInfoSmall, threadItems, false, true, true),
       threadInfoSmall.conversationStarter,
-      uriSummarySmall.title.getOrElse(threadInfoSmall.pageName)
+      threadInfoSmall.pageTitle
     )
   }
 

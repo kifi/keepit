@@ -17,7 +17,7 @@ import com.keepit.social.providers.ProviderController
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, Json }
-import play.api.mvc.{ Action, Cookie, Session, SimpleResult }
+import play.api.mvc.{ Action, Cookie, Session, Result }
 
 import scala.util.{ Failure, Success, Try }
 
@@ -118,7 +118,7 @@ class MobileAuthController @Inject() (
                 error => throw error,
                 authenticator =>
                   Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                    .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                    .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                     .withCookies(authenticator.toCookie)
               )
             case Some(identity) => // social user exists
@@ -130,11 +130,11 @@ class MobileAuthController @Inject() (
                     error => throw error,
                     authenticator =>
                       Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                        .withSession(session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                         .withCookies(authenticator.toCookie)
                   )
                 case Some(userId) =>
-                  val newSession = Events.fire(new LoginEvent(identity)).getOrElse(session)
+                  val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
                   Authenticator.create(identity).fold(
                     error => throw error,
                     authenticator =>
@@ -178,7 +178,7 @@ class MobileAuthController @Inject() (
 
   def loginWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate("userpass")(request).map {
-      case res: SimpleResult if res.header.status == 303 =>
+      case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant

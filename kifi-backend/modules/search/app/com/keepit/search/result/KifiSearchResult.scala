@@ -62,6 +62,7 @@ object KifiSearchResult extends Logging {
     friendsTotal: Int,
     mayHaveMoreHits: Boolean,
     show: Boolean,
+    cutPoint: Int,
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String): KifiSearchResult = {
     try {
@@ -73,11 +74,12 @@ object KifiSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
+        "cutPoint" -> JsNumber(cutPoint),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize KifiPlainResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context]", e)
+        log.error(s"can't serialize KifiPlainResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][cutPoint=$cutPoint][experimentId=$experimentId][context=$context]", e)
         throw e
     }
   }
@@ -132,7 +134,7 @@ object KifiSearchHit extends Logging {
         "count" -> JsNumber(count),
         "bookmark" -> hit.json,
         "users" -> Json.toJson(users),
-        "score" -> JsNumber(score),
+        "score" -> JsNumber(score.toDouble),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
         "isPrivate" -> JsBoolean(isPrivate)
       )))
@@ -154,7 +156,6 @@ class PartialSearchResult(val json: JsValue) extends AnyVal {
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
-  def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
 
 object PartialSearchResult extends Logging {
@@ -164,7 +165,6 @@ object PartialSearchResult extends Logging {
     friendsTotal: Int,
     othersTotal: Int,
     friendStats: FriendStats,
-    svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
     ): PartialSearchResult = {
     try {
@@ -174,7 +174,6 @@ object PartialSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
     } catch {
@@ -190,7 +189,6 @@ object PartialSearchResult extends Logging {
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
       "friendsStats" -> Json.toJson(FriendStats.empty),
-      "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))
   }
@@ -236,7 +234,7 @@ object DetailedSearchHit extends Logging {
         "bookmarkCount" -> JsNumber(bookmarkCount),
         "bookmark" -> hit.json,
         "users" -> JsArray(users.map(id => JsNumber(id.id))),
-        "score" -> JsNumber(score),
+        "score" -> JsNumber(score.toDouble),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
         "isFriendsBookmark" -> JsBoolean(isFriendsBookmark),

@@ -10,7 +10,7 @@ import play.api.libs.json._
 
 class KifiShardResult(val json: JsValue) extends AnyVal {
   def hits: Seq[KifiShardHit] = (json \ "hits").as[JsArray] match {
-    case JsArray(hits) => hits.map { json => new KifiShardHit(json.as[JsObject]) }
+    case JsArray(hits) => hits.map { hit => new KifiShardHit(hit.as[JsObject]) }
     case _ => Seq.empty
   }
   def myTotal: Int = (json \ "myTotal").as[Int]

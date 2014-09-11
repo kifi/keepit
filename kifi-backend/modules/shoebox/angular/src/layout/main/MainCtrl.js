@@ -142,6 +142,11 @@ angular.module('kifi')
         case 'installExtensionError':
           $scope.modal = 'install_extension_error';
           $scope.data.showInstallErrorModal = true;
+          break;
+        case 'createLibrary':
+          $scope.modal = 'create_library';
+          $scope.data.showCreateLibraryModal = true;
+          break;
       }
     });
 
@@ -178,6 +183,10 @@ angular.module('kifi')
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
       $scope.data.showImportModal = false;
+    };
+
+    $scope.hideModal = function () {
+      $scope.modal = null;
     };
 
     $scope.disableBookmarkImport = true;

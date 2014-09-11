@@ -118,9 +118,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
+      libraryRepo.updateMemberCount(libMurica.id.get)
+      libraryRepo.updateMemberCount(libScience.id.get)
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
+      libraryRepo.get(libMurica.id.get).memberCount === 3
+      libraryRepo.get(libScience.id.get).memberCount === 2
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -176,9 +180,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryRepo.count === 0
         }
 
-        val noInvites = Seq.empty[ExternalId[User]]
-        val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
-        val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
+        val noInvites = None
+        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
+        val inv3 = Some(userHulk.externalId :: Nil)
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -188,9 +192,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
           visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv3, followers = noInvites)
-
-        val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
-          visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv2, followers = inv3)
 
         val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -205,7 +206,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
         add3.isRight === true
         add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
         libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
@@ -371,7 +371,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
 
         libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
-        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink.get)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
       }
     }
 
@@ -527,6 +527,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
             (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
           )
+          libraryMembershipRepo.count === 6
+          libraryRepo.get(libMurica.id.get).memberCount === 3 //owner + Ironman + Agent
+          libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
+          libraryRepo.get(libShield.id.get).memberCount === 1 //owner
         }
       }
     }
@@ -538,8 +542,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val libraryCommander = inject[LibraryCommander]
 
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+          libraryRepo.get(libMurica.id.get).memberCount === 3
         }
 
         libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
@@ -547,6 +551,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+          libraryRepo.get(libMurica.id.get).memberCount === 2
         }
       }
     }

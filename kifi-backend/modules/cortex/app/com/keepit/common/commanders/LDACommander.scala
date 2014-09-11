@@ -23,7 +23,8 @@ class LDACommander @Inject() (
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
-    userLDAStatRepo: UserLDAStatsRepo) extends Logging {
+    userLDAStatRepo: UserLDAStatsRepo,
+    userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
   val numOfTopics: Int = wordRep.lda.dimension
 
@@ -99,11 +100,11 @@ class LDACommander @Inject() (
   private def computeGaussianInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeat.feature) match {
       case (Some(userFeat), Some(uriFeatVec)) =>
-        val userMean = userFeat.userTopicMean.get.mean
-        val userVar = userFeat.userTopicVar.get.value
+        val userMean = projectToActive(userFeat.userTopicMean.get.mean)
+        val userVar = projectToActive(userFeat.userTopicVar.get.value)
         val s = userMean.sum
         assume(s > 0)
-        val dist = weightedMDistanceDiagGaussian(uriFeatVec.value, userMean, userVar, userMean.map { _ / s })
+        val dist = weightedMDistanceDiagGaussian(projectToActive(uriFeatVec.value), userMean, userVar, userMean.map { _ / s })
         val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
         Some(LDAUserURIInterestScore(exp(-1 * dist), confidence))
       case _ => None
@@ -140,11 +141,9 @@ class LDACommander @Inject() (
   }
 
   private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    val alpha = if (isRecent) (numOfEvidenceForUser - 20) / 5f else (numOfEvidenceForUser - 30) / 10f
-    val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
+    // only consider uri confidence for now.
     val beta = (numOfWords - 50) / 50f
-    val s2 = 1f / (1 + exp(-1 * beta)).toFloat
-    s1 * s2
+    1f / (1 + exp(-1 * beta)).toFloat
   }
 
   def sampleURIs(topicId: Int): Seq[(Id[NormalizedURI], Float)] = {
@@ -257,6 +256,17 @@ class LDACommander @Inject() (
     (feat1, feat2) match {
       case (Some(f1), Some(f2)) if (f1.numOfWords > 50 && f2.numOfWords > 50) => Some(KL_divergence(f1.feature.get.value, f2.feature.get.value))
       case _ => None
+    }
+  }
+
+  def recomputeUserLDAStats(): Unit = {
+    val users = db.readOnlyReplica { implicit s => userLDAStatRepo.getAllUsers(wordRep.version) }
+    log.info(s"recomputing user LDA Stats for ${users.size} users")
+    var n = 0
+    users.foreach { user =>
+      userStatUpdatePlugin.updateUser(user)
+      n += 1
+      if (n % 100 == 0) log.info(s"recomputed ${n} user LDA Stats")
     }
   }
 

@@ -2,17 +2,18 @@ package com.keepit.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
-import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.scraper._
@@ -23,6 +24,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
 
+import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
 class ShoeboxController @Inject() (
@@ -56,6 +58,7 @@ class ShoeboxController @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
+  emailTemplateSender: EmailTemplateSender,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -95,7 +98,7 @@ class ShoeboxController @Inject() (
         Ok("true")
       case None =>
         val e = new Exception("Unable to parse email")
-        airbrake.notify(s"Unable to parse: ${request.body.toString}", e)
+        airbrake.notify(s"Unable to parse: ${request.body}", e)
         Ok("false")
     }
   }
@@ -109,6 +112,19 @@ class ShoeboxController @Inject() (
       db.readWrite(attempts = 3) { implicit session => postOffice.sendMail(email.copy(to = List(addr.address))) }
     }
     Ok("true")
+  }
+
+  def processAndSendMail = Action.async(parse.tolerantJson) { request =>
+    request.body.asOpt[EmailToSend] match {
+      case Some(module) =>
+        emailTemplateSender.send(module).map { mail =>
+          Ok(if (mail.isReadyToSend) "true" else "false")
+        }
+      case None =>
+        val e = new Exception("Unable to parse EmailToSend")
+        airbrake.notify(s"Unable to parse: ${request.body}", e)
+        Future.successful(Ok("false"))
+    }
   }
 
   def getNormalizedURI(id: Id[NormalizedURI]) = SafeAsyncAction {

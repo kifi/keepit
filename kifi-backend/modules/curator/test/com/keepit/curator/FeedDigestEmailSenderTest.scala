@@ -159,12 +159,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
-        // Friend Recommendations
-        friends.slice(0, 4).foreach { user =>
-          mail42body must contain("?friend=" + user.externalId + "&amp;subtype=digestPymk")
-        }
-        mail42body must not contain friends(5).externalId.toString
-
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
 
@@ -174,8 +168,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must not contain savedRecoModels(5)._1.externalId.toString
 
         mail43body must contain("5 others kept this")
-        mail43body must contain("https://url.com/u44.jpg")
-        mail43body must contain("https://url.com/u48.jpg")
 
         // check that uri's for the recos are in the emails
         mail43body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)

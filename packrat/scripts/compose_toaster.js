@@ -7,131 +7,148 @@
 // @require scripts/look.js
 // @require scripts/render.js
 // @require scripts/compose.js
+// @require scripts/listen.js
 
 var toaster = (function () {
   'use strict';
-  var $toaster;
+  var $toast;
 
   var handlers = {
     page_thread_count: function (o) {
-      if ($toaster) {
-        $toaster.find('.kifi-toast-other-n')
-          .attr('data-n', o.count || null)
-        .parent()
-          .toggleClass('kifi-showing', o.count > 0)
-          .data(o);
+      if ($toast) {
+        var $other = $toast.find('.kifi-toast-other').data(o);
+        $other.find('.kifi-toast-other-n')
+          .attr('data-n', o.count || null);
+        if (o.count > 0 && !$toast.data('sending')) {
+          $other.addClass('kifi-showing');
+        }
       }
     }
   };
 
   return {
-    toggle: function ($parent) {
-      var deferred = Q.defer();
-      if ($toaster) {
-        if ($toaster.data('compose').isBlank()) {
-          hide();
-        } else {
-          log('[toaster:toggle] no-op');
-        }
-        deferred.resolve();
-      } else {
-        api.port.emit('prefs', function (prefs) {
-          if (!$toaster) {
-            show($parent, prefs || {}, deferred);
-          }
-        });
+    show: function ($parent, recipient) {
+      log('[toaster.show]', recipient || '');
+      if ($toast) {
+        hide();
       }
-      return deferred.promise;
+      show($parent, recipient);
+    },
+    hideIfBlank: function () {
+      if ($toast && $toast.data('compose').isBlank()) {
+        hide();
+      } else {
+        log('[toaster:hideIfBlank] no-op');
+      }
     },
     hide: function () {
-      if ($toaster) {
+      if ($toast) {
         hide();
       } else {
         log('[toaster:hide] no-op');
       }
     },
+    onHide: new Listeners(),
+    onHidden: new Listeners(),
     showing: function () {
-      return !!$toaster;
+      return !!$toast;
     }
   };
 
-  function show($parent, prefs, deferred) {
+  function show($parent, recipient) {
     log('[toaster:show]');
-    $toaster = $(render('html/keeper/compose_toaster', {
+    api.port.emit('prefs', function (prefs) {
+      compose.reflectPrefs(prefs || {});
+    });
+    $toast = $(render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Write something…',
       draftDefault: 'Check this out.'
     }, {
       compose: 'compose'
     }))
-    .on('click', '.kifi-toast-x', function (e) {
-      if (e.which !== 1) return;
-      hide();
+    .on('click mousedown', '.kifi-toast-x', function (e) {
+      if (e.which === 1 && $toast) {
+        hide(e, 'x');
+      }
     })
-    .on('click', '.kifi-toast-other', onOthersClick)
+    .on('click mousedown', '.kifi-toast-other', onOthersClick)
     .appendTo($parent);
 
-    var compose = initCompose($toaster, {onSubmit: send});
-    compose.reflectPrefs(prefs);
-    $toaster.data('compose', compose);
+    var compose = initCompose($toast, {onSubmit: send.bind(null, $toast)});
+    $toast.data('compose', compose);
     $(document).data('esc').add(hide);
-    pane.onHide.add(hide);
 
     api.port.on(handlers);
     api.port.emit('get_page_thread_count');
 
-    $toaster.layout()
-    .on('transitionend', $.proxy(onShown, null, deferred, prefs))
+    $toast.layout()
+    .on('transitionend', $.proxy(onShown, null, recipient))
     .removeClass('kifi-down');
   }
 
-  function onShown(deferred, prefs, e) {
-    if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+  function onShown(recipient, e) {
+    if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[toaster:onShown]');
       var $t = $(this).off('transitionend', onShown);
-      deferred.resolve($t.data('compose'));
+      var compose = $t.data('compose');
+      if (recipient) {
+        compose.prefill(recipient);
+      }
+      compose.snapSelection() || compose.focus();
     }
   }
 
-  function hide(e) {
+  function hide(e, trigger) {
     log('[toaster:hide]');
     api.port.off(handlers);
-    pane.onHide.remove(hide);
     $(document).data('esc').remove(hide);
-    $toaster.css('overflow', '')
-      .on('transitionend', onHidden)
-      .addClass('kifi-down')
-      .data('compose').save();
-    $toaster = null;
+    $toast.css('overflow', '')
+      .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
+      .addClass('kifi-down');
+    if (trigger !== 'sent') {
+      $toast.data('compose').save();
+    }
+    $toast = null;
     if (e) e.preventDefault();
+    toaster.onHide.dispatch();
   }
 
-  function onHidden(e) {
-    if (e.target === this && e.originalEvent.propertyName === 'background-color') {
+  function onHidden(trigger, e) {
+    if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[toaster:onHidden]');
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
+      toaster.onHidden.dispatch(trigger);
     }
   }
 
-  function send(text, recipients, guided) {
-    hide();
+  function send($t, text, recipients, guided) {
+    $t.data('sending', true);
     api.port.emit(
       'send_message',
       withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf), guided: guided}),
       function (resp) {
         log('[sendMessage] resp:', resp);
-        pane.show({locator: '/messages/' + resp.threadId});
+        api.require('scripts/pane.js', function () {
+          $t.data('sending', false);
+          pane.show({locator: '/messages/' + resp.threadId});
+          if ($toast === $t) {
+            hide();
+          }
+        });
       });
+    api.require('scripts/pane.js', api.noop); // in parallel
   }
 
   function onOthersClick(e) {
     var data = $.data(this);
     if (e.which === 1 && data.count) {
-      hide();
       var threadId = data.id;
-      pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
+      api.require('scripts/pane.js', function () {
+        pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
+      });
     }
   }
 

@@ -11,7 +11,7 @@ import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import scala.math._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
@@ -45,22 +45,27 @@ class KifiSearchImpl(
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
-  def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
+  def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
+    log.info(s"NE: engine created (${System.currentTimeMillis - currentTime})")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    engine.execute(keepScoreSource)
+    val numRecs1 = engine.execute(keepScoreSource)
+    log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${System.currentTimeMillis - currentTime})")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    engine.execute(articleScoreSource)
+    val numRec2 = engine.execute(articleScoreSource)
+    log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${System.currentTimeMillis - currentTime})")
 
     val tClickBoosts = currentDateTime.getMillis()
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch)
+    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
+    log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime})")
     engine.join(collector)
+    log.info(s"NE: KifiResultCollector joined (${System.currentTimeMillis - currentTime})")
 
     collector.getResults()
   }
@@ -87,9 +92,8 @@ class KifiSearchImpl(
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
-          hit.score = score * myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = hit.score / highScore
+          val boost = myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) * boost
           hits.insert(hit)
       }
     }
@@ -100,9 +104,8 @@ class KifiSearchImpl(
 
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
-          hit.score = score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = hit.score / highScore
+          val boost = (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) * boost
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }
@@ -124,9 +127,8 @@ class KifiSearchImpl(
             othersHighScore = hit.score
             othersNorm = max(highScore, hit.score)
           }
-          val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-          hit.score = score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = hit.score / othersNorm
+          val boost = (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) * boost
           queue.insert(hit)
           rank += 1
         } else {
@@ -146,6 +148,8 @@ class KifiSearchImpl(
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
+
+    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
