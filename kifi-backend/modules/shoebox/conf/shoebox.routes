@@ -108,6 +108,8 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 # Note: /ext/invite has not been in use since 2.9.31.
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
+GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+
 ##########################################
 # Mobile
 ##########################################
