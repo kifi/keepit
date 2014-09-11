@@ -209,7 +209,7 @@ class MobileAuthController @Inject() (
   )
 
   // this one sends an email with a link to a page -- more work for mobile likely needed
-  def forgotPassword() = JsonAction.parseJson(allowPending = true)(
+  def forgotPassword() = JsonAction.parseJsonAsync(allowPending = true)(
     authenticatedAction = authHelper.doForgotPassword(_),
     unauthenticatedAction = authHelper.doForgotPassword(_)
   )
