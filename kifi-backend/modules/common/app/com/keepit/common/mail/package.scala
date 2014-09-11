@@ -66,6 +66,7 @@ package object template {
     }
 
     val kifiLogoUrl = htmlUrl(s"$baseUrl/?", "headerLogo")
+    val kifiFooterUrl = htmlUrl(s"$baseUrl/?", "footerKifiLink")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy")
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter")
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook")

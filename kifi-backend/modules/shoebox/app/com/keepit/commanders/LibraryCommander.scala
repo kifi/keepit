@@ -78,54 +78,57 @@ class LibraryCommander @Inject() (
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
-      if (!libAddReq.collaborators.intersect(libAddReq.followers).isEmpty) { Some("collaborators & followers overlap!") }
-      else if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid library name") }
-      else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid library slug") }
+      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid_name") }
+      else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid_slug") }
       else { None }
     }
     badMessage match {
       case Some(x) => Left(LibraryFail(x))
       case _ => {
-        val exists = db.readOnlyReplica { implicit s => libraryRepo.getByNameAndUserId(ownerId, libAddReq.name) }
-        exists match {
-          case Some(lib) if lib.state == LibraryStates.ACTIVE => Left(LibraryFail("library name already exists for user"))
-          case _ => {
-            val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
-              val collabs = libAddReq.collaborators.map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              val follows = libAddReq.followers.map { x =>
-                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-                inviteeIdOpt.get
-              }
-              (collabs, follows)
-            }
-            val validVisibility = libAddReq.visibility
-            val validSlug = LibrarySlug(libAddReq.slug)
-
-            val library = db.readWrite { implicit s =>
-              libraryRepo.getOpt(ownerId, validSlug) match {
-                case None =>
-                  val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
-                  lib
-                case Some(lib) =>
-                  val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
-                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
-                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
-                    case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
-                  }
-                  newLib
-              }
-            }
-            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
-            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
-
-            inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
-            Right(library)
+        val myLibs = db.readOnlyReplica { implicit s =>
+          for (t <- libraryRepo.getByUser(ownerId) if t._1 == LibraryAccess.OWNER) yield {
+            t._2
           }
+        }
+        val exists = myLibs.exists(lib => lib.name == libAddReq.name || lib.slug == libAddReq.slug)
+        if (exists) {
+          Left(LibraryFail("library_name_or_slug_exists"))
+        } else {
+          val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
+            val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
+              val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
+              inviteeIdOpt.get
+            }
+            val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
+              val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
+              inviteeIdOpt.get
+            }
+            (collabs, follows)
+          }
+          val validVisibility = libAddReq.visibility
+          val validSlug = LibrarySlug(libAddReq.slug)
+
+          val library = db.readWrite { implicit s =>
+            libraryRepo.getOpt(ownerId, validSlug) match {
+              case None =>
+                val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
+                  visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                lib
+              case Some(lib) =>
+                val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
+                  case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                  case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+                }
+                newLib
+            }
+          }
+          val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
+          val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
+
+          inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
+          Right(library)
         }
       }
     }
@@ -522,8 +525,8 @@ case class LibraryFail(message: String) extends AnyVal
   visibility: LibraryVisibility,
   description: Option[String] = None,
   slug: String,
-  collaborators: Seq[ExternalId[User]],
-  followers: Seq[ExternalId[User]])
+  collaborators: Option[Seq[ExternalId[User]]],
+  followers: Option[Seq[ExternalId[User]]])
 
 case class LibraryInfo(
   id: PublicId[Library],

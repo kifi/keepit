@@ -67,23 +67,16 @@ class AugmentationCommanderImpl @Inject() (
     else {
       val ItemAugmentationRequest(items, context) = itemAugmentationRequest
 
-      val futureLibraryFilter = context.libraryFilter match {
-        case Some(libraryIds) => Future.successful(libraryIds)
-        case None => searchFactory.getLibraryIdsFuture(context.userId, None).imap {
-          case (ownedLibraries, followedLibraries, trustedLibraries) =>
-            (ownedLibraries ++ followedLibraries ++ trustedLibraries).map(Id[Library](_))
-        }
+      val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, None).imap {
+        case (_, followedLibraries, _) => followedLibraries.map(Id[Library](_))
       }
 
-      val futureUserFilter = context.userFilter match {
-        case Some(userIds) => Future.successful(userIds)
-        case None => searchFactory.getFriendIdsFuture(context.userId).imap(_.map(Id[User](_)) + context.userId)
-      }
+      val futureUserFilter = searchFactory.getFriendIdsFuture(context.userId).imap(_.map(Id[User](_)) + context.userId)
 
       for {
         libraryFilter <- futureLibraryFilter
         userFilter <- futureUserFilter
-        allAugmentationInfos <- getShardedAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
+        allAugmentationInfos <- getAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -93,7 +86,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getShardedAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[Item]): Future[Map[Item, AugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[Item, AugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
@@ -119,11 +112,10 @@ class AugmentationCommanderImpl @Inject() (
       val recordDocValue = reader.getBinaryDocValues(KeepFields.recordField)
       val docs = reader.termDocsEnum(uriTerm)
 
-      def tags(docId: Int): Set[Hashtag] = {
+      def getKeepRecord(docId: Int): KeepRecord = {
         val ref = new BytesRef()
         recordDocValue.get(docId, ref)
-        val record = KeepRecord.fromByteArray(ref.bytes, ref.offset, ref.length)
-        record.tags
+        KeepRecord.fromByteArray(ref.bytes, ref.offset, ref.length)
       }
 
       if (docs != null) {
@@ -136,10 +128,15 @@ class AugmentationCommanderImpl @Inject() (
 
           if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
             val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
-            keeps += RestrictedKeepInfo(Some(Id(libraryId)), userIdOpt, tags(docId))
+            val record = getKeepRecord(docId)
+            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), userIdOpt, record.tags)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
-            case PUBLISHED => keeps += RestrictedKeepInfo(Some(Id(libraryId)), Some(Id(userId)), tags(docId))
-            case DISCOVERABLE => keeps += RestrictedKeepInfo(None, Some(Id(userId)), Set.empty)
+            case PUBLISHED =>
+              val record = getKeepRecord(docId)
+              keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
+            case DISCOVERABLE =>
+              val record = getKeepRecord(docId)
+              keeps += RestrictedKeepInfo(record.externalId, None, Some(Id(userId)), Set.empty)
             case SECRET => // ignore
           }
           else if (visibility == PUBLISHED) { // kept in a public library
@@ -162,7 +159,7 @@ class AugmentationCommanderImpl @Inject() (
     weigthedAugmentationInfos.foreach {
       case (info, weight) =>
         (info.keeps).foreach {
-          case RestrictedKeepInfo(libraryIdOpt, userIdOpt, tags) =>
+          case RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags) =>
             libraryIdOpt.foreach { libraryId => libraryScores(libraryId) = libraryScores(libraryId) + weight }
             userIdOpt.foreach { userId => userScores(userId) = userScores(userId) + weight }
             tags.foreach { tag =>

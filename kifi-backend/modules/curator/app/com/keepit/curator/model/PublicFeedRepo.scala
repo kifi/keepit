@@ -16,7 +16,7 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[PublicFeedRepoImpl])
 trait PublicFeedRepo extends DbRepo[PublicFeed] {
-  def getByUri(uriId: Id[NormalizedURI], publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Option[PublicFeed]
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[PublicFeed]
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]] = Some(PublicFeedStates.ACTIVE))(implicit session: RSession): Seq[PublicFeed]
   def cleanupLowMasterScoreFeeds(limitNumFeeds: Int, before: DateTime)(implicit session: RWSession): Boolean
 }
@@ -50,8 +50,8 @@ class PublicFeedRepoImpl @Inject() (
 
   def invalidateCache(model: PublicFeed)(implicit session: RSession): Unit = {}
 
-  def getByUri(uriId: Id[NormalizedURI], publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Option[PublicFeed] = {
-    (for (row <- rows if row.uriId === uriId && row.state === publicFeedState) yield row).firstOption
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[PublicFeed] = {
+    (for (row <- rows if row.uriId === uriId) yield row).firstOption
   }
 
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Seq[PublicFeed] = {

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService', /* only needed for libraries experiment */ 'libraryService',
-  function ($location, util, keepService, friendService, tagService, profileService, libraryService) {
+  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope',
+  function ($location, util, keepService, friendService, tagService, profileService, libraryService, $rootScope) {
     return {
       //replace: true,
       restrict: 'A',
@@ -30,6 +30,10 @@ angular.module('kifi')
             });
           }
         });
+
+        scope.addLibrary = function () {
+          $rootScope.$emit('showGlobalModal', 'createLibrary');
+        };
 
         scope.$watch(function () {
           return friendService.requests.length;

@@ -113,14 +113,17 @@ angular.module('kifi')
           }
         };
 
-        scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
-          return lib.access !== 'read_only';
-        });
-        scope.data = scope.data || {};
-        scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
-          return lib.name === 'Main Library';
-        }).id;
+
         scope.librariesEnabled = libraryService.isAllowed();
+        if (scope.librariesEnabled) {
+          scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+            return lib.access !== 'read_only';
+          });
+          scope.data = scope.data || {};
+          scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
+            return lib.name === 'Main Library';
+          }).id;          
+        }
 
         scope.$watch('shown', function (shown) {
           if (shown) {

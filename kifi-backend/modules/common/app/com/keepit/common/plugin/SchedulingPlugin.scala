@@ -103,8 +103,8 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
-  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
-    val taskName = s"call function $f on leader only"
+  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, name: String)(f: => Unit): Unit = {
+    val taskName = s"call task function $name on leader only"
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
@@ -119,8 +119,8 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
-  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
-    val taskName = s"call function $f on all machines"
+  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, name: String)(f: => Unit): Unit = {
+    val taskName = s"call task function $name on all machines"
     if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {

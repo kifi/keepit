@@ -9,7 +9,7 @@ import play.twirl.api.Html
 case class EmailToSend(
   title: String = "Kifi",
   from: EmailAddress,
-  fromName: Option[String] = None,
+  fromName: Option[String] = Some("Kifi"),
   to: Either[Id[User], EmailAddress],
   cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
