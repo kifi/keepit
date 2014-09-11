@@ -4,7 +4,6 @@ import com.keepit.search.SearchConfig
 import com.keepit.search.engine.Visibility
 import com.keepit.search.util.HitQueue
 import scala.math._
-import play.api.libs.json.JsNumber
 
 class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
@@ -51,9 +50,10 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     results.foreach { res =>
       res.hits.foreach { hit =>
+        val visibility = hit.visibility
         val queue = {
-          if ((hit.visibility & Visibility.OWNER) != 0) myHits
-          else if ((hit.visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
+          if ((visibility & Visibility.OWNER) != 0) myHits
+          else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
           else othersHits
         }
         queue.insert(hit.score, null, hit)
@@ -99,9 +99,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       queue.foreach { h => hits.insert(h) }
     }
 
-    hits.toSortedList.map { hit =>
-      hit.hit.set("score", JsNumber(hit.score.toDouble))
-    }
+    hits.toSortedList.map(_.hit)
   }
 
   @inline private def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
