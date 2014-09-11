@@ -58,28 +58,18 @@ class PublicFeedGenerationCommander @Inject() (
     db.readWrite { implicit s =>
       log.info(s"public feed: saving items")
       items foreach { item =>
-        log.info(s"public feed: saving $item")
-        try {
-          val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
-          feedOpt.map { feed =>
-            publicFeedRepo.save(feed.copy(
-              publicMasterScore = computePublicMasterScore(item.publicUriScores),
-              publicAllScores = item.publicUriScores))
-          } getOrElse {
-            publicFeedRepo.save(PublicFeed(
-              uriId = item.uriId,
-              publicMasterScore = computePublicMasterScore(item.publicUriScores),
-              publicAllScores = item.publicUriScores))
-          }
-        } catch {
-          case t: Throwable => {
-            log.info(s"public feed: something went wrong here: $t")
-            t.printStackTrace()
-            throw t
-          }
+        val feedOpt = publicFeedRepo.getByUri(item.uriId)
+        feedOpt.map { feed =>
+          publicFeedRepo.save(feed.copy(
+            publicMasterScore = computePublicMasterScore(item.publicUriScores),
+            publicAllScores = item.publicUriScores))
+        } getOrElse {
+          publicFeedRepo.save(PublicFeed(
+            uriId = item.uriId,
+            publicMasterScore = computePublicMasterScore(item.publicUriScores),
+            publicAllScores = item.publicUriScores))
         }
       }
-      log.info(s"public feed: saving new seq num: $newSeqNum")
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
       log.info(s"public feed: saved new seq num: $newSeqNum")
     }
