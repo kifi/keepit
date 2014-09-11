@@ -105,6 +105,7 @@ angular.module('kifi')
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
                 libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
+                libraryService.fetchLibrarySummaries(true);
                 keepService.fetchFullKeepInfo(result.keeps[0]);
               }
             });
