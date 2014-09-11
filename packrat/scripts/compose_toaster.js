@@ -1,6 +1,5 @@
 // @require styles/keeper/compose.css
 // @require styles/keeper/compose_toaster.css
-// @require scripts/lib/q.min.js
 // @require scripts/html/keeper/compose.js
 // @require scripts/html/keeper/compose_toaster.js
 // @require scripts/formatting.js

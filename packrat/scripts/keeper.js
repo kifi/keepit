@@ -127,7 +127,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         if (this.parentNode.classList.contains('kifi-keep-side')) {
           keepPage('public', e);
         } else {
-          // TODO: open library list
+          showKeepBox();
         }
       }
     }, 400, true))
@@ -163,6 +163,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     })
+    .on('click', '.kifi-keep-to', _.debounce(function (e) {
+      if (e.target === this && e.originalEvent.isTrusted !== false) {
+        showKeepBox();
+      }
+    }, 400, true))
+    // .hoverfu('.kifi-keep-to', function (configureHover) {
+    // })
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
@@ -352,11 +359,36 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
+  function showKeepBox() {
+    if (window.keepBox && keepBox.showing()) return;
+    beginStickyKeepBox();
+    keeper.moveToBottom(function () {
+      api.require('scripts/keep_box.js', function () {
+        if (window.pane) {
+          pane.shade();
+        }
+        keepBox.show($slider);
+        keepBox.onHide.add(function () {
+          endStickyKeepBox();
+          if (window.pane) {
+            pane.unshade();
+          }
+        });
+        keepBox.onHidden.add(function (trigger) {
+          keeper.moveBackFromBottom();
+          if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+            hideSlider('keepBox');
+          }
+        });
+      });
+    });
+  }
+
   function isSticky() {
     return $slider && $slider.data('stickiness') > 0;
   }
   function isClickSticky() {
-    return $slider && $slider.data('stickiness') >= 4;
+    return $slider && $slider.data('stickiness') >= 2;
   }
   function beginSticky(kind) {
     if ($slider) {
@@ -377,8 +409,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
   var beginStickyTitle = beginSticky.bind(null, 1);
   var endStickyTitle = endSticky.bind(null, 1);
-  // var beginStickyKeep = beginSticky.bind(null, 2);
-  // var endStickyKeep = endSticky.bind(null, 2);
+  var beginStickyKeepBox = beginSticky.bind(null, 2);
+  var endStickyKeepBox = endSticky.bind(null, 2);
   var beginStickyToaster = beginSticky.bind(null, 4);
   var endStickyToaster = endSticky.bind(null, 4);
   var beginStickyPane = beginSticky.bind(null, 8);
