@@ -5,9 +5,19 @@
   </div>
   <input class="kifi-keep-box-lib-input" type="text" placeholder="Library name"/>
   <div class="kifi-keep-box-libs">
-    <div class="kifi-keep-box-lib-head">My Libraries</div>
-    <a class="kifi-keep-box-lib" href="javascript:">Main Library</a>
-    <a class="kifi-keep-box-lib kifi-secret" href="javascript:">Secret Library</a>
+    {{#inLibs.length}}
+      <div class="kifi-keep-box-lib-head">Already Kept In</div>
+      {{#inLibs}}{{>keep_box_lib}}{{/inLibs}}
+    {{/inLibs.length}}
+    {{#recentLibs.length}}
+      <div class="kifi-keep-box-lib-head">Recent Libraries</div>
+      {{#recentLibs}}{{>keep_box_lib}}{{/recentLibs}}
+      <div class="kifi-keep-box-lib-head">Other Libraries</div>
+    {{/recentLibs.length}}
+    {{^recentLibs.length}}
+      <div class="kifi-keep-box-lib-head">My Libraries</div>
+    {{/recentLibs.length}}
+    {{#otherLibs}}{{>keep_box_lib}}{{/otherLibs}}
     <a class="kifi-keep-box-create-lib" href="javascript:">Create New Library</a>
   </div>
 </div>

@@ -320,11 +320,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     api.port.emit('unkeep', withUrls({}));
   }
 
-  function toggleKeep(how) {
-    log('[toggleKeep]', how);
-    api.port.emit('set_private', withUrls({private: how == 'private'}));
-  }
-
   function hoverfuFriends($tip, keepers) {
     return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
@@ -353,13 +348,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
     if (window.toaster && toaster.showing()) {
       toaster.hide();
     }
+    var $card = $slider.find('.kifi-keep-card');
     beginStickyKeepBox();
     keeper.moveToBottom(function () {
       api.require('scripts/keep_box.js', function () {
         if (window.pane) {
           pane.shade();
         }
-        keepBox.show($slider, keepPage);
+        var howKept = $card.hasClass('kifi-public') ? 'public' : $card.hasClass('kifi-private') ? 'private' : null;
+        keepBox.show($slider, howKept, keepPage, unkeepPage);
         keepBox.onHide.add(function () {
           endStickyKeepBox();
           if (window.pane) {
@@ -368,7 +365,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         });
         keepBox.onHidden.add(function (trigger) {
           keeper.moveBackFromBottom();
-          if ((trigger === 'x' || trigger === 'esc' || trigger === 'keep') && $slider && !isClickSticky()) {
+          if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
             hideSlider('keepBox');
           }
         });

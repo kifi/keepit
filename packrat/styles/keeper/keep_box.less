@@ -86,12 +86,13 @@
   text-transform: uppercase;
   color: #999;
 }
+@lib-height: 45px;
 .kifi-keep-box-lib,
 .kifi-keep-box-create-lib {
   display: block;
   border-bottom: 1px solid #ece8e6;
   background: url(/images/keeper/lib_cards.png) 14px 8px / auto 28px no-repeat;
-  line-height: 45px;
+  line-height: @lib-height;
   font-size: 13px;
   font-weight: 300;
   padding-left: 54px;
@@ -123,6 +124,24 @@
       @url: %(@svgLockDataUrl, rgba(0,0,0,.2));
       background-image: url(@url);
       background-size: 9px 12px;
+    }
+  }
+}
+.kifi-keep-box-lib-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 10px;
+  line-height: @lib-height;
+  font-size: 10px;
+  color: #a00 !important;
+  &:hover,
+  &:focus {
+    @bg-color: #ffe8e8;
+    background-color: @bg-color;
+    &:active {
+      background-color: shade(@bg-color, 4%);
     }
   }
 }

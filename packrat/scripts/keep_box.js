@@ -1,5 +1,6 @@
 // @require styles/keeper/keep_box.css
 // @require scripts/html/keeper/keep_box.js
+// @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/render.js
 // @require scripts/listen.js
 
@@ -10,12 +11,14 @@ var keepBox = (function () {
   var handlers = {};
 
   return {
-    show: function ($parent, keepPage) {
+    show: function ($parent, howKept, keepPage, unkeepPage) {
       log('[keepBox.show]');
       if ($box) {
         hide();
       }
-      show($parent, keepPage);
+      api.port.emit('get_libraries', function (libs) {
+        show($parent, libs, howKept, keepPage, unkeepPage);
+      });
     },
     hide: function () {
       if ($box) {
@@ -31,9 +34,16 @@ var keepBox = (function () {
     }
   };
 
-  function show($parent, keepPage) {
+  function show($parent, libraries, howKept, keepPage, unkeepPage) {
     log('[keepBox:show]');
-    $box = $(render('html/keeper/keep_box'))
+    var partitionedLibs = partitionLibs(libraries, howKept);
+    $box = $(render('html/keeper/keep_box', {
+      inLibs: partitionedLibs[0],
+      recentLibs: partitionedLibs[1],
+      otherLibs: partitionedLibs[2]
+    }, {
+      keep_box_lib: 'keep_box_lib'
+    }))
     .on('click mousedown', '.kifi-keep-box-x', function (e) {
       if (e.which === 1 && $box) {
         hide(e, 'x');
@@ -42,7 +52,13 @@ var keepBox = (function () {
     .on('click', '.kifi-keep-box-lib', function (e) {
       if (e.which === 1) {
         keepPage(this.classList.contains('kifi-secret') ? 'private' : 'public');
-        hide(e, 'keep');
+        hide(e, 'action');
+      }
+    })
+    .on('click', '.kifi-keep-box-lib-remove', function (e) {
+      if (e.which === 1) {
+        unkeepPage();
+        hide(e, 'action');
       }
     })
     .appendTo($parent);
@@ -82,5 +98,22 @@ var keepBox = (function () {
       $(this).remove();
       keepBox.onHidden.dispatch(trigger);
     }
+  }
+
+  function partitionLibs(libs, howKept) {
+    var inLibs = [];
+    var recentLibs = [];
+    var otherLibs = [];
+    var inPathRe = howKept === 'public' ? /\/main$/ : howKept === 'private' ? /\/secret$/ : /^$/;
+    for (var i = 0; i < libs.length; i++) {
+      var lib = libs[i];
+      if (inPathRe.test(lib.path)) {
+        lib.removable = true;
+        inLibs.push(lib);
+      } else {
+        otherLibs.push(lib);
+      }
+    }
+    return [inLibs, recentLibs, otherLibs];
   }
 }());

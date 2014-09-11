@@ -593,20 +593,10 @@ api.port.on({
       });
     }
   },
-  set_private: function(data, _, tab) {
-    log("[setPrivate]", data);
-    var how = data.private ? 'private' : 'public';
-    var d = pageData[tab.nUri];
-    ajax('POST', '/bookmarks/update', data, function (o) {
-      log("[setPrivate] response:", o);
-      if (d && d.kept !== how) {
-        d.kept = how;
-        d.keeps = Math.max(0, d.keeps + (how === 'private' ? -1 : 1));
-      }
-    });
-    forEachTabAt(tab.url, tab.nUri, function (tab) {
-      api.tabs.emit(tab, 'kept', {kept: how});
-    });
+  get_libraries: function (_, respond) {
+    ajax('GET', '/ext/libraries', function (o) {
+      respond(o.libraries);
+    }, respond);
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
