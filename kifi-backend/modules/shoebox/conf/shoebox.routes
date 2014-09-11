@@ -109,6 +109,7 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id:PublicId[Library])
 
 ##########################################
 # Mobile
