@@ -282,7 +282,7 @@ class AuthController @Inject() (
       .withSession(request.session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
-  def forgotPassword() = JsonAction.parseJson(allowPending = true)(
+  def forgotPassword() = JsonAction.parseJsonAsync(allowPending = true)(
     authenticatedAction = authHelper.doForgotPassword(_),
     unauthenticatedAction = authHelper.doForgotPassword(_)
   )
