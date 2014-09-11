@@ -11,7 +11,7 @@ import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import scala.math._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts

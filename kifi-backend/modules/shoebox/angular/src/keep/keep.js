@@ -34,8 +34,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
-  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util', 'libraryService',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util, libraryService) {
     return {
       restrict: 'A',
       scope: {
@@ -60,6 +60,35 @@ angular.module('kifi')
         var imageWidthThreshold = 200;
 
         scope.addingTag = {enabled: false};
+
+        scope.librariesEnabled = libraryService.isAllowed();
+        if (scope.librariesEnabled) {
+          scope.libraries = libraryService.librarySummaries; 
+          scope.keep.libraryInfo = _.find(scope.libraries, function(lib) {
+            return scope.keep.libraryId === lib.id;
+          }) || null;
+          scope.getLibraryName = function() {
+            if (scope.keep.libraryInfo) {
+              return scope.keep.libraryInfo.name;
+            } else {
+              return '';
+            }
+          };
+
+          scope.getLibraryUrl = function() {
+            if (scope.keep.libraryInfo) {
+              return scope.keep.libraryInfo.url;
+            } else {
+              return '/';
+            }
+          };
+
+          scope.$watch('libraries.length', function() {
+            scope.keep.libraryInfo = _.find(scope.libraries, function(lib) {
+              return scope.keep.libraryId === lib.id;
+            }) || null;
+          });
+        }
 
         scope.getTags = function () {
           return scope.keep && scope.keep.tagList;
@@ -306,15 +335,11 @@ angular.module('kifi')
         scope.isDragTarget = false;
 
 
-
-
         // TODO: bind to 'drop' event
         scope.onTagDrop = function (tag) {
           tagService.addKeepToTag(tag, scope.keep);
           scope.isDragTarget = false;
         };
-
-
 
 
         // TODO: add/remove kf-candidate-drag-target on dragenter/dragleave

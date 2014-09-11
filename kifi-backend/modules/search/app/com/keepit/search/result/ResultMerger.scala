@@ -25,7 +25,7 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   def merge(results: Seq[PartialSearchResult], maxHits: Int): PartialSearchResult = {
     if (results.size == 1) {
       val head = results.head
-      PartialSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.svVariance, head.show)
+      PartialSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show)
     } else {
       val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
       val friendStats = mergeFriendStats(results)
@@ -38,7 +38,6 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
         friendsTotal,
         othersTotal,
         friendStats,
-        -1.0f,
         show
       )
     }

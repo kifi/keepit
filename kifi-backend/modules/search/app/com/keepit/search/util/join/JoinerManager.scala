@@ -17,7 +17,7 @@ abstract class JoinerManager(initialCapacity: Int) {
   private[this] val overflowSize = 2
   private[this] var pool: Array[Joiner] = new Array[Joiner](16) // pool Joiners for reuse
   private[this] var activeCount: Int = 0
-  private[this] var table = new mutable.HashMap[Long, Joiner]()
+  private[this] val table = new mutable.HashMap[Long, Joiner]()
 
   private def getJoiner(): Joiner = {
     if (activeCount >= pool.length) {

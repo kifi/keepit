@@ -52,6 +52,7 @@
     <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Keep Privately</a></span>
+    <span class="kf-keep-footer-link" ng-if="isMine() && librariesEnabled"><a ng-href="{{getLibraryUrl()}}">{{getLibraryName()}}</a></span>
     <div class="kf-keep-private" ng-if="isMine() && isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
   

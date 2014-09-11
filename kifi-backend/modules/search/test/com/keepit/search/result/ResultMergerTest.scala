@@ -58,7 +58,6 @@ class ResultMergerTest extends Specification {
       friendsTotal = 2,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L), scores = Array(2.4f)),
-      svVariance = 0f,
       show = true
     )
   }
@@ -70,7 +69,6 @@ class ResultMergerTest extends Specification {
       friendsTotal = 1,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L, 3L), scores = Array(2f, 1.8f)),
-      svVariance = 0.1f,
       show = true
     )
   }
@@ -117,7 +115,6 @@ class ResultMergerTest extends Specification {
     friendsTotal = 3,
     othersTotal = 0,
     friendStats = FriendStats(Array(2L, 3L), Array(4.4f, 1.8f)),
-    svVariance = -1f,
     show = true
   )
 
@@ -133,7 +130,6 @@ class ResultMergerTest extends Specification {
       merged.friendStats.ids === expectedMerge.friendStats.ids
       merged.friendStats.scores === expectedMerge.friendStats.scores
       merged.show === expectedMerge.show
-      merged.svVariance === expectedMerge.svVariance
     }
   }
 }

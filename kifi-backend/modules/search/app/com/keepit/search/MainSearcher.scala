@@ -306,7 +306,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach { h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser)
+    val show = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false) else classify(hitList, parser)
 
     val shardHits = toDetailedSearchHits(hitList)
 
@@ -315,7 +315,7 @@ class MainSearcher(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
+    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, show)
   }
 
   private[this] def toDetailedSearchHits(hitList: Seq[Hit[MutableArticleHit]]): Seq[DetailedSearchHit] = {
@@ -370,10 +370,9 @@ class MainSearcher(
 
     if (filter.isDefault && isInitialSearch) {
       // simple classifier
-      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
-      (show, -1f)
+      hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
     } else {
-      (true, -1f)
+      true
     }
   }
 

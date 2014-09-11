@@ -63,11 +63,14 @@ angular.module('kifi')
       invitedSummaries: invitedSummaries,
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
-          librarySummariesService.expireAll();
+          librarySummariesService.expire();
         }
         return librarySummariesService.get();
       },
-      getLibraryById: function (libraryId) {
+      getLibraryById: function (libraryId, invalidateCache) {
+        if (invalidateCache) {
+          libraryByIdService.expire(libraryId);
+        }
         return libraryByIdService.get(libraryId);
       },
       getLibraryByPath: function (path) { // path is of the form /username/library-slug
@@ -79,7 +82,10 @@ angular.module('kifi')
         }
         return libraryByUserSlugService.get(username, slug);
       },
-      getLibraryByUserSlug: function (username, slug) {
+      getLibraryByUserSlug: function (username, slug, invalidateCache) {
+        if (invalidateCache) {
+          libraryByUserSlugService.expire(username, slug);
+        }
         return libraryByUserSlugService.get(username, slug);
       },
       getKeepsInLibrary: function (libraryId, offset, authToken) {
@@ -97,14 +103,21 @@ angular.module('kifi')
           return opts[v] === undefined;
         });
 
-        // Andrew: remove these:
-        opts.followers = opts.followers || [];
-        opts.collaborators = opts.collaborators || [];
-
         if (missingFields.length > 0) {
           return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
         }
         return $http.post(routeService.createLibrary, opts);
+      },
+      modifyLibrary: function (opts) {
+        var required = ['name', 'visibility', 'description', 'slug'];
+        var missingFields = _.filter(required, function (v) {
+          return opts[v] === undefined;
+        });
+
+        if (missingFields.length > 0) {
+          return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+        }
+        return $http.post(routeService.modifyLibrary(opts.id), opts);
       },
       librarySlugSuggestion: librarySlugSuggestion
     };
