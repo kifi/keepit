@@ -13,7 +13,7 @@ angular.module('kifi')
     $scope.manageLibrary = function () {
       libraryService.libraryState = {
         library: $scope.library,
-        returnAction: function (resp) {
+        returnAction: function () {
           libraryService.getLibraryById($scope.library.id, true).then(function (data) {
             libraryService.getLibraryByUserSlug(username, data.library.slug, true);
             if (data.library.slug !== librarySlug) {
