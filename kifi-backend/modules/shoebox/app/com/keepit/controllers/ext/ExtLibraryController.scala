@@ -42,7 +42,7 @@ class ExtLibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
 
       case Success(libraryId) =>
         db.readOnlyMaster { implicit s =>
@@ -59,7 +59,7 @@ class ExtLibraryController @Inject() (
             val rawBookmark = info.as[RawBookmarkRepresentation]
             Ok(Json.toJson(keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid access"))
+            BadRequest(Json.obj("error" -> "invalid_access"))
         }
     }
   }

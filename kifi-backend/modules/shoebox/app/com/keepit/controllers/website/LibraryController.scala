@@ -50,7 +50,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         val json = request.body
         val newName = (json \ "name").asOpt[String]
@@ -72,7 +72,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         libraryCommander.removeLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
@@ -95,7 +95,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         if (canView(request.userId, lib, authToken, passcode)) {
@@ -103,7 +103,7 @@ class LibraryController @Inject() (
             Ok(Json.obj("library" -> Json.toJson(library)))
           }
         } else {
-          Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+          Future.successful(BadRequest(Json.obj("error" -> "invalid_access")))
         }
     }
   }
@@ -118,19 +118,19 @@ class LibraryController @Inject() (
     }
     ownerOpt match {
       case None =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid username")))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_username")))
       case Some(owner) =>
         db.readOnlyMaster { implicit s =>
           libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) match {
             case None =>
-              Future.successful(BadRequest(Json.obj("error" -> "no library found")))
+              Future.successful(BadRequest(Json.obj("error" -> "no_library_found")))
             case Some(lib) =>
               if (canView(request.userId, lib, authToken, passcode)) {
                 libraryCommander.createFullLibraryInfo(request.userId, lib).map { libInfo =>
                   Ok(Json.obj("library" -> Json.toJson(libInfo)))
                 }
               } else {
-                Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+                Future.successful(BadRequest(Json.obj("error" -> "invalid_access")))
               }
           }
         }
@@ -166,7 +166,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         val invites = (request.body \ "invites").as[JsArray].value
 
@@ -200,7 +200,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
@@ -217,7 +217,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         libraryCommander.declineLibrary(request.userId, libId)
         Ok(JsString("success"))
@@ -228,7 +228,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         libraryCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
@@ -241,7 +241,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid id")))
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
         db.readOnlyReplica { implicit session =>
           if (canView(request.userId, libraryRepo.get(libraryId), authToken, passcode)) {
@@ -253,7 +253,7 @@ class LibraryController @Inject() (
               Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
             }
           } else
-            Future.successful(BadRequest(Json.obj("error" -> "invalid access")))
+            Future.successful(BadRequest(Json.obj("error" -> "invalid_access")))
         }
     }
   }
@@ -262,7 +262,7 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
 
         db.readOnlyReplica { implicit session =>
@@ -283,7 +283,7 @@ class LibraryController @Inject() (
               "count" -> take,
               "offset" -> offset))
           } else
-            BadRequest(Json.obj("error" -> "invalid access"))
+            BadRequest(Json.obj("error" -> "invalid_access"))
         }
     }
   }
@@ -349,7 +349,7 @@ class LibraryController @Inject() (
   def addKeeps(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
     Library.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid id"))
+        BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
         (request.body \ "keeps").asOpt[Seq[RawBookmarkRepresentation]] map { fromJson =>
           val source = KeepSource.site
