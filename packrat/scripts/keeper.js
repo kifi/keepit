@@ -125,7 +125,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         if (this.parentNode.classList.contains('kifi-keep-side')) {
-          keepPage('public', e);
+          keepPage('public', e.originalEvent.guided);
         } else {
           showKeepBox();
         }
@@ -307,11 +307,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function keepPage(how, e, suppressNamePrompt) {
-    log('[keepPage]', e, how);
+  function keepPage(how, guided, suppressNamePrompt) {
+    log('[keepPage]', how, guided ? 'guided' : '');
     justKept = true;
     var title = authoredTitle();
-    api.port.emit('keep', withUrls({title: title, how: how, guided: e.originalEvent.guided}));
+    api.port.emit('keep', withUrls({title: title, how: how, guided: guided}));
     if (!title && !suppressNamePrompt) {
       beginStickyTitle();
       api.require('scripts/keep_name_prompt.js', function () {
@@ -367,7 +367,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         if (window.pane) {
           pane.shade();
         }
-        keepBox.show($slider);
+        keepBox.show($slider, keepPage);
         keepBox.onHide.add(function () {
           endStickyKeepBox();
           if (window.pane) {
@@ -376,7 +376,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         });
         keepBox.onHidden.add(function (trigger) {
           keeper.moveBackFromBottom();
-          if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+          if ((trigger === 'x' || trigger === 'esc' || trigger === 'keep') && $slider && !isClickSticky()) {
             hideSlider('keepBox');
           }
         });

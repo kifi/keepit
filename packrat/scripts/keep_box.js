@@ -10,12 +10,12 @@ var keepBox = (function () {
   var handlers = {};
 
   return {
-    show: function ($parent) {
+    show: function ($parent, keepPage) {
       log('[keepBox.show]');
       if ($box) {
         hide();
       }
-      show($parent);
+      show($parent, keepPage);
     },
     hide: function () {
       if ($box) {
@@ -31,12 +31,18 @@ var keepBox = (function () {
     }
   };
 
-  function show($parent, recipient) {
+  function show($parent, keepPage) {
     log('[keepBox:show]');
     $box = $(render('html/keeper/keep_box'))
     .on('click mousedown', '.kifi-keep-box-x', function (e) {
       if (e.which === 1 && $box) {
         hide(e, 'x');
+      }
+    })
+    .on('click', '.kifi-keep-box-lib', function (e) {
+      if (e.which === 1) {
+        keepPage(this.classList.contains('kifi-secret') ? 'private' : 'public');
+        hide(e, 'keep');
       }
     })
     .appendTo($parent);

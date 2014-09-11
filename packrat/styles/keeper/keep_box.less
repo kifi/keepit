@@ -66,3 +66,63 @@
     transform: translate(-1px) rotate(-45deg);
   }
 }
+
+@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%D" d="M6,3.7L6,3.7L5.9,2.5C5.9,1.2,4.7,0,3.4,0S0.8,1.2,0.8,2.5v1.3H0.7C0.3,3.7,0,4,0,4.5v3.6C0,8.6,0.4,9,0.8,9h5.1c0.4,0,0.8-0.4,0.8-0.9V4.5C6.7,4,6.5,3.7,6,3.7z M1.7,2.5c0-0.7,0.7-1.6,1.7-1.6s1.7,0.9,1.7,1.6v1.3H1.7V2.5z"/></svg>';
+
+.kifi-keep-box-lib-input {
+  display: block;
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  line-height: 15px;
+  font-size: 13px;
+}
+.kifi-keep-box-lib-head {
+  background-color: #fbf5f3;
+  padding-left: 10px;
+  line-height: 25px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #999;
+}
+.kifi-keep-box-lib,
+.kifi-keep-box-create-lib {
+  display: block;
+  border-bottom: 1px solid #ece8e6;
+  background: url(/images/keeper/lib_cards.png) 14px 8px / auto 28px no-repeat;
+  line-height: 45px;
+  font-size: 13px;
+  font-weight: 300;
+  padding-left: 54px;
+  color: #333 !important;
+  &:hover,
+  &:focus {
+    background-color: #e8e8e8;
+    &:active {
+      background-color: #e3e3e3;
+    }
+  }
+}
+.kifi-keep-box-create-lib {
+  background-image: url(/images/keeper/lib_cards_new.png);
+  font-weight: 500;
+}
+.kifi-keep-box-lib {
+  &.kifi-secret {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      width: 9px;
+      @height: 12px;
+      height: @height;
+      margin-top: -(@height / 2) - 1px;
+      @url: %(@svgLockDataUrl, rgba(0,0,0,.2));
+      background-image: url(@url);
+      background-size: 9px 12px;
+    }
+  }
+}
