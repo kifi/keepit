@@ -57,6 +57,7 @@
     <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark"><a ng-click="unkeep(keep)" href='javascript:'>Unkeep</a></span>
     <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPublic(keep)" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPrivate(keep)" href='javascript:'>Keep Privately</a></span>
+    <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark && librariesEnabled"><a ng-href="{{getLibraryUrl(keep)}}">{{getLibraryName(keep)}}</a></span>
     <div class="kf-keep-private" ng-if="keep.isMyBookmark && keep.isPrivate"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
 

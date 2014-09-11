@@ -522,11 +522,12 @@ angular.module('kifi')
   '$rootScope',
   '$rootElement',
   'keepActionService',
+  'libraryService',
   'recoActionService',
   'tagService',
   'undoService',
   'util',
-  function ($document, $rootScope, $rootElement, keepActionService, recoActionService, tagService, undoService, util) {
+  function ($document, $rootScope, $rootElement, keepActionService, libraryService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -789,6 +790,25 @@ angular.module('kifi')
         });
 
         updateSiteDescHtml(scope.keep);
+
+        // For libraries.
+        scope.librariesEnabled = libraryService.isAllowed();
+
+        if (scope.librariesEnabled && libraryService.librarySummaries) {
+          scope.getLibraryName = function (keep) {
+            return keep.libraryInfo ? keep.libraryInfo.name : '';
+          };
+
+          scope.getLibraryUrl = function (keep) {
+            return keep.libraryInfo ? keep.libraryInfo.url : '/';
+          };
+
+          scope.$watch('libraries.length', function () {
+            scope.keep.libraryInfo = _.find(libraryService.librarySummaries, function(lib) {
+              return scope.keep.libraryId === lib.id;
+            }) || null;
+          });
+        }
 
         // For dragging.
         var tagDragMask = element.find('.kf-tag-drag-mask');
