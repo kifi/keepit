@@ -350,6 +350,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function showKeepBox() {
     if (window.keepBox && keepBox.showing()) return;
+    if (window.toaster && toaster.showing()) {
+      toaster.hide();
+    }
     beginStickyKeepBox();
     keeper.moveToBottom(function () {
       api.require('scripts/keep_box.js', function () {
@@ -541,6 +544,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       log('[keeper:compose]', opts.trigger || '');
       if (!$slider) {
         showSlider();
+      } else if (window.keepBox && keepBox.showing()) {
+        keepBox.hide();
       }
       beginStickyToaster();
       keeper.moveToBottom(function () {
@@ -573,9 +578,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
         beginStickyPane();
         if (window.toaster && toaster.showing()) {
           toaster.hide();
+        } else if (window.keepBox && keepBox.showing()) {
+          keepBox.hide();
         }
       } else {  // dislodge from pane and prepare for x transition
+        var focusedEl = document.activeElement;
         $slider.prependTo(tile).layout();
+        if ($slider[0].contains(focusedEl)) {
+          focusedEl.focus();
+        }
         endStickyPane();
       }
     }};
