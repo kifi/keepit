@@ -565,7 +565,6 @@ angular.module('kifi')
           return keep.hasBigImage || (keep.summary && useBigLayout);
         };
 
-
         scope.hasTag = function (keep) {
           return keep.tagList && keep.tagList.length > 0;
         };

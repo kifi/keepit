@@ -86,6 +86,24 @@ angular.module('util', [])
         fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
         return domain + (fileName ? ' · ' + fileName : '');
+      },
+      joinTags: function (keeps, tags) {
+        var idMap = _.reduce(tags, function (map, tag) {
+          if (tag && tag.id) {
+            map[tag.id] = tag;
+          }
+          return map;
+        }, {});
+
+        var that = this;
+        _.forEach(keeps, function (keep) {
+          var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
+            return idMap[tagId] || null;
+          }).filter(function (tag) {
+            return tag != null;
+          });
+          keep.tagList = that.replaceArrayInPlace(keep.tagList, newTagList);
+        });
       }
     };
   }

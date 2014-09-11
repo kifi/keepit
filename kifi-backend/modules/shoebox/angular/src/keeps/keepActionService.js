@@ -43,7 +43,7 @@ angular.module('kifi')
       return keepList.get(url, config).then(function (data) {
         var result = {};
 
-        result.keeps =  data.keeps;
+        result.keeps = data.keeps;
         result.mayHaveMore = (data.keeps.length > 0) && (data.keeps.length >= params.count - 1);
 
         return result;

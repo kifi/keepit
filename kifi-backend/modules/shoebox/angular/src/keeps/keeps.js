@@ -3,16 +3,17 @@
 angular.module('kifi')
 
 .controller('KeepsCtrl', [
-  '$scope', 'profileService', 'keepService', 'tagService',
-  function ($scope, profileService, keepService, tagService) {
+  '$scope', 'profileService', 'tagService', 'util',
+  function ($scope, profileService, tagService, util) {
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
     $scope.$watch(function () {
-      return keepService.seqResult() + ',' + tagService.allTags.length;
+      // TODO: is this too inefficient? Will this be called too many times?
+      return $scope.keeps.length + ',' + tagService.allTags.length;
     }, function () {
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
-        keepService.joinTags($scope.keeps, tagService.allTags);
+        util.joinTags($scope.keeps, tagService.allTags);
       }
     });
 
