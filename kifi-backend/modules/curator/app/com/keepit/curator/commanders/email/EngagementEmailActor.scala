@@ -1,5 +1,7 @@
 package com.keepit.curator.commanders.email
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -17,15 +19,18 @@ class EngagementEmailActor @Inject() (
 
   import FeedDigestMessage._
 
+  val isRunning = new AtomicBoolean(false)
+
   def receive: PartialFunction[Any, Unit] = {
     case Queue => {
-      log.info("calling FeedDigestEmailSender.send()")
+      log.info("[Queue] calling FeedDigestEmailSender.send()")
       feedDigestSender.addToQueue().foreach(_ => self ! Send)
     }
     case Send => {
-      log.info("calling FeedDigestEmailSender.processQueue()")
-      feedDigestSender.processQueue()
+      if (isRunning.compareAndSet(false, true)) {
+        log.info("[Send] calling FeedDigestEmailSender.processQueue()")
+        feedDigestSender.processQueue().onComplete(_ => isRunning.set(false))
+      } else log.info("[Send] skipping; already running")
     }
   }
-
 }
