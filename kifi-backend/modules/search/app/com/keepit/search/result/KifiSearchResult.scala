@@ -174,7 +174,6 @@ object PartialSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "svVariance" -> JsNumber(-1.0), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
     } catch {
@@ -190,7 +189,6 @@ object PartialSearchResult extends Logging {
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
       "friendsStats" -> Json.toJson(FriendStats.empty),
-      "svVariance" -> JsNumber(-1.0), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))
   }
