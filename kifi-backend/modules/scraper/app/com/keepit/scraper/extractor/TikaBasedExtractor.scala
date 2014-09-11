@@ -16,6 +16,8 @@ import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 import org.apache.tika.io.{ TikaInputStream, TemporaryResources }
 
+import scala.util.Try
+
 abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
   protected val output = new WriteOutContentHandler(maxContentChars)
@@ -58,7 +60,7 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
         else
           log.error("extraction failed: ", e)
     } finally {
-      stream.close()
+      Try(stream.close())
     }
   }
 
