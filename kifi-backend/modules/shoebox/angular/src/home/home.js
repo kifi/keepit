@@ -17,6 +17,7 @@ angular.module('kifi')
     $scope.keeps = [];
     $scope.hasLoaded = false;
     $scope.hasMore = true;
+    $scope.loading = false;
 
 
     //

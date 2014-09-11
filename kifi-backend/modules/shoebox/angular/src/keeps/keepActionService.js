@@ -56,6 +56,17 @@ angular.module('kifi')
       return getKeeps(lastKeepId, params);
     }
 
+    function getSingleKeep(keepId) {
+      var url = routeService.getKeep(keepId);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        return result && result.data;
+      });
+    }
+
     function keepMany(keeps, isPrivate) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'keep',
@@ -144,6 +155,7 @@ angular.module('kifi')
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
+      getSingleKeep: getSingleKeep,
       keepOne: keepOne,
       keepMany: keepMany,
       togglePrivateOne: togglePrivateOne,

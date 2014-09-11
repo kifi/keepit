@@ -19,6 +19,7 @@ angular.module('kifi')
     $scope.hasLoaded = false;
     $scope.hasMore = true;
     $scope.scrollDistance = '100%';
+    $scope.loading = false;
 
 
     //
