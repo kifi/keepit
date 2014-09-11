@@ -230,38 +230,47 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function hideSlider(trigger) {
-    log('[hideSlider]', trigger);
-    $slider
-    .off('transitionend')
-    .on('transitionend', function (e) {
-      if (e.target === this) {
-        var css = JSON.parse(tile.dataset.pos || 0);
-        if (css && !tile.style.top && !tile.style.bottom) {
-          var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
-          css.transition = 'none';
-          css.transform = 'translate(0,' + y + 'px)';
-          $(tile).css(css)
-          .layout().css({transition: '', 'transition-duration': Math.min(1, 32 * Math.log(y)) + 'ms'})
-          .find('.kifi-count').css('zoom', 1); // webkit repaint workaround
-          tile['kifi:position']();
-          $(tile).on('transitionend', function end() {
-            $(this).off('transitionend', end).css('transition-duration', '');
-          });
+    if ($slider.css('opacity') > 0) {
+      log('[hideSlider]', trigger);
+      $slider
+      .off('transitionend')
+      .on('transitionend', function (e) {
+        if (e.target === this) {
+          hideSlider2();
         }
-        $slider.remove(), $slider = null;
-
-        if (justKept && !window.guide) {
-          api.port.emit('prefs', function (prefs) {
-            if (prefs.showExtMsgIntro) {
-              setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
-            }
-          });
-          justKept = false;
-        }
-      }
-    })
-    .addClass('kifi-hidden kifi-transit');
+      })
+      .addClass('kifi-hidden kifi-transit');
+    } else {
+      log('[hideSlider]', trigger, 'synchronously');
+      hideSlider2();
+    }
     $(tile).off('mousedown click keydown keypress keyup', stopPropagation);
+  }
+
+  function hideSlider2() {
+    var css = JSON.parse(tile.dataset.pos || 0);
+    if (css && !tile.style.top && !tile.style.bottom) {
+      var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
+      css.transition = 'none';
+      css.transform = 'translate(0,' + y + 'px)';
+      $(tile).css(css)
+      .layout().css({transition: '', 'transition-duration': Math.min(1, 32 * Math.log(y)) + 'ms'})
+      .find('.kifi-count').css('zoom', 1); // webkit repaint workaround
+      tile['kifi:position']();
+      $(tile).on('transitionend', function end() {
+        $(this).off('transitionend', end).css('transition-duration', '');
+      });
+    }
+    $slider.remove(), $slider = null;
+
+    if (justKept && !window.guide) {
+      api.port.emit('prefs', function (prefs) {
+        if (prefs.showExtMsgIntro) {
+          setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
+        }
+      });
+      justKept = false;
+    }
   }
 
   function startDrag(data) {
