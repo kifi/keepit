@@ -104,6 +104,10 @@ angular.module('util', [])
           });
           keep.tagList = that.replaceArrayInPlace(keep.tagList, newTagList);
         });
+      },
+      validateUrl: function (keepUrl) {
+        // Extremely simple for now, can be developed in the future
+        return keepUrl.indexOf('.') !== -1;
       }
     };
   }

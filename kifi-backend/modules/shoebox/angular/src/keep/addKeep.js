@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepService', 'libraryService', 'tagService',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepService, libraryService, tagService) {
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'keepService', 'libraryService', 'tagService', 'util',
+  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, keepService, libraryService, tagService, util) {
 
     return {
       restrict: 'A',
@@ -77,7 +77,7 @@ angular.module('kifi')
 
         scope.keepUrl = function () {
           var url = (scope.state.input) || '';
-          if (url && keepService.validateUrl(url)) {
+          if (url && util.validateUrl(url)) {
             $location.path('/');
             return keepService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               scope.resetAndHide();
@@ -96,8 +96,8 @@ angular.module('kifi')
 
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
-          if (url && keepService.validateUrl(url)) {
-            keepService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
+          if (url && util.validateUrl(url)) {
+            keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
               } else if (result.alreadyKept.length > 0) {
@@ -113,7 +113,6 @@ angular.module('kifi')
 
                 libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
                 tagService.addToKeepCount(1);
-                keepService.fetchFullKeepInfo(result.keeps[0]);
               }
               scope.resetAndHide();
             });

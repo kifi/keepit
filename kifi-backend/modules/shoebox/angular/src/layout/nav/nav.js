@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope',
-  function ($location, util, keepService, friendService, tagService, profileService, libraryService, $rootScope) {
+  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope',
+  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope) {
     return {
       //replace: true,
       restrict: 'A',

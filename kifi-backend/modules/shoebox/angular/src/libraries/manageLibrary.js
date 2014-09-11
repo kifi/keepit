@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ManageLibraryCtrl', [
-  '$scope', 'keepService', '$routeParams', 'libraryService', 'util', '$timeout', '$location',
-  function ($scope, keepService, $routeParams, libraryService, util, $timeout, $location) {
+  '$scope', '$routeParams', 'libraryService', 'util', '$timeout', '$location',
+  function ($scope, $routeParams, libraryService, util, $timeout, $location) {
     $scope.$error = {};
     $scope.userHasEditedSlug = false;
     var returnAction;

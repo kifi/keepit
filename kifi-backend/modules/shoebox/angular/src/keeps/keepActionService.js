@@ -139,7 +139,7 @@ angular.module('kifi')
         })
       };
 
-      $log.log('keepService.keepToLibrary()', data);
+      $log.log('keepActionService.keepToLibrary()', data);
       var url = env.xhrBase + '/libraries/' + libraryId + '/keeps';
       return $http.post(url, data, {}).then(function (res) {
         _.uniq(res.data.keeps, function (keep) {
