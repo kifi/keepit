@@ -55,7 +55,7 @@ object ResultUtil {
       mergedResult.friendsTotal,
       mergedResult.othersTotal,
       res.mayHaveMoreHits,
-      mergedResult.hits.map { h => (h.json \ "scoring").as[Scoring] },
+      Seq[Scoring](),
       res.idFilter,
       millisPassed,
       pageNumber,
