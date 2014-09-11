@@ -55,10 +55,33 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
           "url" -> "http://42go.com",
           "isPrivate" -> true
-        )))
+        ), libraryId = None))
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           rawKeepRepo.all.headOption.map(_.url) === Some("http://42go.com")
+          rawKeepRepo.all.size === 1
+        }
+      }
+    }
+    "persist to RawKeepRepo (with libraryId)" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user, lib) = db.readWrite { implicit session =>
+          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          (user, lib)
+        }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val bookmarkInterner = inject[KeepInterner]
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
+          "url" -> "http://42go.com",
+          "isPrivate" -> true
+        ), libraryId = lib.id))
+        db.readWrite { implicit session =>
+          userRepo.get(user.id.get) === user
+          val targetRawKeep = rawKeepRepo.all.headOption
+          targetRawKeep.map(_.url) === Some("http://42go.com")
+          targetRawKeep.map(_.libraryId.get) === lib.id
           rawKeepRepo.all.size === 1
         }
       }

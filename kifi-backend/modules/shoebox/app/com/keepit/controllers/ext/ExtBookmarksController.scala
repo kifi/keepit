@@ -19,6 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
+import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 import com.keepit.normalizer.NormalizedURIInterner
 
@@ -214,8 +215,7 @@ class ExtBookmarksController @Inject() (
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body
-    // todo:
-    // val libraryId = (request.body \ "libraryId").asOpt[String].map(id => PublicId[Library](id))
+    val libPubId = (request.body \ "libraryId").asOpt[String].map(id => PublicId[Library](id))
 
     val bookmarkSource = (json \ "source").asOpt[String].map(KeepSource.get) getOrElse KeepSource.unknown
     if (!KeepSource.valid.contains(bookmarkSource)) {
@@ -226,7 +226,17 @@ class ExtBookmarksController @Inject() (
       log.debug(s"adding bookmarks import of user $userId")
 
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
-      bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId))
+      if (libPubId.isEmpty) {
+        bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId, libraryId = None))
+      } else {
+        val idTry = Library.decodePublicId(libPubId.get)
+        idTry match {
+          case Failure(ex) =>
+            airbrake.notify(s"Invalid Library Public Id ${libPubId.get} when importing user $userId bookmarks")
+          case Success(id) =>
+            bookmarkInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId, libraryId = Some(id)))
+        }
+      }
     }
     Status(ACCEPTED)(JsNumber(0))
   }
