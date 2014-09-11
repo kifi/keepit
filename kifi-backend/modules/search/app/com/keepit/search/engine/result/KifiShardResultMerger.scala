@@ -3,6 +3,7 @@ package com.keepit.search.engine.result
 import com.keepit.search.SearchConfig
 import com.keepit.search.engine.Visibility
 import com.keepit.search.util.HitQueue
+import play.api.libs.json.JsResultException
 import scala.math._
 
 class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
@@ -50,13 +51,18 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     results.foreach { res =>
       res.hits.foreach { hit =>
-        val visibility = hit.visibility
-        val queue = {
-          if ((visibility & Visibility.OWNER) != 0) myHits
-          else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
-          else othersHits
+        try {
+          val visibility = hit.visibility
+          val queue = {
+            if ((visibility & Visibility.OWNER) != 0) myHits
+            else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) friendsHits
+            else othersHits
+          }
+          queue.insert(hit.score, null, hit)
+        } catch {
+          case e: JsResultException =>
+            throw new Exception(s"failed to parse KifiShardHit: ${hit.json.toString()}", e)
         }
-        queue.insert(hit.score, null, hit)
       }
     }
 
