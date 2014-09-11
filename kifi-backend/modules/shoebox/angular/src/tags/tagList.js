@@ -238,7 +238,12 @@ angular.module('kifi')
         };
 
         scope.hideAddTagDropdown = function () {
-          return scope.addingTag.enabled = false;
+          // TODO: figure out why this check is necessary.
+          // It seems like Angular processes this before addingTag in the parent
+          // element (kf-keep) has a chance to be initialized.
+          if (scope.addingTag) {
+            return scope.addingTag.enabled = false;
+          }
         };
 
         // We should be able to just replace the ng-show on the directive with an ng-if and remove the code
