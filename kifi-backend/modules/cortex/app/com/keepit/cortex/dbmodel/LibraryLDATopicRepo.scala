@@ -1,23 +1,23 @@
 package com.keepit.cortex.dbmodel
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{ LDATopicFeature, DenseLDA }
+import com.keepit.cortex.models.lda.{ DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.Library
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 
-import scala.slick.jdbc.StaticQuery
-
+@ImplementedBy(classOf[LibraryLDATopicRepoImpl])
 trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
 }
 
+@Singleton
 class LibraryLDATopicRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,

@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.BaseFeatureUpdater
-import com.keepit.model.{ LibraryKind, Library }
+import com.keepit.model.{ LibraryStates, LibraryKind, Library }
 import com.keepit.cortex.utils.MatrixUtils._
 import org.joda.time.DateTime
 
@@ -72,7 +72,7 @@ class LDALibraryUpdaterImpl @Inject() (
   }
 
   private def shouldComputeFeature(libId: Id[Library], model: Option[LibraryLDATopic]): Boolean = {
-    def isApplicableLibrary(lib: Option[CortexLibrary]): Boolean = lib.exists(x => x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET)
+    def isApplicableLibrary(lib: Option[CortexLibrary]): Boolean = lib.exists(x => x.state.value == LibraryStates.ACTIVE.value && x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET)
     def isOld(updatedAt: DateTime) = updatedAt.plusMinutes(2).getMillis < currentDateTime.getMillis
 
     val lib = db.readOnlyReplica { implicit s => libRepo.getByLibraryId(libId) }
