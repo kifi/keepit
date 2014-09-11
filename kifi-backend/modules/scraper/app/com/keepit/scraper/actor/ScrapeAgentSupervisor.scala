@@ -61,8 +61,8 @@ class ScrapeAgentSupervisor @Inject() (
   val scrapers = (0 until config.numWorkers).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
-  val scraperRouter = context.actorOf(Props.empty.withRouter(BroadcastGroup(paths = scrapers.map(_.path.toString))), "scraper-router")
-  log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
+  val scraperBroadcaster = context.actorOf(Props.empty.withRouter(BroadcastGroup(paths = scrapers.map(_.path.toString))), "scraper-router")
+  log.info(s"[Supervisor.<ctr>] scraperBroadcaster=$scraperBroadcaster scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
   val fetchers = (0 until config.numWorkers / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
@@ -113,14 +113,14 @@ class ScrapeAgentSupervisor @Inject() (
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
-      scraperRouter ! Broadcast(JobAvail)
+      scraperBroadcaster ! JobAvail
 
     // external
     case f: Fetch =>
       fetcherRouter.forward(FetchJob(clock.now(), f))
     case s: Scrape =>
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
-      scraperRouter ! Broadcast(JobAvail)
+      scraperBroadcaster ! JobAvail
     case QueueSize =>
       if (scrapeQ.size > config.pullMax / 2) { // tweak
         diagnostic()
