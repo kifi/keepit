@@ -60,8 +60,8 @@ object ArticleSearchResult extends Logging {
     (__ \ 'previousHits).format[Int] and
     (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
     (__ \ 'time).format[DateTime] and
-    (__ \ 'svVariance).format[Float] and
-    (__ \ 'svExistenceVar).format[Float] and
+    (__ \ 'svVariance).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and
+    (__ \ 'svExistenceVar).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and
     (__ \ 'toShow).formatNullable[Boolean].inmap(_.getOrElse(true), Some.apply[Boolean]) and
     (__ \ 'collections).format[Set[Long]] and
     (__ \ 'lang).format[String]
