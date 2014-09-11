@@ -1,19 +1,35 @@
 package com.keepit.cortex.models.lda
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.BaseFeatureUpdater
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.model.{ LibraryStates, LibraryKind, Library }
 import com.keepit.cortex.utils.MatrixUtils._
 import org.joda.time.DateTime
 
+class LDALibraryUpdaterActor @Inject() (airbrake: AirbrakeNotifier, updater: LDALibraryUpdater) extends FeatureUpdateActor(airbrake, updater)
+
+trait LDALibraryUpdaterPlugin extends FeatureUpdatePlugin[Library, DenseLDA]
+
+@Singleton
+class LDALibraryUpdaterPluginImpl @Inject() (
+  actor: ActorInstance[LDALibraryUpdaterActor],
+  discovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDALibraryUpdaterPlugin
+
+@ImplementedBy(classOf[LDALibraryUpdaterImpl])
 trait LDALibraryUpdater extends BaseFeatureUpdater[Id[Library], Library, DenseLDA, FeatureRepresentation[Library, DenseLDA]]
 
+@Singleton
 class LDALibraryUpdaterImpl @Inject() (
     representer: LDAURIRepresenter,
     db: Database,
