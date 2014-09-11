@@ -665,6 +665,6 @@ class SearchCommanderBackwardCompatibilitySupport(
       toDetailedSearchHit(h, friendStats)
     }
 
-    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, -1.0f, result.show)
+    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show)
   }
 }
