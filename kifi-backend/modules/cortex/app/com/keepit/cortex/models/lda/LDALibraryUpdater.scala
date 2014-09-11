@@ -76,7 +76,7 @@ class LDALibraryUpdaterImpl @Inject() (
 
   private def shouldComputeFeature(libId: Id[Library], model: Option[LibraryLDATopic]): Boolean = {
     def isApplicableLibrary(lib: Option[CortexLibrary]): Boolean = lib.exists(x => x.state.value == LibraryStates.ACTIVE.value && x.kind != LibraryKind.SYSTEM_MAIN && x.kind != LibraryKind.SYSTEM_SECRET)
-    def isOld(updatedAt: DateTime) = updatedAt.plusMinutes(2).getMillis < currentDateTime.getMillis
+    def isOld(updatedAt: DateTime) = updatedAt.plusMinutes(5).getMillis < currentDateTime.getMillis
 
     val lib = db.readOnlyReplica { implicit s => libRepo.getByLibraryId(libId) }
     isApplicableLibrary(lib) && (model.isEmpty || isOld(model.get.updatedAt))
