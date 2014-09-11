@@ -145,15 +145,15 @@ class LibraryCommander @Inject() (
 
     val targetLib = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (targetLib.ownerId != userId) {
-      Left(LibraryFail("Not Owner"))
+      Left(LibraryFail("permission_denied"))
     } else {
       def validName(name: String): Either[LibraryFail, String] = {
         if (Library.isValidName(name)) Right(name)
-        else Left(LibraryFail("Invalid name"))
+        else Left(LibraryFail("invalid_name"))
       }
       def validSlug(slug: String): Either[LibraryFail, String] = {
         if (LibrarySlug.isValidSlug(slug)) Right(slug)
-        else Left(LibraryFail("Invalid slug"))
+        else Left(LibraryFail("invalid_slug"))
       }
 
       for {
@@ -182,11 +182,9 @@ class LibraryCommander @Inject() (
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, String] = {
     val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (oldLibrary.ownerId != userId) {
-      Left(LibraryFail("Not Owner"))
-    } else if (oldLibrary.kind == LibraryKind.SYSTEM_MAIN) {
-      Left(LibraryFail("Cannot delete Main Library"))
-    } else if (oldLibrary.kind == LibraryKind.SYSTEM_SECRET) {
-      Left(LibraryFail("Cannot delete Secret Library"))
+      Left(LibraryFail("permission_denied"))
+    } else if (oldLibrary.kind == LibraryKind.SYSTEM_MAIN || oldLibrary.kind == LibraryKind.SYSTEM_SECRET) {
+      Left(LibraryFail("cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
         val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
@@ -222,7 +220,7 @@ class LibraryCommander @Inject() (
       (library, ownerId, memTo, tagOpt, keeps)
     }
     (memTo, tagOpt) match {
-      case (_, None) => Left(LibraryFail("tag not found"))
+      case (_, None) => Left(LibraryFail("tag_not_found"))
       case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
       case (_, Some(tag)) =>
@@ -335,9 +333,9 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
       if (targetLib.ownerId != inviterId)
-        Left(LibraryFail("Not Owner"))
+        Left(LibraryFail("permission_denied"))
       else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail("System generated MAIN/SECRET libraries cannot be invited to!"))
+        Left(LibraryFail("cant_invite_to_system_generated_library"))
       else {
         val successInvites = for (i <- inviteList) yield {
           val (inv, extId) = i._1 match {
@@ -361,9 +359,9 @@ class LibraryCommander @Inject() (
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 
       if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail("System generated MAIN/SECRET libraries cannot be joined by others!"))
+        Left(LibraryFail("cant_join_system_generated_library"))
       else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
-        Left(LibraryFail("cannot join - not published library"))
+        Left(LibraryFail("cant_join_nonpublished_library"))
       else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.getOpt(userId, libraryId) match {
@@ -389,7 +387,7 @@ class LibraryCommander @Inject() (
   def leaveLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-        case None => Left(LibraryFail("membership not found"))
+        case None => Left(LibraryFail("membership_not_found"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           libraryRepo.updateMemberCount(libraryId)
