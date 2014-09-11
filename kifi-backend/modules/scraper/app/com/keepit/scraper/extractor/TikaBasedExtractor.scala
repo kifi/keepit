@@ -16,7 +16,7 @@ import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 import org.apache.tika.io.{ TikaInputStream, TemporaryResources }
 
-import scala.util.Try
+import scala.util.{ Success, Failure, Try }
 
 abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
@@ -60,7 +60,11 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
         else
           log.error("extraction failed: ", e)
     } finally {
-      Try(stream.close())
+      try {
+        stream.close()
+      } catch {
+        case e: Exception => log.error(s"error closing Tika stream of content type: ${input.httpContentType}", e)
+      }
     }
   }
 
