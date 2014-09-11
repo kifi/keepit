@@ -3,22 +3,11 @@ package com.keepit.abook.model
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ ABookInfo, User }
+import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
-object RichContact {
-  implicit val format = Json.format[RichContact]
-  def deduplicateByEmailAddress(contacts: Seq[RichContact]): Seq[RichContact] = {
-    var uniqueLowerCasedAddresses = Set.empty[String]
-    contacts.filter { contact =>
-      val lowerCasedAddress = contact.email.address.toLowerCase
-      val isDuplicate = uniqueLowerCasedAddresses.contains(lowerCasedAddress)
-      uniqueLowerCasedAddresses += lowerCasedAddress
-      !isDuplicate
-    }
-  }
-}
+@json case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 
 case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[EmailAccountInfo])
 object EmailAccountInfo {
