@@ -16,19 +16,6 @@ import com.keepit.model.{ LibraryStates, LibraryKind, Library }
 import com.keepit.cortex.utils.MatrixUtils._
 import org.joda.time.DateTime
 
-class LDALibraryUpdaterActor @Inject() (airbrake: AirbrakeNotifier, updater: LDALibraryUpdater) extends FeatureUpdateActor(airbrake, updater)
-
-trait LDALibraryUpdaterPlugin extends FeatureUpdatePlugin[Library, DenseLDA]
-
-@Singleton
-class LDALibraryUpdaterPluginImpl @Inject() (
-  actor: ActorInstance[LDALibraryUpdaterActor],
-  discovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDALibraryUpdaterPlugin
-
-@ImplementedBy(classOf[LDALibraryUpdaterImpl])
-trait LDALibraryUpdater extends BaseFeatureUpdater[Id[Library], Library, DenseLDA, FeatureRepresentation[Library, DenseLDA]]
-
 @Singleton
 class LDALibraryUpdaterImpl @Inject() (
     representer: LDAURIRepresenter,
@@ -104,3 +91,16 @@ class LDALibraryUpdaterImpl @Inject() (
     }
   }
 }
+
+class LDALibraryUpdaterActor @Inject() (airbrake: AirbrakeNotifier, updater: LDALibraryUpdater) extends FeatureUpdateActor(airbrake, updater)
+
+trait LDALibraryUpdaterPlugin extends FeatureUpdatePlugin[Library, DenseLDA]
+
+@Singleton
+class LDALibraryUpdaterPluginImpl @Inject() (
+  actor: ActorInstance[LDALibraryUpdaterActor],
+  discovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDALibraryUpdaterPlugin
+
+@ImplementedBy(classOf[LDALibraryUpdaterImpl])
+trait LDALibraryUpdater extends BaseFeatureUpdater[Id[Library], Library, DenseLDA, FeatureRepresentation[Library, DenseLDA]]
