@@ -10,6 +10,7 @@
         <div class="kf-add-keep-private-container" ng-if="!librariesEnabled" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
 
         <div class="kf-add-keep-to-library" ng-if="librariesEnabled">
+          <span class="sprite sprite-cards-small"></span>&nbsp;&nbsp;
           <select ng-model="data.selectedLibraryId">
             <option ng-repeat="lib in libraries" 
                     value="{{lib.id}}">{{lib.name}}</option>

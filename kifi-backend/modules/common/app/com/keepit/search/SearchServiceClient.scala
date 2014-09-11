@@ -435,7 +435,7 @@ class SearchServiceClientImpl(
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
 
-    distRouter.dispatch(plan, Search.internal.distSearch, request).map { f => f.map(_.json) }
+    distRouter.dispatch(plan, path, request).map { f => f.map(_.json) }
   }
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {

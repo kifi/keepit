@@ -9,7 +9,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.common.mail.{ EmailToSend, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -397,7 +397,7 @@ object Curator extends Service {
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
     def triggerEmail(code: String) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
-    def resetUserRecoGenState(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/resetUserRecoGenState", Param("userId", userId))
+    def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
   }
 }
 

@@ -31,7 +31,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
-  def resetUserRecoGenState(userId: Id[User]): Future[Unit] = { Future.successful() }
+  def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
 
   // test helpers
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()

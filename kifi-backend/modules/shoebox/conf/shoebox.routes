@@ -108,6 +108,9 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 # Note: /ext/invite has not been in use since 2.9.31.
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
+GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id:PublicId[Library])
+
 ##########################################
 # Mobile
 ##########################################
@@ -493,6 +496,8 @@ GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserCont
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
+POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
+
 
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
@@ -733,6 +738,8 @@ POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controll
 GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
+GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
+
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()

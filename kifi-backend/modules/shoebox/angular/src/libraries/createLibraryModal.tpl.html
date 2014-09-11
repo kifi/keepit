@@ -1,0 +1,41 @@
+<div kf-modal show="data.showCreateLibraryModal" kf-width="600px">
+  <div kf-basic-modal-content class="create-library" title="Create a library" single-action="false" cancel="cancel()">
+    <div ng-controller="ManageLibraryCtrl">
+      <div class="dialog-text">
+
+        <div class="create-lib-input-wrapper">
+          <div class="create-lib-input-title">Library Name<span ng-if="$error.name">{{$error.name}}</span></div>
+            <input class="create-lib-input"
+              ng-model="library.name"
+              type="text" name="name" placeholder="Snazzy links" novalidate>
+            <div>
+              <span>kifi.com/username/</span>
+              <input ng-change="editSlug()" class="create-lib-input create-lib-partial"
+                ng-model="library.slug" ng-class="{'create-lib-calced':!userHasEditedSlug}"
+                type="text" name="slug" placeholder="new-library" novalidate>
+            </div>
+        </div>
+        <div class="create-lib-input-wrapper">
+          <div class="create-lib-input-title">Description<span ng-if="$error.description">{{$error.description}}</span></div>
+            <input class="create-lib-input"
+              ng-model="library.description"
+              type="text" name="description" placeholder="Best links on the internet, as of 30 seconds ago" novalidate>
+        </div>
+        <div class="create-lib-input-wrapper">
+          <div class="create-lib-input-title">Keep it limited?</div>
+          <div>
+            <div><label><input type="radio" ng-model="library.visibility" value="secret"> Secret</label></div>
+            <div><label><input type="radio" ng-model="library.visibility" value="discoverable"> Discoverable</label></div>
+            <div><label><input type="radio" ng-model="library.visibility" value="published"> Published</label></div>
+          </div>
+        </div>
+
+        <div ng-if="$error.general" class="create-lib-error">{{$error.general}}</div>
+
+      </div>
+      <div class="dialog-buttons">
+        <button class="create-button" ng-click="createLibrary()">Create library</button>
+      </div>
+    </div>
+  </div>
+</div>

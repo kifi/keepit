@@ -263,32 +263,4 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  def resetUser(userId: Id[User]): Future[Unit] = {
-    getPerUserGenerationLock(userId).withLockFuture {
-      db.readWriteAsync { implicit s =>
-        val stateOpt = genStateRepo.getByUserId(userId)
-        stateOpt.foreach { state =>
-          genStateRepo.save(state.copy(seq = SequenceNumber.ZERO))
-        }
-      }.flatMap { _ =>
-
-        val state = getStateOfUser(userId)
-
-        val seedsFuture = getRescoreSeedsForUser(userId)
-        specialCurators().flatMap { boostedKeepersSeq =>
-          val res: Future[Unit] = seedsFuture.flatMap { seeds =>
-            val batches = seeds.grouped(200)
-            FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, boostedKeepersSeq.toSet))
-          }
-
-          res.onFailure {
-            case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
-          }
-
-          res
-        }
-      }
-    }
-  }
-
 }

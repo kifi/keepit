@@ -180,9 +180,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryRepo.count === 0
         }
 
-        val noInvites = Seq.empty[ExternalId[User]]
-        val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
-        val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
+        val noInvites = None
+        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
+        val inv3 = Some(userHulk.externalId :: Nil)
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -192,9 +192,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
           visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv3, followers = noInvites)
-
-        val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
-          visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv2, followers = inv3)
 
         val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -209,7 +206,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
         add3.isRight === true
         add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
         libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
