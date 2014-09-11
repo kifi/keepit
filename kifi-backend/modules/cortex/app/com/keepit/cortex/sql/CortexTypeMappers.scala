@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.cortex.core._
 import java.sql.Blob
 import javax.sql.rowset.serial.SerialBlob
-import com.keepit.cortex.dbmodel.{ UserTopicVar, UserTopicMean }
+import com.keepit.cortex.dbmodel.{ LibraryTopicMean, UserTopicVar, UserTopicMean }
 import com.keepit.cortex.store.StoreUtil.FloatArrayFormmater
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.SparseTopicRepresentation
@@ -34,6 +34,11 @@ trait CortexTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def userTopicVarMapper = MappedColumnType.base[UserTopicVar, Blob](
     { topicVar => new SerialBlob(FloatArrayFormmater.toBinary(topicVar.value)) },
     { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(1, len)); UserTopicVar(arr) }
+  )
+
+  implicit def libraryTopicMeanMapper = MappedColumnType.base[LibraryTopicMean, Blob](
+    { topic => new SerialBlob(FloatArrayFormmater.toBinary(topic.value)) },
+    { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(1, len)); LibraryTopicMean(arr) }
   )
 
   implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](
