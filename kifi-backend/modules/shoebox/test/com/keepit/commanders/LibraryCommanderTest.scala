@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
-
+  implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
