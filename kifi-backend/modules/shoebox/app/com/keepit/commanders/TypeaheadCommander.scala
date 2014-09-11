@@ -258,7 +258,7 @@ class TypeaheadCommander @Inject() (
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
         val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits =>
           val nonUsers = hits.filter(_.info.userId.isEmpty)
-          val distinctEmails = dedupBy(nonUsers) { _.info.email.address.toLowerCase }
+          val distinctEmails = dedupBy(nonUsers)(_.info.email.address.toLowerCase)
           distinctEmails.map { SocialNetworks.EMAIL -> _ }
         }
         val nf: Future[Seq[NetworkTypeAndHit]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
