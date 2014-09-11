@@ -3,14 +3,14 @@ package com.keepit.search
 import com.keepit.common.db._
 import com.keepit.model._
 import org.specs2.mutable._
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{ JsArray, JsObject, Json }
 
 class ArticleSearchResultTest extends Specification {
 
   val initialResult = ArticleSearchResult(
     last = None,
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, Seq(Id[User](33)), 42)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
@@ -31,7 +31,7 @@ class ArticleSearchResultTest extends Specification {
   val nextResult = ArticleSearchResult(
     last = Some(initialResult.uuid),
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, Seq(Id[User](33)), 42)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
@@ -74,6 +74,15 @@ class ArticleSearchResultTest extends Specification {
       val newJson = fullJson.as[JsObject] - "svVariance" - "svExistenceVar"
       val newDeserialized = newJson.as[ArticleSearchResult]
       newDeserialized === initialResult
+    }
+
+    "deal with legacy ArticleHit missing textScore" in {
+      val fullJson = Json.toJson(initialResult).as[JsObject]
+      val hits = (fullJson \ "hits").as[JsArray].value
+      val legacyHits = JsArray(hits.map(hit => hit.as[JsObject] - "textScore"))
+      val legacyJson = fullJson - "hits" + ("hits" -> legacyHits)
+      val legacyDeserialized = legacyJson.as[ArticleSearchResult]
+      legacyDeserialized === initialResult
     }
 
     "be stored and retrieved" in {
