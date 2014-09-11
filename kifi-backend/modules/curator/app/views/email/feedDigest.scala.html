@@ -1,6 +1,5 @@
 @(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
-@import email.helpers.black.assetUrl
-@import com.keepit.model.Email.placeholders._
+@import com.keepit.common.mail.template.helpers._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
 <tr>
@@ -26,7 +25,7 @@
                                         <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">
                                             This digest is a recommended list based on your interests and recent activity on Kifi.
                                             @if(!allRecos.isFacebookConnected) {
-                                            You can also <a href="@{baseUrl}/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
+                                            You can also <a href="@baseUrl/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
                                             }
                                             <br/>
                                         </td>
@@ -69,15 +68,5 @@
             </tr>
         </table>
     </td>
-</tr>
-
-@if(allRecos.friendRecos.size > 0) {
-<tr>
-    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
-</tr>
-<tr><td>@partials.friendRecommendations(allRecos.friendRecos)</td></tr>
-}
-<tr>
-    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
 </tr>
 </table>

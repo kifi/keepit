@@ -889,4 +889,9 @@ class AdminUserController @Inject() (
     NoContent
   }
 
+  def refreshRecos(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+    SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
+    NoContent
+  }
+
 }

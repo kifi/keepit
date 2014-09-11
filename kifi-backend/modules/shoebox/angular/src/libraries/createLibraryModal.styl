@@ -1,0 +1,52 @@
+.create-library
+
+  .dialog-buttons
+    padding: 20px 0 0 0
+
+  .create-button
+    width: 180px
+
+  .create-lib-input-wrapper
+    margin-bottom: 15px
+    margin-top: 25px
+
+  .create-lib-input-title
+    color: #333
+    font-size: 16px
+    font-weight: 200
+    letter-spacing: 1px
+    font-family: "Georgia", Arial, sans-serif
+    font-style: italic
+
+  input.create-lib-input
+    height: 29px
+    display: inline-block
+    font: inherit
+    letter-spacing: 0.5px
+    border: 0
+    margin: 0
+    width: 100%
+    color: textBlackColor
+    padding: 6px 2px
+    background-color: transparent
+    box-sizing: border-box
+    border-bottom: 1px solid #d2dae3
+    transition: all .3s ease
+
+    &:focus
+      padding-left: 7px
+      border: 1px solid blueColor
+      border-radius: 2px
+
+    &.create-lib-partial
+      width: 50%
+
+    &.create-lib-calced
+      color: textGreyColor
+
+      &:focus
+        color: textBlackColor
+
+
+  .create-lib-error
+    color: redColor

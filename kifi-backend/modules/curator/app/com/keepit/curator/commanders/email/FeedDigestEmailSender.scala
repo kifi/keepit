@@ -4,26 +4,26 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.slick.Database
+import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailToSend, SystemEmailAddress }
+import com.keepit.common.mail.SystemEmailAddress
+import com.keepit.common.mail.template.helpers.toHttpsUrl
+import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.curator.commanders.RecommendationGenerationCommander
-import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
+import com.keepit.curator.model.{ UriRecommendation, UriRecommendationRepo }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ SocialNetworks, BasicUser }
+import com.keepit.social.{ BasicUser, SocialNetworks }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
-import views.html.email.helpers
-import com.keepit.common.concurrent.PimpMyFuture._
 
-import concurrent.Future
-import scala.util.{ Success, Random, Failure }
+import scala.concurrent.Future
+import scala.util.{ Failure, Random, Success }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -42,24 +42,17 @@ object DigestEmail {
   // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10
 
-  val FRIEND_RECOMMENDATIONS_TO_QUERY = 20
-  val FRIEND_RECOMMENDATIONS_TO_DELIVER = 5
-
   // the minimum masterScore for a URIRecommendation to make the cut
   val RECO_THRESHOLD = 8
-
-  def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 }
 
-sealed case class FriendReco(userId: Id[User], basicUser: BasicUser, avatarUrl: String)
-
-sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], friendRecos: Seq[FriendReco], isFacebookConnected: Boolean = false)
+sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], isFacebookConnected: Boolean = false)
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestRecoKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) {
   val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl.map(DigestEmail.toHttpsUrl)
+  val imageUrl = uriSummary.imageUrl.map(toHttpsUrl)
   val url = uri.url
   val domain = DomainToNameMapper.getNameFromUrl(url)
   val score = reco.masterScore
@@ -85,10 +78,7 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
     keepers: Map[Id[User], BasicUser] = Map.empty,
     userAvatarUrls: Map[Id[User], String] = Map.empty) {
 
-  val friendsToShow = keepers.map { pair =>
-    val (userId, user) = pair
-    KeeperUser(userId, DigestEmail.toHttpsUrl(userAvatarUrls(userId)), user)
-  }
+  val friendsToShow = keepers.map(_._1)
 
   val message = {
     // adding s works since we are only dealing with "friend" and "other"
@@ -119,7 +109,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends FeedDigestEmailSender with Logging {
 
-  import DigestEmail._
+  import com.keepit.curator.commanders.email.DigestEmail._
 
   val defaultUriRecommendationScores = UriRecommendationScores()
 
@@ -139,17 +129,15 @@ class FeedDigestEmailSenderImpl @Inject() (
     log.info(s"sending engagement feed email to $userId")
 
     val recosF = getDigestRecommendationsForUser(userId)
-    val friendRecoF = getFriendRecommendationsForUser(userId)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
     // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
 
     val digestRecoMailF = for {
       recos <- recosF
-      friendRecos <- friendRecoF
       socialInfos <- socialInfosF
     } yield {
-      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, friendRecos, socialInfos)
+      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, socialInfos)
       else {
         log.info(s"NOT sending digest email to ${user.id.get}; 0 worthy recos")
         Future.successful(DigestRecoMail(userId = userId, mailSent = false, feed = Seq.empty))
@@ -158,25 +146,28 @@ class FeedDigestEmailSenderImpl @Inject() (
     digestRecoMailF.flatten
   }
 
-  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], friendRecos: Seq[FriendReco],
+  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco],
     socialInfos: Seq[SocialUserInfo]): Future[DigestRecoMail] = {
     val userId = user.id.get
 
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
-    val emailData = AllDigestRecos(toUser = user, recos = digestRecos, friendRecos = friendRecos, isFacebookConnected = isFacebookConnected)
+    val emailData = AllDigestRecos(toUser = user, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
     // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
     // TODO(josh) add textBody to EmailModule
+
+    val mainTemplate = views.html.email.feedDigest(emailData)
 
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.head.title}",
       to = Left(user.id.get),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplates = Seq(views.html.email.feedDigest(emailData)),
+      htmlTemplate = mainTemplate,
       senderUserId = Some(userId),
       fromName = Some("Kifi"),
-      campaign = Some("digest")
+      campaign = Some("digest"),
+      tips = Seq(EmailTips.FriendRecommendations)
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
@@ -202,9 +193,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     val myFakeUserId = userIds.head
     val otherUserIds = userIds.tail
 
-    val fakeFriendReco = FriendReco(myFakeUserId, fakeBasicUser, S3UserPictureConfig.defaultImage)
     val qaEmailData = emailData.copy(
-      friendRecos = otherUserIds.take(emailData.friendRecos.size).map(userId => fakeFriendReco.copy(userId = userId)),
       toUser = fakeUser,
       recos = emailData.recos.map { reco =>
         val qaFriends = otherUserIds.take(reco.keepers.friends.size)
@@ -226,7 +215,7 @@ class FeedDigestEmailSenderImpl @Inject() (
       subject = s"Kifi Digest: ${emailData.recos.head.title}",
       to = Right(SystemEmailAddress.FEED_QA),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplates = Seq(views.html.email.feedDigest(qaEmailData)),
+      htmlTemplate = views.html.email.feedDigest(qaEmailData),
       senderUserId = None,
       fromName = Some("Kifi"),
       campaign = Some("digestQA")
@@ -237,25 +226,6 @@ class FeedDigestEmailSenderImpl @Inject() (
       case Success(sent) => if (!sent) airbrake.notify("Failed to cc digest email to feed-qa")
       case Failure(t) => airbrake.notify("Failed to send digest email to feed-qa", t)
     }
-  }
-
-  private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
-    for {
-      userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOMMENDATIONS_TO_QUERY, bePatient = true)
-      if userIds.isDefined
-      friends <- shoebox.getBasicUsers(userIds.get)
-      friendImages <- getManyUserImageUrls(userIds.get: _*)
-    } yield {
-      val friendRecos = friends.map(pair => FriendReco(pair._1, pair._2, DigestEmail.toHttpsUrl(friendImages(pair._1)))).toSeq
-      friendRecos.sortBy { friendReco =>
-        /* kifi ghost images should be at the bottom of the list */
-        (if (friendReco.avatarUrl.endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
-      }.take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
-    }
-  } recover {
-    case throwable =>
-      airbrake.notify(s"getFriendRecommendationsForUser($userId) failed", throwable)
-      Seq.empty
   }
 
   private def getDigestRecommendationsForUser(userId: Id[User]) = {
@@ -305,22 +275,12 @@ class FeedDigestEmailSenderImpl @Inject() (
   private def getRecoKeepers(reco: UriRecommendation) = {
     reco.attribution.user match {
       case Some(userAttribution) if userAttribution.friends.size > 0 =>
-        for {
-          users <- shoebox.getBasicUsers(userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
-          avatarUrls <- getManyUserImageUrls(users.keys.toSeq: _*)
-        } yield DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others,
-          keepers = users, userAvatarUrls = avatarUrls)
+        shoebox.getBasicUsers(userAttribution.friends.take(MAX_FRIENDS_TO_SHOW)).map { users =>
+          DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others, keepers = users)
+        }
       case Some(userAttribution) => Future.successful(DigestRecoKeepers(others = userAttribution.others))
       case _ => Future.successful(DigestRecoKeepers())
     }
-  }
-
-  private def getManyUserImageUrls(userIds: Id[User]*): Future[Map[Id[User], String]] = {
-    val seqF = userIds.map { userId => userId -> shoebox.getUserImageUrl(userId, 100) }
-    Future.traverse(seqF) { pair =>
-      val (userId, urlF) = pair
-      urlF.map((userId, _))
-    }.map(_.toMap)
   }
 
 }

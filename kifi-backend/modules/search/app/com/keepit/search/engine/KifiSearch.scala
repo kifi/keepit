@@ -58,7 +58,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
     } else {
       // only a primary id (uri id)
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url, null)
+      KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
     }
   }
 

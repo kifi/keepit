@@ -16,6 +16,7 @@ import com.keepit.curator.model.{
 import com.keepit.model.{ ExperimentType, User, Name, SystemValueRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.logging.Logging
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,7 +30,7 @@ class PublicFeedGenerationCommander @Inject() (
     db: Database,
     publicFeedRepo: PublicFeedRepo,
     systemValueRepo: SystemValueRepo,
-    experimentCommander: RemoteUserExperimentCommander) {
+    experimentCommander: RemoteUserExperimentCommander) extends Logging {
 
   val pubicFeedsGenerationLock = new ReactiveLock(1)
   private val SEQ_NUM_NAME: Name[SequenceNumber[PublicSeedItem]] = Name("public_feeds_seq_num")
@@ -55,8 +56,9 @@ class PublicFeedGenerationCommander @Inject() (
 
   private def savePublicScoredSeedItems(items: Seq[PublicScoredSeedItem], newSeqNum: SequenceNumber[PublicSeedItem]) =
     db.readWrite { implicit s =>
+      log.info(s"public feed: saving items")
       items foreach { item =>
-        val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
+        val feedOpt = publicFeedRepo.getByUri(item.uriId)
         feedOpt.map { feed =>
           publicFeedRepo.save(feed.copy(
             publicMasterScore = computePublicMasterScore(item.publicUriScores),
@@ -69,6 +71,7 @@ class PublicFeedGenerationCommander @Inject() (
         }
       }
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
+      log.info(s"public feed: saved new seq num: $newSeqNum")
     }
 
   private def getPrecomputationFeedsResult(
@@ -77,8 +80,10 @@ class PublicFeedGenerationCommander @Inject() (
     boostedKeepers: Set[Id[User]]): Future[Boolean] = {
     publicSeedsAndSeqFuture.flatMap {
       case (publicSeedItems, newSeqNum) =>
+        log.info(s"public feed: got batch of items to process ${publicSeedItems.length}, $newSeqNum, $lastSeqNum")
         if (publicSeedItems.isEmpty) {
-          db.readWriteAsync { implicit session =>
+          log.info("public feed: empty batch")
+          db.readWrite { implicit session =>
             systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
           }
           if (lastSeqNum < newSeqNum) precomputePublicFeeds()
@@ -90,8 +95,10 @@ class PublicFeedGenerationCommander @Inject() (
               case _ => false
             }
           }
+          log.info(s"public feed: filtered items ${cleanedItems.length}, now scoring")
           val weightedItems = publicUriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           publicScoringHelper(weightedItems, boostedKeepers).map { items =>
+            log.info("public feed: got scores, now saving")
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()
             publicSeedItems.nonEmpty
@@ -100,20 +107,24 @@ class PublicFeedGenerationCommander @Inject() (
     }
   }
 
-  def precomputePublicFeeds(): Future[Unit] = SafeFuture(pubicFeedsGenerationLock.withLockFuture {
-    specialCurators().flatMap { boostedKeepersSeq =>
+  def precomputePublicFeeds(): Future[Unit] = {
+    log.info("public feed: computation triggered")
+    SafeFuture(pubicFeedsGenerationLock.withLockFuture {
+      specialCurators().flatMap { boostedKeepersSeq =>
+        log.info("public feed: got special curators")
+        val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
+          systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse {
+            SequenceNumber[PublicSeedItem](0)
+          }
+        }
 
-      val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
-        systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse {
-          SequenceNumber[PublicSeedItem](0)
+        lastSeqNumFut.flatMap { lastSeqNum =>
+          val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
+          log.info("public feed: started fetching a batch of uris to process")
+          val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum, boostedKeepersSeq.toSet)
+          res.map(_ => ())
         }
       }
-
-      lastSeqNumFut.flatMap { lastSeqNum =>
-        val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
-        val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum, boostedKeepersSeq.toSet)
-        res.map(_ => ())
-      }
-    }
-  }, Some("Public Feed Precomputation"))
+    }, Some("Public Feed Precomputation"))
+  }
 }

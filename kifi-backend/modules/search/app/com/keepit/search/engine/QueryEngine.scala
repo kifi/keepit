@@ -2,7 +2,7 @@ package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ DataBuffer, HashJoin }
+import com.keepit.search.util.join.{ JoinerManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
 
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging {
@@ -49,16 +49,16 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     dataBuffer.size
   }
 
-  def createScoreContext(collector: ResultCollector[ScoreContext]): ScoreContext = {
-    new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
-  }
-
   def join(collector: ResultCollector[ScoreContext]): Unit = {
     val size = dataBuffer.size
     if (size > 0) {
       normalizeMatchWeight()
 
-      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createScoreContext(collector))
+      val joinerManager: JoinerManager = new JoinerManager(32) {
+        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
+      }
+
+      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, joinerManager)
       hashJoin.execute()
     }
   }

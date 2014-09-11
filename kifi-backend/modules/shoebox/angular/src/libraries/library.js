@@ -39,11 +39,6 @@ angular.module('kifi')
         return 'Loading...';
       }
 
-      var subtitle = false; // todo? keepService.getSubtitle($scope.mouseoverCheckAll);
-      if (subtitle) {
-        return subtitle;
-      }
-
       var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:

@@ -1,5 +1,6 @@
 package com.keepit.common.mail
 
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model.NotificationCategory
@@ -42,13 +43,13 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
         subject = "Test",
         campaign = Some("testing"),
         category = NotificationCategory.User.DIGEST,
-        htmlTemplates = Seq(Html("this is <b>html</b>"))
+        htmlTemplate = Html("this is <b>html</b>")
       )
 
       val expectedJson = """
           |{"title":"Kifi","from":"eng@42go.com","to":"josh@kifi.com","cc":[],"subject":"Test",
-          |"htmlTemplates":["this is <b>html</b>"],"category":"digest",
-          |"campaign":"testing","senderUserId":null}
+          |"htmlTemplate":"this is <b>html</b>","category":"digest","fromName":"Kifi",
+          |"campaign":"testing","tips":[]}
         """.stripMargin
       val jsVal = Json.parse(expectedJson)
       Json.toJson(em) === jsVal
@@ -59,7 +60,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
       result.subject === em.subject
       result.campaign === em.campaign
       result.category === em.category
-      result.htmlTemplates(0).body === em.htmlTemplates(0).body
+      result.htmlTemplate.body === em.htmlTemplate.body
     }
   }
 }
