@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders.email
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.FutureHelpers
@@ -14,15 +14,19 @@ import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendation, UriRecommendationRepo }
+import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks }
+import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.util.{ Failure, Random, Success }
 
 object DigestEmail {
@@ -46,7 +50,7 @@ object DigestEmail {
   val RECO_THRESHOLD = 8
 }
 
-sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], isFacebookConnected: Boolean = false)
+sealed case class AllDigestRecos(toUser: Id[User], recos: Seq[DigestReco], isFacebookConnected: Boolean = false)
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestRecoKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) {
@@ -93,39 +97,75 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
 
 sealed case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[DigestReco])
 
-@ImplementedBy(classOf[FeedDigestEmailSenderImpl])
-trait FeedDigestEmailSender {
-  def send(): Future[Seq[DigestRecoMail]]
-  def sendToUser(user: User): Future[DigestRecoMail]
-}
-
-class FeedDigestEmailSenderImpl @Inject() (
+class FeedDigestEmailSender @Inject() (
     recommendationGenerationCommander: RecommendationGenerationCommander,
-    userExperimentCommander: RemoteUserExperimentCommander,
     uriRecommendationRepo: UriRecommendationRepo,
     shoebox: ShoeboxServiceClient,
     abook: ABookServiceClient,
     db: Database,
+    serviceDiscovery: ServiceDiscovery,
+    queue: SQSQueue[SendFeedDigestToUserMessage],
+    userExperimentCommander: RemoteUserExperimentCommander,
     protected val config: FortyTwoConfig,
-    protected val airbrake: AirbrakeNotifier) extends FeedDigestEmailSender with Logging {
+    protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import com.keepit.curator.commanders.email.DigestEmail._
 
   val defaultUriRecommendationScores = UriRecommendationScores()
 
-  def send() = {
-    userExperimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).flatMap { userSet =>
-      Future.sequence(userSet.map(sendToUser).toSeq)
+  def addToQueue(): Future[Set[Id[User]]] = {
+    if (serviceDiscovery.isLeader()) {
+      userExperimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map { userSet =>
+        userSet.map { user =>
+          if (user.primaryEmail.isDefined) {
+            queue.send(SendFeedDigestToUserMessage(user.id.get))
+            user.id
+          } else {
+            log.info(s"NOT sending digest email to ${user.id.get}; primaryEmail missing")
+            None
+          }
+        }.flatten.toSet
+      }
+    } else {
+      airbrake.notify("FeedDigestEmailSender.send() should not be called by non-leader!")
+      Future.successful(Set.empty)
     }
   }
 
-  def sendToUser(user: User): Future[DigestRecoMail] = {
-    if (user.primaryEmail.isEmpty) {
-      log.info(s"NOT sending digest email to ${user.id.get}; primaryEmail missing")
-      return Future.successful(DigestRecoMail(userId = user.id.get, mailSent = false, Seq.empty))
+  def processQueue(): Future[Unit] = {
+    def fetchFromQueue(): Future[Seq[Unit]] = {
+      log.info(s"fetching 5 messages from queue ${queue.queue.name}")
+      queue.nextBatchWithLock(1, 1 minute).flatMap { messages =>
+        log.info(s"locked ${messages.size} messages from queue ${queue.queue.name}")
+        Future.sequence(messages.map { message =>
+          try {
+            sendToUser(message.body.userId).map { digestMail =>
+              if (digestMail.mailSent) log.info(s"consumed digest email for ${digestMail.userId}")
+              else log.warn(s"digest email was not mailed: $digestMail")
+              message.consume()
+            } recover {
+              case e =>
+                airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
+            } map (_ => ())
+          } catch {
+            case e: Throwable =>
+              airbrake.notify(s"error sending digest email to ${message.body.userId} before future", e)
+              Future.successful(())
+          }
+        })
+      }
     }
 
-    val userId = user.id.get
+    val doneF = FutureHelpers.whilef(fetchFromQueue().map(_.size > 0))()
+    doneF.onFailure {
+      case e =>
+        airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
+    }
+
+    doneF
+  }
+
+  def sendToUser(userId: Id[User]): Future[DigestRecoMail] = {
     log.info(s"sending engagement feed email to $userId")
 
     val recosF = getDigestRecommendationsForUser(userId)
@@ -137,21 +177,20 @@ class FeedDigestEmailSenderImpl @Inject() (
       recos <- recosF
       socialInfos <- socialInfosF
     } yield {
-      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, socialInfos)
+      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(userId, recos, socialInfos)
       else {
-        log.info(s"NOT sending digest email to ${user.id.get}; 0 worthy recos")
+        log.info(s"NOT sending digest email to $userId; 0 worthy recos")
         Future.successful(DigestRecoMail(userId = userId, mailSent = false, feed = Seq.empty))
       }
     }
     digestRecoMailF.flatten
   }
 
-  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco],
+  private def composeAndSendEmail(userId: Id[User], digestRecos: Seq[DigestReco],
     socialInfos: Seq[SocialUserInfo]): Future[DigestRecoMail] = {
-    val userId = user.id.get
 
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
-    val emailData = AllDigestRecos(toUser = user, recos = digestRecos, isFacebookConnected = isFacebookConnected)
+    val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
     // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
     // TODO(josh) add textBody to EmailModule
@@ -161,7 +200,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.head.title}",
-      to = Left(user.id.get),
+      to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = mainTemplate,
       senderUserId = Some(userId),
@@ -194,7 +233,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     val otherUserIds = userIds.tail
 
     val qaEmailData = emailData.copy(
-      toUser = fakeUser,
+      toUser = myFakeUserId,
       recos = emailData.recos.map { reco =>
         val qaFriends = otherUserIds.take(reco.keepers.friends.size)
         val qaKeepers = qaFriends.take(reco.keepers.keepers.size)
