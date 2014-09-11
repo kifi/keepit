@@ -27,9 +27,14 @@ angular.module('kifi')
       var url = env.xhrBase + '/keeps/all';
 
       params = params || {};
-      params.count = lastKeepId ? params.count || limit : smallLimit;
-      params.before = lastKeepId;
       params.withPageInfo = true;
+
+      // Pass the id of the last keep received to the server so the server 
+      // knows which keeps to send next.
+      params.before = lastKeepId;
+
+      // Request a smaller number of keeps in the first request.
+      params.count = lastKeepId ? params.count || limit : smallLimit;
 
       var config = {
         params: params

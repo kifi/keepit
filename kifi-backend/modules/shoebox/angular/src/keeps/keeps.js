@@ -94,7 +94,7 @@ angular.module('kifi')
         //
         scope.scrollDistance = '100%';
         scope.editingTags = false;
-        scope.addingTag = {enabled: false};
+        scope.addingTag = { enabled: false };
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
@@ -191,20 +191,6 @@ angular.module('kifi')
         scope.disableEditTags = function () {
           scope.editingTags = false;
         };
-
-        // Currently, this overrides the toggleEdit in MainCtrl,
-        // which is broken because it depends on keepService.
-        // Fix this with that.
-        scope.toggleEdit = function (moveWindow) {
-          if (!scope.editMode.enabled) {
-            if (moveWindow) {
-              $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
-            }
-          } else {
-            scope.selection.unselectAll();
-          }
-          scope.editMode.enabled = !scope.editMode.enabled;
-        };
         
 
         //
@@ -215,6 +201,14 @@ angular.module('kifi')
         }, function (numSelected) {
           scope.disableEditTags();
           scope.updateSelectedCount({ numSelected: numSelected });
+        });
+
+        scope.$watch(function () {
+          return scope.editMode.enabled;
+        }, function(enabled) {
+          if (!enabled) { 
+            scope.selection.unselectAll(); 
+          }
         });
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);
