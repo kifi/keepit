@@ -203,6 +203,7 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def bookmarkCount: Int = (json \ "bookmarkCount").as[Int]
   def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map { users => users.map { id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
   def score: Float = (json \ "score").as[Float]
+  def textScore: Float = (json \ "textScore").asOpt[Float].getOrElse(-1f)
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
@@ -227,6 +228,7 @@ object DetailedSearchHit extends Logging {
     isPrivate: Boolean,
     users: Seq[Id[User]],
     score: Float,
+    textScore: Float,
     scoring: Scoring): DetailedSearchHit = {
     try {
       new DetailedSearchHit(JsObject(List(
@@ -235,6 +237,7 @@ object DetailedSearchHit extends Logging {
         "bookmark" -> hit.json,
         "users" -> JsArray(users.map(id => JsNumber(id.id))),
         "score" -> JsNumber(score.toDouble),
+        "textScore" -> JsNumber(textScore.toDouble),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
         "isFriendsBookmark" -> JsBoolean(isFriendsBookmark),

@@ -10,12 +10,13 @@ import com.keepit.serializer.TraversableFormat
 import com.keepit.common.logging.Logging
 import scala.math._
 
-case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
+case class ArticleHit(uriId: Id[NormalizedURI], score: Float, textScore: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
 object ArticleHit {
   implicit val format = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'score).format[Float] and
+    (__ \ 'textScore).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and
     (__ \ 'isMyBookmark).format[Boolean] and
     (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'users).format(TraversableFormat.seq(Id.format[User])) and
