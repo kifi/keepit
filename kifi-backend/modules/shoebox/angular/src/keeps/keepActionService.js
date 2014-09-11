@@ -50,6 +50,12 @@ angular.module('kifi')
       });
     }
 
+    function getKeepsByTagId(tagId, lastKeepId, params) {
+      params = params || {};
+      params.collection = tagId;
+      return getKeeps(lastKeepId, params);
+    }
+
     function keepMany(keeps, isPrivate) {
       $analytics.eventTrack('user_clicked_page', {
         'action': 'keep',
@@ -137,6 +143,7 @@ angular.module('kifi')
 
     var api = {
       getKeeps: getKeeps,
+      getKeepsByTagId: getKeepsByTagId,
       keepOne: keepOne,
       keepMany: keepMany,
       togglePrivateOne: togglePrivateOne,

@@ -45,7 +45,7 @@ angular.module('kifi')
         $scope.loading = false;
         $scope.hasLoaded = true;
 
-        return result.keeps;
+        return $scope.keeps;
       });
     };
 
@@ -80,12 +80,13 @@ angular.module('kifi')
             return 'Showing all ' + numShown + ' of your keeps';
           }
           return 'Showing your ' + numShown + ' latest keeps';
-        }
+      }
     };
 
     $scope.updateSelectedCount = function (numSelected) {
       selectedCount = numSelected;
     };
+
     $scope.showEmptyState = function () {
       return tagService.getTotalKeepCount() === 0;
     };
