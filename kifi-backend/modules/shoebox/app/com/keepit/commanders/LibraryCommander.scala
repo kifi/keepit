@@ -174,13 +174,13 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("Not Owner"))
       } else {
         val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
-
         libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
           libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
         }
         libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
+        // todo(andrew/aaron): Inactivate keeps. Simply remove? or move keeps to main/secret? But what if it's somebody else's keeps?
         Right("success")
       }
     }
