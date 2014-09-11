@@ -754,7 +754,7 @@ angular.module('kifi')
           if (scope.keep.summary) {
             maybeSizeImage(scope.keep);
             if (scope.keep.calcSizeCard) {
-              scope.keep.calcSizeCard();
+              scope.keep.calcSizeCard(scope.keep);
               scope.keep.calcSizeCard = null; // only want it called once.
               if (scope.keep.sizeCard) {
                 scope.keep.sizeCard();
