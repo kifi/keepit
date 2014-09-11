@@ -23,7 +23,7 @@ angular.module('kifi')
       });
     });
 
-    function getKeeps(lastKeepId, params) {  // TODO: what are these params?
+    function getKeeps(lastKeepId, params) {
       var url = env.xhrBase + '/keeps/all';
 
       params = params || {};
@@ -53,6 +53,12 @@ angular.module('kifi')
     function getKeepsByTagId(tagId, lastKeepId, params) {
       params = params || {};
       params.collection = tagId;
+      return getKeeps(lastKeepId, params);
+    }
+
+    function getKeepsByHelpRank(helprank, lastKeepId, params) {
+      params = params || {};
+      params.helprank = helprank;
       return getKeeps(lastKeepId, params);
     }
 
@@ -155,6 +161,7 @@ angular.module('kifi')
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
+      getKeepsByHelpRank: getKeepsByHelpRank,
       getSingleKeep: getSingleKeep,
       keepOne: keepOne,
       keepMany: keepMany,

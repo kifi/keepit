@@ -3,71 +3,95 @@
 angular.module('kifi')
 
 .controller('HelpRankCtrl', [
-  '$scope', 'keepService', '$routeParams',
-  function ($scope, keepService, $routeParams) {
-
-    keepService.reset();
-    $scope.keepService = keepService;
-    $scope.keeps = keepService.list;
-
+  '$scope', 'keepActionService', 'keepDecoratorService', '$routeParams',
+  function ($scope, keepActionService, keepDecoratorService, $routeParams) {
+    //
+    // Internal data.
+    //
     var helprank = $routeParams.helprank || '';
+    var selectedCount = 0;
 
-    $scope.hasMore = function () {
-      return !keepService.isEnd();
-    };
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Loading...';
-      }
 
-      var subtitle = keepService.getSubtitle($scope.mouseoverCheckAll);
-      if (subtitle) {
-        return subtitle;
-      }
-
-      var numShown = $scope.keeps.length;
-      switch (numShown) {
-      case 0:
-        return 'No Keeps';
-      case 1:
-        return 'Showing the only Keep';
-      case 2:
-        return 'Showing both Keeps';
-      }
-      if (keepService.isEnd()) {
-        return 'Showing all ' + numShown + ' Keeps';
-      }
-      return 'Showing the ' + numShown + ' latest Keeps';
-    };
-
+    //
+    // Scope data.
+    //
+    $scope.keeps = [];
+    $scope.hasMore = true;
     $scope.scrollDistance = '100%';
-    $scope.scrollDisabled = false;
+    $scope.loading = false;
 
+
+    //
+    // Scope methods.
+    //
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
         return;
       }
 
       $scope.loading = true;
-      return keepService.getKeepsByHelpRank(helprank).then(function (list) {
+
+      var lastKeepId = $scope.keeps.length ? _.last($scope.keeps).id : null;
+      return keepActionService.getKeepsByHelpRank(helprank, lastKeepId).then(function (result) {
+        var rawKeeps = result.keeps;
+
+        rawKeeps.forEach(function (rawKeep) {
+          var keep = new keepDecoratorService.Keep(rawKeep);
+          keep.buildKeep(keep);
+          keep.makeKept();
+
+          $scope.keeps.push(keep);
+        });
+
+        $scope.hasMore = !!result.mayHaveMore;
         $scope.loading = false;
 
-        if (keepService.isEnd()) {
-          $scope.scrollDisabled = true;
-        }
-
-        return list;
+        return $scope.keeps;
       });
     };
 
-    function initKeepList() {
-      $scope.scrollDisabled = false;
-      $scope.getNextKeeps();
-    }
+    $scope.getSubtitle = function () {
+      if ($scope.loading) {
+        return 'Loading...';
+      }
 
-    $scope.$watch('keepService.seqReset()', function () {
-      initKeepList();
-    });
+      // If there are selected keeps, display the number of keeps
+      // in the subtitle.
+      if (selectedCount > 0) {
+        switch (selectedCount) {
+          case 0:
+            return null;
+          case 1:
+            return selectedCount + ' Keep selected';
+          default:
+            return selectedCount + ' Keeps selected';
+        }
+      }
 
+      var numShown = $scope.keeps.length;
+      switch (numShown) {
+        case 0:
+          return 'No Keeps';
+        case 1:
+          return 'Showing the only Keep';
+        case 2:
+          return 'Showing both Keeps';
+        default:
+          if (!$scope.hasMore) {
+            return 'Showing all ' + numShown + ' Keeps';
+          }
+          return 'Showing your ' + numShown + ' latest Keeps';
+      }
+    };
+
+    $scope.updateSelectedCount = function (numSelected) {
+      selectedCount = numSelected;
+    };
+
+    
+    //
+    // On HelpRankCtrl initialization.
+    //
+    $scope.getNextKeeps();
   }
 ]);
