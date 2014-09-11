@@ -56,7 +56,7 @@ class TypeaheadCommander @Inject() (
       case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
-    futureContacts map { items => items.dedupBy(_.email.address.toLowerCase).toSeq }
+    futureContacts map { items => dedupBy(items)(_.email.address.toLowerCase) }
   }
 
   def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {
