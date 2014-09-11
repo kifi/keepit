@@ -74,6 +74,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         libraryCommander.removeLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(success) => Ok(JsString(success))
