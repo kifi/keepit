@@ -23,6 +23,15 @@ angular.module('kifi')
       });
     });
 
+    function sanitizeUrl(url) {
+      var regex = /^[a-zA-Z]+:\/\//;
+      if (!regex.test(url)) {
+        return 'http://' + url;
+      } else {
+        return url;
+      }
+    }
+
     function getKeeps(lastKeepId, params) {
       var url = env.xhrBase + '/keeps/all';
 
@@ -114,6 +123,33 @@ angular.module('kifi')
       });
     }
 
+    function keepToLibrary(keepUrls, libraryId) {
+      $analytics.eventTrack('user_clicked_page', {
+        // TODO(yiping): should we have a different action
+        // for keeping to library?
+        'action': 'keep',
+        'path': $location.path()
+      });
+
+      var data = {
+        keeps: keepUrls.map(function (keepUrl) {
+          return {
+            url: sanitizeUrl(keepUrl)
+          };
+        })
+      };
+
+      $log.log('keepService.keepToLibrary()', data);
+      var url = env.xhrBase + '/libraries/' + libraryId + '/keeps';
+      return $http.post(url, data, {}).then(function (res) {
+        _.uniq(res.data.keeps, function (keep) {
+          return keep.url;
+        });
+
+        return res.data;
+      });
+    }
+
     function togglePrivateMany(keeps) {
       // If all the keeps were private, they will all become public.
       // If all the keeps were public, they will all become private.
@@ -165,6 +201,7 @@ angular.module('kifi')
       getSingleKeep: getSingleKeep,
       keepOne: keepOne,
       keepMany: keepMany,
+      keepToLibrary: keepToLibrary,
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,
       unkeepOne: unkeepOne,
