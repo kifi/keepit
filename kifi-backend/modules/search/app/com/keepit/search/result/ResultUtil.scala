@@ -55,17 +55,13 @@ object ResultUtil {
       mergedResult.friendsTotal,
       mergedResult.othersTotal,
       res.mayHaveMoreHits,
-      Seq[Scoring](),
       res.idFilter,
       millisPassed,
       pageNumber,
       previousHits,
       res.uuid,
       time,
-      -1.0f,
-      -1.0f,
       mergedResult.show,
-      Set.empty[Long],
       lang
     )
   }

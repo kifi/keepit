@@ -15,15 +15,11 @@ class ArticleSearchResultTest extends Specification {
     friendsTotal = 3232,
     othersTotal = 5252,
     mayHaveMoreHits = true,
-    scorings = Seq(),
     filter = Set(100L, 200L, 300L),
     uuid = ExternalId[ArticleSearchResult](),
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(),
-    svVariance = -1.0f,
-    svExistenceVar = -1.0f,
     toShow = false,
     lang = "fr"
   )
@@ -36,15 +32,11 @@ class ArticleSearchResultTest extends Specification {
     friendsTotal = 3232,
     othersTotal = 5252,
     mayHaveMoreHits = true,
-    scorings = Seq(),
     filter = Set(100L, 200L, 300L),
     uuid = ExternalId[ArticleSearchResult](),
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(),
-    svVariance = -1.0f,
-    svExistenceVar = -1.0f,
     lang = "fr"
   )
 
