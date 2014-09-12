@@ -6,7 +6,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.serializer.TupleFormat
 
-case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
+case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
 
 object AugmentableItem {
   implicit val format = Json.format[AugmentableItem]
@@ -90,7 +90,7 @@ case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Fl
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], items: Seq[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
+  def uniform(userId: Id[User], items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
@@ -101,7 +101,12 @@ object AugmentationScores {
 case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext)
 
 object ItemAugmentationRequest {
-  implicit val format = Json.format[ItemAugmentationRequest]
+  implicit val writes = Json.format[ItemAugmentationRequest]
+  def uniform(userId: Id[User], items: AugmentableItem*): ItemAugmentationRequest = {
+    val itemSet = items.toSet
+    val context = AugmentationContext.uniform(userId, itemSet)
+    ItemAugmentationRequest(itemSet, context)
+  }
 }
 
 case class ItemAugmentationResponse(infos: Map[AugmentableItem, AugmentationInfo], scores: AugmentationScores)
