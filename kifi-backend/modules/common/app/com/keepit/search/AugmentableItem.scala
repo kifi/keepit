@@ -6,7 +6,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.serializer.TupleFormat
 
-case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
+case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
 
 object AugmentableItem {
   implicit val format = Json.format[AugmentableItem]
@@ -102,10 +102,10 @@ case class ItemAugmentationRequest(items: Set[AugmentableItem], context: Augment
 
 object ItemAugmentationRequest {
   implicit val writes = Json.format[ItemAugmentationRequest]
-  def simple(userId: Id[User], uris: Id[NormalizedURI]*): ItemAugmentationRequest = {
-    val items = uris.map(AugmentableItem(_, None)).toSet
-    val context = AugmentationContext.uniform(userId, items)
-    ItemAugmentationRequest(items, context)
+  def uniform(userId: Id[User], items: AugmentableItem*): ItemAugmentationRequest = {
+    val itemSet = items.toSet
+    val context = AugmentationContext.uniform(userId, itemSet)
+    ItemAugmentationRequest(itemSet, context)
   }
 }
 
