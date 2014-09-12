@@ -85,5 +85,6 @@ GET         /internal/search/cache/warmResultClick        @com.keepit.controller
 GET         /internal/search/spell/suggest        @com.keepit.controllers.search.SpellCorrectorController.correct(input: String, enableBoost: Boolean)
 
 GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
+POST        /internal/search/augmentation   @com.keepit.controllers.search.SearchController.augmentation()
 
 ->          /        common.Routes

@@ -11,7 +11,7 @@ import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
 class LDAController @Inject() (
@@ -58,16 +58,6 @@ class LDAController @Inject() (
     Ok(Json.toJson(infoCommander.ldaConfigurations))
   }
 
-  def getLDAFeatures() = Action.async(parse.tolerantJson) { request =>
-    implicit val format = Id.format[NormalizedURI]
-    val ids = (request.body).as[Seq[Id[NormalizedURI]]]
-    Future {
-      val feats = lda.getLDAFeatures(ids)
-      val vecs = feats.flatMap { featOpt => featOpt.map { _.vectorize } }
-      Ok(Json.toJson(vecs))
-    }
-  }
-
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     val scores1 = lda.userUriInterest(userId, uriId)
     val scores2 = lda.gaussianUserUriInterest(userId, uriId)
@@ -93,6 +83,12 @@ class LDAController @Inject() (
     val meanOpt = feat.flatMap { _.userTopicMean }
     val recentOpt = feat.flatMap { _.userRecentTopicMean }
     Ok(Json.obj("global" -> meanOpt.map { _.mean }, "recent" -> recentOpt.map { _.mean }))
+  }
+
+  def libraryTopic(libId: Id[Library]) = Action { request =>
+    val feat = lda.libraryTopic(libId).flatMap { _.topic }
+    val vecOpt = feat.map(_.value)
+    Ok(Json.toJson(vecOpt))
   }
 
   def sampleURIs(topicId: Int) = Action { request =>

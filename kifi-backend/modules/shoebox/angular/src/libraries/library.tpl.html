@@ -1,6 +1,7 @@
 <div class="kf-main-library-keeps">
   <div class="kf-main-head">
     <h1 class="kf-main-title">{{library.name}}</h1>
+    <div>{{library.description}} <span ng-if="library.slug" ng-click="manageLibrary()">(edit)</span></div>
     <div class="kf-subtitle">
       <div class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>
@@ -12,11 +13,12 @@
   <div kf-keeps
     keeps="keeps"
     keeps-loading="loading"
-    keeps-has-more="hasMore()"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
     scroll-distance="scrollDistance"
-    scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
     edit-mode="editMode"
     toggle-edit="toggleEdit"
+    update-selected-count="updateSelectedCount(numSelected)"
   ></div>
 </div>

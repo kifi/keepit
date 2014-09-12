@@ -113,7 +113,7 @@ class SearchCommanderImpl @Inject() (
     query: String,
     filter: Option[String],
     maxHits: Int,
-    lastUUIDStr: Option[String],
+    lastUUID: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
@@ -181,7 +181,6 @@ class SearchCommanderImpl @Inject() (
       // stash timing information
       timing.sendTotal()
 
-      val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val numPreviousHits = searchFilter.idFilter.size
       val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
       val articleSearchResult = ResultUtil.toArticleSearchResult(
@@ -294,7 +293,7 @@ class SearchCommanderImpl @Inject() (
     filter: Option[String],
     library: Option[String],
     maxHits: Int,
-    lastUUIDStr: Option[String],
+    lastUUID: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String]): Future[KifiPlainResult] = {
@@ -326,8 +325,6 @@ class SearchCommanderImpl @Inject() (
       }
     }
 
-    val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
-
     // do the local part
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
@@ -342,8 +339,9 @@ class SearchCommanderImpl @Inject() (
     Future.sequence(resultFutures).map { results =>
       log.info("NE: merging result")
 
+      val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
-      val mergedResult = resultMerger.merge(results, maxHits)
+      val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
 
       timing.decoration
       timing.end
@@ -357,7 +355,23 @@ class SearchCommanderImpl @Inject() (
         // stash timing information
         timing.sendTotal()
 
-        // TODO: save ArticleSearchResult
+        val numPreviousHits = searchFilter.idFilter.size
+        val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
+        val articleSearchResult = ResultUtil.toArticleSearchResult(
+          plainResult,
+          lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+          timing.getTotalTime.toInt,
+          numPreviousHits / maxHits,
+          numPreviousHits,
+          currentDateTime,
+          lang
+        )
+
+        try {
+          articleSearchResultStore += (plainResult.uuid -> articleSearchResult)
+        } catch {
+          case e: Throwable => airbrake.notify(AirbrakeError(e, Some(s"Could not store article search result for user id $userId.")))
+        }
 
         // search is a little slow after service restart. allow some grace period
         val timeLimit = 1000
@@ -634,7 +648,7 @@ class SearchCommanderBackwardCompatibilitySupport(
               val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
               if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
             }
-            BasicSearchHit(Some(h.title), h.url, collections, h.keepId)
+            BasicSearchHit(Some(h.title), h.url, collections, h.externalId)
           } else {
             BasicSearchHit(Some(h.title), h.url)
           }
@@ -652,6 +666,7 @@ class SearchCommanderBackwardCompatibilitySupport(
             isPrivate,
             sharingUserIds,
             score,
+            score,
             new Scoring(score, 0.0f, 0.0f, 0.0f, false)
           )
 
@@ -666,6 +681,6 @@ class SearchCommanderBackwardCompatibilitySupport(
       toDetailedSearchHit(h, friendStats)
     }
 
-    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, -1.0f, result.show)
+    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show)
   }
 }

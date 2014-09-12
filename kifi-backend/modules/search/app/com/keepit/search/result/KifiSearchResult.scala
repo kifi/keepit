@@ -90,7 +90,7 @@ object KifiSearchResult extends Logging {
         "title" -> h.titleJson,
         "url" -> h.urlJson
       ))
-      h.keepIdJson match {
+      h.externalIdJson match {
         case v: JsString => json + ("keepId" -> v)
         case _ => json
       }
@@ -134,7 +134,7 @@ object KifiSearchHit extends Logging {
         "count" -> JsNumber(count),
         "bookmark" -> hit.json,
         "users" -> Json.toJson(users),
-        "score" -> JsNumber(score),
+        "score" -> JsNumber(score.toDouble),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
         "isPrivate" -> JsBoolean(isPrivate)
       )))
@@ -156,7 +156,6 @@ class PartialSearchResult(val json: JsValue) extends AnyVal {
   def othersTotal: Int = (json \ "othersTotal").as[Int]
   def friendStats: FriendStats = (json \ "friendStats").as[FriendStats]
   def show: Boolean = (json \ "show").as[Boolean] // TODO: remove
-  def svVariance: Float = (json \ "svVariance").as[Float] // TODO: remove
 }
 
 object PartialSearchResult extends Logging {
@@ -166,7 +165,6 @@ object PartialSearchResult extends Logging {
     friendsTotal: Int,
     othersTotal: Int,
     friendStats: FriendStats,
-    svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
     ): PartialSearchResult = {
     try {
@@ -176,7 +174,6 @@ object PartialSearchResult extends Logging {
         "friendsTotal" -> JsNumber(friendsTotal),
         "othersTotal" -> JsNumber(othersTotal),
         "friendStats" -> Json.toJson(friendStats),
-        "svVariance" -> JsNumber(svVariance), // TODO: remove
         "show" -> JsBoolean(show) // TODO: remove
       )))
     } catch {
@@ -192,7 +189,6 @@ object PartialSearchResult extends Logging {
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
       "friendsStats" -> Json.toJson(FriendStats.empty),
-      "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))
   }
@@ -207,6 +203,7 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def bookmarkCount: Int = (json \ "bookmarkCount").as[Int]
   def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map { users => users.map { id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
   def score: Float = (json \ "score").as[Float]
+  def textScore: Float = (json \ "textScore").asOpt[Float].getOrElse(-1f)
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
 
@@ -231,6 +228,7 @@ object DetailedSearchHit extends Logging {
     isPrivate: Boolean,
     users: Seq[Id[User]],
     score: Float,
+    textScore: Float,
     scoring: Scoring): DetailedSearchHit = {
     try {
       new DetailedSearchHit(JsObject(List(
@@ -238,7 +236,8 @@ object DetailedSearchHit extends Logging {
         "bookmarkCount" -> JsNumber(bookmarkCount),
         "bookmark" -> hit.json,
         "users" -> JsArray(users.map(id => JsNumber(id.id))),
-        "score" -> JsNumber(score),
+        "score" -> JsNumber(score.toDouble),
+        "textScore" -> JsNumber(textScore.toDouble),
         "scoring" -> Json.toJson(scoring),
         "isMyBookmark" -> JsBoolean(isMyBookmark),
         "isFriendsBookmark" -> JsBoolean(isFriendsBookmark),

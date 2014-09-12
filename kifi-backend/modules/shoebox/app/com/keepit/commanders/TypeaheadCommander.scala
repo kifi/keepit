@@ -56,7 +56,7 @@ class TypeaheadCommander @Inject() (
       case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
-    futureContacts.map(RichContact.deduplicateByEmailAddress)
+    futureContacts map { items => dedupBy(items)(_.email.address.toLowerCase) }
   }
 
   def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {
@@ -258,12 +258,20 @@ class TypeaheadCommander @Inject() (
         val kifi: Future[Seq[NetworkTypeAndHit]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
         val abook: Future[Seq[NetworkTypeAndHit]] = abookF.map { hits =>
           val nonUsers = hits.filter(_.info.userId.isEmpty)
-          val distinctEmails = nonUsers.groupBy(_.info.email.address).map(_._2.head).toSeq.sortBy(_.score)
+          val distinctEmails = dedupBy(nonUsers)(_.info.email.address.toLowerCase)
           distinctEmails.map { SocialNetworks.EMAIL -> _ }
         }
         val nf: Future[Seq[NetworkTypeAndHit]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[NetworkTypeAndHit]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)
+    }
+  }
+
+  private def dedupBy[A, B](items: Seq[A])(by: A => B): Seq[A] = {
+    val hashSet = new collection.mutable.HashSet[B]
+    items.filter { item =>
+      val elem = by(item)
+      !hashSet(elem) tap { notSeen => if (notSeen) hashSet += elem }
     }
   }
 

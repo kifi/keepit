@@ -9,7 +9,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.model.{ Keep, NormalizedURI, User }
+import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import scala.math.exp
 
 @Singleton
@@ -20,10 +20,10 @@ class LDACommander @Inject() (
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo,
+    libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
   val numOfTopics: Int = wordRep.lda.dimension
@@ -47,14 +47,14 @@ class LDACommander @Inject() (
     docRep(doc).map { _.vectorize }
   }
 
-  def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
-    ldaRetriever.getByKeys(ids, wordRep.version)
-  }
-
   def userTopicMean(userId: Id[User]): Option[UserLDAInterests] = {
     db.readOnlyReplica { implicit s =>
       userTopicRepo.getByUser(userId, wordRep.version)
     }
+  }
+
+  def libraryTopic(libId: Id[Library]): Option[LibraryLDATopic] = {
+    db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, wordRep.version) }
   }
 
   // for admin
@@ -76,14 +76,23 @@ class LDACommander @Inject() (
   }
 
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
+
+    def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
+
+    val junkTopics = infoCommander.inactiveTopics
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
       val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
-        val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
-        val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-        LDAUserURIInterestScores(s2.global, s1.recency)
+        if (!isInJunkTopic(uriTopicOpt, junkTopics)) {
+          val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
+          val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+          LDAUserURIInterestScores(s2.global, s1.recency)
+        } else {
+          log.info("uri in junk topic. return zero scores for user")
+          LDAUserURIInterestScores(None, None)
+        }
       }
     }
   }

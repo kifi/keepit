@@ -19,6 +19,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](1), Id[User](2)),
       score = 3f,
+      textScore = 3f,
       scoring = new Scoring(3f, 3f, 0f, 0f, false)
     )
   }
@@ -33,6 +34,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2)),
       score = 2f,
+      textScore = 2f,
       scoring = new Scoring(2f, 2f, 0f, 0f, false)
     )
   }
@@ -47,6 +49,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2), Id[User](3)),
       score = 1f,
+      textScore = 1f,
       scoring = new Scoring(1f, 1f, 0f, 0f, false)
     )
   }
@@ -58,7 +61,6 @@ class ResultMergerTest extends Specification {
       friendsTotal = 2,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L), scores = Array(2.4f)),
-      svVariance = 0f,
       show = true
     )
   }
@@ -70,7 +72,6 @@ class ResultMergerTest extends Specification {
       friendsTotal = 1,
       othersTotal = 0,
       friendStats = FriendStats(ids = Array(2L, 3L), scores = Array(2f, 1.8f)),
-      svVariance = 0.1f,
       show = true
     )
   }
@@ -89,6 +90,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](1), Id[User](2)),
       score = 3f / 3f * bookmarkBoost,
+      textScore = 3f,
       scoring = new Scoring(3f, 3f, 0f, 0f, false)
     )
   }
@@ -103,6 +105,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2)),
       score = 2f / 3f,
+      textScore = 2f,
       scoring = new Scoring(2f, 2f, 0f, 0f, false)
     )
   }
@@ -117,7 +120,6 @@ class ResultMergerTest extends Specification {
     friendsTotal = 3,
     othersTotal = 0,
     friendStats = FriendStats(Array(2L, 3L), Array(4.4f, 1.8f)),
-    svVariance = -1f,
     show = true
   )
 
@@ -133,7 +135,6 @@ class ResultMergerTest extends Specification {
       merged.friendStats.ids === expectedMerge.friendStats.ids
       merged.friendStats.scores === expectedMerge.friendStats.scores
       merged.show === expectedMerge.show
-      merged.svVariance === expectedMerge.svVariance
     }
   }
 }

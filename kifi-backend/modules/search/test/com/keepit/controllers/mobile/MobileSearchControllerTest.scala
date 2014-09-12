@@ -142,6 +142,7 @@ class FixedResultSearchCommander extends SearchCommander {
           false, // isPrivate
           Seq(Id[User](999)), // users
           0.999f, // score
+          10.0f, // textScore
           new Scoring( // scoring
             1.3f, // textScore
             1.0f, // normalizedTextScore,

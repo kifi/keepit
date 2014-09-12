@@ -17,6 +17,7 @@ object StatModelName {
   val LDA = StatModelName("lda")
   val LDA_USER = StatModelName("lda_user")
   val LDA_USER_STATS = StatModelName("lda_user_stats")
+  val LDA_LIBRARY = StatModelName("lda_library")
 }
 
 object ModelVersion {

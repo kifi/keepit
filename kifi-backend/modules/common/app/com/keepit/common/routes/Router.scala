@@ -213,6 +213,7 @@ object Search extends Service {
     def updateUserIndex() = ServiceRoute(POST, "/internal/search/user/update")
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
+    def augmentation() = ServiceRoute(POST, "/internal/search/augmentation")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
@@ -356,7 +357,6 @@ object Cortex extends Service {
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
     def ldaConfigurations() = ServiceRoute(GET, "/internal/cortex/lda/confs")
     def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
-    def getLDAFeatures() = ServiceRoute(POST, "/internal/cortex/lda/ldaFeatures")
     def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId))
     def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
@@ -365,6 +365,7 @@ object Cortex extends Service {
     def unamedTopics(limit: Int) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit))
     def getTopicNames() = ServiceRoute(POST, "/internal/cortex/lda/getTopicNames")
     def explainFeed() = ServiceRoute(POST, "/internal/cortex/lda/explainFeed")
+    def libraryTopic(libId: Id[Library]) = ServiceRoute(GET, "/internal/cortex/lda/libraryTopic", Param("libId", libId))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

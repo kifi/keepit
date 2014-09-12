@@ -11,7 +11,7 @@ import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import scala.math._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
@@ -114,7 +114,7 @@ class KifiSearchImpl(
     val noFriendlyHits = (hits.size == 0)
 
     var othersHighScore = -1.0f
-    var othersTotal = othersHits.size
+    var othersTotal = othersHits.totalHits
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
       (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
       val queue = createQueue(numHitsToReturn - hits.size)

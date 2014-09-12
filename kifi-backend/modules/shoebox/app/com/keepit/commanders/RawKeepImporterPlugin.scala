@@ -35,6 +35,7 @@ private class RawKeepImporterActor @Inject() (
     keepRepo: KeepRepo,
     uriRepo: NormalizedURIRepo,
     userValueRepo: UserValueRepo,
+    libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     urlRepo: URLRepo,
     scraper: ScrapeScheduler,
@@ -78,8 +79,8 @@ private class RawKeepImporterActor @Inject() (
   private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate)).map { // todo: use libraries!
-      case ((userId, importIdOpt, source, installationId, isPrivate), rawKeepGroup) =>
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
+      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
 
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
         val rawBookmarks = rawKeepGroup.map { rk =>
@@ -87,7 +88,12 @@ private class RawKeepImporterActor @Inject() (
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
           RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None)
         }
-        val library = db.readWrite(getLibFromPrivacy(isPrivate, userId)(_))
+        val library = db.readWrite { implicit s =>
+          if (libraryId.isEmpty)
+            getLibFromPrivacy(isPrivate, userId)(s)
+          else
+            libraryRepo.get(libraryId.get)
+        }
         val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
         val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
