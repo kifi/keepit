@@ -16,6 +16,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.{ WSResponse, WS }
 import com.keepit.common.db.Id
 import play.api.Play.current
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait EmbedlyClient {
   def embedlyUrl(url: String): String
@@ -24,7 +25,7 @@ trait EmbedlyClient {
 }
 
 @Singleton
-class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
+class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyClient with Logging {
 
   private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
@@ -59,6 +60,7 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
       } recover {
         case t: Throwable =>
           log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
+          airbrake.notify("Failed getting embedly info", t)
           None
       }
     }

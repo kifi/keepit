@@ -150,6 +150,7 @@ class ShoeboxServiceClientImpl @Inject() (
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
   val extraLongTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val superExtraLongTimeoutJustForEmbedly = CallTimeouts(responseTimeout = Some(250000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
@@ -625,7 +626,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
+    val timeout = if (request.waiting) superExtraLongTimeoutJustForEmbedly else longTimeout
+    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = timeout).map { r =>
       r.json.as[URISummary]
     }
   }
@@ -636,7 +638,7 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
       val missingKeysSeq = missing.toSeq
       val request = Json.obj("uriIds" -> missingKeysSeq.map(_.id))
-      call(Shoebox.internal.getUriSummaries, request, callTimeouts = longTimeout).map { r =>
+      call(Shoebox.internal.getUriSummaries, request, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
         Json.fromJson[Seq[URISummary]](r.json).get
       } map { uriSummaries =>
         (missingKeysSeq zip uriSummaries) toMap

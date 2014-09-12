@@ -13,7 +13,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, HeimdalQueueDevModule }
-import com.keepit.model.{ KeepSource, RawKeepFactory, UrlPatternRuleModule, User }
+import com.keepit.model._
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -59,7 +59,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json))
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = None))
 
         // Importer is run synchronously in TestKit.
 
@@ -72,6 +72,35 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           val bm = oneUrl.head
           bm.userId === user.id.get
           bm.isPrivate === true
+          bookmarks.size === 5
+        }
+      }
+    }
+
+    "handle imports to library" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user, lib) = db.readWrite { implicit session =>
+          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          (user, lib)
+        }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val bookmarkInterner = inject[KeepInterner]
+        val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json")).mkString)
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = Some(lib.id.get)))
+
+        // Importer is run synchronously in TestKit.
+
+        db.readWrite { implicit session =>
+          userRepo.get(user.id.get) === user
+          val bookmarks = keepRepo.all
+          bookmarks.count(k => k.libraryId == lib.id) === 5
+          val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
+          println(bookmarks)
+          oneUrl.size === 1
+          val bm = oneUrl.head
+          bm.userId === user.id.get
           bookmarks.size === 5
         }
       }

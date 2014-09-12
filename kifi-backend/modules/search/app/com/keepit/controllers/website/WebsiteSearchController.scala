@@ -13,11 +13,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json.Json
+import com.keepit.search.graph.library.LibraryIndexer
 
 class WebsiteSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
+    libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander) extends WebsiteController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
@@ -61,7 +63,7 @@ class WebsiteSearchController @Inject() (
 
     var decorationFutures: List[Future[String]] = Nil
 
-    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander)(userId, _).map(Json.stringify)(immediate))
+    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher, shoeboxClient)(userId, _).map(Json.stringify)(immediate))
 
     decorationFutures = augmentationFuture :: decorationFutures
 

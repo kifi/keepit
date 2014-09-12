@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
-
+  implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
@@ -734,16 +734,16 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         res1.isRight === true
         res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 6
-          keepToCollectionRepo.count === 9
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
 
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
         res2.isRight === true
-        res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
+        res2.right.get.unzip._1.map(_.title.get).sorted === Seq()
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 7
-          keepToCollectionRepo.count === 10
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
       }
     }

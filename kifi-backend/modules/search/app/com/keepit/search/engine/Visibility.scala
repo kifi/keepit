@@ -10,7 +10,5 @@ object Visibility { // use value class?
   val OWNER = 0x08
   //  unused = 0x10
   val HAS_SECONDARY_ID = 0x20
-  val HAS_TERTIARY_ID = 0x40
-
-  val ALTERNATIVE_ID_MASK = (0x20 | 0x40)
+  // unused = 0x40
 }

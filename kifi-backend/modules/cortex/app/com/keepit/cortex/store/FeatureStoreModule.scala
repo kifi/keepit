@@ -21,13 +21,6 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
 
   @Singleton
   @Provides
-  def ldaURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAURIFeatureStore = {
-    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
-    new S3BlobLDAURIFeatureStore(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
   def word2vecURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): Word2VecURIFeatureStore = {
     val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
     new S3BlobWord2VecURIFeatureStore(bucketName, amazonS3Client, accessLog)
@@ -44,14 +37,6 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
 
 case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule {
   def configure() {}
-
-  @Singleton
-  @Provides
-  def ldaURIFeatureStore(amazonS3Client: AmazonS3, accessLog: AccessLog): LDAURIFeatureStore = {
-    whenConfigured(S3_CORTEX_BUCKET)(
-      prodStoreModule.ldaURIFeatureStore(amazonS3Client, accessLog)
-    ) getOrElse (new InMemoryLDAURIFeatureStore)
-  }
 
   @Singleton
   @Provides

@@ -1,6 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.curator.queue.DevFeedDigestEmailQueueModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.curator.CuratorModule
@@ -22,5 +23,6 @@ case class CuratorDevModule() extends CuratorModule(
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
+  val feedDigestQueueModule = DevFeedDigestEmailQueueModule()
 }
 

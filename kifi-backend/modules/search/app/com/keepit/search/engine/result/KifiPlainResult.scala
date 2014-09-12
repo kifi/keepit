@@ -13,6 +13,7 @@ class KifiPlainResult(val uuid: ExternalId[ArticleSearchResult], val query: Stri
   def hits: Seq[KifiShardHit] = result.hits
   def myTotal: Int = result.myTotal
   def friendsTotal: Int = result.friendsTotal
+  def othersTotal: Int = result.othersTotal
   def show: Boolean = result.show
   def cutPoint: Int = result.cutPoint
   def mayHaveMoreHits = (result.myTotal + result.friendsTotal + result.othersTotal > result.hits.size)
