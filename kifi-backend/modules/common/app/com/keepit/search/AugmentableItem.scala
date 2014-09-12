@@ -27,19 +27,6 @@ case class AugmentedItem(
   otherPublishedKeeps: Int)
 
 object AugmentedItem {
-  implicit val format = {
-    implicit val keepFormat: Format[(Id[Library], Option[Id[User]], Seq[Hashtag])] = (
-      (__ \ 'keptIn).format[Id[Library]] and
-      (__ \ 'keptBy).formatNullable[Id[User]] and
-      (__ \ 'tags).formatNullable[Seq[Hashtag]].inmap(_.getOrElse(Seq.empty[Hashtag]), { tags: Seq[Hashtag] => Some(tags).filter(_.nonEmpty) })
-    )(Tuple3.apply, unlift(Tuple3.unapply))
-    implicit val moreKeepsFormat: Format[(Option[Id[Library]], Option[Id[User]])] = (
-      (__ \ 'keptIn).formatNullable[Id[Library]] and
-      (__ \ 'keptBy).formatNullable[Id[User]]
-    )(Tuple2.apply, unlift(Tuple2.unapply))
-    Json.format[AugmentedItem]
-  }
-
   def withScores(augmentationScores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo): AugmentedItem = {
     val keep = item.keptIn.flatMap { libraryId =>
       info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>

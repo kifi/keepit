@@ -2,20 +2,22 @@ package com.keepit.controllers.util
 
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.result.{ ResultUtil, DecoratedResult, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{ JsValue, Json, JsObject }
+import play.api.libs.json._
 
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.JsObject
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.result.DecoratedResult
+import play.api.libs.json.JsObject
+import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -76,15 +78,33 @@ trait SearchControllerUtil {
       decoratedResult.experts).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
+  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher, shoebox: ShoeboxServiceClient)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None))
     val context = AugmentationContext.uniform(userId, items ++ previousItems)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.augmentation(augmentationRequest).map { augmentationResponse =>
+    augmentationCommander.augmentation(augmentationRequest).flatMap { augmentationResponse =>
+      val futureBasicUsers = shoebox.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
+      val libraryNames = getLibraryNames(librarySearcher, augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptIn).flatten).toSeq)
       val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
       val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
-      Json.toJson(augmentedItems)
+      futureBasicUsers.map { basicUsers =>
+        JsArray(augmentedItems.map {
+          augmentedItem =>
+            Json.obj(
+              "keep" -> augmentedItem.keep.map { case (keptIn, keptBy, tags) => Json.obj("keptIn" -> libraryNames(keptIn), "keptBy" -> keptBy.map(basicUsers(_)), "tags" -> tags) },
+              "moreKeeps" -> JsArray(augmentedItem.moreKeeps.map { case (keptIn, keptBy) => Json.obj("keptIn" -> keptIn.map(libraryNames(_)), "keptBy" -> keptBy.map(basicUsers(_))) }),
+              "moreTags" -> Json.toJson(augmentedItem.moreTags),
+              "otherPublishedKeeps" -> augmentedItem.otherPublishedKeeps
+            )
+        })
+      }
     }
+  }
+
+  def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
+    libraryIds.map { libId =>
+      libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
+    }.toMap
   }
 }
