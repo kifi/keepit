@@ -2,9 +2,9 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.id.Types.{UserSessionExternalId, UserSessionId}
+import com.keepit.model.id.Types.{ UserSessionExternalId, UserSessionId }
 import com.keepit.model.view.UserSessionView
-import com.keepit.social.{SocialId, SocialNetworkType}
+import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
