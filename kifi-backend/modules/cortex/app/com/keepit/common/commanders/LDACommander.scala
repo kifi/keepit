@@ -90,6 +90,7 @@ class LDACommander @Inject() (
           val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
           LDAUserURIInterestScores(s2.global, s1.recency)
         } else {
+          log.info("uri in junk topic. return zero scores for user")
           LDAUserURIInterestScores(None, None)
         }
       }
