@@ -268,6 +268,7 @@ POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0, auth:Option[String] ?= None, passcode:Option[String] ?= None)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/collabs @com.keepit.controllers.website.LibraryController.getCollaborators(id: PublicId[Library], count: Int, offset: Int ?= 0, auth: Option[String] ?= None, passcode:Option[String] ?= None)
+POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
