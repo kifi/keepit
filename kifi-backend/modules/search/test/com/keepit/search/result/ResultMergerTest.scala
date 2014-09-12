@@ -19,6 +19,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](1), Id[User](2)),
       score = 3f,
+      textScore = 3f,
       scoring = new Scoring(3f, 3f, 0f, 0f, false)
     )
   }
@@ -33,6 +34,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2)),
       score = 2f,
+      textScore = 2f,
       scoring = new Scoring(2f, 2f, 0f, 0f, false)
     )
   }
@@ -47,6 +49,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2), Id[User](3)),
       score = 1f,
+      textScore = 1f,
       scoring = new Scoring(1f, 1f, 0f, 0f, false)
     )
   }
@@ -87,6 +90,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](1), Id[User](2)),
       score = 3f / 3f * bookmarkBoost,
+      textScore = 3f,
       scoring = new Scoring(3f, 3f, 0f, 0f, false)
     )
   }
@@ -101,6 +105,7 @@ class ResultMergerTest extends Specification {
       isPrivate = false,
       users = Seq(Id[User](2)),
       score = 2f / 3f,
+      textScore = 2f,
       scoring = new Scoring(2f, 2f, 0f, 0f, false)
     )
   }

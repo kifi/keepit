@@ -1,6 +1,7 @@
 <div class="kf-main-library-keeps">
   <div class="kf-main-head">
     <h1 class="kf-main-title">{{library.name}}</h1>
+    <div>{{library.description}} <span ng-if="library.slug" ng-click="manageLibrary()">(edit)</span></div>
     <div class="kf-subtitle">
       <div class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>

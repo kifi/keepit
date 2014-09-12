@@ -3,15 +3,15 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', 'keepDecoratorService', '$routeParams', 'libraryService', 'util',
-  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util) {
+  '$scope', '$rootScope', 'keepDecoratorService','$routeParams', 'libraryService', 'util', '$location',
+  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util, $location) {
     //
     // Internal data.
     //
     var username = $routeParams.username;
     var librarySlug = $routeParams.librarySlug;
     var selectedCount = 0;
-
+    
 
     //
     // Scope data.
@@ -48,6 +48,21 @@ angular.module('kifi')
 
         return $scope.keeps;
       });
+    };
+
+    $scope.manageLibrary = function () {
+      libraryService.libraryState = {
+        library: $scope.library,
+        returnAction: function () {
+          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
+            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
+            if (data.library.slug !== librarySlug) {
+              $location.path('/' + username + '/' + data.library.slug);
+            }
+          });
+        }
+      };
+      $rootScope.$emit('showGlobalModal', 'manageLibrary');
     };
 
     $scope.getSubtitle = function () {

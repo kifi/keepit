@@ -268,6 +268,8 @@ POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0, auth:Option[String] ?= None, passcode:Option[String] ?= None)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/collabs @com.keepit.controllers.website.LibraryController.getCollaborators(id: PublicId[Library], count: Int, offset: Int ?= 0, auth: Option[String] ?= None, passcode:Option[String] ?= None)
+POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
@@ -616,18 +618,18 @@ POST    /admin/cortex/lda/showTopics                       @com.keepit.controlle
 POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 POST    /admin/cortex/lda/saveEdits                        @com.keepit.controllers.admin.AdminLDAController.saveEdits
-GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controllers.admin.AdminLDAController.userTopicDump(userId: Id[User], limit: Int)
 POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
 GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
 GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5)
+POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
-GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering
+GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
 ##########################################
 # Common Healthcheck / service routes

@@ -342,6 +342,7 @@ class MainSearcher(
         isPrivate,
         h.users.toSeq,
         hit.score,
+        hit.scoring.textScore,
         hit.scoring
       )
     }

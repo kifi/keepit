@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.util.Random
 import views.html
 
-case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
+case class ArticleSearchResultHitMeta(uri: NormalizedURI, hit: ArticleHit)
 
 case class MinimalHit(rank: Int, title: String, url: String)
 case class ConfigIdAndHits(id: Long, hits: Seq[MinimalHit])
@@ -119,18 +119,14 @@ class AdminSearchController @Inject() (
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
-    val result = articleSearchResultStore.get(id).get
-    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyMaster { implicit s =>
-      result.hits.zip(result.scorings) map { tuple =>
-        val hit = tuple._1
-        val scoring = tuple._2
-        val uri = uriRepo.get(hit.uriId)
-        val users = hit.users.map { userId =>
-          userRepo.get(userId)
+    articleSearchResultStore.get(id) match {
+      case Some(result) =>
+        val metas = db.readOnlyMaster { implicit s =>
+          result.hits map { hit => ArticleSearchResultHitMeta(uriRepo.get(hit.uriId), hit) }
         }
-        ArticleSearchResultHitMeta(uri, users.toSeq, scoring, hit)
-      }
+        Ok(html.admin.articleSearchResult(result, metas))
+      case None =>
+        NotFound
     }
-    Ok(html.admin.articleSearchResult(result, metas))
   }
 }

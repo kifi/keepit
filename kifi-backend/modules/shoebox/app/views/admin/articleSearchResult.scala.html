@@ -48,32 +48,28 @@
      <tr>
        <th>URI</th>
        <th>Score</th>
-       <th>Friends</th>
        <th>Text Score</th>
-       <th>My bookmark</th>
-       <th>Private</th>
-       <th>Count</th>
+       <th>My Keep</th>
+       <th>Friends</th>
        <th> </th>
      </tr>
      @for(meta <- metas) {
       <tr>
         <td><a href="/admin/scraped/@{meta.uri.id}">@{if(meta.uri.title.getOrElse("NO TITLE").length > 50) meta.uri.title.get.substring(0, 50) else meta.uri.title.getOrElse("NO TITLE") }</a></td>
         <td>@meta.hit.score</td>
-        <td>@meta.users.size</td>
-        <td>@{meta.scoring.textScore}</td>
+        <td>@{meta.hit.textScore}</td>
         <td>@{meta.hit.isMyBookmark}</td>
-        <td>@{meta.hit.isPrivate}</td>
-        <td>@{meta.hit.bookmarkCount}</td>
+        <td>@{(meta.hit.keptByFriend || meta.hit.users.size > 0)}</td>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get, result.lang)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
             <input type="hidden" name="uriId" value="@{meta.uri.id}"/>
             <input type="hidden" name="lang" value="@{result.lang}"/>
-            <button type="submit" class="btn">Explain</button> </td>
+            <button type="submit" class="btn">Explain</button>
           </form>
+        </td>
       </tr>
      }
    </table>
-
 
 }

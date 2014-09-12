@@ -143,9 +143,9 @@ angular.module('kifi')
           $scope.modal = 'install_extension_error';
           $scope.data.showInstallErrorModal = true;
           break;
-        case 'createLibrary':
-          $scope.modal = 'create_library';
-          $scope.data.showCreateLibraryModal = true;
+        case 'manageLibrary':
+          $scope.modal = 'manage_library';
+          $scope.data.showManageLibraryModal = true;
           break;
       }
     });

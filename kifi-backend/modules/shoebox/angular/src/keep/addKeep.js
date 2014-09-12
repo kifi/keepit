@@ -120,6 +120,7 @@ angular.module('kifi')
                   keep.buildKeep(keep);
                   keep.makeKept();
 
+                  libraryService.fetchLibrarySummaries(true);
                   libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
                   tagService.addToKeepCount(1);
 

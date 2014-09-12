@@ -105,13 +105,6 @@ class AdminLDAController @Inject() (
     futureMsg.map(msg => Ok(JsString(msg)))
   }
 
-  def userTopicDump(userId: Id[User], limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val uris = db.readOnlyReplica { implicit s => keepRepo.getLatestKeepsURIByUser(userId, limit, includePrivate = false) }
-    cortex.getLDAFeatures(uris).map { feats =>
-      Ok(Json.toJson(feats))
-    }
-  }
-
   def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
@@ -178,5 +171,22 @@ class AdminLDAController @Inject() (
         val words = topicWords.map { case words => getFormatted(words) }
         Ok(html.admin.unamedTopics(topicInfo, words))
     }
+  }
+
+  def libraryTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val libId = Id[Library](body.get("libId").get.toLong)
+
+    val msgFut = cortex.libraryTopic(libId).flatMap { feat =>
+      feat match {
+        case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+        case None => Future.successful("not enough information")
+      }
+    }
+
+    msgFut.map { msg =>
+      Ok(msg)
+    }
+
   }
 }

@@ -298,7 +298,7 @@ class HomeController @Inject() (
   }
 
   def getKifiExtensionIPhone(s: String) = Action { implicit request =>
-    Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png">"""))
+    Ok(Html("""<img src="http://djty7jcqog9qu.cloudfront.net/assets/site/keep-from-other-apps.png" style="width: 100%;">"""))
   }
 
 }

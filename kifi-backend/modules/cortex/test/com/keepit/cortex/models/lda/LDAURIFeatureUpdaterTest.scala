@@ -14,26 +14,6 @@ import com.keepit.cortex.plugins.URIPuller
 import com.keepit.cortex.plugins.DataPuller
 import com.keepit.cortex.features.URIFeatureTestHelper
 
-class LDAURIFeatureUpdaterTest extends Specification with LDATestHelper {
-  "lda uri feature updater" should {
-    "work" in {
-
-      ldaUriUpdater.commitInfo() === None
-
-      ldaUriUpdater.update()
-
-      val info = ldaUriUpdater.commitInfo().get
-      info.seq.value === 3
-      info.version === version
-
-      featStore.get(Id[NormalizedURI](1), version).get.vectorize === Array(1f, 0f)
-      featStore.get(Id[NormalizedURI](2), version).get.vectorize === Array(1f, 0f)
-      featStore.get(Id[NormalizedURI](3), version).get.vectorize === Array(0f, 1f)
-
-    }
-  }
-}
-
 trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
   val dim = 2
   val lda = DenseLDA(dim, mapper)
@@ -46,9 +26,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
   ldaModelStore.+=(version, lda)
 
   val ldaFromStore = ldaModelStore.get(version).get
-  val featStore = new InMemoryLDAURIFeatureStore
   val articleStore = new InMemoryArticleStoreImpl()
-  val commitStore = new InMemoryLDAURIFeatureCommitStore
 
   val wordRep = LDAWordRepresenter(version, ldaFromStore)
   val docRep = new LDADocRepresenter(wordRep, Stopwords(Set())) {
@@ -74,7 +52,5 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
   }
 
   val puller = new FakeURIPuller(Seq(uri1, uri2, uri3))
-
-  val ldaUriUpdater = new LDAURIFeatureUpdater(uriRep, featStore, commitStore, puller)
 
 }

@@ -71,12 +71,16 @@ angular.module('kifi')
       Clutch.prototype.expire = function () {
         var key = stringize(arguments);
         var prev = this._cache[key];
-        delete this._cache[key];
+        if (this._cache[key]) {
+          this._cache[key].time = 0;
+        }
         return prev;
       };
 
       Clutch.prototype.expireAll = function () {
-        this._cache = {};
+        _.forEach(this._cache, function (v) {
+          v.time = 0;
+        });
         return;
       };
 

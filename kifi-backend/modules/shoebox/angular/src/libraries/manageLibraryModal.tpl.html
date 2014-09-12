@@ -1,0 +1,43 @@
+<div kf-modal show="data.showManageLibraryModal" kf-width="600px">
+  <div class="manage-library dialog-content">
+    <a class="dialog-x sprite-close-x-icon" ng-click="hideModal()"></a>
+    <div ng-controller="ManageLibraryCtrl" class="dialog-body-wrap">
+      <h1 class="dialog-header">{{modalTitle}}</h1>
+      <div class="dialog-body">
+        <div>
+          <div class="dialog-text">
+            <div class="manage-lib-input-wrapper">
+              <div class="manage-lib-input-title">Library Name<span class="manage-lib-error" ng-if="$error.name">{{$error.name}}</span></div>
+              <input class="manage-lib-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Snazzy links" novalidate>
+              <div><span>kifi.com/{{username}}/</span>
+                <input ng-change="editSlug()" class="manage-lib-input manage-lib-partial ng-pristine ng-valid manage-lib-calced" ng-model="library.slug" ng-class="{'manage-lib-calced':!userHasEditedSlug}" type="text" name="slug" placeholder="new-library" novalidate>
+              </div>
+            </div>
+            <div class="manage-lib-input-wrapper">
+              <div class="manage-lib-input-title">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></div>
+              <input class="manage-lib-input ng-pristine ng-valid" ng-model="library.description" type="text" name="description" placeholder="Best links on the internet, as of 30 seconds ago" novalidate>
+            </div>
+            <div class="manage-lib-input-wrapper">
+              <div class="manage-lib-input-title">Keep it limited?</div>
+              <div>
+                <div>
+                  <label><input type="radio" ng-model="library.visibility" value="secret">Secret</label>
+                </div>
+                <div>
+                  <label><input type="radio" ng-model="library.visibility" value="discoverable">Discoverable</label>
+                </div>
+                <div>
+                  <label><input type="radio" ng-model="library.visibility" value="published">Published</label>
+                </div>
+              </div>
+            </div>
+            <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
+          </div>
+          <div class="dialog-buttons">
+            <button class="create-button" ng-click="saveLibrary()">Create library</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

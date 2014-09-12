@@ -61,6 +61,7 @@ angular.module('kifi')
     // Add properties that are specific to a really kept Keep.
     Keep.prototype.buildKeep = function (keptItem, isMyBookmark) {
       this.id = keptItem.id;
+      this.libraryId = keptItem.libraryId;
       this.isPrivate = keptItem.isPrivate;
       
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;

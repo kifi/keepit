@@ -19,9 +19,9 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
-  def merge(results: Seq[KifiShardResult], maxHits: Int): KifiShardResult = {
+  def merge(results: Seq[KifiShardResult], maxHits: Int, withFinalScores: Boolean = false): KifiShardResult = {
     val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
-    val hits = mergeHits(results, maxHits)
+    val hits = mergeHits(results, maxHits, withFinalScores)
     val show = results.exists(_.show)
 
     val cutPoint = {
@@ -41,9 +41,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     )
   }
 
-  private def mergeHits(results: Seq[KifiShardResult], maxHits: Int): Seq[KifiShardHit] = {
-
-    if (results.size == 1) return results.head.hits // short cut for a single result set
+  private def mergeHits(results: Seq[KifiShardResult], maxHits: Int, withFinalScores: Boolean): Seq[KifiShardHit] = {
 
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
@@ -105,7 +103,11 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       queue.foreach { h => hits.insert(h) }
     }
 
-    hits.toSortedList.map(_.hit)
+    if (withFinalScores) {
+      hits.toSortedList.map(h => h.hit.withFinalScore(h.score))
+    } else {
+      hits.toSortedList.map(_.hit)
+    }
   }
 
   @inline private def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)

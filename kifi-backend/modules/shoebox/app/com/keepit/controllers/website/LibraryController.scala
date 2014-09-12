@@ -74,6 +74,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         libraryCommander.removeLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(success) => Ok(JsString(success))
@@ -81,9 +82,24 @@ class LibraryController @Inject() (
     }
   }
 
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(libraryId)
+    val hashtag = Hashtag(tag)
+    idTry match {
+      case Failure(ex) =>
+        BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(id) =>
+        libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(success) => Ok(JsString("success"))
+        }
+    }
+  }
+
   private def canView(userId: Id[User], lib: Library, authToken: Option[String], passcode: Option[String]): Boolean = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getOpt(userId = userId, libraryId = lib.id.get).nonEmpty ||
+        lib.visibility == LibraryVisibility.PUBLISHED ||
         (lib.universalLink.nonEmpty && authToken.nonEmpty && lib.universalLink == authToken.get) || {
           val invites = libraryInviteRepo.getWithLibraryIdAndUserId(userId = userId, libraryId = lib.id.get)
           passcode.nonEmpty && invites.exists(i => i.passCode == passcode.get)
