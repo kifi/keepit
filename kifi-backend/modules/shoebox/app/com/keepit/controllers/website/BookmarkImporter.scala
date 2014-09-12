@@ -31,7 +31,6 @@ class BookmarkImporter @Inject() (
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepsCommander,
-    airbrake: AirbrakeNotifier,
     clock: Clock,
     implicit val config: PublicIdConfiguration) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
