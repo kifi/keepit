@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagItem', [
-  '$timeout', '$document', '$rootScope', 'tagService', 'keepService', 'keyIndices', 'dragService',
-  function ($timeout, $document, $rootScope, tagService, keepService, keyIndices, dragService) {
+  '$timeout', '$document', '$rootScope', 'tagService', 'keepDecoratorService', 'keyIndices', 'dragService',
+  function ($timeout, $document, $rootScope, tagService, keepDecoratorService, keyIndices, dragService) {
     return {
       restrict: 'A',
       scope: {
@@ -174,9 +174,7 @@ angular.module('kifi')
           if (scope.tag && data.length > 0) {
             // keep drop
             var keeps = angular.fromJson(data);
-            // TODO(yiping): figure out what buildKeep does here.
-            // keeps.forEach(keepService.buildKeep);
-            // keeps.forEach(function (keep) { keep.buildKeep(keep); });
+            keeps.forEach(keepDecoratorService.buildKeepForTagDrop);
             tagService.addKeepsToTag(scope.tag, keeps);
             animate();
           } else {
