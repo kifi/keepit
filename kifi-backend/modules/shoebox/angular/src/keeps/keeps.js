@@ -68,10 +68,11 @@ angular.module('kifi')
         //
         function sizeKeeps() {
           scope.$broadcast('resizeImage');
+
           $timeout(function () {
             scope.keeps.forEach(function (keep) {
               if (keep.calcSizeCard) {
-                keep.calcSizeCard();
+                keep.calcSizeCard(keep);
               }
             });
             scope.keeps.forEach(function (keep) {
