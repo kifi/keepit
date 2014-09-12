@@ -54,7 +54,7 @@ angular.module('kifi')
         var result = {};
 
         result.keeps = data.keeps;
-        result.mayHaveMore = (data.keeps.length > 0) && (data.keeps.length >= params.count - 1);
+        result.mayHaveMore = data.keeps.length === params.count;
 
         return result;
       });

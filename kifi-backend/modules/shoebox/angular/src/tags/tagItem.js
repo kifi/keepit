@@ -174,7 +174,10 @@ angular.module('kifi')
           if (scope.tag && data.length > 0) {
             // keep drop
             var keeps = angular.fromJson(data);
-            keeps.forEach(keepDecoratorService.buildKeepForTagDrop);
+            keeps.forEach(function (keep, index, keeps) {
+              keeps[index] = keepDecoratorService.reconstituteKeepFromJson(keep);
+              keeps[index].buildKeep(keep);
+            });
             tagService.addKeepsToTag(scope.tag, keeps);
             animate();
           } else {

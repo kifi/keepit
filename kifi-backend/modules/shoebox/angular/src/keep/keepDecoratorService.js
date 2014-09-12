@@ -51,8 +51,9 @@ angular.module('kifi')
       // Add new properties to the keep.
       this.titleAttr = this.title || this.url;
       this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
-      this.hasSmallImage = this.summary && shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary);
-      this.hasBigImage = this.summary && (!shouldShowSmallImage(this.summary) && hasSaneAspectRatio(this.summary));
+      if (this.summary && hasSaneAspectRatio(this.summary)) {
+        this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
+      }
       this.readTime = getKeepReadTime(this.summary);
       this.showSocial = this.others || (this.keepers && this.keepers.length > 0);
     }
@@ -116,42 +117,15 @@ angular.module('kifi')
       }
     };
 
-    // This is needed only for tag drop in tagItem.js.
-    // The reason is that angular.toJSON does not copy over
-    // the Keep prototype methods.:(
-    // TODO(yiping): figure out a more elegant way to do this.
-    function buildKeepForTagDrop(keep, isMyBookmark) {
-      keep.isMyBookmark = isMyBookmark;
-      if (typeof keep.isMyBookmark !== 'boolean') {
-        keep.isMyBookmark = true;
-      }
-      keep.tagList = keep.tagList || [];
-      keep.collections = keep.collections || [];
-
-      keep.addTag = function (tag) {
-        this.tagList.push(tag);
-        this.collections.push(tag.id);
-      };
-
-      keep.removeTag = function (tagId) {
-        var idx1 = _.findIndex(this.tagList, function (tag) {
-          return tag.id === tagId;
-        });
-        if (idx1 > -1) {
-          this.tagList.splice(idx1, 1);
-        }
-        var idx2 = this.collections.indexOf(tagId);
-        if (idx2 > -1) {
-          this.collections.splice(idx2, 1);
-          return true;
-        } else {
-          return false;
-        }
-      };
+    // angular.toJSON does not copy over the Keep prototype methods.
+    // This function reconstitutes a Keep object with all the prototype methods.
+    function reconstituteKeepFromJson(keep) {
+      return _.extend(new Keep(keep), {isMyBookmark: keep.isMyBookmark});
     }
+
     var api = {
       Keep: Keep,
-      buildKeepForTagDrop: buildKeepForTagDrop
+      reconstituteKeepFromJson: reconstituteKeepFromJson
     };
 
     return api;

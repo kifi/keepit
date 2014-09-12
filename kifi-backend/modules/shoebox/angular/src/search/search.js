@@ -110,14 +110,7 @@ angular.module('kifi')
       // If there are selected keeps, display the number of keeps
       // in the subtitle.
       if (selectedCount > 0) {
-        switch (selectedCount) {
-          case 0:
-            return null;
-          case 1:
-            return selectedCount + ' Keep selected';
-          default:
-            return selectedCount + ' Keeps selected';
-        }
+        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
       }
 
       // If there are no selected keep, the display the number of

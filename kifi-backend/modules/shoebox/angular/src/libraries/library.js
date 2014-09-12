@@ -58,14 +58,7 @@ angular.module('kifi')
       // If there are selected keeps, display the number of keeps
       // in the subtitle.
       if (selectedCount > 0) {
-        switch (selectedCount) {
-          case 0:
-            return null;
-          case 1:
-            return selectedCount + ' Keep selected';
-          default:
-            return selectedCount + ' Keeps selected';
-        }
+        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
       }
 
       var numShown = $scope.keeps.length;
@@ -100,8 +93,9 @@ angular.module('kifi')
     // librarySummaries has a few of the fields we need to draw the library.
     // Attempt to pre-populate the library object while we wait
     if (libraryService.librarySummaries) {
+      var path = '/' + username + '/' + librarySlug;
       var lib = _.find(libraryService.librarySummaries, function (elem) {
-        return elem.url === '/' + username + '/' + librarySlug;
+        return elem.url === path;
       });
 
       if (lib) {
