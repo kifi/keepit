@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.{ FeatureWaitlistEmailSender, ResetPasswordEmailSender }
+import com.keepit.commanders.emails.{ WelcomeEmailSender, FriendRequestAcceptedEmailSender, FeatureWaitlistEmailSender, ResetPasswordEmailSender }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -15,8 +15,10 @@ import play.twirl.api.Html
 class EmailTestController @Inject() (
     postOffice: LocalPostOffice,
     db: Database,
+    welcomeEmailSender: WelcomeEmailSender,
     resetPasswordSender: ResetPasswordEmailSender,
-    waitListSender: FeatureWaitlistEmailSender) extends ShoeboxServiceController {
+    waitListSender: FeatureWaitlistEmailSender,
+    friendRequestAcceptedSender: FriendRequestAcceptedEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -59,13 +61,16 @@ class EmailTestController @Inject() (
 
   def testEmailSender(name: String) = Action.async { request =>
     def userId = Id[User](request.getQueryString("userId").get.toLong)
+    def friendId = Id[User](request.getQueryString("friendId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
 
     val emailF = name match {
+      case "welcomeEmail" => welcomeEmailSender.sendToUser(userId)
       case "resetPassword" => resetPasswordSender.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val feature = request.getQueryString("feature").getOrElse(waitListSender.emailTriggers.keys.head)
         waitListSender.sendToUser(sendTo, feature)
+      case "friendRequestAccepted" => friendRequestAcceptedSender.sendToUser(userId, friendId)
     }
 
     emailF.map(email => Ok(email.htmlBody.value))

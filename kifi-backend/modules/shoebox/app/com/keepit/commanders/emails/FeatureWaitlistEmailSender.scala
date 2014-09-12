@@ -34,7 +34,7 @@ class FeatureWaitlistEmailSender @Inject() (
         campaign = Some(s"${feature}_waitlist")
       )
       emailTemplateSender.send(emailToSend)
-    }.getOrElse(throw new IllegalArgumentException(s"unrecognized feature $feature"))
+    }.getOrElse(Future.failed(new IllegalArgumentException(s"unrecognized feature $feature")))
   }
 }
 
