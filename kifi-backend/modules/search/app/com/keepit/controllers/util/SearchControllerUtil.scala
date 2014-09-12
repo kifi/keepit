@@ -89,11 +89,12 @@ trait SearchControllerUtil {
       val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
       val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
       futureBasicUsers.map { basicUsers =>
+        val userNames = basicUsers.mapValues(basicUser => basicUser.firstName + " " + basicUser.lastName)
         JsArray(augmentedItems.map {
           augmentedItem =>
             Json.obj(
-              "keep" -> augmentedItem.keep.map { case (keptIn, keptBy, tags) => Json.obj("keptIn" -> libraryNames(keptIn), "keptBy" -> keptBy.map(basicUsers(_)), "tags" -> tags) },
-              "moreKeeps" -> JsArray(augmentedItem.moreKeeps.map { case (keptIn, keptBy) => Json.obj("keptIn" -> keptIn.map(libraryNames(_)), "keptBy" -> keptBy.map(basicUsers(_))) }),
+              "keep" -> augmentedItem.keep.map { case (keptIn, keptBy, tags) => Json.obj("keptIn" -> libraryNames(keptIn), "keptBy" -> keptBy.map(userNames(_)), "tags" -> tags) },
+              "moreKeeps" -> JsArray(augmentedItem.moreKeeps.map { case (keptIn, keptBy) => Json.obj("keptIn" -> keptIn.map(libraryNames(_)), "keptBy" -> keptBy.map(userNames(_))) }),
               "moreTags" -> Json.toJson(augmentedItem.moreTags),
               "otherPublishedKeeps" -> augmentedItem.otherPublishedKeeps
             )
