@@ -633,7 +633,7 @@ class SearchCommanderBackwardCompatibilitySupport(
               val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
               if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
             }
-            BasicSearchHit(Some(h.title), h.url, collections, h.keepId)
+            BasicSearchHit(Some(h.title), h.url, collections, h.externalId)
           } else {
             BasicSearchHit(Some(h.title), h.url)
           }
