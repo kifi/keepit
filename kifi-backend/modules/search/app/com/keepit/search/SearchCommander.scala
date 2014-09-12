@@ -113,7 +113,7 @@ class SearchCommanderImpl @Inject() (
     query: String,
     filter: Option[String],
     maxHits: Int,
-    lastUUIDStr: Option[String],
+    lastUUID: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None,
@@ -181,7 +181,6 @@ class SearchCommanderImpl @Inject() (
       // stash timing information
       timing.sendTotal()
 
-      val lastUUID = for { str <- lastUUIDStr if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
       val numPreviousHits = searchFilter.idFilter.size
       val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
       val articleSearchResult = ResultUtil.toArticleSearchResult(
@@ -294,7 +293,7 @@ class SearchCommanderImpl @Inject() (
     filter: Option[String],
     library: Option[String],
     maxHits: Int,
-    lastUUIDStr: Option[String],
+    lastUUID: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String]): Future[KifiPlainResult] = {
@@ -356,7 +355,23 @@ class SearchCommanderImpl @Inject() (
         // stash timing information
         timing.sendTotal()
 
-        // TODO: save ArticleSearchResult
+        val numPreviousHits = searchFilter.idFilter.size
+        val lang = firstLang.lang + secondLang.map("," + _.lang).getOrElse("")
+        val articleSearchResult = ResultUtil.toArticleSearchResult(
+          plainResult,
+          lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
+          timing.getTotalTime.toInt,
+          numPreviousHits / maxHits,
+          numPreviousHits,
+          currentDateTime,
+          lang
+        )
+
+        try {
+          articleSearchResultStore += (plainResult.uuid -> articleSearchResult)
+        } catch {
+          case e: Throwable => airbrake.notify(AirbrakeError(e, Some(s"Could not store article search result for user id $userId.")))
+        }
 
         // search is a little slow after service restart. allow some grace period
         val timeLimit = 1000
