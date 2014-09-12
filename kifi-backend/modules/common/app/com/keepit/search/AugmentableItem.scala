@@ -90,7 +90,7 @@ case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Fl
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], items: Seq[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
+  def uniform(userId: Id[User], items: Set[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
@@ -101,7 +101,12 @@ object AugmentationScores {
 case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext)
 
 object ItemAugmentationRequest {
-  implicit val format = Json.format[ItemAugmentationRequest]
+  implicit val writes = Json.format[ItemAugmentationRequest]
+  def simple(userId: Id[User], uris: Id[NormalizedURI]*): ItemAugmentationRequest = {
+    val items = uris.map(AugmentableItem(_, None)).toSet
+    val context = AugmentationContext.uniform(userId, items)
+    ItemAugmentationRequest(items, context)
+  }
 }
 
 case class ItemAugmentationResponse(infos: Map[AugmentableItem, AugmentationInfo], scores: AugmentationScores)

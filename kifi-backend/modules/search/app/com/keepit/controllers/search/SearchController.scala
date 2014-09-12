@@ -196,5 +196,12 @@ class SearchController @Inject() (
         Ok("shard not found")
     }
   }
+
+  def augmentation() = Action.async(parse.json) { implicit request =>
+    augmentationCommander.augmentation(request.body.as[ItemAugmentationRequest]).map { augmentationResponse =>
+      val json = Json.toJson(augmentationResponse)
+      Ok(json)
+    }
+  }
 }
 

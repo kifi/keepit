@@ -80,8 +80,8 @@ trait SearchControllerUtil {
 
   def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher, shoebox: ShoeboxServiceClient)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
-    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None))
-    val context = AugmentationContext.uniform(userId, items ++ previousItems)
+    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
+    val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
     augmentationCommander.augmentation(augmentationRequest).flatMap { augmentationResponse =>
       val futureBasicUsers = shoebox.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
