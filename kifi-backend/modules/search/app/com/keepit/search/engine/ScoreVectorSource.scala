@@ -315,7 +315,11 @@ class UriFromKeepsScoreVectorSource(
         val visibility = getKeepVisibility(docId, libId, userIdDocValues, visibilityDocValues)
 
         if (visibility != Visibility.RESTRICTED) {
-          val boost = if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) else 1.0f
+          val boost = {
+            if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) + 0.2f // recency boost [1.0, recencyBoost]
+            else if ((visibility & Visibility.MEMBER) != 0) 1.1f
+            else 1.0f
+          }
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)

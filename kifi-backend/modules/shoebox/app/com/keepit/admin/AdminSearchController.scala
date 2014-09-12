@@ -119,10 +119,14 @@ class AdminSearchController @Inject() (
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
-    val result = articleSearchResultStore.get(id).get
-    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyMaster { implicit s =>
-      result.hits map { hit => ArticleSearchResultHitMeta(uriRepo.get(hit.uriId), hit) }
+    articleSearchResultStore.get(id) match {
+      case Some(result) =>
+        val metas = db.readOnlyMaster { implicit s =>
+          result.hits map { hit => ArticleSearchResultHitMeta(uriRepo.get(hit.uriId), hit) }
+        }
+        Ok(html.admin.articleSearchResult(result, metas))
+      case None =>
+        NotFound
     }
-    Ok(html.admin.articleSearchResult(result, metas))
   }
 }

@@ -49,12 +49,24 @@ object ResultUtil {
     time: DateTime,
     lang: String): ArticleSearchResult = {
 
+    def toArticleHit(hit: DetailedSearchHit): ArticleHit = {
+      ArticleHit(
+        hit.uriId,
+        hit.score,
+        hit.textScore,
+        hit.isMyBookmark,
+        hit.isPrivate,
+        hit.users.size > 0,
+        Seq(),
+        -1)
+    }
+
     val lastUUID = for { str <- last if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
     ArticleSearchResult(
       lastUUID,
       res.query,
-      mergedResult.hits.map { h => h.json.as[ArticleHit] },
+      mergedResult.hits map toArticleHit,
       mergedResult.myTotal,
       mergedResult.friendsTotal,
       mergedResult.othersTotal,
@@ -79,6 +91,18 @@ object ResultUtil {
     time: DateTime,
     lang: String): ArticleSearchResult = {
 
+    def toArticleHit(hit: KifiShardHit): ArticleHit = {
+      ArticleHit(
+        Id[NormalizedURI](hit.id),
+        hit.finalScore,
+        hit.score,
+        (hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0,
+        false,
+        (hit.visibility & Visibility.NETWORK) != 0,
+        Seq(),
+        -1)
+    }
+
     val lastUUID = for { str <- last if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
 
     ArticleSearchResult(
@@ -98,17 +122,5 @@ object ResultUtil {
       res.show,
       lang
     )
-  }
-
-  def toArticleHit(hit: KifiShardHit): ArticleHit = {
-    ArticleHit(
-      Id[NormalizedURI](hit.id),
-      hit.score,
-      hit.score,
-      (hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0,
-      false,
-      (hit.visibility & Visibility.NETWORK) != 0,
-      Seq(),
-      -1)
   }
 }
