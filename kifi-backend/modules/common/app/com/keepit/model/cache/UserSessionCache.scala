@@ -8,7 +8,7 @@ import com.keepit.model.view.UserSessionView
 import scala.concurrent.duration.Duration
 
 case class UserSessionViewExternalIdKey(externalId: UserSessionExternalId) extends Key[UserSessionView] {
-  override val version = 3
+  override val version = 1
   val namespace = "user_session_view_by_external_id"
   def toKey(): String = externalId.id
 }

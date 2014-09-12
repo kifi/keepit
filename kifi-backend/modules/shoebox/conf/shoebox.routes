@@ -706,7 +706,8 @@ GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.in
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.internal.ShoeboxController.saveExperiment
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
-GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionByExternalId(sessionId: UserSessionExternalId)
+GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
+GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
 
