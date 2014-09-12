@@ -11,7 +11,8 @@ angular.module('kifi')
   'env',
   'routeService',
   'Clutch',
-  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
+  'util',
+  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch, util) {
     var limit = 10;
     var smallLimit = 4;
 
@@ -172,6 +173,21 @@ angular.module('kifi')
       });
     }
 
+    // When a url is added as a keep, the returned keep does not have the full
+    // keep information we need to display it. This function fetches that 
+    // information.
+    function fetchFullKeepInfo(keep) {
+      var url = routeService.getKeep(keep.id);
+      var config = {
+        params: { withFullInfo: true }
+      };
+
+      return $http.get(url, config).then(function (result) {
+        util.completeObjectInPlace(keep, result.data);
+        return keep;
+      });
+    }
+
     function togglePrivateMany(keeps) {
       // If all the keeps were private, they will all become public.
       // If all the keeps were public, they will all become private.
@@ -225,6 +241,7 @@ angular.module('kifi')
       keepMany: keepMany,
       keepUrl: keepUrl,
       keepToLibrary: keepToLibrary,
+      fetchFullKeepInfo: fetchFullKeepInfo,
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,
       unkeepOne: unkeepOne,

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', 'keepDecoratorService', '$routeParams', 'libraryService', 'util',
-  function ($scope, keepDecoratorService, $routeParams, libraryService, util) {
+  '$scope', '$rootScope', 'keepDecoratorService', '$routeParams', 'libraryService', 'util',
+  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util) {
     //
     // Internal data.
     //
@@ -84,6 +84,14 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+    //
+    // Watches and listeners.
+    //
+    $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+      if (libSlug === librarySlug) {
+        $scope.keeps.unshift(keep);
+      }
+    });
 
     //
     // On LibraryCtrl initialization.

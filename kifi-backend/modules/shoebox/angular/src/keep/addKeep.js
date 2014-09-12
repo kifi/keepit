@@ -31,7 +31,11 @@ angular.module('kifi')
           scope.$apply(function () {
             switch (e.which) {
               case keyIndices.KEY_ENTER:
-                scope.keepUrl();
+                if (scope.librariesEnabled) {
+                  scope.keepToLibrary();
+                } else {
+                  scope.keepUrl();
+                }
                 break;
               case keyIndices.KEY_TAB:
                 focusState = (focusState + 1) % 3;
@@ -82,19 +86,21 @@ angular.module('kifi')
 
             return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal','genericError');
+                $rootScope.$emit('showGlobalModal', 'genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                var keep = new keepDecoratorService.Keep(result.keeps[0]);
-                keep.buildKeep(keep);
-                keep.makeKept();
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
+                  tagService.addToKeepCount(1);
 
-                tagService.addToKeepCount(1);
+                  scope.$emit('keepAdded', '', keep);
+                  scope.resetAndHide();
+                });
               }
-
-              scope.resetAndHide();
-            });
+            }); 
           } else {
             scope.state.invalidUrl = true;
           }
@@ -105,22 +111,22 @@ angular.module('kifi')
           if (url && util.validateUrl(url)) {
             return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal','genericError');
+                $rootScope.$emit('showGlobalModal', 'genericError');
               } else if (result.alreadyKept.length > 0) {
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                var keep = new keepDecoratorService.Keep(result.keeps[0]);
-                keep.buildKeep(keep);
-                keep.makeKept();
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
 
-                // TODO: Add to the appropriate library.
-                // If we are on keep stream, add.
-                // Else if we are on the particular library, add.
+                  libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
+                  tagService.addToKeepCount(1);
 
-                libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
-                tagService.addToKeepCount(1);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.data.selectedLibraryId), keep);
+                  scope.resetAndHide();
+                });
               }
-              scope.resetAndHide();
             });
           } else {
             scope.state.invalidUrl = true;

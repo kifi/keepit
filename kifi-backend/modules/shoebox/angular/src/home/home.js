@@ -119,6 +119,13 @@ angular.module('kifi')
 
 
     //
+    // Watches and listeners.
+    //
+    $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+      $scope.keeps.unshift(keep);
+    });
+
+    //
     // On HomeCtrl initialization.
     //
     $window.document.title = 'Kifi • Your Keeps';
