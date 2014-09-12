@@ -90,7 +90,7 @@ object KifiSearchResult extends Logging {
         "title" -> h.titleJson,
         "url" -> h.urlJson
       ))
-      h.keepIdJson match {
+      h.externalIdJson match {
         case v: JsString => json + ("keepId" -> v)
         case _ => json
       }
