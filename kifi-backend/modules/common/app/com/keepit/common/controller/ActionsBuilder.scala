@@ -44,7 +44,11 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       if (authFilter(request)) {
         onAuthenticated(request)
       } else {
-        onUnauthenticated(request)
+        onUnauthenticated(request).map { res =>
+          request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
+            res.addingToSession("kcid" -> kcid)(request)
+          } getOrElse res
+        }
       }
     }
 
