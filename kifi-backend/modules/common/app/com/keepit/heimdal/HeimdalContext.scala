@@ -117,7 +117,8 @@ class HeimdalContextBuilder {
     request match {
       case authRequest: AuthenticatedRequest[_] =>
         this += ("userCreatedAt", authRequest.user.createdAt)
-        this += ("daysSinceUserJoined", (currentDateTime.getMillis.toFloat - authRequest.user.createdAt.getMillis) / (24 * 3600 * 1000))
+        val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - authRequest.user.createdAt.getMillis) / (24 * 3600 * 1000)
+        this += ("daysSinceUserJoined", daysSinceUserJoined - daysSinceUserJoined % 0.01)
         authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(authRequest.experiments)
         Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
