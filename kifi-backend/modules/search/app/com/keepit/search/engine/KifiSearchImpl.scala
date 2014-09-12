@@ -114,7 +114,7 @@ class KifiSearchImpl(
     val noFriendlyHits = (hits.size == 0)
 
     var othersHighScore = -1.0f
-    var othersTotal = othersHits.size
+    var othersTotal = othersHits.totalHits
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
       (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
       val queue = createQueue(numHitsToReturn - hits.size)
