@@ -11,7 +11,7 @@ import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
 class LDAController @Inject() (
@@ -83,6 +83,12 @@ class LDAController @Inject() (
     val meanOpt = feat.flatMap { _.userTopicMean }
     val recentOpt = feat.flatMap { _.userRecentTopicMean }
     Ok(Json.obj("global" -> meanOpt.map { _.mean }, "recent" -> recentOpt.map { _.mean }))
+  }
+
+  def libraryTopic(libId: Id[Library]) = Action { request =>
+    val feat = lda.libraryTopic(libId).flatMap { _.topic }
+    val vecOpt = feat.map(_.value)
+    Ok(Json.toJson(vecOpt))
   }
 
   def sampleURIs(topicId: Int) = Action { request =>
