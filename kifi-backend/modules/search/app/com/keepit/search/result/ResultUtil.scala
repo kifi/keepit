@@ -94,7 +94,7 @@ object ResultUtil {
     def toArticleHit(hit: KifiShardHit): ArticleHit = {
       ArticleHit(
         Id[NormalizedURI](hit.id),
-        hit.score,
+        hit.finalScore,
         hit.score,
         (hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0,
         false,

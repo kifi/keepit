@@ -341,7 +341,7 @@ class SearchCommanderImpl @Inject() (
 
       val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
-      val mergedResult = resultMerger.merge(results, maxHits)
+      val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
 
       timing.decoration
       timing.end
