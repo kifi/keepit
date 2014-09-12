@@ -8,7 +8,7 @@
 
 var keepBox = (function () {
   'use strict';
-  var $box;
+  var $box, librariesById;
 
   var handlers = {};
 
@@ -38,11 +38,13 @@ var keepBox = (function () {
 
   function show($parent, libraries, howKept, keepPage, unkeepPage) {
     log('[keepBox:show]');
+    librariesById = libraries.reduce(indexById, {});
     var partitionedLibs = partitionLibs(libraries, howKept);
     $box = $(render('html/keeper/keep_box', {
       inLibs: partitionedLibs[0],
       recentLibs: partitionedLibs[1],
-      otherLibs: partitionedLibs[2]
+      otherLibs: partitionedLibs[2],
+      link: true
     }, {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib'
@@ -52,11 +54,15 @@ var keepBox = (function () {
         hide(e, 'x');
       }
     })
-    .on('click', '.kifi-keep-box-lib', function (e) {
+    .on('click', '.kifi-keep-box-lib[href]', function (e) {
       if (e.which === 1) {
-        // keepPage(this.classList.contains('kifi-secret') ? 'private' : 'public');
-        // hide(e, 'action');
-        swipe('keep');
+        swipeTo($(render('html/keeper/keep_box_keep', {
+          library: librariesById[this.dataset.id],
+          title: document.title,
+          site: document.location.hostname
+        }, {
+          keep_box_lib: 'keep_box_lib'
+        })));
       }
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
@@ -64,6 +70,10 @@ var keepBox = (function () {
         unkeepPage();
         hide(e, 'action');
       }
+    })
+    .on('click', '.kifi-keep-box-save', function (e) {
+      keepPage($(this).prevAll('.kifi-keep-box-lib').hasClass('kifi-secret') ? 'private' : 'public');
+      hide(e, 'action');
     })
     .appendTo($parent);
 
@@ -104,10 +114,10 @@ var keepBox = (function () {
     }
   }
 
-  function swipe(name, left) {
+  function swipeTo($new, left) {
     var $cart = $box.find('.kifi-keep-box-cart').addClass(left ? 'kifi-back' : 'kifi-forward');
     var $old = $cart.find('.kifi-keep-box-view');
-    var $new = $(render('html/keeper/keep_box_' + name))[left ? 'prependTo' : 'appendTo']($cart).layout();
+    $new[left ? 'prependTo' : 'appendTo']($cart).layout();
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
     .on('transitionend', function end(e) {
       if (e.target === this) {
@@ -134,5 +144,10 @@ var keepBox = (function () {
       }
     }
     return [inLibs, recentLibs, otherLibs];
+  }
+
+  function indexById(o, item) {
+    o[item.id] = item;
+    return o;
   }
 }());

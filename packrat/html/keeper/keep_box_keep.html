@@ -1,2 +1,12 @@
 <div class="kifi-keep-box-view kifi-keep-box-view-keep">
+  <div class="kifi-keep-box-lib-head">Keep Into</div>
+  {{#library}}{{>keep_box_lib}}{{/library}}
+  <div class="kifi-keep-box-page-title">{{title}}</div>
+  <div class="kifi-keep-box-page-site">{{site}}</div>
+  <div class="kifi-keep-box-image-picker">
+    <a class="kifi-keep-box-image-prev" href="javascript:"></a>
+    <a class="kifi-keep-box-image-next" href="javascript:"></a>
+  </div>
+  <textarea class="kifi-keep-box-comment" placeholder="Comment or add a tag (optional)"></textarea>
+  <a class="kifi-keep-box-save" href="javascript:">Save</a>
 </div>
