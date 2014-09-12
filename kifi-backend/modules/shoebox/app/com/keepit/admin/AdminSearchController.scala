@@ -126,7 +126,7 @@ class AdminSearchController @Inject() (
         }
         Ok(html.admin.articleSearchResult(result, metas))
       case None =>
-        NotFound
+        NotFound("search result not found")
     }
   }
 }
