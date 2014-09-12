@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'keepService', 'libraryService', 'tagService', 'util',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, keepService, libraryService, tagService, util) {
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'tagService', 'util',
+  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, tagService, util) {
 
     return {
       restrict: 'A',
@@ -79,15 +79,21 @@ angular.module('kifi')
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
             $location.path('/');
-            return keepService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
-              scope.resetAndHide();
+
+            return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                keepService.fetchFullKeepInfo(result.keeps[0]);
+                var keep = new keepDecoratorService.Keep(result.keeps[0]);
+                keep.buildKeep(keep);
+                keep.makeKept();
+
+                tagService.addToKeepCount(1);
               }
+
+              scope.resetAndHide();
             });
           } else {
             scope.state.invalidUrl = true;
@@ -97,7 +103,7 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
+            return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal','genericError');
               } else if (result.alreadyKept.length > 0) {
