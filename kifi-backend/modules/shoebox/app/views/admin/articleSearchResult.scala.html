@@ -49,10 +49,8 @@
        <th>URI</th>
        <th>Score</th>
        <th>Text Score</th>
-       <th>My bookmark</th>
-       <th>Private</th>
+       <th>My Keep</th>
        <th>Friends</th>
-       <th>Count</th>
        <th> </th>
      </tr>
      @for(meta <- metas) {
@@ -61,19 +59,17 @@
         <td>@meta.hit.score</td>
         <td>@{meta.hit.textScore}</td>
         <td>@{meta.hit.isMyBookmark}</td>
-        <td>@{meta.hit.isPrivate}</td>
-        <td>@meta.users.size</td>
-        <td>@{meta.hit.bookmarkCount}</td>
+        <td>@{(meta.hit.keptByFriend || meta.hit.users.size > 0)}</td>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get, result.lang)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
             <input type="hidden" name="uriId" value="@{meta.uri.id}"/>
             <input type="hidden" name="lang" value="@{result.lang}"/>
-            <button type="submit" class="btn">Explain</button> </td>
+            <button type="submit" class="btn">Explain</button>
           </form>
+        </td>
       </tr>
      }
    </table>
-
 
 }
