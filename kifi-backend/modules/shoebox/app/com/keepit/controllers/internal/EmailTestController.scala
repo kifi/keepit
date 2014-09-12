@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.ResetPasswordEmailSender
+import com.keepit.commanders.emails.{ FeatureWaitlistEmailSender, ResetPasswordEmailSender }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -15,7 +15,8 @@ import play.twirl.api.Html
 class EmailTestController @Inject() (
     postOffice: LocalPostOffice,
     db: Database,
-    resetPasswordSender: ResetPasswordEmailSender) extends ShoeboxServiceController {
+    resetPasswordSender: ResetPasswordEmailSender,
+    waitListSender: FeatureWaitlistEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -60,12 +61,14 @@ class EmailTestController @Inject() (
     def userId = Id[User](request.getQueryString("userId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
 
-    name match {
-      case "resetPassword" =>
-        resetPasswordSender.sendToUser(userId, sendTo).map { email =>
-          Ok(email.htmlBody.value)
-        }
+    val emailF = name match {
+      case "resetPassword" => resetPasswordSender.sendToUser(userId, sendTo)
+      case "mobileWaitlist" =>
+        val feature = request.getQueryString("feature").getOrElse(waitListSender.emailTriggers.keys.head)
+        waitListSender.sendToUser(sendTo, feature)
     }
+
+    emailF.map(email => Ok(email.htmlBody.value))
   }
 }
 

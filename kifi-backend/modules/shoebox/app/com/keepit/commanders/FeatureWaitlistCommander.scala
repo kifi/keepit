@@ -1,38 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.mail.template.EmailToSend
 
 import com.keepit.model.{ NotificationCategory, FeatureWaitlistEntry, FeatureWaitlistRepo }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ PostOffice, LocalPostOffice, ElectronicMail, EmailAddress, SystemEmailAddress }
 import com.keepit.common.logging.Logging
-import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.commanders.emails.{ FeatureWaitlistEmailSender, EmailTemplateSender, EmailOptOutCommander }
 
-class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWaitlistRepo, postOffice: LocalPostOffice, emailOptOutCommander: EmailOptOutCommander) extends Logging {
-
-  val emailTriggers = Map(
-    "mobile_app" -> (views.html.email.mobileWaitlistInlined, views.html.email.mobileWaitlistText)
-  )
-
-  private def triggerEmail(feature: String, email: String): Unit = {
-    emailTriggers.get(feature).foreach { template =>
-      val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(EmailAddress(email)))}"
-      db.readWrite { implicit session =>
-        postOffice.sendMail(ElectronicMail(
-          senderUserId = None,
-          from = SystemEmailAddress.NOTIFICATIONS,
-          fromName = Some("Kifi"),
-          to = List(EmailAddress(email)),
-          subject = s"You're on the wait list",
-          htmlBody = template._1(unsubLink).body,
-          textBody = Some(template._2(unsubLink).body),
-          category = NotificationCategory.User.WAITLIST)
-        )
-      }
-    }
-
-  }
+class FeatureWaitlistCommander @Inject() (
+    db: Database,
+    waitlistRepo: FeatureWaitlistRepo,
+    waitListSender: FeatureWaitlistEmailSender) extends Logging {
 
   def waitList(email: String, feature: String, userAgent: String, extIdOpt: Option[ExternalId[FeatureWaitlistEntry]] = None): ExternalId[FeatureWaitlistEntry] = {
     val existingOpt: Option[FeatureWaitlistEntry] = extIdOpt.flatMap { db.readOnlyReplica { implicit session => waitlistRepo.getOpt(_) } }
@@ -47,7 +28,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
         ))
       }.externalId
     }
-    triggerEmail(feature, email)
+    waitListSender.sendToUser(EmailAddress(email), feature)
     extId
   }
 

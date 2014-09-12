@@ -19,7 +19,7 @@ import org.specs2.mutable.Specification
 import scala.concurrent.duration.Duration
 import scala.concurrent.Await
 
-class ResetPasswordEmailSenderTest extends Specification with ShoeboxTestInjector {
+class VariousEmailSenderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
@@ -59,6 +59,26 @@ class ResetPasswordEmailSenderTest extends Specification with ShoeboxTestInjecto
       }
     }
 
+  }
+
+  "FeatureWaitlistEmailSender" should {
+
+    "sends correct email for mobile_app" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[FeatureWaitlistEmailSender]
+        val toEmail = EmailAddress("foo@bar.com")
+        val email = Await.result(sender.sendToUser(toEmail, "mobile_app"), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.to === Seq(toEmail)
+        email.subject === "You're on the wait list"
+        val html = email.htmlBody.value
+        html must contain("Yay, you are on the kifi ANDROID wait list!")
+        html must contain("utm_campaign=mobile_app_waitlist")
+      }
+    }
   }
 
 }
