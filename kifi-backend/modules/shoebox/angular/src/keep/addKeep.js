@@ -88,6 +88,7 @@ angular.module('kifi')
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal', 'genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
+                scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
                 return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
@@ -113,6 +114,7 @@ angular.module('kifi')
               if (result.failures && result.failures.length) {
                 $rootScope.$emit('showGlobalModal', 'genericError');
               } else if (result.alreadyKept.length > 0) {
+                scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
                 return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
