@@ -132,6 +132,7 @@ angular.module('kifi')
           keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
              keep.buildKeep(keptItem);
              keep.makeKept();
+             libraryService.addToLibraryCount(keep.libraryId, 1);
              tagService.addToKeepCount(1);
            });
 
@@ -156,6 +157,7 @@ angular.module('kifi')
               keepOne(keep);
             });
 
+            libraryService.addToLibraryCount(keep.libraryId, -1);
             tagService.addToKeepCount(-1);
           });
         };
