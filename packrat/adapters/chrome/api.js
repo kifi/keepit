@@ -350,6 +350,8 @@ var api = (function createApi() {
           " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
           ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
           '  var s = document.createElement("SCRIPT");',
+          '  s.dataset.loading = true;',
+          '  s.addEventListener("load", function () { this.dataset.loading = false; });',
           '  s.src = url;',
           '  document.head.appendChild(s);',
           ' });',
