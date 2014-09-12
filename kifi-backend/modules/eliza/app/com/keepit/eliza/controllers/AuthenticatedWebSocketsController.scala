@@ -156,12 +156,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
   }
 
-  def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.async[JsArray] { implicit request =>
+  def websocket(versionOpt: Option[String], eipOpt: Option[String]) = WebSocket.tryAccept[JsArray] { implicit request =>
     val connectTimer = accessLog.timer(WS_IN)
     if (shoutdownListener.shuttingDown) {
+      accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
       Future.successful {
-        accessLog.add(connectTimer.done(trackingId = "xxxxx", method = "DISCONNECT", body = "refuse connect"))
-        (Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof)
+        Left(ServiceUnavailable) // was: "bye" -> "shutdown"
       }
     } else {
       authenticate(request) match {
@@ -191,7 +191,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               startMessages = startMessages :+ Json.arr("version", "new")
             }
             onConnect(socketInfo)
-            (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
+            Right((iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator))
           }
           iterateeAndEnumeratorFuture.onFailure {
             case t: Throwable =>
@@ -201,7 +201,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         case None => Future.successful {
           statsd.incrementOne(s"websocket.anonymous", ONE_IN_TEN)
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
-          (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
+          Left(Forbidden) // was: "denied"
         }
       }
     }
