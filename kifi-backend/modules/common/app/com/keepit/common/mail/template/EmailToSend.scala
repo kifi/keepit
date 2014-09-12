@@ -17,7 +17,8 @@ case class EmailToSend(
   category: ElectronicMailCategory,
   campaign: Option[String] = None,
   senderUserId: Option[Id[User]] = None,
-  tips: Seq[EmailTips] = Seq.empty)
+  tips: Seq[EmailTips] = Seq.empty,
+  extraHeaders: Option[Map[String, String]] = None)
 
 object EmailToSend {
   import com.keepit.common.mail.ElectronicMail.emailCategoryFormat
@@ -43,7 +44,8 @@ object EmailToSend {
     (__ \ 'category).format[ElectronicMailCategory] and
     (__ \ 'campaign).format[Option[String]] and
     (__ \ 'senderUserId).formatNullable[Id[User]] and
-    (__ \ 'tips).format[Seq[EmailTips]]
+    (__ \ 'tips).format[Seq[EmailTips]] and
+    (__ \ 'extraHeaders).formatNullable[Map[String, String]]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }
 
