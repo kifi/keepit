@@ -77,8 +77,8 @@ trait SearchControllerUtil {
   }
 
   def augment(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
-    val items = kifiPlainResult.hits.map { hit => Item(Id(hit.id), hit.libraryId.map(Id(_))) }
-    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(Item(_, None))
+    val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
+    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None))
     val context = AugmentationContext.uniform(userId, items ++ previousItems)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
     augmentationCommander.augmentation(augmentationRequest).map { augmentationResponse =>

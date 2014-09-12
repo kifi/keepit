@@ -3,18 +3,18 @@ package com.keepit.search
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import com.keepit.serializer.TupleFormat
-import scala.Some
 
-case class Item(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
+case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]])
 
-object Item {
-  implicit val format = Json.format[Item]
+object AugmentableItem {
+  implicit val format = Json.format[AugmentableItem]
   implicit def itemMapFormat[T](implicit tFormat: Format[T]) = {
-    implicit val tupleFormat = TupleFormat.tuple2Format[Item, T]
-    new Format[Map[Item, T]] {
-      def reads(json: JsValue) = json.validate[Seq[(Item, T)]].map(_.toMap)
-      def writes(itemMap: Map[Item, T]) = Json.toJson(itemMap.toSeq)
+    implicit val tupleFormat = TupleFormat.tuple2Format[AugmentableItem, T]
+    new Format[Map[AugmentableItem, T]] {
+      def reads(json: JsValue) = json.validate[Seq[(AugmentableItem, T)]].map(_.toMap)
+      def writes(itemMap: Map[AugmentableItem, T]) = Json.toJson(itemMap.toSeq)
     }
   }
 }
@@ -28,13 +28,20 @@ case class AugmentedItem(
 
 object AugmentedItem {
   implicit val format = {
-    implicit val keptFormat = TupleFormat.tuple3Format[Id[Library], Option[Id[User]], Seq[Hashtag]]
-    implicit val moreKeepsFormat = TupleFormat.tuple2Format[Option[Id[Library]], Option[Id[User]]]
+    implicit val keepFormat: Format[(Id[Library], Option[Id[User]], Seq[Hashtag])] = (
+      (__ \ 'keptIn).format[Id[Library]] and
+      (__ \ 'keptBy).formatNullable[Id[User]] and
+      (__ \ 'tags).formatNullable[Seq[Hashtag]].inmap(_.getOrElse(Seq.empty[Hashtag]), { tags: Seq[Hashtag] => Some(tags).filter(_.nonEmpty) })
+    )(Tuple3.apply, unlift(Tuple3.unapply))
+    implicit val moreKeepsFormat: Format[(Option[Id[Library]], Option[Id[User]])] = (
+      (__ \ 'keptIn).formatNullable[Id[Library]] and
+      (__ \ 'keptBy).formatNullable[Id[User]]
+    )(Tuple2.apply, unlift(Tuple2.unapply))
     Json.format[AugmentedItem]
   }
 
-  def withScores(augmentationScores: AugmentationScores)(item: Item, info: AugmentationInfo): AugmentedItem = {
-    val kept = item.keptIn.flatMap { libraryId =>
+  def withScores(augmentationScores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo): AugmentedItem = {
+    val keep = item.keptIn.flatMap { libraryId =>
       info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
         val sortedTags = keepInfo.tags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
         val userIdOpt = keepInfo.keptBy
@@ -46,19 +53,19 @@ object AugmentedItem {
       case ((moreKeeps, moreTags), RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
     }
 
-    val (moreKeeps, moreTags) = kept match {
+    val (moreKeeps, moreTags) = keep match {
       case Some((libraryId, userIdOpt, tags)) => (allKeeps - ((Some(libraryId), userIdOpt)), allTags -- tags)
       case None => (allKeeps, allTags)
     }
 
     val moreSortedKeeps = moreKeeps.toSeq.sortBy {
       case (libraryIdOpt, userIdOpt) => (
-        libraryIdOpt.flatMap(augmentationScores.libraryScores.get) getOrElse 0f,
-        userIdOpt.flatMap(augmentationScores.userScores.get) getOrElse 0f
+        -libraryIdOpt.flatMap(augmentationScores.libraryScores.get).getOrElse(0f),
+        -userIdOpt.flatMap(augmentationScores.userScores.get).getOrElse(0f)
       )
     }
-    val moreSortedTags = moreTags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
-    AugmentedItem(item.uri, kept, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps)
+    val moreSortedTags = moreTags.toSeq.sortBy(-augmentationScores.tagScores.getOrElse(_, 0f))
+    AugmentedItem(item.uri, keep, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps)
   }
 }
 
@@ -92,11 +99,11 @@ case class AugmentationScores(
   }
 }
 
-case class AugmentationContext(userId: Id[User], corpus: Map[Item, Float])
+case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Float])
 
 object AugmentationContext {
   implicit val format = Json.format[AugmentationContext]
-  def uniform(userId: Id[User], items: Seq[Item]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
+  def uniform(userId: Id[User], items: Seq[AugmentableItem]): AugmentationContext = AugmentationContext(userId, items.map(_ -> 1f).toMap)
 }
 
 object AugmentationScores {
@@ -104,13 +111,13 @@ object AugmentationScores {
   val empty = AugmentationScores(Map.empty, Map.empty, Map.empty)
 }
 
-case class ItemAugmentationRequest(items: Set[Item], context: AugmentationContext)
+case class ItemAugmentationRequest(items: Set[AugmentableItem], context: AugmentationContext)
 
 object ItemAugmentationRequest {
   implicit val format = Json.format[ItemAugmentationRequest]
 }
 
-case class ItemAugmentationResponse(infos: Map[Item, AugmentationInfo], scores: AugmentationScores)
+case class ItemAugmentationResponse(infos: Map[AugmentableItem, AugmentationInfo], scores: AugmentationScores)
 
 object ItemAugmentationResponse {
   implicit val format = Json.format[ItemAugmentationResponse]
