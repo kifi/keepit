@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
-import com.keepit.model.{ Keep, User, NormalizedURI, Word2VecKeywords }
+import com.keepit.model._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.net.CallTimeouts
@@ -43,6 +43,7 @@ trait CortexServiceClient extends ServiceClient {
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]]
+  def libraryTopic(libId: Id[Library]): Future[Option[Array[Float]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -209,6 +210,10 @@ class CortexServiceClientImpl(
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = {
     val payload = Json.obj("user" -> userId, "uris" -> uriIds)
     call(Cortex.internal.explainFeed(), payload).map { r => (r.json).as[Seq[Seq[Id[Keep]]]] }
+  }
+
+  def libraryTopic(libId: Id[Library]): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.libraryTopic(libId)).map { r => (r.json).as[Option[Array[Float]]] }
   }
 
 }

@@ -34,5 +34,6 @@ POST    /internal/cortex/lda/getTopicNames                                      
 POST    /internal/cortex/lda/explainFeed                                            @com.keepit.controllers.cortex.LDAController.explainFeed
 GET     /internal/cortex/lda/uriKLDivergence                                        @com.keepit.controllers.cortex.LDAController.uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI])
 GET     /internal/cortex/lda/recomputeUserLDAStat                                   @com.keepit.controllers.cortex.LDAController.recomputeUserLDAStat
+GET     /internal/cortex/lda/libraryTopic                                           @com.keepit.controllers.cortex.LDAController.libraryTopic(libId: Id[Library])
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

@@ -172,4 +172,21 @@ class AdminLDAController @Inject() (
         Ok(html.admin.unamedTopics(topicInfo, words))
     }
   }
+
+  def libraryTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val libId = Id[Library](body.get("libId").get.toLong)
+
+    val msgFut = cortex.libraryTopic(libId).flatMap { feat =>
+      feat match {
+        case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+        case None => Future.successful("not enough information")
+      }
+    }
+
+    msgFut.map { msg =>
+      Ok(msg)
+    }
+
+  }
 }
