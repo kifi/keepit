@@ -3,14 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  'keepService', 'tagService', '$filter', '$sce', '$document',
-  function (keepService, tagService, $filter, $sce, $document) {
-    var KEY_UP = 38,
-      KEY_DOWN = 40,
-      KEY_ENTER = 13,
-      KEY_ESC = 27,
-      KEY_DEL = 46,
-      KEY_F2 = 113;
+  '$document', '$sce', 'keyIndices', 'tagService',
+  function ($document, $sce, keyIndices, tagService) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -244,7 +238,12 @@ angular.module('kifi')
         };
 
         scope.hideAddTagDropdown = function () {
-          return scope.addingTag.enabled = false;
+          // TODO: figure out why this check is necessary.
+          // It seems like Angular processes this before addingTag in the parent
+          // element (kf-keep) has a chance to be initialized.
+          if (scope.addingTag) {
+            return scope.addingTag.enabled = false;
+          }
         };
 
         // We should be able to just replace the ng-show on the directive with an ng-if and remove the code
@@ -255,22 +254,22 @@ angular.module('kifi')
 
         scope.onKeydown = function (e) {
           switch (e.keyCode) {
-          case KEY_UP:
+          case keyIndices.KEY_UP:
             scope.highlightPrev();
             break;
-          case KEY_DOWN:
+          case keyIndices.KEY_DOWN:
             scope.highlightNext();
             break;
-          case KEY_ENTER:
+          case keyIndices.KEY_ENTER:
             scope.selectTag();
             break;
-          case KEY_ESC:
+          case keyIndices.KEY_ESC:
             scope.hideAddTagDropdown();
             break;
-          case KEY_DEL:
+          case keyIndices.KEY_DEL:
             scope.hideAddTagDropdown();
             break;
-          case KEY_F2:
+          case keyIndices.KEY_F2:
             // scope.rename(scope.highlight);
             break;
           }

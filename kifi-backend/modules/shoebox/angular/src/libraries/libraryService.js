@@ -56,23 +56,28 @@ angular.module('kifi')
 
     var api = {
       libraryState: libraryState,
+      librarySummaries: librarySummaries,
+      invitedSummaries: invitedSummaries,
+      librarySlugSuggestion: librarySlugSuggestion,
+
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
       },
-      librarySummaries: librarySummaries,
-      invitedSummaries: invitedSummaries,
+
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
           librarySummariesService.expire();
         }
         return librarySummariesService.get();
       },
+
       getLibraryById: function (libraryId, invalidateCache) {
         if (invalidateCache) {
           libraryByIdService.expire(libraryId);
         }
         return libraryByIdService.get(libraryId);
       },
+
       getLibraryByPath: function (path) { // path is of the form /username/library-slug
         var split = path.split('/').filter(function (a) { return a.length !== 0; });
         var username = split[0];
@@ -82,21 +87,46 @@ angular.module('kifi')
         }
         return libraryByUserSlugService.get(username, slug);
       },
+      
       getLibraryByUserSlug: function (username, slug, invalidateCache) {
         if (invalidateCache) {
           libraryByUserSlugService.expire(username, slug);
         }
         return libraryByUserSlugService.get(username, slug);
       },
+
       getKeepsInLibrary: function (libraryId, offset, authToken) {
         return keepsInLibraryService.get(libraryId, 10, offset, authToken);
       },
+
+      getSlugById: function (libraryId) {
+        var lib = _.find(librarySummaries, function (librarySummary) {
+          return librarySummary.id === libraryId;
+        });
+
+        if (!!lib) {
+          var split = lib.url.split('/').filter(function (a) { return a.length !== 0; });
+          return split[1];
+        } 
+
+        return null;
+      },
+
+      getLibraryInfoById: function (libraryId) {
+        var lib = _.find(librarySummaries, function (librarySummary) {
+          return librarySummary.id === libraryId;
+        });
+
+        return lib || null;
+      },
+
       addToLibraryCount: function (libraryId, val) {
         var lib = _.find(librarySummaries, function (librarySummary) {
           return librarySummary.id === libraryId;
         });
         lib.numKeeps += val;
       },
+
       createLibrary: function (opts) {
         var required = ['name', 'visibility', 'description', 'slug'];
         var missingFields = _.filter(required, function (v) {
@@ -108,6 +138,7 @@ angular.module('kifi')
         }
         return $http.post(routeService.createLibrary, opts);
       },
+
       modifyLibrary: function (opts) {
         var required = ['name', 'visibility', 'description', 'slug'];
         var missingFields = _.filter(required, function (v) {
@@ -118,8 +149,7 @@ angular.module('kifi')
           return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
         }
         return $http.post(routeService.modifyLibrary(opts.id), opts);
-      },
-      librarySlugSuggestion: librarySlugSuggestion
+      }
     };
 
     return api;
