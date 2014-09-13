@@ -279,7 +279,7 @@ class SearchAnalytics @Inject() (
 
   private def keep(hit: ArticleHit): String = {
     if (hit.isMyBookmark) own
-    else if (hit.keptByFriend || (hit.users.length > 0)) friends
+    else if (hit.keptByFriend) friends
     else others
   }
 
