@@ -6,16 +6,12 @@ angular.module('kifi')
   '$scope',
   '$rootScope',
   '$analytics',
-  '$timeout',
   '$window',
-  'keepActionService',
-  'keepService',
   'recoActionService',
   'recoDecoratorService',
-  'tagService',
   'undoService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService,
-    recoActionService, recoDecoratorService, tagService, undoService) {
+  function ($scope, $rootScope, $analytics, $window,
+    recoActionService, recoDecoratorService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = [];
@@ -56,18 +52,6 @@ angular.module('kifi')
 
       undoService.add('Recommendation removed.', function () {
         $scope.recos.splice(trashedRecoIndex, 0, trashedReco);
-      });
-    };
-
-    $scope.keepReco = function (reco, isPrivate) {
-      recoActionService.trackKeep(reco.recoKeep);
-
-      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keptKeep) {
-        reco.recoKeep.id = keptKeep.id;
-        reco.recoKeep.isPrivate = keptKeep.isPrivate;
-
-        keepService.buildKeep(reco.recoKeep);
-        tagService.addToKeepCount(1);
       });
     };
 
@@ -163,11 +147,19 @@ angular.module('kifi')
     $scope.submitImprovement = function (reco) {
       recoActionService.improve(reco.recoKeep, $scope.improvement.type);
     };
+
+    $scope.trackRecoKeep = function (recoKeep) {
+      recoActionService.trackKeep(recoKeep);
+    };
+
+    $scope.trackRecoClick = function (recoKeep) {
+      recoActionService.trackClick(recoKeep);
+    };
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['$document', 'keyIndices', 'recoActionService',
-  function ($document, keyIndices, recoActionService) {
+.directive('kfRecoDropdownMenu', ['$document', 'recoActionService',
+  function ($document, recoActionService) {
     return {
       restrict: 'A',
       replace: true,

@@ -17,13 +17,14 @@
     </ul>
   </div>
   <div ng-if="!showEmptyState()" kf-keeps
-    keeps="keeps"
+    keeps="tagKeeps"
     keeps-loading="loading"
-    keeps-has-more="hasMore()"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
     scroll-distance="scrollDistance"
-    scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
     edit-mode="editMode"
     toggle-edit="toggleEdit"
+    update-selected-count="updateSelectedCount(numSelected)"
   ></div>
 </div>
