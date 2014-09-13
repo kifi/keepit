@@ -11,8 +11,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class UserSessionView(
-  id: UserSessionId,
-  externalId: UserSessionExternalId,
   socialId: SocialId,
   provider: SocialNetworkType,
   expires: DateTime,
@@ -27,8 +25,6 @@ object UserSessionView {
   private implicit val stateFormat = State.format[UserSessionRemoteModel]
 
   implicit val userSessionFormat: Format[UserSessionView] = (
-    (__ \ 'id).format[Id[UserSessionRemoteModel]] and
-    (__ \ 'externalId).format[ExternalId[UserSessionRemoteModel]] and
     (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
     (__ \ 'provider).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
     (__ \ 'expires).format(DateTimeJsonFormat) and

@@ -122,7 +122,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-
   "ResetPasswordEmailSender" should {
 
     "sends reset password email" in {

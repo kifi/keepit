@@ -32,8 +32,8 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject() (
         Left(new Error(ex))
     }
 
-  private def authenticatorFromSession(session: UserSessionView): Authenticator = Authenticator(
-    id = session.externalId.id,
+  private def authenticatorFromSession(session: UserSessionView, externalId: UserSessionExternalId): Authenticator = Authenticator(
+    id = externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
@@ -52,7 +52,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject() (
     externalIdOpt flatMap { externalId =>
       val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds, s"get session for $externalId")
       result collect {
-        case s if s.valid => authenticatorFromSession(s)
+        case s if s.valid => authenticatorFromSession(s, externalId)
       }
     }
   }

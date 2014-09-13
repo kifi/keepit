@@ -24,7 +24,7 @@ case class UserSession(
   def isValid = state == UserSessionStates.ACTIVE && expires.isAfterNow
   def invalidated = copy(state = UserSessionStates.INACTIVE)
   def toUserSessionView: UserSessionView =
-    UserSessionView(id.get, externalId, socialId, provider, expires, isValid, createdAt, updatedAt)
+    UserSessionView(socialId, provider, expires, isValid, createdAt, updatedAt)
 }
 
 object UserSession {

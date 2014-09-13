@@ -351,8 +351,9 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
       state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
     )
   }
-  private def authenticatorFromSession(session: UserSessionView): Authenticator = Authenticator(
-    id = session.externalId.id,
+
+  private def authenticatorFromSession(session: UserSessionView, externalId: ExternalId[UserSession]): Authenticator = Authenticator(
+    id = externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
@@ -361,23 +362,25 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
 
   def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptionsAndTime(s"save authenticator ${authenticator.identityId.userId}") {
     val sessionFromCookie = sessionFromAuthenticator(authenticator)
-    val session = internSession(sessionFromCookie)
-    authenticatorFromSession(session)
+    val (session, externalId) = internSession(sessionFromCookie)
+    authenticatorFromSession(session, externalId)
   }
 
-  private def internSession(newSession: UserSession): UserSessionView = loadSession(newSession) getOrElse persistSession(newSession)
+  private def internSession(newSession: UserSession) = {
+    loadSession(newSession) getOrElse persistSession(newSession)
+  }
 
-  private def loadSession(newSession: UserSession): Option[UserSessionView] = timing(s"loadSession ${newSession.socialId}") {
+  private def loadSession(newSession: UserSession) = timing(s"loadSession ${newSession.socialId}") {
     db.readOnlyMaster { implicit s => //from cache
-      sessionRepo.getViewOpt(newSession.externalId)
+      sessionRepo.getViewOpt(newSession.externalId) map (_ -> newSession.externalId)
     }
   }
 
-  private def persistSession(newSession: UserSession): UserSessionView = timing(s"persistSession ${newSession.socialId}") {
+  private def persistSession(newSession: UserSession) = timing(s"persistSession ${newSession.socialId}") {
     db.readWrite(attempts = 3) { implicit s =>
       val sessionFromCookie = sessionRepo.save(newSession)
       log.debug(s"[save] newSession=$sessionFromCookie")
-      sessionFromCookie.toUserSessionView
+      sessionFromCookie.toUserSessionView -> sessionFromCookie.externalId
     }
   }
 
@@ -403,7 +406,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
         sess
       } collect {
         case s if s.valid =>
-          authenticatorFromSession(s)
+          authenticatorFromSession(s, externalId)
       }
     }
     log.debug(s"[find] id=$id res=$res")
