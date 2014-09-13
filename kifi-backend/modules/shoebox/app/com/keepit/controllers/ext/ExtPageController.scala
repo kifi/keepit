@@ -6,7 +6,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.net.URI
 import play.api.libs.json._
-
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
@@ -34,7 +34,7 @@ class ExtPageController @Inject() (
     URI.parse(url) match {
       case Success(_) =>
         pageCommander.getPageInfo(url, request.userId, request.experiments).map { info =>
-         Ok(Json.toJson(info))
+          Ok(Json.toJson(info))
         }
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)

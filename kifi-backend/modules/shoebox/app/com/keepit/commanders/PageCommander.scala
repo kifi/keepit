@@ -3,19 +3,19 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.classify.{ Domain, DomainClassifier, DomainRepo }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.search.{AugmentableItem, ItemAugmentationRequest, SearchServiceClient}
+import com.keepit.search.{ AugmentableItem, ItemAugmentationRequest, SearchServiceClient }
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
@@ -34,7 +34,8 @@ class PageCommander @Inject() (
     libraryRepo: LibraryRepo,
     historyTracker: SliderHistoryTracker,
     normalizedURIInterner: NormalizedURIInterner,
-    searchClient: SearchServiceClient) extends Logging {
+    searchClient: SearchServiceClient,
+    implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
     searchClient.sharingUserInfo(userId, uri.id.get).map { sharingUserInfo =>
@@ -126,7 +127,7 @@ class PageCommander @Inject() (
       searchClient.augmentation(request).map { response =>
         val restrictedKeeps = response.infos(item).keeps
 
-        val restrictedKeepsMap = (restrictedKeeps map { k => k.id -> (k.keptBy, k.keptIn)}).toMap
+        val restrictedKeepsMap = (restrictedKeeps map { k => k.id -> (k.keptBy, k.keptIn) }).toMap
 
         val (keepers, keeps) = db.readOnlyMaster { implicit session =>
           val (a, b) = restrictedKeepsMap.map { m =>

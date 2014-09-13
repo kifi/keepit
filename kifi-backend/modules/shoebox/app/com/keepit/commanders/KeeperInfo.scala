@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ SequenceNumber, State, Id, ExternalId }
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -63,22 +63,12 @@ case class KeepData(
   removable: Boolean,
   library: LibraryData)
 object KeepData {
-  val keepReads: Reads[KeepData] = (
-    (JsPath \ "id").read[ExternalId[Keep]] and
-    (JsPath \ "mine").read[Boolean] and
-    (JsPath \ "removable").read[Boolean] and
-    (JsPath \ "library").read[LibraryData]
-  )(KeepData.apply _)
-
-  val keepWrites: Writes[KeepData] = (
-    (JsPath \ "id").write[ExternalId[Keep]] and
-    (JsPath \ "mine").write[Boolean] and
-    (JsPath \ "removable").write[Boolean] and
-    (JsPath \ "library").write[LibraryData]
-  )(unlift(KeepData.unapply))
-
-  implicit val keepDataFormat: Format[KeepData] =
-    Format(keepReads, keepWrites)
+  implicit val format: Format[KeepData] = (
+    (__ \ 'id).format[ExternalId[Keep]] and
+    (__ \ 'mine).format[Boolean] and
+    (__ \ 'removable).format[Boolean] and
+    (__ \ 'library).format[LibraryData]
+  )(KeepData.apply, unlift(KeepData.unapply))
 }
 
 case class LibraryData(
@@ -88,21 +78,10 @@ case class LibraryData(
   url: String)
 
 object LibraryData {
-
-  val libReads: Reads[LibraryData] = (
-    (JsPath \ "id").read[PublicId[Library]] and
-    (JsPath \ "name").read[String] and
-    (JsPath \ "visibility").read[LibraryVisibility] and
-    (JsPath \ "url").read[String]
-  )(LibraryData.apply _)
-
-  val libWrites: Writes[LibraryData] = (
-    (JsPath \ "id").write[PublicId[Library]] and
-    (JsPath \ "name").write[String] and
-    (JsPath \ "visibility").write[LibraryVisibility] and
-    (JsPath \ "url").write[String]
-  )(unlift(LibraryData.unapply))
-
-  implicit val libDataFormat: Format[LibraryData] =
-    Format(libReads, libWrites)
+  implicit val format: Format[LibraryData] = (
+    (__ \ 'id).format[PublicId[Library]] and
+      (__ \ 'name).format[String] and
+      (__ \ 'visibility).format[LibraryVisibility] and
+      (__ \ 'url).format[String]
+    )(LibraryData.apply, unlift(LibraryData.unapply))
 }
