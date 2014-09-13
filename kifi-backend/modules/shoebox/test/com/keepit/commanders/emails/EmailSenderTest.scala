@@ -122,6 +122,31 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "FriendRequestEmailSender" should {
+    "sends email" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[FriendRequestEmailSender]
+        val (toUser, fromUser) = db.readWrite { implicit rw =>
+          (
+            inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")))),
+            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+          )
+        }
+        val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.to === Seq(EmailAddress("billy@gmail.com"))
+        email.subject === "Johnny Manziel sent you a friend request."
+        email.fromName === Some(s"Johnny Manziel (via Kifi)")
+        val html = email.htmlBody.value
+        html must contain("Hi Billy")
+        html must contain("Johnny Manziel wants to be your kifi friend")
+        html must contain("utm_campaign=friendRequest")
+      }
+    }
+  }
 
   "ResetPasswordEmailSender" should {
 
