@@ -2,26 +2,25 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/keep/:keepId', {
-      templateUrl: 'keep/keepView.tpl.html',
-      controller: 'KeepViewCtrl'
-    });
-  }
-])
-
 .controller('KeepViewCtrl', [
-  '$scope', '$routeParams', 'keepService',
-  function ($scope, $routeParams, keepService) {
-
-    $scope.keeps = [];
-    $scope.loading = true;
-    $scope.keepService = keepService;
+  '$scope', '$routeParams', 'keepActionService', 'keepDecoratorService',
+  function ($scope, $routeParams, keepActionService, keepDecoratorService) {
+    //
+    // Internal data.
+    //
     var keepId = $routeParams.keepId || '';
 
+
+    //
+    // Scope data.
+    //
+    $scope.keeps = [];
+    $scope.loading = true;
+
+
+    //
+    // Scope methods.
+    //
     $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Loading...';
@@ -30,16 +29,17 @@ angular.module('kifi')
       }
     };
 
-    function initKeepList() {
-      keepService.getSingleKeep(keepId).then(function () {
-        $scope.keeps = keepService.list;
-        $scope.loading = false;
-      });
-    }
+    
+    //
+    // On KeepViewCtrl initialization.
+    //
+    keepActionService.getSingleKeep(keepId).then(function (rawKeep) {
+      var keep = new keepDecoratorService.Keep(rawKeep);
+      keep.buildKeep(keep);
+      keep.makeKept();
 
-    $scope.$watch('keepService.seqReset()', function () {
-      initKeepList();
+      $scope.keeps = [keep];
+      $scope.loading = false;
     });
-
   }
 ]);

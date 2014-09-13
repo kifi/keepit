@@ -65,8 +65,10 @@ package object template {
       s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign"
     }
 
-    val kifiLogoUrl = htmlUrl(s"$baseUrl/?", "headerLogo")
-    val kifiFooterUrl = htmlUrl(s"$baseUrl/?", "footerKifiLink")
+    def kifiUrl(source: String = "unknown") = htmlUrl(s"$baseUrl/?", source)
+
+    val kifiLogoUrl = kifiUrl("headerLogo")
+    val kifiFooterUrl = kifiUrl("footerKifiLink")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy")
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter")
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook")

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ManageLibraryCtrl', [
-  '$scope', 'keepService', '$routeParams', 'libraryService', 'util', '$timeout', '$location', 'profileService',
-  function ($scope, keepService, $routeParams, libraryService, util, $timeout, $location, profileService) {
+  '$scope', '$routeParams', 'libraryService', 'util', '$timeout', '$location', 'profileService',
+  function ($scope, $routeParams, libraryService, util, $timeout, $location, profileService) {
     $scope.$error = {};
     $scope.userHasEditedSlug = false;
     $scope.username = profileService.me.username;

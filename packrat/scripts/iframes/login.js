@@ -93,11 +93,19 @@ document.addEventListener('keydown', function (e) {
   s.textContent = ['api_key:' + appIds.linkedin, 'onLoad:onLoadLinkedInApi', 'authorize:true', 'credentials_cookie:true'].join('\n');
   document.head.appendChild(s);
 
-  s = document.head.querySelector('script[src$="jquery.js"]');
-  if (window.$) {
-    withJQuery.call(s, creds, pics, on);
+  var proceed = withJQuery.bind(s, creds, pics, on);
+  var loading = Array.prototype.slice.call(document.head.querySelectorAll('script[data-loading=true]'));
+  if (loading.length === 0) {
+    proceed();
   } else {
-    s.addEventListener('load', withJQuery.bind(s, creds, pics, on));
+    var onLoad = function () {
+      if (--loading.length === 0) {
+        proceed();
+      }
+    };
+    loading.forEach(function (s) {
+      s.addEventListener('load', onLoad);
+    });
   }
 }(function (creds, pics, on) {
   'use strict';
