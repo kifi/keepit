@@ -21,6 +21,7 @@ import scala.concurrent.Future
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
     topUrisIngestor: TopUriSeedIngestionHelper,
+    libraryIngestor: LibraryMembershipIngestionHelper,
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
@@ -37,8 +38,10 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
-      usersToIngestGraphDataFor().flatMap { userIds =>
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+      ingestLibraries.flatMap { _ =>
+        usersToIngestGraphDataFor().flatMap { userIds =>
+          FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+        }
       }
     }
     fut.onComplete {
@@ -53,6 +56,10 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
     log.info("Ingested one batch of keeps.")
+  }
+
+  def ingestLibraries(): Future[Unit] = FutureHelpers.whilef(libraryIngestor(INGESTION_BATCH_SIZE)) {
+    log.info("Ingested one batch of libraries.")
   }
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId).map(_ => ())
