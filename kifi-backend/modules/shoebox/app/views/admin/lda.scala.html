@@ -65,6 +65,14 @@
   </form>
   <p id = "user_topic_mean_result">
 
+  <br><bt>
+  <div>Library topic</div>
+  <form id = "library_topic">
+    <input id = "libId_for_library_topic" type = "text" placeholder = "library Id">
+    <button type = "submit">submit</button>
+  </form>
+  <p id = "library_topic_result">
+
 
 
 
@@ -209,6 +217,17 @@
         ).done(done).fail(fail);
 
         function done(data) { $("#user_topic_mean_result").empty().prepend(data)}
+        function fail() { alert("bad things happened") }
+
+      })
+
+      $('#library_topic').submit(function(event){
+        event.preventDefault();
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.libraryTopic',
+          {libId: $('#libId_for_library_topic').val()}
+        ).done(done).fail(fail);
+
+        function done(data) { $("#library_topic_result").empty().prepend(data)}
         function fail() { alert("bad things happened") }
 
       })

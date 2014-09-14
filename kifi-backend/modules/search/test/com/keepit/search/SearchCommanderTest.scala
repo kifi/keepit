@@ -52,7 +52,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           query = "keepit",
           filter = None,
           maxHits = 3,
-          lastUUIDStr = None,
+          lastUUID = None,
           context = None,
           predefinedConfig = Some(searchConfig),
           withUriSummary = false)

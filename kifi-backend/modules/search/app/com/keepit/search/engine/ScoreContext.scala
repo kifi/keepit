@@ -15,8 +15,6 @@ class ScoreContext(
 
   private[engine] var secondaryId: Long = -1 // secondary id (keep id for kifi search)
   private[this] var secondaryIdScore: Float = -1.0f
-  private[engine] var tertiaryId: Long = -1 // tertiary id (library id for kifi search)
-  private[this] var tertiaryIdScore: Float = -1.0f
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
@@ -41,8 +39,6 @@ class ScoreContext(
     visibility = Visibility.RESTRICTED
     secondaryId = -1L
     secondaryIdScore = -1.0f
-    tertiaryId = -1L
-    tertiaryIdScore = -1.0f
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
@@ -50,8 +46,7 @@ class ScoreContext(
   def join(reader: DataBufferReader): Unit = {
     val theVisibility = reader.recordType
     val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
-    val id3 = if ((theVisibility & Visibility.HAS_TERTIARY_ID) != 0) reader.nextLong() else -1L
-    var localSum = 0.0f // use a simple sum of scores to compare secondary/tertiary ids
+    var localSum = 0.0f // use a simple sum of scores to compare secondary ids
 
     while (reader.hasMore) {
       val bits = reader.nextTaggedFloatBits()
@@ -64,10 +59,6 @@ class ScoreContext(
     if (id2 >= 0 && localSum > secondaryIdScore) {
       secondaryId = id2
       secondaryIdScore = localSum
-    }
-    if (id3 >= 0 && localSum > tertiaryIdScore) {
-      tertiaryId = id3
-      tertiaryIdScore = localSum
     }
 
     visibility = visibility | theVisibility

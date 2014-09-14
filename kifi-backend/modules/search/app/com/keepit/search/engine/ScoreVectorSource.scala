@@ -7,7 +7,7 @@ import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.engine.query.KWeight
 import com.keepit.search.graph.keep.KeepFields
-import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.query.{ RecencyScorer, RecencyQuery }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
@@ -302,7 +302,7 @@ class UriFromKeepsScoreVectorSource(
 
     // load all URIs in the network with no score (this supersedes the old URIGraphSearcher things)
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
-    loadURIsInNetwork(idFilter, reader, uriIdDocValues, writer, output)
+    loadURIsInNetwork(idFilter, reader, idMapper, uriIdDocValues, writer, output)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
@@ -315,7 +315,11 @@ class UriFromKeepsScoreVectorSource(
         val visibility = getKeepVisibility(docId, libId, userIdDocValues, visibilityDocValues)
 
         if (visibility != Visibility.RESTRICTED) {
-          val boost = getRecencyBoost(recencyScorer, docId)
+          val boost = {
+            if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) + 0.2f // recency boost [1.0, recencyBoost]
+            else if ((visibility & Visibility.MEMBER) != 0) 1.1f
+            else 1.0f
+          }
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
@@ -335,18 +339,19 @@ class UriFromKeepsScoreVectorSource(
     }
   }
 
-  private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
+  private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
     def load(libId: Long, visibility: Int): Unit = {
       val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
+          val keepId = idMapper.getId(docId)
 
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
             // write to the buffer
-            output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8 + 8) // id (8 bytes), libId (8 bytes)
-            writer.putLong(uriId).putLong(libId)
+            output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
+            writer.putLong(uriId).putLong(keepId)
           }
           docId = td.nextDoc()
         }
