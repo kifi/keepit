@@ -16,7 +16,7 @@ import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper._
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.social._
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
@@ -625,9 +625,14 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
+    val tracer = new StackTrace()
+    val res = call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
       r.json.as[URISummary]
     }
+    res.onFailure {
+      case t: Throwable => airbrakeNotifier.notify(s"call to getUriSummary failed on request $request", tracer.withCause(t))
+    }
+    res
   }
 
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
