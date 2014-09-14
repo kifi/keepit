@@ -87,6 +87,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
+  def getFriendRequestsViewBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
   def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]]
   def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
