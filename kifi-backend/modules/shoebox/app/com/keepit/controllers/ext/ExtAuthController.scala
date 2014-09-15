@@ -4,10 +4,10 @@ import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.AuthCommander
+import com.keepit.commanders.{ AuthCommander, LibraryCommander }
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
-import com.keepit.common.crypto.RatherInsecureDESCrypt
+import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ SliderRuleGroup, SliderRuleRepo, URLPatternRepo, User, UserRepo }
+import com.keepit.model.{ Library, SliderRuleGroup, SliderRuleRepo, URLPatternRepo }
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,7 +29,7 @@ class ExtAuthController @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
   authCommander: AuthCommander,
-  userRepo: UserRepo,
+  libraryCommander: LibraryCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
@@ -37,7 +37,8 @@ class ExtAuthController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
   facebook: FacebookSocialGraph,
-  linkedIn: LinkedInSocialGraph)
+  linkedIn: LinkedInSocialGraph,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private val crypt = new RatherInsecureDESCrypt
@@ -58,7 +59,7 @@ class ExtAuthController @Inject() (
             // They sent an invalid id. Bug on client side?
             airbrake.notify(AirbrakeError(
               method = Some(request.method.toUpperCase),
-              userId = request.user.id,
+              userId = Some(userId),
               userName = Some(request.user.fullName),
               url = Some(request.path),
               message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
@@ -67,8 +68,8 @@ class ExtAuthController @Inject() (
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      val user: User = userRepo.get(userId)
+    val (libraries, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
+      val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -82,7 +83,7 @@ class ExtAuthController @Inject() (
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate)
+      (libraries, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate)
     }
 
     if (isUpdate || isInstall) {
@@ -94,7 +95,7 @@ class ExtAuthController @Inject() (
 
         if (isInstall) {
           contextBuilder += ("action", "installedExtension")
-          val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
+          val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length }
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
         } else
@@ -109,8 +110,8 @@ class ExtAuthController @Inject() (
     val encryptedIp: String = crypt.crypt(ipkey, ip)
 
     Ok(Json.obj(
-      "joined" -> user.createdAt.toLocalDate,
-      "user" -> BasicUser.fromUser(user),
+      "user" -> BasicUser.fromUser(request.user),
+      "libraryIds" -> Seq(libraries._1.id.get, libraries._2.id.get).map(Library.publicId),
       "installationId" -> installation.externalId.id,
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
