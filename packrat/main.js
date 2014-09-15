@@ -163,8 +163,9 @@ function insertUpdateChronologically(arr, o, timePropName) {
 
 // ===== Server requests
 
+var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service === 'GET' || service === 'POST') { // shift args if service is missing
+  if (httpMethodRe.test(service)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data === 'function') {  // shift args if data is missing and done is present
@@ -1768,7 +1769,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax('GET', '/ext/authed', function (loggedIn) {
+      ajax('GET', '/ext/auth', function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -2378,7 +2379,7 @@ function authenticate(callback, retryMs) {
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
   }
-  ajax('POST', '/kifi/start', {
+  ajax('POST', '/ext/start', {
     installation: origInstId,
     version: api.version
   },
@@ -2450,7 +2451,7 @@ function deauthenticate() {
   log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
-  ajax('POST', '/ext/session/end');
+  ajax('DELETE', '/ext/auth');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
