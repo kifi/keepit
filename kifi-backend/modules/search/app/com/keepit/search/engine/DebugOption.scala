@@ -45,10 +45,11 @@ trait DebugOption { self: Logging =>
     log.info(s"debug flags: $debugFlags")
   }
 
-  def listLibraries(libIds: (Set[Long], Set[Long], Set[Long])): Unit = {
-    val (myLibIds, memberLibIds, trustedLibIds) = libIds
-    log.info(s"""NE: myLibs: ${myLibIds.toSeq.sorted.mkString(",")}""")
-    log.info(s"""NE: memberLibs: ${memberLibIds.toSeq.sorted.mkString(",")}""")
-    log.info(s"""NE: trustedLibs: ${trustedLibIds.toSeq.sorted.mkString(",")}""")
+  def listLibraries(visibilityEvaluator: VisibilityEvaluator): Unit = {
+    log.info(s"""NE: myLibs: ${visibilityEvaluator.myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
+    log.info(s"""NE: memberLibs: ${visibilityEvaluator.memberLibraryIds.toSeq.sorted.mkString(",")}""")
+    log.info(s"""NE: trustedLibs: ${visibilityEvaluator.trustedLibraryIds.toSeq.sorted.mkString(",")}""")
+    log.info(s"""NE: myOwnLibKeepCount: ${visibilityEvaluator.myOwnLibraryKeepCount}""")
+    log.info(s"""NE: memberLibKeepCount: ${visibilityEvaluator.memberLibraryKeepCount}""")
   }
 }
