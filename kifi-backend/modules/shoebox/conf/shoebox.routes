@@ -82,7 +82,7 @@ POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksCont
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
+GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()

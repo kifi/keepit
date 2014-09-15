@@ -136,6 +136,12 @@ class ExtAuthController @Inject() (
     } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
 
+  def getLoggedIn() = JsonAction(allowPending = true)(authenticatedAction = { request =>
+    Ok(Json.toJson(request.user.state == UserStates.ACTIVE))
+  }, unauthenticatedAction = { request =>
+    Ok(Json.toJson(false))
+  })
+
   def logOut = Action { implicit request => // code mostly copied from LoginPage.logout
     val user = for (
       authenticator <- SecureSocial.authenticatorFromRequest;
