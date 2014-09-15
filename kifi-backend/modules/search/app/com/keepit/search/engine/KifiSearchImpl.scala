@@ -62,8 +62,8 @@ class KifiSearchImpl(
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-    if (debugFlag != 0) {
-      if ((debugFlag & DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+    if (debugFlags != 0) {
+      if ((debugFlags & DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
     }
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
