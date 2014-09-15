@@ -1,0 +1,77 @@
+@(toUserId: Id[User], otherUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+  <tr>
+    <td width="78" class="side1">&nbsp;</td>
+    <td><table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+      <tr>
+        <td height="46">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:22px; font-weight:bold; color:#333333; line-height:24px;">Hi @firstName(toUserId)</td>
+      </tr>
+      <tr>
+        <td height="22">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:23px;">@fullName(otherUserId) wants to be your kifi friend. Woo hoo</td>
+      </tr>
+      <tr>
+        <td height="20">&nbsp;</td>
+      </tr>
+      <tr>
+        <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="29">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left"><table width="230" border="0" cellspacing="0" cellpadding="0" align="left" >
+          <tr>
+            <td valign="top" align="center"><img src="@avatarUrl(otherUserId)" width="73" height="73" style="display:block;" border="0"/></td>
+            <td width="39">&nbsp;</td>
+            <td width="119" valign="top"  ><table width="119" border="0" cellspacing="0" cellpadding="0" align="center">
+              <tr>
+                <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:20px;">@fullName(otherUserId)</td>
+              </tr>
+              <tr>
+                <td height="10" style="font-size:1px;line-height:1px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="center">
+                  <table width="119"  border="0" cellspacing="0" cellpadding="0" align="center">
+                    <tr>
+                      <td height="40" class="white" align="center" bgcolor="#41c381" style="-webkit-border-radius: 4px; -moz-border-radius: 4px; border-radius: 4px; text-decoration:">
+                        <a href='@acceptFriendUrl(otherUserId, "acceptBtn")' target="_blank" style="font-size: 16px; font-family: Arial,sans-serif; color: #ffffff; text-decoration: none; color: #ffffff; text-decoration: none; -webkit-border-radius: 4px; -moz-border-radius: 4px; border-radius: 4px; padding: 8px 14px;  display: inline-block;  font-weight:bold;border: 1px solid #41c381;"><span class="webfontsubstitute">Accept</span> </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            </td>
+          </tr>
+        </table>
+        </td>
+      </tr>
+      <tr>
+        <td height="29">&nbsp;</td>
+      </tr>
+      <tr>
+        <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="29">&nbsp;</td>
+      </tr>
+      <tr>
+        <td valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:23px;">Have a great day, <br />
+          The Kifi team</td>
+      </tr>
+      <tr>
+        <td height="70">&nbsp;</td>
+      </tr>
+    </table></td>
+    <td width="58" class="side1">&nbsp;</td>
+  </tr>
+</table>

@@ -1,0 +1,83 @@
+@(toUserId: Id[User], otherUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+
+<table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+  <tr>
+    <td width="80" class="aside1">&nbsp;</td>
+    <td width="485"><table width="485" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+      <tr>
+        <td height="45" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="top" style="font-family:Arial, sans-serif;font-size:22px;line-height:24px;color:#333333;font-weight:bold;">Hi @firstName(toUserId),</td>
+      </tr>
+      <tr>
+        <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="top" style="font-family:Arial, sans-serif;font-size:16px;line-height:20px;color:#333333;">@fullName(otherUserId) just joined kifi.</td>
+      </tr>
+      <tr>
+        <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="1" bgcolor="#f3f3f3" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="top"><table width="485" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
+          <tr>
+            <td align="left" valign="top" width="73">
+              <a href='@inviteContactUrl(otherUserId, "avatar")' target="_blank" style="text-decoration:none;display:block;">
+                <img src="@avatarUrl(otherUserId)" width="73" height="73" alt="@fullName(otherUserId)" style="display:block;max-width:73px;max-height:73px" border="0" />
+              </a>
+            </td>
+            <td align="left" valign="top" width="38" class="aside1">&nbsp;</td>
+            <td align="left" valign="top"><table width="374" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
+              <tr>
+                <td align="left" valign="top" style="font-family:Arial, sans-serif;font-size:14px;line-height:16px;color:#333333;">@fullName(otherUserId)</td>
+              </tr>
+              <tr>
+                <td height="10" style="font-size:1px; line-height:1px;">&nbsp;</td>
+              </tr>
+              <tr>
+                <td align="left" valign="top"><table width="158" border="0" cellspacing="0" cellpadding="0" align="left" bgcolor="#41c381">
+                  <tr>
+                    <td align="left" valign="middle" width="8"><img src='@assetUrl("left.png")' width="8" height="40" alt="" style="display:block;max-width:8px;max-height:80px;" border="0" /></td>
+                    <td width="14">&nbsp;</td>
+                    <td align="left"  width="22" valign="middle" style="font-family:Arial, sans-serif;font-size:24px;color:#ffffff;font-weight:bold;">
+                      <a href='@inviteContactUrl(otherUserId, "addFriendBtn")' target="_blank" style="font-family:Arial, sans-serif;font-size:24px;line-height:26px;color:#ffffff;font-weight:bold;text-decoration:none;display:block;">+</a>
+                    </td>
+                    <td align="left"  valign="middle" style="font-family:Arial, sans-serif;font-size:16px;color:#ffffff;font-weight:bold;">
+                      <a href='@inviteContactUrl(otherUserId, "addFriendBtn")' target="_blank" style="font-family:Arial, sans-serif;font-size:16px;line-height:26px;color:#ffffff;font-weight:bold;text-decoration:none;display:block;">Add Friend</a>
+                    </td>
+                    <td align="right" valign="middle" width="8" bgcolor="#ffffff"><img src='@assetUrl("right.png")' width="8" height="40" alt="" style="display:block;max-width:8px;max-height:80px;" border="0" /></td>
+                  </tr>
+                </table></td>
+              </tr>
+            </table></td>
+          </tr>
+        </table></td>
+      </tr>
+      <tr>
+        <td height="28" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="1" bgcolor="#f3f3f3" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td align="left" valign="top" style="font-family:Arial, sans-serif;font-size:16px;line-height:24px;color:#333333;">Have a great day, <br />
+          The Kifi team</td>
+      </tr>
+      <tr>
+        <td height="70" style="font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr>
+    </table></td>
+    <td width="60" class="aside">&nbsp;</td>
+  </tr>
+</table>

@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 object DataBuffer {
   type Page = Array[Short]
 
-  private[join] val PAGE_SHORT_ARRAY_SIZE = 1024 // short array size
+  private[join] val PAGE_SHORT_ARRAY_SIZE = 2048 // short array size
   val PAGE_SIZE = PAGE_SHORT_ARRAY_SIZE << 1
 
   // We encode the record type and the record size together into one short word (16-bit)

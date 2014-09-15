@@ -59,7 +59,7 @@
         <td>@meta.hit.score</td>
         <td>@{meta.hit.textScore}</td>
         <td>@{meta.hit.isMyBookmark}</td>
-        <td>@{(meta.hit.keptByFriend || meta.hit.users.size > 0)}</td>
+        <td>@{meta.hit.keptByFriend}</td>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminSearchController.explain(result.query, meta.uri.id.get, result.lang)" method="GET" class="form-inline">
             <input type="hidden" name="query" value="@{result.query}"/>
