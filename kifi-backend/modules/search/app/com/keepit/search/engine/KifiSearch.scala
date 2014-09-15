@@ -15,6 +15,21 @@ import scala.math._
 
 abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) {
 
+  protected var debugFlag: Int = 0
+  protected var debugDumpBufIds: Set[Long] = null
+
+  // debug flags
+  def debug(debugMode: String) {
+    import DebugOption._
+    debugMode.split(",").map(_.toLowerCase).foldLeft(0) { (flag, str) =>
+      str match {
+        case DumpBuf(ids) =>
+          debugDumpBufIds = ids
+          flag | DumpBuf.flag
+      }
+    }
+  }
+
   def execute(): KifiShardResult
 
   @inline def createQueue(sz: Int) = new HitQueue(sz)
