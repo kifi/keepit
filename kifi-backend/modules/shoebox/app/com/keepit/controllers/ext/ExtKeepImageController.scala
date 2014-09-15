@@ -1,11 +1,11 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{KeepImageCommander, KeepImageSize}
+import com.keepit.commanders.{ KeepImageCommander, KeepImageSize }
 import com.keepit.common.db.Id
-import com.keepit.model.{Keep, KeepImageSource}
+import com.keepit.model.{ Keep, KeepImageSource }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{ Action, Controller }
 
 class ExtKeepImageController @Inject() (keepImageCommander: KeepImageCommander)
     extends Controller {

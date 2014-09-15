@@ -28,9 +28,15 @@ class KeepImageStoreImpl @Inject() (
     if (contentLength > 0) {
       om.setCacheControl("public, max-age=31556926")
       om.setContentLength(contentLength)
-      asyncUpload(s3ImageConfig.bucketName, key, is, om)
+      asyncUpload(s3ImageConfig.bucketName, key, is, om).map { res =>
+        is.close()
+        res
+      }
     } else {
-      Future.failed(new RuntimeException(s"Invalid contentLength for $key: $contentLength"))
+      Future.failed {
+        is.close()
+        new RuntimeException(s"Invalid contentLength for $key: $contentLength")
+      }
     }
   }
 
