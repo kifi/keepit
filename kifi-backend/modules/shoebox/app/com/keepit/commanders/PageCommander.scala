@@ -98,22 +98,26 @@ class PageCommander @Inject() (
     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 
-  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Option[Future[KeeperPageInfo]] = {
-    val (nUriOpt, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
+  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
+    val (nUriOpt, nUriStr, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val host: Option[String] = uri.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
           userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
-      val nUri = normalizedURIInterner.getByUri(uri.raw.get)
-      (nUri, domain, position, neverOnSite, host)
+      val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
+        case Success(Left(nUri)) => (nUri.url, Some(nUri))
+        case Success(Right(pUri)) => (pUri, None)
+        case Failure(ex) => (uri.raw.get, None)
+      }
+      (nUri, nUriStr, domain, position, neverOnSite, host)
     }
     val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
+    val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
     nUriOpt.map { normUri =>
-      val shown = historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
       val item = AugmentableItem(normUri.id.get)
       val request = ItemAugmentationRequest.uniform(userId, item)
       searchClient.augmentation(request).map { response =>
@@ -146,8 +150,10 @@ class PageCommander @Inject() (
           }.toSeq.unzip // separate & flatten to keepers & kept in which libraries
           (a.flatten, b.flatten)
         }
-        KeeperPageInfo(normUri, position, neverOnSite, sensitive, shown, keepers, keepsInfo)
+        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsInfo)
       }
+    }.getOrElse {
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
     }
   }
 }
