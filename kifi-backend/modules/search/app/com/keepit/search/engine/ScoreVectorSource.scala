@@ -113,15 +113,18 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
 
-  protected lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+  lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
-  protected lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
     val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
 
     require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
 
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
+
+  var myOwnLibraryKeepCount = 0
+  var memberLibraryKeepCount = 0
 
   @inline
   protected def getKeepVisibility(docId: Int, libId: Long, userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): Int = {
@@ -340,7 +343,8 @@ class UriFromKeepsScoreVectorSource(
   }
 
   private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
-    def load(libId: Long, visibility: Int): Unit = {
+    def load(libId: Long, visibility: Int): Int = {
+      var count = 0
       val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
       if (td != null) {
         var docId = td.nextDoc()
@@ -352,16 +356,18 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
             writer.putLong(uriId).putLong(keepId)
+            count += 1
           }
           docId = td.nextDoc()
         }
       }
+      count
     }
 
-    myOwnLibraryIds.foreach { libId => load(libId, Visibility.OWNER) }
+    myOwnLibraryKeepCount = myOwnLibraryIds.foldLeft(0) { (count, libId) => count + load(libId, Visibility.OWNER) }
 
     // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryIds.foreach { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
+    memberLibraryKeepCount = memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
 
     myFriendIds.foreach { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
