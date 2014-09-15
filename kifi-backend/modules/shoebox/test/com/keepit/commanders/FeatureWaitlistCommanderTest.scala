@@ -1,5 +1,8 @@
 package com.keepit.commanders
 
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.specs2.mutable.Specification
 
 import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
@@ -7,13 +10,16 @@ import com.keepit.common.mail.{ FakeMailModule, FakeOutbox }
 import com.keepit.model.FeatureWaitlistRepo
 import com.keepit.common.db.slick.Database
 
-import play.api.test.Helpers.running
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
   val modules = Seq(
-    FakeMailModule()
-  )
+    FakeMailModule(),
+    FakeSocialGraphModule(),
+    FakeScrapeSchedulerModule(),
+    FakeABookServiceClientModule())
 
   "FeatureWaitlistCommander" should {
     "wait list correctly" in {
@@ -25,7 +31,7 @@ class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjecto
 
         outbox.size === 0
 
-        val extId = commander.waitList("stephen@42go.com", "mobile_app", "Test Browser/0.42")
+        val extId = Await.result(commander.waitList("stephen@42go.com", "mobile_app", "Test Browser/0.42"), Duration(5, "seconds"))
 
         outbox.size === 1
         outbox(0).to.length === 1
@@ -37,7 +43,7 @@ class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjecto
         datum1.feature === "mobile_app"
         datum1.userAgent === "Test Browser/0.42"
 
-        commander.waitList("stephen+waitlist@42go.com", "mobile_app", "Test Browser/0.42", Some(extId))
+        Await.ready(commander.waitList("stephen+waitlist@42go.com", "mobile_app", "Test Browser/0.42", Some(extId)), Duration(5, "seconds"))
         outbox.size === 2
         val data2 = db.readOnlyMaster { implicit session => repo.all() }
         data2.length === 1
@@ -46,7 +52,7 @@ class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjecto
         datum2.feature === "mobile_app"
         datum2.userAgent === "Test Browser/0.42"
 
-        commander.waitList("stephen+other@42go.com", "lynx_support", "curl")
+        Await.ready(commander.waitList("stephen+other@42go.com", "lynx_support", "curl"), Duration(5, "seconds"))
         outbox.size === 2
         val data3 = db.readOnlyMaster { implicit session => repo.all() }
         data3.length === 2
