@@ -26,6 +26,8 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
         case DumpBuf(ids) =>
           debugDumpBufIds = ids
           flag | DumpBuf.flag
+        case _ =>
+          flag
       }
     }
   }
