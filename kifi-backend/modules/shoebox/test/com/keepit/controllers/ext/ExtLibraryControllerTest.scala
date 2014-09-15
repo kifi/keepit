@@ -3,10 +3,12 @@ package com.keepit.controllers.ext
 import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -157,6 +159,70 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "guided" -> false))
         val result3 = extLibraryController.addKeep(pubId3)(request3)
         status(result3) must equalTo(BAD_REQUEST)
+      }
+    }
+
+    "remove keep from library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        val (user1, user2, lib1, lib2, keep1, keep2, keep3) = db.readWrite { implicit s =>
+
+          val user1 = userRepo.save(User(firstName = "Colin", lastName = "Kaepernick", username = Some(Username("qb")), createdAt = t1))
+          val lib1 = libraryRepo.save(Library(name = "49ers UberL33t Football Plays", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          val lib2 = libraryRepo.save(Library(name = "shoes", ownerId = user1.id.get, slug = LibrarySlug("shoes"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+
+          // coach has RW access to kaep's football library
+          val user2 = userRepo.save(User(firstName = "Jim", lastName = "Harbaugh", username = Some(Username("coach")), createdAt = t1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash("www.runfast.com", Some("Run")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash("www.throwlong.com", Some("Throw")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash("www.howtonotchoke.com", Some("NotChoke")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          val keep1 = keepRepo.save(Keep(title = Some("Run"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(1)))
+          val keep2 = keepRepo.save(Keep(title = Some("Throw"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(2)))
+          val keep3 = keepRepo.save(Keep(title = Some("NotChoke"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(3)))
+          (user1, user2, lib1, lib2, keep1, keep2, keep3)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+
+        inject[FakeActionAuthenticator].setUser(user1)
+        val extLibraryController = inject[ExtLibraryController]
+
+        db.readOnlyMaster { implicit s => keepRepo.count === 3 }
+
+        // test unkeep from own library
+        val request1 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId1, keep1.externalId).url)
+        val result1 = extLibraryController.removeKeep(pubId1, keep1.externalId)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("NotChoke", "Throw") }
+
+        // test incorrect unkeep from own library (keep exists but in wrong library)
+        val request2 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId2, keep2.externalId).url)
+        val result2 = extLibraryController.removeKeep(pubId2, keep2.externalId)(request2)
+        status(result2) must equalTo(BAD_REQUEST)
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("NotChoke", "Throw") }
+
+        // test unkeep from someone else's library (have RW access)
+        inject[FakeActionAuthenticator].setUser(user2)
+        val request3 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId1, keep3.externalId).url)
+        val result3 = extLibraryController.removeKeep(pubId1, keep3.externalId)(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("Throw") }
       }
     }
   }

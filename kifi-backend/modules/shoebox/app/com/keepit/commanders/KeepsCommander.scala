@@ -158,6 +158,7 @@ class KeepsCommander @Inject() (
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
@@ -455,6 +456,26 @@ class KeepsCommander @Inject() (
       keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
     } flatMap { keep =>
       finalizeUnkeeping(Seq(keep), userId).headOption
+    }
+  }
+
+  def unkeepFromLibrary(libId: Id[Library], extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
+    } match {
+      case Some(mem) if mem.hasWriteAccess() =>
+        db.readWrite { implicit session =>
+          val ownerId = libraryRepo.get(libId).ownerId
+          keepRepo.getByExtIdAndUser(extId, ownerId) match {
+            case Some(keep) if libId == keep.libraryId.get =>
+              // report who unkept
+              setKeepStateWithSession(keep, KeepStates.INACTIVE, userId)
+              Right(finalizeUnkeeping(Seq(keep), userId).head)
+            case _ => Left("keep_not_found")
+          }
+        }
+      case None =>
+        Left("permission_denied")
     }
   }
 

@@ -26,6 +26,10 @@ case class LibraryMembership(
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
+
+  def hasWriteAccess(): Boolean = {
+    return access == LibraryAccess.READ_WRITE || access == LibraryAccess.OWNER
+  }
 }
 
 object LibraryMembership {
