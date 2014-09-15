@@ -15,12 +15,6 @@ class ExtUserController @Inject() (
   userCommander: UserCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getLoggedIn() = JsonAction(allowPending = true)(authenticatedAction = { request =>
-    Ok(Json.toJson(request.user.state == UserStates.ACTIVE))
-  }, unauthenticatedAction = { request =>
-    Ok(Json.toJson(false))
-  })
-
   def getFriends() = JsonAction.authenticated { request =>
     Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
   }
