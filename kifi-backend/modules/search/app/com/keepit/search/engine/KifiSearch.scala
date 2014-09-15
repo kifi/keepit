@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.logging.Logging
 import com.keepit.search.{ SearchTimeLogs, Searcher }
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
@@ -13,13 +14,13 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 
-abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) {
+abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends Logging {
 
   protected var debugFlag: Int = 0
   protected var debugDumpBufIds: Set[Long] = null
 
   // debug flags
-  def debug(debugMode: String) {
+  def debug(debugMode: String): Unit = {
     import DebugOption._
     debugMode.split(",").map(_.toLowerCase).foldLeft(0) { (flag, str) =>
       str match {
@@ -30,6 +31,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
           flag
       }
     }
+    if (debugFlag != 0) log.info(s"debug flag set: $debugFlag")
   }
 
   def execute(): KifiShardResult
