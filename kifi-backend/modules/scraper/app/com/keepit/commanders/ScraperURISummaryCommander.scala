@@ -35,7 +35,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
 
   private def fetchAndInternImage(uri: NormalizedURI, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
     imageInfo.url match {
-      case Some(imageUrl) => imageFetcher.fetchRawImage(imageUrl).map { rawImageOpt =>
+      case Some(imageUrl) => imageFetcher.fetchRawImage(URI.parse(imageUrl).get).map { rawImageOpt =>
         rawImageOpt flatMap { rawImage => internImage(imageInfo, rawImage, uri) }
       }
       case None => Future.successful(None)
@@ -55,7 +55,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
         Some(imageInfoWithUrl)
       }
       case Failure(ex) => {
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage()}")
+        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
       }
     }
