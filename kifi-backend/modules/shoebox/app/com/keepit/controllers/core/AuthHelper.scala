@@ -162,6 +162,14 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
+  private def saveKifiCampaignId(userId: Id[User], kcid: String): Unit = {
+    db.readWrite { implicit session =>
+      if (userValueRepo.getValueStringOpt(userId, UserValueName.KIFI_CAMPAIGN_ID).isEmpty) {
+        userValueRepo.setValue(userId, UserValueName.KIFI_CAMPAIGN_ID, kcid)
+      }
+    }
+  }
+
   def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
@@ -182,6 +190,8 @@ class AuthHelper @Inject() (
         if (agent.canRunExtensionIfUpToDate) Some("/install") else None
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
+
+    request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),

@@ -48,8 +48,16 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       }
     }
 
+    val augmentedUnauthenticatedRequest: Request[T] => Future[Result] = { request =>
+      onUnauthenticated(request).map { res =>
+        request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
+          res.addingToSession("kcid" -> kcid)(request)
+        } getOrElse res
+      }
+    }
+
     actionAuthenticator.authenticatedAction(apiClient, allowPending, parser, filteredAuthenticatedRequest,
-      onSocialAuthenticated = onSocialAuthenticated, onUnauthenticated = onUnauthenticated)
+      onSocialAuthenticated = onSocialAuthenticated, onUnauthenticated = augmentedUnauthenticatedRequest)
   }
 
   trait ActionDefaults {
