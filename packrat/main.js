@@ -2378,7 +2378,7 @@ function authenticate(callback, retryMs) {
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
   }
-  ajax('POST', '/kifi/start', {
+  ajax('POST', '/ext/start', {
     installation: origInstId,
     version: api.version
   },

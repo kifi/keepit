@@ -80,11 +80,14 @@ POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
+# Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
+POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 
+# Note: /ext/pageDetails will be replaced by /ext/page when we launch libraries.
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPage()
 
