@@ -8,13 +8,16 @@ import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
-import com.keepit.model.Library
+import com.keepit.model.{ User, Library }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
+
+import scala.slick.jdbc.{ GetResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryLDATopicRepoImpl])
 trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryTopicMean]
 }
 
 @Singleton
@@ -47,5 +50,17 @@ class LibraryLDATopicRepoImpl @Inject() (
 
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic] = {
     (for { r <- rows if r.libraryId === libId && r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).firstOption
+  }
+
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryTopicMean] = {
+    import StaticQuery.interpolation
+    implicit val getLibraryFeature = GetResult(r => libraryTopicMeanMapper.nextValue(r))
+    val q =
+      sql"""select topic from
+           library_lda_topic as tp inner join cortex_library_membership as mem
+           on tp.library_id = mem.library_id
+           where mem.user_id = ${userId.id} and mem.state = 'active'
+           and tp.version = ${version.version} and tp.state = 'active'"""
+    q.as[LibraryTopicMean].list
   }
 }
