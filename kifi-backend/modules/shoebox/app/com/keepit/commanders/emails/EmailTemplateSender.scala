@@ -26,7 +26,7 @@ class EmailTemplateSenderImpl @Inject() (
     config: FortyTwoConfig) extends EmailTemplateSender with Logging {
 
   def send(mailToSend: EmailToSend) = {
-    htmlPreProcessor.process(mailToSend) map { html =>
+    htmlPreProcessor.process(mailToSend) map { result =>
       val toAddresses = Seq(mailToSend.to match {
         case Left(userId) => db.readOnlyReplica { implicit sess => emailAddrRepo.getByUser(userId) }
         case Right(address) => address
@@ -37,7 +37,8 @@ class EmailTemplateSenderImpl @Inject() (
         to = toAddresses,
         cc = mailToSend.cc,
         subject = mailToSend.subject,
-        htmlBody = LargeString(html.body),
+        htmlBody = result.htmlBody,
+        textBody = result.textBody,
         fromName = mailToSend.fromName,
         category = mailToSend.category
       )
