@@ -3,21 +3,22 @@
 angular.module('kifi')
 
 .controller('KeepsCtrl', [
-  '$scope', 'profileService', 'keepService', 'tagService',
-  function ($scope, profileService, keepService, tagService) {
+  '$scope', 'profileService', 'tagService', 'util',
+  function ($scope, profileService, tagService, util) {
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
     $scope.$watch(function () {
-      return keepService.seqResult() + ',' + tagService.allTags.length;
+      // TODO: is this too inefficient? Will this be called too many times?
+      return $scope.keeps.length + ',' + tagService.allTags.length;
     }, function () {
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
-        keepService.joinTags($scope.keeps, tagService.allTags);
+        util.joinTags($scope.keeps, tagService.allTags);
       }
     });
 
-    $scope.dragKeeps = function (keep, event, mouseX, mouseY) {
-      var draggedKeeps = keepService.getSelected();
+    $scope.dragKeeps = function (keep, event, mouseX, mouseY, selection) {
+      var draggedKeeps = selection.getSelected($scope.keeps);
       if (draggedKeeps.length === 0) {
         draggedKeeps = [keep];
       }
@@ -37,8 +38,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  'keepService', '$window', '$timeout',
-  function (keepService, $window, $timeout) {
+  '$window', '$timeout', 'keepActionService', 'selectionService', 'tagService', 'undoService',
+  function ($window, $timeout, keepActionService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
@@ -50,37 +51,78 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         editMode: '=',
-        toggleEdit: '='
+        toggleEdit: '=',
+        updateSelectedCount: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
-      link: function (scope, element /*, attrs*/ ) {
-        scope.toggleSelect = keepService.toggleSelect;
-        scope.getSelected = keepService.getSelected;
-        scope.isSelected = keepService.isSelected;
-        scope.toggleSelectAll = keepService.toggleSelectAll;
-        scope.isSelectedAll = keepService.isSelectedAll;
-        scope.editingTags = false;
-        scope.addingTag = {enabled: false};
+      link: function (scope, element /*, attrs*/) {
+        //
+        // Internal data.
+        //
+        var lastSizedAt = $window.innerWidth;
 
+
+        //
+        // Internal methods.
+        //
+        function sizeKeeps() {
+          scope.$broadcast('resizeImage');
+
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard(keep);
+              }
+            });
+            scope.keeps.forEach(function (keep) {
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
+            });
+          });
+        }
+
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            sizeKeeps();
+          }
+        }
+
+
+        //
+        // Scope data.
+        //
+        scope.scrollDistance = '100%';
+        scope.editingTags = false;
+        scope.addingTag = { enabled: false };
+
+        // 'selection' keeps track of which keeps have been selected.
+        scope.selection = new selectionService.Selection();
+
+
+        //
+        // Scope methods.
+        //
         scope.keepClickAction = function (event, keep) {
           if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
             if (!scope.editMode.enabled) {
               scope.toggleEdit(true);
             }
             scope.editMode.enabled = true;
-            scope.toggleSelect(keep);
+            scope.selection.toggleSelect(keep);
           } else if (event.target.href && scope.keepClick) {
             scope.keepClick(keep, event);
           }
         };
 
-        scope.isMultiChecked = function () {
-          return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
+        scope.isMultiChecked = function (keeps) {
+          return scope.selection.getSelectedLength() > 0 && !scope.selection.isSelectedAll(keeps);
         };
 
-        scope.isUnchecked = function () {
-          return !scope.isSelectedAll() && !scope.isMultiChecked();
+        scope.isUnchecked = function (keeps) {
+          return !scope.selection.isSelectedAll(keeps) && !scope.isMultiChecked(keeps);
         };
 
         scope.isShowMore = function () {
@@ -113,18 +155,31 @@ angular.module('kifi')
           return scope.scrollDisabled;
         };
 
-        scope.scrollDistance = '100%';
+        scope.unkeep = function (keeps) {
+          var selectedKeeps = scope.selection.getSelected(keeps);
 
-        scope.unkeep = function () {
-          keepService.unkeep(keepService.getSelected());
+          keepActionService.unkeepMany(selectedKeeps).then(function () {
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+            });
+
+            undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+              keepActionService.keepMany(selectedKeeps);
+              _.forEach(selectedKeeps, function (selectedKeep) {
+                selectedKeep.makeKept();
+              });
+            });
+
+            tagService.addToKeepCount(-1 * selectedKeeps.length);
+          });
         };
 
-        scope.togglePrivate = function () {
-          keepService.togglePrivate(keepService.getSelected());
+        scope.togglePrivate = function (keeps) {
+          keepActionService.togglePrivateMany(scope.selection.getSelected(keeps));
         };
 
-        scope.selectionPrivacyState = function () {
-          if (_.every(keepService.getSelected(), 'isPrivate')) {
+        scope.selectionPrivacyState = function (keeps) {
+          if (_.every(scope.selection.getSelected(keeps), 'isPrivate')) {
             return 'Public';
           } else {
             return 'Private';
@@ -138,36 +193,25 @@ angular.module('kifi')
         scope.disableEditTags = function () {
           scope.editingTags = false;
         };
+        
 
+        //
+        // Watches and listeners.
+        //
         scope.$watch(function () {
-          return scope.getSelected().length;
-        }, function () {
+          return scope.selection.getSelected(scope.keeps).length;
+        }, function (numSelected) {
           scope.disableEditTags();
+          scope.updateSelectedCount({ numSelected: numSelected });
         });
 
-        var lastSizedAt = $window.innerWidth;
-        function resizeWindowListener() {
-          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
-            lastSizedAt = $window.innerWidth;
-            sizeKeeps();
+        scope.$watch(function () {
+          return scope.editMode.enabled;
+        }, function(enabled) {
+          if (!enabled) { 
+            scope.selection.unselectAll(); 
           }
-        }
-
-        function sizeKeeps() {
-          scope.$broadcast('resizeImage');
-          $timeout(function () {
-            scope.keeps.forEach(function (keep) {
-              if (keep.calcSizeCard) {
-                keep.calcSizeCard();
-              }
-            });
-            scope.keeps.forEach(function (keep) {
-              if (keep.sizeCard) {
-                keep.sizeCard();
-              }
-            });
-          });
-        }
+        });
 
         var lazyResizeListener = _.debounce(resizeWindowListener, 250);
         $window.addEventListener('resize', lazyResizeListener);
@@ -176,7 +220,6 @@ angular.module('kifi')
           $window.removeEventListener('resize', lazyResizeListener);
           scope.editMode.enabled = false;
         });
-
       }
     };
   }

@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
-  'installService', '$rootScope', '$analytics', 'friendService', 'socialService', '$location', 'keepService', 'tagService',
+  'installService', '$rootScope', '$analytics', 'friendService', 'socialService', '$location', 'tagService',
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout,
-    installService, $rootScope, $analytics, friendService, socialService, $location, keepService, tagService) {
+    installService, $rootScope, $analytics, friendService, socialService, $location, tagService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -172,7 +172,6 @@ angular.module('kifi')
             $timeout.cancel(refreshTimeout);
             refreshTimeout = $timeout(function () {
               tagService.fetchAll(true);
-              keepService.reset();
             }, 1000); // Giving enough time for the services to be updated
             break;
         }
