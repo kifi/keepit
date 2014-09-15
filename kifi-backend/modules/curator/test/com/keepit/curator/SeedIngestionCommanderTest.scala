@@ -343,7 +343,37 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           seedItem2 === None
         }
       }
+    }
 
+    "ingest library memberships correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val shoebox = shoeboxClientInstance()
+        val libMemRepo = inject[CuratorLibraryMembershipInfoRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        val library = Library(name = "foo", ownerId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("foo"), memberCount = 1)
+        shoebox.saveLibraries(
+          library,
+          library.copy(name = "bar", slug = LibrarySlug("bar"))
+        )
+
+        val libMem = LibraryMembership(libraryId = Id[Library](1), userId = Id[User](1), access = LibraryAccess.OWNER, showInSearch = true)
+        shoebox.saveLibraryMemberships(
+          libMem,
+          libMem.copy(libraryId = Id[Library](2)),
+          libMem.copy(libraryId = Id[Library](2), userId = Id[User](2), access = LibraryAccess.READ_ONLY)
+        )
+
+        Await.result(commander.ingestLibraryMemberships(), Duration(10, "seconds"))
+        val libMems1 = db.readOnlyMaster { implicit session => libMemRepo.all() }
+        libMems1.length === 3
+
+        shoebox.saveLibraryMemberships(libMem.copy(access = LibraryAccess.READ_ONLY))
+        Await.result(commander.ingestLibraryMemberships(), Duration(10, "seconds"))
+        val libMems2 = db.readOnlyMaster { implicit session => libMemRepo.all() }
+        libMems2.length === 3
+
+      }
     }
 
   }
