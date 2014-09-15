@@ -1,32 +1,29 @@
 package com.keepit.common.images
 
-import java.io.InputStream
-import com.ning.http.client.providers.netty.NettyResponse
-
-import scala.util.{ Success, Failure, Try }
-import com.keepit.common.store.ImageUtils
-import javax.imageio.ImageIO
-import scala.concurrent.Future
 import java.awt.image.BufferedImage
-import play.api.libs.ws.WS
-import play.api.http.Status
-import com.keepit.common.logging.{ Access, AccessLog, Logging }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import java.security.cert.CertificateExpiredException
-import java.nio.channels.ClosedChannelException
-import java.net.{ URISyntaxException, ConnectException }
-import com.keepit.common.net.URI
-import org.jboss.netty.channel.ConnectTimeoutException
+import java.io.{ IOException, InputStream }
 import java.security.GeneralSecurityException
-import java.io.IOException
 import java.util.concurrent.TimeoutException
+import javax.imageio.ImageIO
+
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
+import com.keepit.common.logging.{ Access, AccessLog, Logging }
+import com.keepit.common.net.URI
+import com.keepit.common.store.ImageUtils
+import com.ning.http.client.providers.netty.NettyResponse
+import org.jboss.netty.channel.ConnectTimeoutException
 import play.api.Play.current
+import play.api.http.Status
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.ws.WS
+
+import scala.concurrent.Future
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[ImageFetcherImpl])
 trait ImageFetcher {
-  def fetchRawImage(url: String): Future[Option[BufferedImage]]
+  def fetchRawImage(url: URI): Future[Option[BufferedImage]]
 }
 
 @Singleton
@@ -44,17 +41,16 @@ class ImageFetcherImpl @Inject() (
 
   private def getBufferedImage(is: InputStream) = Try { ImageUtils.forceRGB(ImageIO.read(is)) }
 
-  override def fetchRawImage(url: String): Future[Option[BufferedImage]] = {
+  override def fetchRawImage(url: URI): Future[Option[BufferedImage]] = {
     val trace = new StackTrace()
     val timer = accessLog.timer(Access.HTTP_OUT)
-    val uriObj = URI.parse(url) match {
-      case Success(uriObj) => uriObj
-      case Failure(e) => {
+    val uriObj = URI.parse(url.toString()) match {
+      case Success(goodUri) => goodUri
+      case Failure(e) =>
         log.error(s"Url [$url] parsing error, ignoring image", e)
         return Future.successful(None) //just ignore
-      }
     }
-    WS.url(uriObj.toString).withRequestTimeout(120000).get map { resp =>
+    WS.url(uriObj.toString()).withRequestTimeout(120000).get map { resp =>
       log.info(s"[fetchRawImage($url)] resp=${resp.statusText}")
       resp.status match {
         case Status.OK =>
@@ -64,13 +60,13 @@ class ImageFetcherImpl @Inject() (
                 log.error(s"Failed to process image: ($url)")
                 None
               case Success(rawImage) =>
-                timer.done(url = url, statusCode = resp.status)
+                timer.done(url = uriObj.toString(), statusCode = resp.status)
                 Some(rawImage)
             }
           }
         case _ =>
           log.error(s"[fetchRawImage($url)] Failed to retrieve image. Response: ${resp.statusText}")
-          timer.done(url = url, statusCode = resp.status, error = resp.statusText)
+          timer.done(url = uriObj.toString(), statusCode = resp.status, error = resp.statusText)
           None
       }
     } recover {
@@ -79,7 +75,7 @@ class ImageFetcherImpl @Inject() (
         _: ConnectTimeoutException |
         _: GeneralSecurityException |
         _: IOException) => {
-        timer.done(url = url, error = e.toString)
+        timer.done(url = url.toString(), error = e.toString)
         log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
         None
       }

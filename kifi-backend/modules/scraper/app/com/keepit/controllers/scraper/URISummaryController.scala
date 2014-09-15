@@ -1,17 +1,14 @@
 package com.keepit.controllers.scraper
 
 import com.google.inject.Inject
-import com.keepit.commanders.ScraperURISummaryCommander
+import com.keepit.commanders.{ ScraperURISummaryCommander, WordCountCommander }
 import com.keepit.common.controller.ScraperServiceController
-import com.keepit.scraper.embedly.EmbedlyClient
-import com.google.inject.Inject
-import play.api.mvc.Action
-import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
 import com.keepit.common.store.ImageSize
-import com.keepit.commanders.WordCountCommander
+import com.keepit.model.NormalizedURI
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
+import play.api.mvc.Action
 
 class URISummaryController @Inject() (
     summaryCmdr: ScraperURISummaryCommander,
