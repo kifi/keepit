@@ -143,4 +143,9 @@ class LDAController @Inject() (
     Ok
   }
 
+  def libraryInducedUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
+    val score = lda.libraryInducedUserURIInterest(userId, uriId)
+    Ok(Json.toJson(score))
+  }
+
 }
