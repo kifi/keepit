@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.DebugOption._
 import com.keepit.search.engine.result.{ KifiShardResult, KifiResultCollector }
 import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
@@ -60,6 +61,10 @@ class KifiSearchImpl(
     val tClickBoosts = currentDateTime.getMillis()
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
+
+    if (debugFlag != 0) {
+      if ((debugFlag & DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+    }
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime})")
