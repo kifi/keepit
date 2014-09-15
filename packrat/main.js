@@ -26,7 +26,6 @@ var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'un
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
-var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
@@ -48,7 +47,6 @@ function clearDataCache() {
   threadsById = {};
   messageData = {};
   contactSearchCache = null;
-  ruleSet = {rules: {}};
   urlPatterns = null;
   tags = null;
   tagsById = null;
@@ -165,8 +163,9 @@ function insertUpdateChronologically(arr, o, timePropName) {
 
 // ===== Server requests
 
+var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service === 'GET' || service === 'POST') { // shift args if service is missing
+  if (httpMethodRe.test(service)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data === 'function') {  // shift args if data is missing and done is present
@@ -297,7 +296,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs.bind(null, getTags));
+  getUrlPatterns(getPrefs.bind(null, getTags));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -1770,7 +1769,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax('GET', '/ext/authed', function (loggedIn) {
+      ajax('GET', '/ext/auth', function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -1843,9 +1842,9 @@ function kififyWithPageData(tab, d) {
   if (!tab.engaged) {
     tab.engaged = true;
     if (!d.kept && !hide) {
-      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+      if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
-      } else if (ruleSet.rules.shown && d.shown) {
+      } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
       } else if (d.keepers.length) {
         tab.keepersSec = 20;
@@ -2331,11 +2330,10 @@ function getPrefs(next) {
   });
 }
 
-function getRules(next) {
-  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
-    log('[gotRules]', o);
-    if (o && Object.getOwnPropertyNames(o).length > 0) {
-      ruleSet = o.slider_rules;
+function getUrlPatterns(next) {
+  ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
+    log('[gotUrlPatterns]', o);
+    if (o && o.url_patterns) {
       urlPatterns = compilePatterns(o.url_patterns);
     }
     if (next) next();
@@ -2381,7 +2379,7 @@ function authenticate(callback, retryMs) {
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
   }
-  ajax('POST', '/kifi/start', {
+  ajax('POST', '/ext/start', {
     installation: origInstId,
     version: api.version
   },
@@ -2399,7 +2397,6 @@ function authenticate(callback, retryMs) {
     logEvent.catchUp();
     mixpanel.catchUp();
 
-    ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
 
@@ -2454,7 +2451,7 @@ function deauthenticate() {
   log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
-  ajax('POST', '/ext/session/end');
+  ajax('DELETE', '/ext/auth');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

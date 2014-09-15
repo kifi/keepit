@@ -52,6 +52,7 @@ class ScoreContext(
       val bits = reader.nextTaggedFloatBits()
       val idx = DataBuffer.getTaggedFloatTag(bits)
       val scr = DataBuffer.getTaggedFloatValue(bits)
+      localSum += scr
       scoreSum(idx) += scr
       if (scoreMax(idx) < scr) scoreMax(idx) = scr
     }

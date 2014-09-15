@@ -71,8 +71,8 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
           category = NotificationCategory.System.ADMIN,
           htmlTemplate = Html("")
         )
-        val htmlOptF: Option[Future[Html]] = tip.render(emailToSend)
-        val html = Await.result(htmlOptF.get, Duration(5, "seconds")).body
+        val htmlOptF: Future[Option[Html]] = tip.render(emailToSend)
+        val html = Await.result(htmlOptF, Duration(5, "seconds")).get.body
 
         // Friend Recommendations
         friends.slice(1, 5).foreach { user =>
