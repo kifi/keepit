@@ -1,4 +1,5 @@
 
+POST     /test                      @com.keepit.controllers.ext.ExtKeepImageController.doIt()
 
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
 GET     /ss/login                   com.keepit.social.providers.LoginPage.login
