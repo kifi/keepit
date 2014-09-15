@@ -86,7 +86,7 @@ class KifiSearchImpl(
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
-    val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
+    val usefulPages = monitoredAwait.result(clickHistoryFuture, 100 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
 
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
