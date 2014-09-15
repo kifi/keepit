@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ Library, SliderRuleGroup, SliderRuleRepo, URLPatternRepo }
+import com.keepit.model.{ Library, SliderRuleGroup, SliderRuleRepo, URLPatternRepo, UserStates }
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

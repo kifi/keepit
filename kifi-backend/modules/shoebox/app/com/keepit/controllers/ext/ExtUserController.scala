@@ -2,7 +2,6 @@ package com.keepit.controllers.ext
 
 import com.keepit.commanders.{ EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
-import com.keepit.model.UserStates
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
