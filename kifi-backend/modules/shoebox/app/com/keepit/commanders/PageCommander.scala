@@ -98,7 +98,7 @@ class PageCommander @Inject() (
     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 
-  def getPageInfo(url: String, userId: Id[User], experiments: Set[ExperimentType]): Future[PageInfo] = {
+  def getPageInfo(url: String, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
     val (nUriStr, nUri, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
@@ -150,10 +150,10 @@ class PageCommander @Inject() (
           }.toSeq.unzip
           (a.flatten, b.flatten)
         }
-        PageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keeps)
+        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keeps)
       }
     }.getOrElse {
-      Future.successful(PageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
+      Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
     }
   }
 }

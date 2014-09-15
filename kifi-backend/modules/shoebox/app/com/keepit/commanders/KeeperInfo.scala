@@ -35,7 +35,7 @@ object KeeperInfo {
   )(unlift(KeeperInfo.unapply))
 }
 
-case class PageInfo(
+case class KeeperPageInfo(
   normalized: String,
   position: Option[JsObject],
   neverOnSite: Boolean,
@@ -43,7 +43,7 @@ case class PageInfo(
   shown: Boolean,
   keepers: Seq[BasicUser],
   keeps: Seq[KeepData])
-object PageInfo {
+object KeeperPageInfo {
   implicit val writesPageInfo = (
     (__ \ 'normalized).write[String] and
     (__ \ 'position).writeNullable[JsObject] and
@@ -52,7 +52,7 @@ object PageInfo {
     (__ \ 'shown).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'keepers).writeNullable[Seq[BasicUser]].contramap[Seq[BasicUser]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'keeps).write[Seq[KeepData]]
-  )(unlift(PageInfo.unapply))
+  )(unlift(KeeperPageInfo.unapply))
 }
 
 case class KeepData(
