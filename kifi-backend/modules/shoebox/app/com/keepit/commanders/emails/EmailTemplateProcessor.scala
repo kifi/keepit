@@ -2,11 +2,12 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTips }
+import com.keepit.common.mail.template.{ TipTemplate, EmailToSend, TagWrapper, tags, EmailTips }
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.mail.template.Tag._
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
@@ -44,8 +45,9 @@ class EmailTemplateProcessorImpl @Inject() (
 
   def process(emailToSend: EmailToSend) = {
     val tipHtmlF = getTipHtml(emailToSend)
-    val templatesF = tipHtmlF.map(_.map(tipHtml => Seq(emailToSend.htmlTemplate, tipHtml))).
-      getOrElse(Future.successful(Seq(emailToSend.htmlTemplate)))
+    val templatesF = tipHtmlF.map { htmlOpt =>
+      htmlOpt.map { tipHtml => Seq(emailToSend.htmlTemplate, tipHtml) }.getOrElse(Seq(emailToSend.htmlTemplate))
+    }
 
     templatesF.flatMap[Html] { templates =>
       val html = views.html.email.black.layout(templates)
@@ -100,12 +102,15 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def getTipHtml(emailToSend: EmailToSend) = {
-    // get the first available Tip for this email that returns Some
-    val tipStream = emailToSend.tips.toStream.collect {
+    val predicate = (html: Option[Html]) => html.isDefined
+    val transform = (tip: EmailTips) => tip match {
       case EmailTips.FriendRecommendations => peopleRecommendationsTip.render(emailToSend)
-      case _ => None
     }
-    tipStream.find(_.isDefined).flatten
+
+    // get the first available Tip for this email that returns Some
+    FutureHelpers.findMatching[EmailTips, Option[Html]](emailToSend.tips, 1, predicate, transform).map { seqOpts =>
+      seqOpts.dropWhile(_.isEmpty).headOption.flatten
+    }
   }
 
   // used to gather the types of objects we need to replace the tags with real values

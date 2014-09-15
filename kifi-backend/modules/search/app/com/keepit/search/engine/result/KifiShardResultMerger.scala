@@ -12,8 +12,6 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
-  private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
-  private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
 
   // tailCutting is set to low when a non-default filter is in use
@@ -75,8 +73,8 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     if (myHits.size > 0) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          var score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
-          hits.insert(score / highScore, null, hit.hit)
+          var score = hit.score * dampFunc(rank, dampingHalfDecayMine) / highScore // damping the scores by rank
+          hits.insert(score, null, hit.hit)
       }
     }
 
@@ -86,8 +84,8 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
-          queue.insert(score / highScore, null, hit.hit)
+          val score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+          queue.insert(score, null, hit.hit)
       }
       queue.foreach { h => hits.insert(h) }
     }
@@ -97,8 +95,8 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       val queue = createQueue(maxHits - hits.size)
       othersHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-          queue.insert(score / othersNorm, null, hit.hit)
+          val score = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+          queue.insert(score, null, hit.hit)
       }
       queue.foreach { h => hits.insert(h) }
     }

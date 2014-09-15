@@ -55,10 +55,7 @@ object ResultUtil {
         hit.score,
         hit.textScore,
         hit.isMyBookmark,
-        hit.isPrivate,
-        hit.users.size > 0,
-        Seq(),
-        -1)
+        hit.users.size > 0)
     }
 
     val lastUUID = for { str <- last if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)
@@ -97,10 +94,7 @@ object ResultUtil {
         hit.finalScore,
         hit.score,
         (hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0,
-        false,
-        (hit.visibility & Visibility.NETWORK) != 0,
-        Seq(),
-        -1)
+        (hit.visibility & Visibility.NETWORK) != 0)
     }
 
     val lastUUID = for { str <- last if str.nonEmpty } yield ExternalId[ArticleSearchResult](str)

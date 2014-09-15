@@ -12,5 +12,5 @@ object EmailTips {
 }
 
 trait TipTemplate {
-  def render(emailToSend: EmailToSend): Option[Future[Html]]
+  def render(emailToSend: EmailToSend): Future[Option[Html]]
 }

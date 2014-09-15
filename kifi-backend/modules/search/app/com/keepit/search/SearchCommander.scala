@@ -421,6 +421,7 @@ class SearchCommanderImpl @Inject() (
     }
 
     val future = Future.traverse(searches) { search =>
+      if (debug.isDefined) search.debug(debug.get)
       SafeFuture { search.execute() }
     }
 

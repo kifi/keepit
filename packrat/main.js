@@ -26,7 +26,6 @@ var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'un
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
-var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
@@ -48,7 +47,6 @@ function clearDataCache() {
   threadsById = {};
   messageData = {};
   contactSearchCache = null;
-  ruleSet = {rules: {}};
   urlPatterns = null;
   tags = null;
   tagsById = null;
@@ -297,7 +295,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs.bind(null, getTags));
+  getUrlPatterns(getPrefs.bind(null, getTags));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -1843,9 +1841,9 @@ function kififyWithPageData(tab, d) {
   if (!tab.engaged) {
     tab.engaged = true;
     if (!d.kept && !hide) {
-      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+      if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
-      } else if (ruleSet.rules.shown && d.shown) {
+      } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
       } else if (d.keepers.length) {
         tab.keepersSec = 20;
@@ -2331,11 +2329,10 @@ function getPrefs(next) {
   });
 }
 
-function getRules(next) {
-  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
-    log('[gotRules]', o);
-    if (o && Object.getOwnPropertyNames(o).length > 0) {
-      ruleSet = o.slider_rules;
+function getUrlPatterns(next) {
+  ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
+    log('[gotUrlPatterns]', o);
+    if (o && o.url_patterns) {
       urlPatterns = compilePatterns(o.url_patterns);
     }
     if (next) next();
@@ -2399,7 +2396,6 @@ function authenticate(callback, retryMs) {
     logEvent.catchUp();
     mixpanel.catchUp();
 
-    ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
 

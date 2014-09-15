@@ -89,6 +89,7 @@ GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserControlle
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
+POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPage()
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
