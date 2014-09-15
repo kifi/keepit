@@ -28,13 +28,17 @@ object KeepImageStates extends States[KeepImage]
 
 sealed abstract class KeepImageSource(val name: String)
 object KeepImageSource {
-  case object Embedly extends KeepImageSource("embedly")
-  case object Unknown extends KeepImageSource("unknown")
-  case object PagePeeker extends KeepImageSource("pagepeeker")
-  case object UserPicked extends KeepImageSource("user_picked")
-  case object UserUpload extends KeepImageSource("user_upload")
+  sealed abstract class UserInitiated(name: String) extends KeepImageSource(name)
+  sealed abstract class SystemInitiated(name: String) extends KeepImageSource(name)
 
-  private val all: Seq[KeepImageSource] = Seq(Embedly, Unknown, PagePeeker, UserUpload)
+  case object Embedly extends SystemInitiated("embedly")
+  case object PagePeeker extends SystemInitiated("pagepeeker")
+  case object EmbedlyOrPagePeeker extends SystemInitiated("embedly_or_pagepeeker")
+  case object UserPicked extends UserInitiated("user_picked")
+  case object UserUpload extends UserInitiated("user_upload")
+  case object Unknown extends KeepImageSource("unknown")
+
+  private val all: Seq[KeepImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked)
   def apply(name: String) = {
     all.find(_.name == name).getOrElse(throw new Exception(s"Can't find KeepImageSource for $name"))
   }

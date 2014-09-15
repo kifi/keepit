@@ -1,6 +1,6 @@
 package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.time.Clock
@@ -8,6 +8,7 @@ import com.keepit.common.time.Clock
 @ImplementedBy(classOf[KeepImageRepoImpl])
 trait KeepImageRepo extends Repo[KeepImage] {
   def getForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
+  def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
   def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[KeepImage]
 }
 
@@ -51,10 +52,17 @@ class KeepImageRepoImpl @Inject() (
   override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {}
 
   private val getForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
-    for (r <- rows if r.keepId === keepId) yield r
+    for (r <- rows if r.keepId === keepId && r.state === KeepImageStates.ACTIVE) yield r
   }
   def getForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
     getForKeepIdCompiled(keepId).list
+  }
+
+  private val getAllForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
+    for (r <- rows if r.keepId === keepId) yield r
+  }
+  def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
+    getAllForKeepIdCompiled(keepId).list
   }
 
   private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
