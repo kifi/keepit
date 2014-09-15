@@ -1,5 +1,6 @@
-@(toUserId: Id[User], otherUserId: Id[User])
+@(toUserId: Id[User], otherUserId: Id[User], category: com.keepit.model.NotificationCategory)
 @import com.keepit.common.mail.template.helpers._
+@import com.keepit.model.NotificationCategory.User._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
   <tr>
@@ -20,7 +21,14 @@
         </tr>
 
         <tr>
-          <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:23px;">@firstName(otherUserId) accepted your Kifi friend request.</td>
+          <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:23px;">
+            @if(category == CONNECTION_MADE) {
+            You are now friends with @fullName(otherUserId) on Kifi. Enjoy @firstName(otherUserId)’s
+            keeps in your search results and message @firstName(otherUserId) directly on any page!
+            } else {
+            @firstName(otherUserId) accepted your Kifi friend request.
+            }
+          </td>
         </tr>
 
         <tr>
