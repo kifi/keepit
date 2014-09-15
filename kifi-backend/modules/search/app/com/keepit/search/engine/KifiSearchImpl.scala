@@ -42,7 +42,6 @@ class KifiSearchImpl(
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
-  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
   def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
@@ -92,8 +91,8 @@ class KifiSearchImpl(
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val boost = myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) * boost
+          hit.score = hit.score * myBookmarkBoost * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine)
           hits.insert(hit)
       }
     }
@@ -104,8 +103,8 @@ class KifiSearchImpl(
 
       friendsHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val boost = (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends) * boost
+          hit.score = hit.score * (if ((hit.visibility & Visibility.MEMBER) != 0) myBookmarkBoost else 1.0f) * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayFriends)
           queue.insert(hit)
       }
       queue.foreach { h => hits.insert(h) }
@@ -115,8 +114,7 @@ class KifiSearchImpl(
 
     var othersHighScore = -1.0f
     var othersTotal = othersHits.totalHits
-    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
-      (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
+    if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val queue = createQueue(numHitsToReturn - hits.size)
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
@@ -125,10 +123,10 @@ class KifiSearchImpl(
           if (rank == 0) {
             // this is the first discoverable hit from others. compute the high score.
             othersHighScore = hit.score
-            othersNorm = max(highScore, hit.score)
+            othersNorm = max(highScore, hit.score) * 1.1f // discount others hit
           }
-          val boost = (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
-          hit.normalizedScore = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) * boost
+          hit.score = hit.score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
+          hit.normalizedScore = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers)
           queue.insert(hit)
           rank += 1
         } else {
@@ -139,11 +137,7 @@ class KifiSearchImpl(
       queue.foreach { h => hits.insert(h) }
     }
 
-    val show = if (filter.isDefault && isInitialSearch && (noFriendlyHits && forbidEmptyFriendlyHits)) {
-      false
-    } else {
-      highScore > 0.6f || othersHighScore > 0.8f
-    }
+    val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
 
     timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
