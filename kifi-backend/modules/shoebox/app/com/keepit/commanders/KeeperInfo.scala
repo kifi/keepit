@@ -80,8 +80,8 @@ case class LibraryData(
 object LibraryData {
   implicit val format: Format[LibraryData] = (
     (__ \ 'id).format[PublicId[Library]] and
-      (__ \ 'name).format[String] and
-      (__ \ 'visibility).format[LibraryVisibility] and
-      (__ \ 'url).format[String]
-    )(LibraryData.apply, unlift(LibraryData.unapply))
+    (__ \ 'name).format[String] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'url).format[String]
+  )(LibraryData.apply, unlift(LibraryData.unapply))
 }
