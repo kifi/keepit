@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ SliderRuleGroup, SliderRuleRepo, SocialUserInfoRepo, URLPatternRepo, User, UserRepo }
+import com.keepit.model.{ SliderRuleGroup, SliderRuleRepo, URLPatternRepo, User, UserRepo }
 import com.keepit.social.{ BasicUser, SecureSocialClientIds }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -33,7 +33,6 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
-  socialUserRepo: SocialUserInfoRepo,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
@@ -69,9 +68,8 @@ class ExtAuthController @Inject() (
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate, notAuthed) = db.readWrite { implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
       val user: User = userRepo.get(userId)
-      val notAuthed = socialUserRepo.getNotAuthorizedByUser(userId).map(_.networkType.name)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
       } match {
@@ -85,7 +83,7 @@ class ExtAuthController @Inject() (
       }
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate, notAuthed)
+      (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate)
     }
 
     if (isUpdate || isInstall) {
@@ -118,8 +116,7 @@ class ExtAuthController @Inject() (
       "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
       "patterns" -> urlPatterns,
-      "eip" -> encryptedIp,
-      "notAuthed" -> notAuthed
+      "eip" -> encryptedIp
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
