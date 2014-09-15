@@ -55,8 +55,8 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         to = Left(id3),
         cc = Seq(SystemEmailAddress.ENG),
         from = SystemEmailAddress.NOTIFICATIONS,
-        fromName = Some("Kifi"),
-        subject = "hi",
+        fromName = Some(Left(id1)),
+        subject = "hi from " + fullName(id1),
         category = NotificationCategory.System.ADMIN,
         htmlTemplate = html,
         campaign = Some("testing"),
@@ -69,11 +69,11 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
       db.readOnlyMaster { implicit s =>
         val freshEmail = emailRepo.get(email.id.get)
         freshEmail === email
-        email.subject === "hi"
+        email.subject === "hi from Aaron Paul"
         email.to === Seq(EmailAddress("test@gmail.com"))
         email.cc === Seq(SystemEmailAddress.ENG)
-        email.from === emailToSend.from
-        email.fromName === emailToSend.fromName
+        email.from === SystemEmailAddress.NOTIFICATIONS
+        email.fromName === Some("Aaron Paul (via Kifi)")
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
         val html = email.htmlBody.value
         html must contain("<title>Testing!!!</title>")
