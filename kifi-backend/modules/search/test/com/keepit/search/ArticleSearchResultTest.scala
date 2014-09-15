@@ -10,7 +10,7 @@ class ArticleSearchResultTest extends Specification {
   val initialResult = ArticleSearchResult(
     last = None,
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
@@ -27,7 +27,7 @@ class ArticleSearchResultTest extends Specification {
   val nextResult = ArticleSearchResult(
     last = Some(initialResult.uuid),
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
@@ -59,17 +59,6 @@ class ArticleSearchResultTest extends Specification {
       val legacyJson = JsObject((fullJson.as[JsObject].value - "toShow").toSeq)
       val legacyDeserialized = legacyJson.as[ArticleSearchResult]
       legacyDeserialized === initialResult.copy(toShow = true)
-    }
-
-    "deal with new ArticleSearchResult missing isPrivate, Users" in {
-      val fullJson = Json.toJson(initialResult).as[JsObject]
-      val hits = (fullJson \ "hits").as[JsArray].value
-      val newHits = JsArray(hits.map(hit => hit.as[JsObject] - "isPrivate" - "Users"))
-      val newJson = fullJson - "hits" + ("hits" -> newHits)
-      newJson !== fullJson
-
-      val newDeserialized = newJson.as[ArticleSearchResult]
-      newDeserialized === initialResult
     }
 
     "deal with legacy ArticleHit missing textScore" in {
