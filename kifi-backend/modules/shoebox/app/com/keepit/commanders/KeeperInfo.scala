@@ -36,7 +36,7 @@ object KeeperInfo {
 }
 
 case class KeeperPageInfo(
-  normalized: String,
+  normalized: NormalizedURI,
   position: Option[JsObject],
   neverOnSite: Boolean,
   sensitive: Boolean,
@@ -45,7 +45,7 @@ case class KeeperPageInfo(
   keeps: Seq[KeepData])
 object KeeperPageInfo {
   implicit val writesPageInfo = (
-    (__ \ 'normalized).write[String] and
+    (__ \ 'normalized).write[NormalizedURI] and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'sensitive).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and

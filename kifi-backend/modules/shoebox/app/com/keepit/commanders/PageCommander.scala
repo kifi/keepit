@@ -98,9 +98,8 @@ class PageCommander @Inject() (
     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 
-  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Future[KeeperPageInfo] = {
-
-    val (nUri, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
+  def getPageInfo(uri: URI, userId: Id[User], experiments: Set[ExperimentType]): Option[Future[KeeperPageInfo]] = {
+    val (nUriOpt, domain, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val host: Option[String] = uri.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
@@ -113,10 +112,9 @@ class PageCommander @Inject() (
     val sensitive: Boolean = !experiments.contains(ExperimentType.NOT_SENSITIVE) &&
       (domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false)
 
-    val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
-
-    nUri.map { uri =>
-      val item = AugmentableItem(uri.id.get)
+    nUriOpt.map { normUri =>
+      val shown = historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
+      val item = AugmentableItem(normUri.id.get)
       val request = ItemAugmentationRequest.uniform(userId, item)
       searchClient.augmentation(request).map { response =>
         val restrictedKeeps = response.infos(item).keeps
@@ -138,19 +136,18 @@ class PageCommander @Inject() (
                 name = lib.name,
                 visibility = lib.visibility,
                 url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
-              val mine = (userId == lib.ownerId || userId == keeperId.get)
-              // right now assumes keep "isMine" and "removable" if I own keep or I own library
+              val mine = userId == keeperId.get
+              val removable = (mine || userId == lib.ownerId)
+              // right now assumes keep is "removable" if I own keep or I own library
               // todo: for collaborators, users may have RW access so they can remove keeps that they don't own
-              KeepData(keepId, mine, mine, libData)
+              KeepData(keepId, mine, removable, libData)
             }
             (keeperOpt, keepDataOpt)
           }.toSeq.unzip // separate & flatten to keepers & kept in which libraries
           (a.flatten, b.flatten)
         }
-        KeeperPageInfo(uri.url, position, neverOnSite, sensitive, shown, keepers, keepsInfo)
+        KeeperPageInfo(normUri, position, neverOnSite, sensitive, shown, keepers, keepsInfo)
       }
-    }.getOrElse {
-      Future.successful(KeeperPageInfo(uri.raw.get, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
     }
   }
 }

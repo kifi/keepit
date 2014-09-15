@@ -32,8 +32,13 @@ class ExtPageController @Inject() (
     val url = (request.body \ "url").as[String]
     URI.parse(url) match {
       case Success(uri) =>
-        pageCommander.getPageInfo(uri, request.userId, request.experiments).map { info =>
-          Ok(Json.toJson(info))
+        pageCommander.getPageInfo(uri, request.userId, request.experiments) match {
+          case None =>
+            Future.successful(BadRequest(Json.obj("error" -> "invalid_normalized_uri")))
+          case Some(res) =>
+            res.map { info =>
+              Ok(Json.toJson(info))
+            }
         }
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)
