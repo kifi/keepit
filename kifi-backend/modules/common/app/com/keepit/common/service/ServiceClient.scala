@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import scala.util.Random
 
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient, HttpUri }
 import com.keepit.common.routes._
@@ -78,6 +78,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
   }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
+    val tracer = new StackTrace()
     val respFuture = RetryFuture(attempts, { case t: ConnectException => serviceCluster.refresh(); true }) {
       callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
     }
@@ -90,8 +91,9 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     respFuture.onFailure {
       case ex: Throwable =>
         val stringBody = body.toString()
+        val withTrace = tracer.withCause(ex)
         airbrakeNotifier.notify(AirbrakeError(
-          exception = ex,
+          exception = withTrace,
           message = Some(
             s"can't call [${call.path}] " +
               s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
@@ -99,7 +101,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
           method = Some(call.method.toString),
           url = Some(call.path)))
         //also dumping the full thing to the log in case we want to dig into the error details
-        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")} because of ${ex.getMessage}", ex)
+        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")} because of ${ex.getMessage}", withTrace)
     }
     respFuture
   }
