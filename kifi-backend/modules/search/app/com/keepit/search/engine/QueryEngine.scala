@@ -72,8 +72,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeights(): Array[Float] = matchWeights
 
   def dumpBuf(ids: Set[Long]): Unit = {
-    log.info(s"""NE:BUF starting buffer dump for: ${ids.mkString(",")}""")
-
     dataBuffer.scan(new DataBufferReader) { reader =>
       // assuming the first datum is ID
       val id = reader.nextLong()
@@ -91,7 +89,5 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
         log.info(s"NE:BUF id=$id recType=${reader.recordType} scores=${scores}")
       }
     }
-
-    log.info("NE:BUF ending buffer dump")
   }
 }
