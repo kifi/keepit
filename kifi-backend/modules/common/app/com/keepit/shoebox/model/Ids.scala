@@ -1,9 +1,8 @@
 package com.keepit.shoebox.model
 
-import com.keepit.common.db.{ SurrogateExternalIdCompanion, SurrogateExternalId, ExternalId, Id }
+import com.keepit.common.db.{SurrogateExternalId, SurrogateExternalIdCompanion}
 
 object Ids {
-  //case class UserSessionId(id: Long) extends SurrogateId
   case class UserSessionExternalId(id: String) extends SurrogateExternalId
 
   object UserSessionExternalId extends SurrogateExternalIdCompanion[Ids.UserSessionExternalId] {
