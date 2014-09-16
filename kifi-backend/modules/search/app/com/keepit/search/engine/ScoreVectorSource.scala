@@ -125,6 +125,7 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
   var myOwnLibraryKeepCount = 0
   var memberLibraryKeepCount = 0
+  var discoverableKeepCount = 0
 
   @inline
   protected def getKeepVisibility(docId: Int, libId: Long, userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): Int = {
@@ -364,13 +365,14 @@ class UriFromKeepsScoreVectorSource(
       count
     }
 
-    myOwnLibraryKeepCount = myOwnLibraryIds.foldLeft(0) { (count, libId) => count + load(libId, Visibility.OWNER) }
+    myOwnLibraryKeepCount += myOwnLibraryIds.foldLeft(0) { (count, libId) => count + load(libId, Visibility.OWNER) }
 
     // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryKeepCount = memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
+    memberLibraryKeepCount += memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
 
-    myFriendIds.foreach { friendId =>
+    discoverableKeepCount += myFriendIds.foldLeft(0) { (count, friendId) =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
+      var cnt = 0
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
@@ -380,10 +382,12 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
+            cnt += 1
           }
           docId = td.nextDoc()
         }
       }
+      count + cnt
     }
   }
 }
