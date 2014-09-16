@@ -331,7 +331,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess)]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
       if (targetLib.ownerId != inviterId)
@@ -340,13 +340,14 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("cant_invite_to_system_generated_library"))
       else {
         val successInvites = for (i <- inviteList) yield {
-          val (inv, extId) = i._1 match {
+          val (recipient, access, msgOpt) = i
+          val (inv, extId) = recipient match {
             case Left(id) =>
-              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = i._2), Left(userRepo.get(id).externalId))
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(userRepo.get(id).externalId))
             case Right(email) =>
-              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, emailAddress = Some(email), access = i._2), Right(email))
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(email))
           }
-          (inv, (extId, i._2))
+          (inv, (extId, access))
         }
         val (inv1, res) = successInvites.unzip
         inviteBulkUsers(inv1)

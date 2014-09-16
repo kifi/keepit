@@ -188,13 +188,14 @@ class LibraryController @Inject() (
 
         val validInviteList = db.readOnlyMaster { implicit s =>
           invites.map { i =>
+            val message = (i \ "message").asOpt[String]
             val access = (i \ "access").as[LibraryAccess]
             val id = (i \ "type").as[String] match {
               case "user" if userRepo.getOpt((i \ "id").as[ExternalId[User]]).nonEmpty =>
                 Left(userRepo.getOpt((i \ "id").as[ExternalId[User]]).get.id.get)
               case "email" => Right((i \ "id").as[EmailAddress])
             }
-            (id, access)
+            (id, access, message)
           }
         }
 
