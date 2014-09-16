@@ -16,7 +16,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
@@ -180,7 +180,7 @@ class MainSearcher(
     val friendStats = FriendStats(friendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
-    val usefulPages = monitoredAwait.result(clickHistoryFuture, 100 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
+    val usefulPages = if (clickHistoryFuture.isCompleted) Await.result(clickHistoryFuture, 0 millisecond) else MultiHashFilter.emptyFilter[ClickedURI]
 
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.forall {
