@@ -58,7 +58,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   "FriendRequestMadeEmailSender" should {
     def testFriendConnectionMade(toUser: User, category: NotificationCategory)(implicit injector: Injector) = {
       val outbox = inject[FakeOutbox]
-      val sender = inject[FriendRequestMadeEmailSender]
+      val sender = inject[FriendConnectionMadeEmailSender]
       val friendUser = db.readWrite { implicit rw =>
         inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
       }

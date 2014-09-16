@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.{ ContactJoinedEmailSender, FriendRequestEmailSender, WelcomeEmailSender, FriendRequestMadeEmailSender, FeatureWaitlistEmailSender, ResetPasswordEmailSender }
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, FriendRequestEmailSender, WelcomeEmailSender, FriendConnectionMadeEmailSender, FeatureWaitlistEmailSender, ResetPasswordEmailSender }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -20,7 +20,7 @@ class EmailTestController @Inject() (
     waitListSender: FeatureWaitlistEmailSender,
     friendRequestEmailSender: FriendRequestEmailSender,
     contactJoinedEmailSender: ContactJoinedEmailSender,
-    friendRequestAcceptedSender: FriendRequestMadeEmailSender) extends ShoeboxServiceController {
+    friendRequestAcceptedSender: FriendConnectionMadeEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body

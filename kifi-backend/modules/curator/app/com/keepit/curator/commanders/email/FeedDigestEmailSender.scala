@@ -204,7 +204,7 @@ class FeedDigestEmailSender @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = mainTemplate,
       senderUserId = Some(userId),
-      fromName = Some("Kifi"),
+      fromName = Some(Right("Kifi")),
       campaign = Some("digest"),
       tips = Seq(EmailTips.FriendRecommendations)
     )
@@ -256,7 +256,7 @@ class FeedDigestEmailSender @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = views.html.email.feedDigest(qaEmailData),
       senderUserId = None,
-      fromName = Some("Kifi"),
+      fromName = Some(Right("Kifi")),
       campaign = Some("digestQA")
     )
 

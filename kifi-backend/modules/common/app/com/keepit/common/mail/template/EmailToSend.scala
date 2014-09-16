@@ -9,7 +9,7 @@ import play.twirl.api.Html
 case class EmailToSend(
   title: String = "Kifi",
   from: EmailAddress,
-  fromName: Option[String] = Some("Kifi"),
+  fromName: Option[Either[Id[User], String]] = Some(Right("Kifi")),
   to: Either[Id[User], EmailAddress],
   cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
@@ -33,11 +33,12 @@ object EmailToSend {
   }
 
   val toFormat = EitherFormat[Id[User], EmailAddress]
+  val fromNameFormat = EitherFormat[Id[User], String]
 
   implicit val emailToSendFormat: Format[EmailToSend] = (
     (__ \ 'title).format[String] and
     (__ \ 'from).format[EmailAddress] and
-    (__ \ 'fromName).formatNullable[String] and
+    (__ \ 'fromName).formatNullable(fromNameFormat) and
     (__ \ 'to).format(toFormat) and
     (__ \ 'cc).format[Seq[EmailAddress]] and
     (__ \ 'subject).format[String] and

@@ -6,10 +6,10 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ TipTemplate, EmailToSend, TagWrapper, tags, EmailTips }
-import com.keepit.common.mail.template.helpers.toHttpsUrl
-import com.keepit.common.mail.template.Tag._
+import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTips }
+import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
@@ -20,6 +20,7 @@ import scala.concurrent.Future
 
 case class ProcessedEmailResult(
   subject: String,
+  fromName: Option[String],
   htmlBody: LargeString,
   textBody: Option[LargeString])
 
@@ -54,11 +55,20 @@ class EmailTemplateProcessorImpl @Inject() (
     val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt }
 
     templatesF.flatMap[ProcessedEmailResult] { templates =>
-      val html = views.html.email.black.layout(templates)
+      val htmlBody = views.html.email.black.layout(templates)
+      val textBody = emailToSend.textTemplate.map { text =>
+        views.html.email.black.layoutText(Seq(text))
+      }
 
-      val needs = getNeededObjects(html.body, emailToSend) ++
-        emailToSend.textTemplate.map { text => getNeededObjects(text.body, emailToSend) }.getOrElse(Set.empty) ++
-        getNeededObjects(emailToSend.subject, emailToSend)
+      val fromName = emailToSend.fromName.collect {
+        case Left(userId) => s"${fullName(userId)} (via Kifi)"
+        case Right(fromNameStr) => fromNameStr
+      }
+
+      val needs = getNeededObjects(htmlBody.body, emailToSend) ++
+        textBody.map { text => getNeededObjects(text.body, emailToSend) }.getOrElse(Set.empty) ++
+        getNeededObjects(emailToSend.subject, emailToSend) ++
+        fromName.map { text => getNeededObjects(text, emailToSend) }
 
       val userIds = needs.collect { case UserNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
@@ -73,8 +83,9 @@ class EmailTemplateProcessorImpl @Inject() (
         val input = DataNeededResult(users = users, imageUrls = userImageUrls)
         ProcessedEmailResult(
           subject = evalTemplate(emailToSend.subject, input, emailToSend),
-          htmlBody = LargeString(evalTemplate(html.body, input, emailToSend)),
-          textBody = emailToSend.textTemplate.map(text => LargeString(evalTemplate(text.body, input, emailToSend)))
+          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend)),
+          textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend))),
+          fromName = fromName.map(text => evalTemplate(text, input, emailToSend))
         )
       }
     }

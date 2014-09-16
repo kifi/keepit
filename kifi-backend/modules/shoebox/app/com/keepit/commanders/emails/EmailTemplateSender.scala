@@ -32,14 +32,15 @@ class EmailTemplateSenderImpl @Inject() (
         case Right(address) => address
       })
 
+      println(mailToSend.fromName, result.fromName)
       val email = ElectronicMail(
         from = mailToSend.from,
         to = toAddresses,
         cc = mailToSend.cc,
-        subject = mailToSend.subject,
+        subject = result.subject,
         htmlBody = result.htmlBody,
         textBody = result.textBody,
-        fromName = mailToSend.fromName,
+        fromName = result.fromName,
         category = mailToSend.category
       )
 
