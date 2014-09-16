@@ -8,9 +8,7 @@ import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.commanders.{ LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.Future
+import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfiguration, LDATopicInfo }
 import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.common.db.Id
 
