@@ -3,6 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator, AdminController }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -35,7 +36,8 @@ class AdminLibraryController @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
-    db: Database) extends AdminController(actionAuthenticator) {
+    db: Database,
+    implicit val publicIdConfig: PublicIdConfiguration) extends AdminController(actionAuthenticator) {
 
   def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     val pageSize = 30
@@ -65,7 +67,7 @@ class AdminLibraryController @Inject() (
 
       (lib, owner, keepCount, contributors, followers)
     }
-    Ok(html.admin.library(library, owner, keepCount, contributors, followers))
+    Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId)))
   }
 
   def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
