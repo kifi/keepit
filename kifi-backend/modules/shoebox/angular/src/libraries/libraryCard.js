@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', ['friendService',
-  function (friendService) {
+.directive('kfLibraryCard', ['friendService', 'libraryService', 'profileService',
+  function (friendService, libraryService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -38,6 +38,34 @@ angular.module('kifi')
         scope.library.followers.forEach(function (follower) {
           follower.image = friendService.getPictureUrlForUser(follower);
         });
+
+        scope.followed = function () {
+          return _.some(scope.library.followers, function (follower) {
+            return follower.id === profileService.me.id;
+          });
+        };
+
+        scope.follow = function () {
+          if (!scope.followed()) {
+            libraryService.joinLibrary(scope.library.id);
+            scope.library.followers.push({
+              id: profileService.me.id,
+              firstName: profileService.me.firstName,
+              lastName: profileService.me.lastName,
+              image: friendService.getPictureUrlForUser(profileService.me)
+            });
+          }
+        };
+
+        scope.unfollow = function () {
+          libraryService.leaveLibrary(scope.library.id).then( function () {
+            _.remove(scope.library.followers, function (follower) {
+              return follower.id === profileService.me.id;
+            });
+          });
+        };
+
+
       }
     };
   }
