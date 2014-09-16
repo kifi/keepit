@@ -156,7 +156,7 @@ class FeedDigestEmailSender @Inject() (
 
     val doneF = FutureHelpers.whilef(fetchFromQueue())()
     doneF.onFailure {
-      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
+      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextWithLock failed", e)
     }
 
     doneF

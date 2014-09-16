@@ -26,7 +26,8 @@ class ContactJoinedEmailSender @Inject() (
       subject = s"${fullName(otherUserId)} joined Kifi. Want to connect?",
       to = Left(toUserId),
       category = NotificationCategory.User.CONTACT_JOINED,
-      htmlTemplate = views.html.email.contactJoinedBlack(toUserId, otherUserId),
+      htmlTemplate = views.html.email.black.contactJoined(toUserId, otherUserId),
+      textTemplate = Some(views.html.email.black.contactJoinedText(toUserId, otherUserId)),
       campaign = Some("contactJoined")
     )
     emailTemplateSender.send(emailToSend)
