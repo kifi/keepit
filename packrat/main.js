@@ -56,13 +56,14 @@ function clearDataCache() {
 (function (ab) {
   ab.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
   ab.addReporter(function airbrake(notice, opts) {
+    log.apply(null, ['#c00', '[airbrake]'].concat(notice.errors));
     notice.params = breakLoops(notice.params);
     notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
     notice.context.version = api.version;
     notice.context.userAgent = api.browser.userAgent;
     notice.context.userId = me && me.id;
     api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
-      log('#c00', '[airbrake] report', o.id, o.url);
+      log('[airbrake]', o.url);
     });
   });
   api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
@@ -80,8 +81,14 @@ function clearDataCache() {
       var o2 = {};
       for (var k in o) {
         if (o.hasOwnProperty(k)) {
-          if (++n > 1000) break;
-          o2[k] = visit(o[k], d + 1);
+          if (++n > 100) break;
+          var v;
+          try {
+            v = o[k];
+          } catch (e) {
+            continue;
+          }
+          o2[k] = visit(v, d + 1);
         }
       }
       return o2;
