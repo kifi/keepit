@@ -5,7 +5,7 @@ import java.io._
 import java.net.URLConnection
 import java.sql.SQLException
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -37,6 +37,7 @@ trait KeepImageCommander {
 
 }
 
+@Singleton
 class KeepImageCommanderImpl @Inject() (
     keepImageStore: KeepImageStore,
     db: Database,
@@ -51,20 +52,23 @@ class KeepImageCommanderImpl @Inject() (
     KeepImageSize.pickBest(idealSize, keepImages)
   }
 
+  private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](2.minutes)
   def autoSetKeepImage(keepId: Id[Keep], overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
     val keep = db.readOnlyMaster { implicit session =>
       keepRepo.get(keepId)
     }
-    uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).flatMap { summary =>
-      log.info(summary.toString)
-      summary.imageUrl.map { imageUrl =>
-        fetchAndSet(imageUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
-      }.getOrElse {
-        Future.successful(ImageProcessState.UpstreamProviderNoImage)
+    autoSetConsolidator(keepId) { keepId =>
+      uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).flatMap { summary =>
+        log.info(summary.toString)
+        summary.imageUrl.map { imageUrl =>
+          fetchAndSet(imageUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
+        }.getOrElse {
+          Future.successful(ImageProcessState.UpstreamProviderNoImage)
+        }
+      }.recover {
+        case ex: Throwable =>
+          ImageProcessState.UpstreamProviderFailed(ex)
       }
-    }.recover {
-      case ex: Throwable =>
-        ImageProcessState.UpstreamProviderFailed(ex)
     }
   }
 
