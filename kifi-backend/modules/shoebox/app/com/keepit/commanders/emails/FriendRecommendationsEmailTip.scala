@@ -5,6 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TipTemplate }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.User
@@ -27,15 +28,14 @@ class FriendRecommendationsEmailTip @Inject() (
     basicUserRepo: BasicUserRepo,
     abook: ABookServiceClient,
     userCommander: UserCommander,
-    airbrake: AirbrakeNotifier) extends TipTemplate {
+    airbrake: AirbrakeNotifier) extends TipTemplate with Logging {
 
   import FriendRecommendationsEmailTip._
 
   def render(emailToSend: EmailToSend): Future[Option[Html]] = {
     val userIdOpt = emailToSend.to.fold(id => Some(id), _ => None)
     userIdOpt map { userId =>
-      val recosF = getFriendRecommendationsForUser(userId)
-      recosF map { friendRecos =>
+      getFriendRecommendationsForUser(userId) map { friendRecos =>
         if (friendRecos.size >= MIN_RECOS_TO_SHOW) Some(views.html.email.tips.friendRecommendations(friendRecos))
         else None
       }
@@ -43,25 +43,34 @@ class FriendRecommendationsEmailTip @Inject() (
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
-    for {
-      userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true)
-      if userIds.isDefined && userIds.get.size >= MIN_RECOS_TO_SHOW
-      imageUrls <- getManyUserImageUrls(userIds.get: _*)
-    } yield {
-      userIds.get.sortBy { userId =>
-        /* kifi ghost images should be at the bottom of the list */
-        (if (imageUrls(userId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
-      }.take(MAX_RECOS_TO_SHOW).map(userId => FriendReco(userId, toHttpsUrl(imageUrls(userId))))
+    abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true) flatMap {
+      case Some(userIds) if userIds.size >= MIN_RECOS_TO_SHOW =>
+        getManyUserImageUrls(userIds: _*) map { imageUrls =>
+          userIds.sortBy { userId =>
+            /* kifi ghost images should be at the bottom of the list */
+            (if (imageUrls(userId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
+          }.take(MAX_RECOS_TO_SHOW).map(userId => FriendReco(userId, toHttpsUrl(imageUrls(userId))))
+        }
+      case Some(userIds) =>
+        log.info(s"[getFriendRecommendationsForUser $userId] not enough ($MIN_RECOS_TO_SHOW required): $userIds")
+        Future.successful(Seq.empty)
+      case None =>
+        log.info(s"[getFriendRecommendationsForUser $userId] returned None")
+        Future.successful(Seq.empty)
+    } recover {
+      case e =>
+        airbrake.notify(s"[getFriendRecommendationsForUser $userId] failed: abook.getFriendRecommendations", e)
+        Seq.empty
     }
-  } recover {
-    case throwable =>
-      airbrake.notify(s"abook.getFriendRecommendations($userId) returned None or less than $MIN_RECOS_TO_SHOW items", throwable)
-      Seq.empty
   }
 
   private def getManyUserImageUrls(userIds: Id[User]*): Future[Map[Id[User], String]] = {
     val seqF = userIds.map { userId => userId -> userCommander.getUserImageUrl(userId, 100) }
-    Future.traverse(seqF) { case (userId, urlF) => urlF.map(userId -> _) }.map(_.toMap)
+    Future.traverse(seqF) { case (userId, urlF) => urlF.map(userId -> _) } map (_.toMap) recover {
+      case e =>
+        airbrake.notify(s"[getManyUserImageUrls $userIds] failed", e)
+        Map.empty
+    }
   }
 
 }
