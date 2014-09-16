@@ -35,7 +35,7 @@ class ProdUserEventLoggingRepo(
 
   val warnBufferSize = 500
   val maxBufferSize = 10000
-  private val augmentors = Seq(UserIdAugmentor, new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new UserValuesAugmentor(shoeboxClient))
+  private val augmentors = Seq(UserIdAugmentor, new ExtensionVersionAugmentor(shoeboxClient), new UserSegmentAugmentor(shoeboxClient), new UserValuesAugmentor(shoeboxClient), new UserKifiCampaignIdAugmentor(shoeboxClient))
 
   def toBSON(event: UserEvent): BSONDocument = {
     val userBatch: Long = event.userId.id / 1000 //Warning: This is a (neccessary!) index optimization. Changing this will require a database change!
@@ -78,6 +78,25 @@ class UserValuesAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugm
     shoeboxClient.getUserValue(userEvent.userId, Gender.key).map(Seq(_).flatten.map { gender =>
       Gender.key.name -> ContextStringData(Gender(gender).toString)
     })
+  }
+}
+
+class UserKifiCampaignIdAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = true
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+    shoeboxClient.getUserValue(userEvent.userId, UserValueName.KIFI_CAMPAIGN_ID).map { kcidOpt =>
+      kcidOpt.map { kcid =>
+        val segments = kcid.split("-")
+        val segmentsWithNumber = segments zip (1 to segments.length)
+        val res: Seq[(String, ContextData)] = ("kcid" -> ContextStringData(kcid)) +: segmentsWithNumber.map {
+          case (segment, num) =>
+            (s"kcid_$num" -> ContextStringData(segment))
+        }
+        res //type inference had some trouble here, hence this intermediate variable
+      } getOrElse {
+        Seq(("kcid" -> ContextStringData("unknown")))
+      }
+    }
   }
 }
 

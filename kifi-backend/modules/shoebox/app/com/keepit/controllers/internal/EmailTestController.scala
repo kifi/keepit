@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.{ WelcomeEmailSender, FriendRequestAcceptedEmailSender, FeatureWaitlistEmailSender, ResetPasswordEmailSender }
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, FriendRequestEmailSender, WelcomeEmailSender, FriendConnectionMadeEmailSender, FeatureWaitlistEmailSender, ResetPasswordEmailSender }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -18,7 +18,9 @@ class EmailTestController @Inject() (
     welcomeEmailSender: WelcomeEmailSender,
     resetPasswordSender: ResetPasswordEmailSender,
     waitListSender: FeatureWaitlistEmailSender,
-    friendRequestAcceptedSender: FriendRequestAcceptedEmailSender) extends ShoeboxServiceController {
+    friendRequestEmailSender: FriendRequestEmailSender,
+    contactJoinedEmailSender: ContactJoinedEmailSender,
+    friendRequestAcceptedSender: FriendConnectionMadeEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -70,7 +72,10 @@ class EmailTestController @Inject() (
       case "mobileWaitlist" =>
         val feature = request.getQueryString("feature").getOrElse(waitListSender.emailTriggers.keys.head)
         waitListSender.sendToUser(sendTo, feature)
-      case "friendRequestAccepted" => friendRequestAcceptedSender.sendToUser(userId, friendId)
+      case "friendRequest" => friendRequestEmailSender.sendToUser(userId, friendId)
+      case "friendRequestAccepted" => friendRequestAcceptedSender.sendToUser(userId, friendId, NotificationCategory.User.FRIEND_ACCEPTED)
+      case "connectionMade" => friendRequestAcceptedSender.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE)
+      case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
     }
 
     emailF.map(email => Ok(email.htmlBody.value))

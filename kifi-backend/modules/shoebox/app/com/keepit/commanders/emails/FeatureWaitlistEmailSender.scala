@@ -1,7 +1,6 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
@@ -12,7 +11,6 @@ import com.keepit.model.NotificationCategory
 import scala.concurrent.Future
 
 class FeatureWaitlistEmailSender @Inject() (
-    db: Database,
     emailTemplateSender: EmailTemplateSender,
     config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
@@ -25,7 +23,7 @@ class FeatureWaitlistEmailSender @Inject() (
     emailTriggers.get(feature).map { template =>
       val emailToSend = EmailToSend(
         title = "kifi — Boom! You're on the wait list",
-        fromName = Some("Kifi"),
+        fromName = Some(Right("Kifi")),
         from = SystemEmailAddress.NOTIFICATIONS,
         to = Right(email),
         subject = "You're on the wait list",

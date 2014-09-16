@@ -113,15 +113,19 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
 
-  protected lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+  lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
-  protected lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
     val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
 
     require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
 
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
+
+  var myOwnLibraryKeepCount = 0
+  var memberLibraryKeepCount = 0
+  var discoverableKeepCount = 0
 
   @inline
   protected def getKeepVisibility(docId: Int, libId: Long, userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): Int = {
@@ -287,22 +291,23 @@ class UriFromKeepsScoreVectorSource(
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers, coreSize)
-    if (pq.size <= 0) return // no scorer
-
     val idMapper = reader.getIdMapper
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-
-    val recencyScorer = getRecencyScorer(readerContext)
 
     val writer: DataBufferWriter = new DataBufferWriter
 
     // load all URIs in the network with no score (this supersedes the old URIGraphSearcher things)
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
     loadURIsInNetwork(idFilter, reader, idMapper, uriIdDocValues, writer, output)
+
+    // execute the query
+    val pq = createScorerQueue(scorers, coreSize)
+    if (pq.size <= 0) return // no scorer
+
+    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
+    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
+    val recencyScorer = getRecencyScorer(readerContext)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
@@ -340,7 +345,8 @@ class UriFromKeepsScoreVectorSource(
   }
 
   private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
-    def load(libId: Long, visibility: Int): Unit = {
+    def load(libId: Long, visibility: Int): Int = {
+      var count = 0
       val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
       if (td != null) {
         var docId = td.nextDoc()
@@ -352,19 +358,22 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
             writer.putLong(uriId).putLong(keepId)
+            count += 1
           }
           docId = td.nextDoc()
         }
       }
+      count
     }
 
-    myOwnLibraryIds.foreach { libId => load(libId, Visibility.OWNER) }
+    myOwnLibraryKeepCount += myOwnLibraryIds.foldLeft(0) { (count, libId) => count + load(libId, Visibility.OWNER) }
 
     // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryIds.foreach { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
+    memberLibraryKeepCount += memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
 
-    myFriendIds.foreach { friendId =>
+    discoverableKeepCount += myFriendIds.foldLeft(0) { (count, friendId) =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
+      var cnt = 0
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
@@ -374,10 +383,12 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
+            cnt += 1
           }
           docId = td.nextDoc()
         }
       }
+      count + cnt
     }
   }
 }

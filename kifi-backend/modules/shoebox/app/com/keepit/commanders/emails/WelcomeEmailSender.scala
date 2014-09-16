@@ -23,7 +23,7 @@ class WelcomeEmailSender @Inject() (
   def sendToUser(userId: Id[User]): Future[ElectronicMail] = {
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
-      fromName = Some("Kifi"),
+      fromName = Some(Right("Kifi")),
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = "Let's get started with Kifi",
       to = Left(userId),

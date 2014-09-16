@@ -503,6 +503,7 @@ class UserCommander @Inject() (
   }
 
   def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUserId: Id[User], recipient: User): Unit = SafeFuture {
+    // todo(josh) replace with FriendRequestEmailSender
     val (requestingUser, requestingUserImage) = db.readWrite { implicit session =>
       val requestingUser = userRepo.get(myUserId)
       val destinationEmail = emailRepo.getByUser(recipient.id.get)

@@ -97,7 +97,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
     value.asOpt[String].flatMap { url =>
       uriIdOpt.flatMap { uriId =>
         val resultFut = summaryCache.getOrElseFuture(InboxUriSummaryCacheKey(uriId)) {
-          new SafeFuture(fetchUriSummary(uriId, url), Some("Fetching URI summary for extension inbox"))
+          new SafeFuture(fetchUriSummary(uriId, url), Some(s"Fetching URI summary ($uriId -> $url) for extension inbox"))
         }
         resultFut.value.flatMap(_.toOption)
       }

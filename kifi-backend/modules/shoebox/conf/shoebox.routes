@@ -80,12 +80,20 @@ POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
+# Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
+POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
+# Note: /ext/authed is deprecated. 3.2.12 and later use /ext/auth instead.
+GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+# Note: /ext/session/end is deprecated. 3.2.12 and later use DELETE /ext/auth instead.
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
+DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
+# Note: /ext/pageDetails will be replaced by /ext/page when we launch libraries.
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
+POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
@@ -109,7 +117,8 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
-POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id:PublicId[Library])
+POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
+DELETE  /ext/libraries/:id/keeps/:keepId @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
 
 ##########################################
 # Mobile

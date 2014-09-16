@@ -16,8 +16,9 @@ import scala.concurrent.Future
 import scala.util.Random
 
 object FriendRecommendationsEmailTip {
-  val FRIEND_RECOMMENDATIONS_TO_QUERY = 20
-  val FRIEND_RECOMMENDATIONS_TO_DELIVER = 5
+  val FRIEND_RECOS_TO_QUERY = 20
+  val MAX_RECOS_TO_SHOW = 5
+  val MIN_RECOS_TO_SHOW = 3
 }
 
 sealed case class FriendReco(userId: Id[User], avatarUrl: String)
@@ -30,29 +31,31 @@ class FriendRecommendationsEmailTip @Inject() (
 
   import FriendRecommendationsEmailTip._
 
-  def render(emailToSend: EmailToSend): Option[Future[Html]] = {
+  def render(emailToSend: EmailToSend): Future[Option[Html]] = {
     val userIdOpt = emailToSend.to.fold(id => Some(id), _ => None)
     userIdOpt map { userId =>
-      Some(getFriendRecommendationsForUser(userId) map { friendRecos =>
-        views.html.email.tips.friendRecommendations(friendRecos)
-      })
-    } getOrElse None
+      val recosF = getFriendRecommendationsForUser(userId)
+      recosF map { friendRecos =>
+        if (friendRecos.size >= MIN_RECOS_TO_SHOW) Some(views.html.email.tips.friendRecommendations(friendRecos))
+        else None
+      }
+    } getOrElse Future.successful(None)
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
     for {
-      userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOMMENDATIONS_TO_QUERY, bePatient = true)
-      if userIds.isDefined
+      userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true)
+      if userIds.isDefined && userIds.get.size >= MIN_RECOS_TO_SHOW
       imageUrls <- getManyUserImageUrls(userIds.get: _*)
     } yield {
       userIds.get.sortBy { userId =>
         /* kifi ghost images should be at the bottom of the list */
         (if (imageUrls(userId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
-      }.take(FRIEND_RECOMMENDATIONS_TO_DELIVER).map(userId => FriendReco(userId, toHttpsUrl(imageUrls(userId))))
+      }.take(MAX_RECOS_TO_SHOW).map(userId => FriendReco(userId, toHttpsUrl(imageUrls(userId))))
     }
   } recover {
     case throwable =>
-      airbrake.notify(s"getFriendRecommendationsForUser($userId) failed", throwable)
+      airbrake.notify(s"abook.getFriendRecommendations($userId) returned None or less than $MIN_RECOS_TO_SHOW items", throwable)
       Seq.empty
   }
 
