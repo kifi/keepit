@@ -14,6 +14,7 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   def kind: VertexType = data.kind
   val outgoingEdgeReader: OutgoingEdgeReader = new SimpleOutgoingEdgeReader(this, currentVertex.outgoingEdges)
   val incomingEdgeReader: IncomingEdgeReader = new SimpleIncomingEdgeReader(this, currentVertex.incomingEdges, edgeData)
+  def hasVertex(vertexId: VertexId) = vertices.contains(vertexId)
   def moveTo(vertex: VertexId): Unit = {
     Vertex.checkIfVertexExists(vertices)(vertex)
     currentVertexId = Some(vertex)
