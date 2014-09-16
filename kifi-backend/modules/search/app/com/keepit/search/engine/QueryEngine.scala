@@ -72,12 +72,12 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeights(): Array[Float] = matchWeights
 
   def dumpBuf(ids: Set[Long]): Unit = {
-    log.info(s"""NE:BUF starting buffer dump for: ${ids.mkString(",")}""")
-
     dataBuffer.scan(new DataBufferReader) { reader =>
       // assuming the first datum is ID
       val id = reader.nextLong()
       if (ids.contains(id)) {
+        val visibility = reader.recordType
+        val id2 = if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
         def scores: String = {
           val out = new ListBuffer[(Int, Float)]
           while (reader.hasMore()) {
@@ -88,10 +88,8 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           }
           out.mkString("[", ", ", "]")
         }
-        log.info(s"NE:BUF id=$id recType=${reader.recordType} scores=${scores}")
+        log.info(s"NE:BUF id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
       }
     }
-
-    log.info("NE:BUF ending buffer dump")
   }
 }

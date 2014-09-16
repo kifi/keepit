@@ -68,7 +68,7 @@ class LibraryCommander @Inject() (
         ownerId = owner.externalId,
         description = lib.description,
         slug = lib.slug,
-        url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+        url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
         visibility = lib.visibility,
         collaborators = collabs,
         followers = follows,
@@ -558,7 +558,8 @@ case class LibraryInfo(
   shortDescription: Option[String],
   url: String,
   ownerId: ExternalId[User],
-  numKeeps: Int)
+  numKeeps: Int,
+  kind: LibraryKind)
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -569,7 +570,8 @@ object LibraryInfo {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
-    (__ \ 'numKeeps).format[Int]
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'kind).format[LibraryKind]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: User, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -578,9 +580,10 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+      url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
       ownerId = owner.externalId,
-      numKeeps = keepCount
+      numKeeps = keepCount,
+      kind = lib.kind
     )
   }
 

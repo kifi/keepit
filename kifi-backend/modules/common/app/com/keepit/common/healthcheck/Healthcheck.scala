@@ -130,7 +130,7 @@ class HealthcheckActor @Inject() (
         val message = misses.map {
           case (key, ratio) =>
             val keyName = key.substring(cacheName.length + 1)
-            s"$keyName:$ratio%(h${globalCacheStatistics.hitCount(key)},m${globalCacheStatistics.missCount(key)},s${globalCacheStatistics.setCount(key)}})"
+            s"$keyName:$ratio%(h${globalCacheStatistics.hitCount(key)},m${globalCacheStatistics.missCount(key)},s${globalCacheStatistics.setCount(key)})"
         } mkString ", "
         self ! AirbrakeError(message = Some(s"there are too many cache misses: $message"))
       }

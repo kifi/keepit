@@ -97,6 +97,22 @@ class LDACommander @Inject() (
     }
   }
 
+  def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI]): Option[LDAUserURIInterestScore] = {
+    val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
+    val uriFeatOpt = db.readOnlyReplica { implicit s => uriTopicRepo.getFeature(uriId, wordRep.version) }
+    libraryInducedUserURIInterestScore(libFeats, uriFeatOpt)
+  }
+
+  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+    if (libFeats.size > 0 && uriFeatOpt.isDefined) {
+      val uriFeat = uriFeatOpt.get.value
+      val libsFeats = libFeats.map { _.value }
+      val div = libsFeats.map { v => KL_divergence(v, uriFeat) }.min
+      val score = (1f - div) max 0f
+      Some(LDAUserURIInterestScore(score, 1f)) // need to rethink confidence score
+    } else None
+  }
+
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>

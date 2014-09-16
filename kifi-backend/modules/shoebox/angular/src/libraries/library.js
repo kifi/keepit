@@ -92,6 +92,7 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+
     //
     // Watches and listeners.
     //
@@ -100,6 +101,7 @@ angular.module('kifi')
         $scope.keeps.unshift(keep);
       }
     });
+
 
     //
     // On LibraryCtrl initialization.
@@ -133,5 +135,158 @@ angular.module('kifi')
       $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
       $scope.loading = false;
     });
+  }
+])
+
+.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService',
+  function ($document, friendService, keyIndices, libraryService) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        library: '='
+      },
+      templateUrl: 'libraries/libraryShareSearch.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        //
+        // Internal data.
+        //
+        var resultIndex = -1;
+
+        //
+        // Scope data.
+        //
+        scope.results = [];
+        scope.search = {};
+        scope.showDropdown = false;
+
+
+        //
+        // Internal methods.
+        //
+        function showDropdown() {
+          scope.showDropdown = true;
+          $document.on('click', onClick);
+          resultIndex = -1;
+          clearSelection();
+          element.on('keydown', processKeyEvent);
+        }
+
+        function hideDropdown() {
+          scope.showDropdown = false;
+          $document.off('click', onClick);
+          element.off('keydown', processKeyEvent);
+        }
+
+        function onClick(e) {
+          // Clicking outside the dropdown menu will close the menu.
+          if (!element.find(e.target)[0]) {
+            scope.$apply(function () {
+              scope.search.name = '';
+              hideDropdown();
+            });
+          }
+        }
+
+        function clearSelection () {
+          scope.results.forEach(function (result) {
+            result.selected = false;
+          });
+        }
+
+        function processKeyEvent (event) {
+          clearSelection();
+
+          function getNextIndex(index, direction) {
+            var nextIndex = index + direction;
+            return (nextIndex < 0 || nextIndex > scope.results.length - 1) ? index : nextIndex;
+          }
+
+          switch (event.which) {
+            case keyIndices.KEY_UP:
+              resultIndex = getNextIndex(resultIndex, -1);
+              scope.results[resultIndex].selected = true;
+              break;
+            case keyIndices.KEY_DOWN:
+              resultIndex = getNextIndex(resultIndex, 1);
+              scope.results[resultIndex].selected = true;
+              break;
+            case keyIndices.KEY_ENTER:
+              scope.shareLibrary(scope.results[resultIndex]);
+
+              // After sharing, reset index.
+              resultIndex = -1;
+              break;
+            case keyIndices.KEY_ESC:
+              hideDropdown();
+              break;
+          }
+        }
+
+        function populateDropDown(opt_query) {
+          libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
+            if (contacts && contacts.length) {
+              scope.results = contacts;
+
+              scope.results.forEach(function (result) {
+                if (result.id) {
+                  result.image = friendService.getPictureUrlForUser(result);
+                }
+              });
+
+              if (scope.results.length > 0) {
+                showDropdown();
+              } else {
+                hideDropdown();
+              }
+            } else {
+              // TODO(yiping): show backfill cards when length is less than 5.
+              scope.results = [];
+            }
+          });
+        }
+
+
+        //
+        // Scope methods.
+        //
+        scope.onInputFocus = function () {
+          // For empty state (when user has not inputted a query), show the contacts
+          // that the user has most recently sent messages to.
+          if (!scope.search.name) {
+            populateDropDown();
+          }
+        };
+
+        scope.change = _.debounce(function () {
+          populateDropDown(scope.search.name);
+        }, 200);
+
+        scope.shareLibrary = function (result) {
+          // For now, we are only supporting inviting one person at a time.
+          var invitees = [
+            {
+              type: result.id ? 'user' : 'email',
+              id: result.id ? result.id : result.email,
+              access: 'read_only'  // Right now, we're only supporting read-only access.
+            }
+          ];
+
+          // console.log('Library ID: ' + scope.library.id + ' Invitee: ' + JSON.stringify(invitees));
+
+          // TODO(yiping): implement error path.
+          libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
+            // Show sent indication.
+            // console.log('Library shared!');
+          });
+        };
+
+        scope.onResultHover = function (result) {
+          clearSelection();
+          result.selected = true;
+          resultIndex = _.indexOf(scope.results, result);
+        };
+      }
+    };
   }
 ]);

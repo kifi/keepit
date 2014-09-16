@@ -6,13 +6,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.DebugOption._
 import com.keepit.search.engine.result.{ KifiShardResult, KifiResultCollector }
 import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import scala.math._
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
@@ -62,8 +61,9 @@ class KifiSearchImpl(
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-    if (debugFlag != 0) {
-      if ((debugFlag & DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+    if (debugFlags != 0) {
+      if ((debugFlags & DebugOption.DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
     }
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
@@ -91,7 +91,7 @@ class KifiSearchImpl(
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
-    val usefulPages = monitoredAwait.result(clickHistoryFuture, 100 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
+    val usefulPages = if (clickHistoryFuture.isCompleted) Await.result(clickHistoryFuture, 0 millisecond) else MultiHashFilter.emptyFilter[ClickedURI]
 
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {

@@ -1,6 +1,6 @@
 package com.keepit.common.mail.template
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress }
 import com.keepit.model.User
 import com.keepit.serializer.EitherFormat
@@ -9,11 +9,12 @@ import play.twirl.api.Html
 case class EmailToSend(
   title: String = "Kifi",
   from: EmailAddress,
-  fromName: Option[String] = Some("Kifi"),
+  fromName: Option[Either[Id[User], String]] = Some(Right("Kifi")),
   to: Either[Id[User], EmailAddress],
   cc: Seq[EmailAddress] = Seq[EmailAddress](),
   subject: String,
   htmlTemplate: Html,
+  textTemplate: Option[Html] = None,
   category: ElectronicMailCategory,
   campaign: Option[String] = None,
   senderUserId: Option[Id[User]] = None,
@@ -32,15 +33,17 @@ object EmailToSend {
   }
 
   val toFormat = EitherFormat[Id[User], EmailAddress]
+  val fromNameFormat = EitherFormat[Id[User], String]
 
   implicit val emailToSendFormat: Format[EmailToSend] = (
     (__ \ 'title).format[String] and
     (__ \ 'from).format[EmailAddress] and
-    (__ \ 'fromName).formatNullable[String] and
+    (__ \ 'fromName).formatNullable(fromNameFormat) and
     (__ \ 'to).format(toFormat) and
     (__ \ 'cc).format[Seq[EmailAddress]] and
     (__ \ 'subject).format[String] and
     (__ \ 'htmlTemplate).format[Html] and
+    (__ \ 'textTemplate).formatNullable[Html] and
     (__ \ 'category).format[ElectronicMailCategory] and
     (__ \ 'campaign).format[Option[String]] and
     (__ \ 'senderUserId).formatNullable[Id[User]] and

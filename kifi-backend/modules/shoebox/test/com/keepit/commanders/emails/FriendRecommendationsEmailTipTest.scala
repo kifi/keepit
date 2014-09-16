@@ -66,7 +66,6 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
           to = Left(toUserId),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
-          fromName = Some("Kifi"),
           subject = "hi",
           category = NotificationCategory.System.ADMIN,
           htmlTemplate = Html("")

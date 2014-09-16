@@ -4,10 +4,11 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ KeepsCommander, RawBookmarkRepresentation, LibraryCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ LibraryMembershipRepo, KeepSource, Library, LibraryAccess }
+import com.keepit.model.{ LibraryMembershipRepo, Keep, KeepSource, Library, LibraryAccess }
 import play.api.libs.json._
 
 import scala.util.{ Success, Failure }
@@ -32,7 +33,7 @@ class ExtLibraryController @Inject() (
       Json.obj(
         "id" -> Library.publicId(lib.id.get).id,
         "name" -> lib.name,
-        "path" -> Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+        "path" -> Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
         "visibility" -> Json.toJson(lib.visibility))
     }
     Ok(Json.obj("libraries" -> Json.toJson(jsons)))
@@ -59,7 +60,21 @@ class ExtLibraryController @Inject() (
             val rawBookmark = info.as[RawBookmarkRepresentation]
             Ok(Json.toJson(keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid_access"))
+            Forbidden
+        }
+    }
+  }
+
+  def removeKeep(pubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) =>
+        BadRequest(Json.obj("error" -> "invalid_library_id"))
+      case Success(libraryId) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+        keepsCommander.unkeepFromLibrary(Seq(keepExtId), libraryId, request.userId) match {
+          case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
+          case Right(_) => NoContent
         }
     }
   }
