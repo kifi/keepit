@@ -42,11 +42,20 @@ const api = function() {
     }
   });
 
+  self.port.on('detach', function () {
+    log('[detach]');
+    api.port.on = api.port.emit = api.noop;
+    for (var i in api.onEnd) {
+      api.onEnd[i]();
+    }
+    api.onEnd.length = msgHandlers.length = 0;
+  });
+
   return {
     dev: self.options.dev,
     mutationsFirePromptly: false,
     noop: function() {},
-    onEnd: [],  // TODO: find an event that will allow us to invoke these
+    onEnd: [],
     port: {
       emit: function(type, data, callback) {
         if (!callback && typeof data == "function") {
