@@ -19,6 +19,11 @@ object DebugOption {
       if (parts.length > 0 && parts.head == "library") Some(parts.tail.map(_.toLong).toSet) else None
     }
   }
+
+  object Timing {
+    val flag = 0x00000004
+    def unapply(str: String): Boolean = (str == "timing")
+  }
 }
 
 trait DebugOption { self: Logging =>
@@ -37,6 +42,8 @@ trait DebugOption { self: Logging =>
         case Library(ids) =>
           debugLibraryIds = ids
           flags | Library.flag
+        case Timing() =>
+          flags | Timing.flag
         case _ =>
           log.warn(s"debug mode ignored: $str")
           flags

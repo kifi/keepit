@@ -3,7 +3,6 @@ package com.keepit.search.engine
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
@@ -23,9 +22,6 @@ class KifiSearchNonUserImpl(
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs) extends KifiSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
-
-  private[this] val currentTime = currentDateTime.getMillis()
-  private[this] val idFilter = filter.idFilter
 
   // get config params
   private[this] val percentMatch = config.asFloat("percentMatch")
@@ -47,10 +43,7 @@ class KifiSearchNonUserImpl(
   }
 
   def execute(): KifiShardResult = {
-    val now = currentDateTime
     val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
-
-    val tProcessHits = currentDateTime.getMillis()
 
     val total = textHits.totalHits
 
@@ -67,16 +60,15 @@ class KifiSearchNonUserImpl(
       }
     }
 
-    timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
-    timeLogs.total = currentDateTime.getMillis() - now.getMillis()
+    timeLogs.processHits()
+    timeLogs.done()
     timing()
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
   }
 
   override def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
-    val recOpt = if (h.keepId >= 0) getKeepRecord(h.keepId) else None
-    recOpt match {
+    getKeepRecord(h.keepId) match {
       case Some(r) =>
         KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
       case None =>

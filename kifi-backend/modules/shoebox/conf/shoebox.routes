@@ -95,7 +95,7 @@ DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthControlle
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
-GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
+GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
 POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
@@ -546,8 +546,6 @@ POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSear
 GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
 GET     /admin/search/compare     @com.keepit.controllers.admin.AdminSearchController.searchComparisonPage
 
-GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
-POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
 GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags

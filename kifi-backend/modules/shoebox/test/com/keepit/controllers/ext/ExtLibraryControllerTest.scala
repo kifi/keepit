@@ -120,18 +120,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.imagenius.com",
             "guided" -> false))
         val result1 = extLibraryController.addKeep(pubId1)(request1)
-        status(result1) must equalTo(OK)
+        status(result1) === OK
         contentType(result1) must beSome("application/json")
         val keep1 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).head }
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
-          s"""
-            |{
-              |"id":"${keep1.externalId}",
-              |"title":"kayne-fidence",
-              |"url":"http://www.imagenius.com",
-              |"isPrivate":false,
-              |"libraryId":"${pubId1.id}"}""".stripMargin
-        ))
+        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true}"""
 
         val request2 = FakeRequest("POST", path2).withBody(
           Json.obj(
@@ -139,18 +131,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.beyonceisbetter.com",
             "guided" -> false))
         val result2 = extLibraryController.addKeep(pubId2)(request2)
-        status(result2) must equalTo(OK)
+        status(result2) === OK
         contentType(result2) must beSome("application/json")
         val keep2 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib2.id.get, 10, 0).head }
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-            |{
-              |"id":"${keep2.externalId}",
-              |"title":"IMMA LET YOU FINISH",
-              |"url":"http://www.beyonceisbetter.com",
-              |"isPrivate":true,
-              |"libraryId":"${pubId2.id}"}""".stripMargin
-        ))
+        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true}"""
 
         val request3 = FakeRequest("POST", path3).withBody(
           Json.obj(
@@ -158,7 +142,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.beyonceisbetter.com",
             "guided" -> false))
         val result3 = extLibraryController.addKeep(pubId3)(request3)
-        status(result3) must equalTo(BAD_REQUEST)
+        status(result3) === FORBIDDEN
       }
     }
 
@@ -206,43 +190,20 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         // test unkeep from own library
         val request1 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId1, keep1.externalId).url)
         val result1 = extLibraryController.removeKeep(pubId1, keep1.externalId)(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
-          s"""
-             |{
-             |  "unkept":[{"id":"${keep1.externalId}","title":"Run", "url":"www.runfast.com", "isPrivate":false, "libraryId":"${pubId1.id}"}],
-             |  "failed":[]
-             |}
-           """.stripMargin))
+        status(result1) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("DontChoke", "Throw") }
 
         // test incorrect unkeep from own library (keep exists but in wrong library)
         val request2 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId2, keep2.externalId).url)
         val result2 = extLibraryController.removeKeep(pubId2, keep2.externalId)(request2)
-        status(result2) must equalTo(OK)
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-             |{
-             |  "unkept":[],
-             |  "failed":["${keep2.externalId}"]
-             |}
-           """.stripMargin))
+        status(result2) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("DontChoke", "Throw") }
 
         // test unkeep from someone else's library (have RW access)
         inject[FakeActionAuthenticator].setUser(user2)
         val request3 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId1, keep3.externalId).url)
         val result3 = extLibraryController.removeKeep(pubId1, keep3.externalId)(request3)
-        status(result3) must equalTo(OK)
-        contentType(result3) must beSome("application/json")
-        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
-          s"""
-             |{
-             |  "unkept":[{"id":"${keep3.externalId}","title":"DontChoke", "url":"www.howtonotchoke.com", "isPrivate":false, "libraryId":"${pubId1.id}"}],
-             |  "failed":[]
-             |}
-           """.stripMargin))
+        status(result3) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("Throw") }
       }
     }

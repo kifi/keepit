@@ -59,13 +59,13 @@ case class KeepData(
   id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
-  library: LibraryData)
+  library: Option[LibraryData] = None)
 object KeepData {
   implicit val format: Format[KeepData] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
-    (__ \ 'library).format[LibraryData]
+    (__ \ 'library).formatNullable[LibraryData]
   )(KeepData.apply, unlift(KeepData.unapply))
 }
 
@@ -73,12 +73,12 @@ case class LibraryData(
   id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
-  url: String)
+  path: String)
 object LibraryData {
   implicit val format: Format[LibraryData] = (
     (__ \ 'id).format[PublicId[Library]] and
     (__ \ 'name).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'url).format[String]
+    (__ \ 'path).format[String]
   )(LibraryData.apply, unlift(LibraryData.unapply))
 }

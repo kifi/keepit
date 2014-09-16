@@ -245,6 +245,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[Library] = {
+    db.readOnlyMaster { implicit s =>
+      libraryRepo.getByUser(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(_._2)
+    }
+  }
+
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
@@ -558,7 +564,8 @@ case class LibraryInfo(
   shortDescription: Option[String],
   url: String,
   ownerId: ExternalId[User],
-  numKeeps: Int)
+  numKeeps: Int,
+  kind: LibraryKind)
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -569,7 +576,8 @@ object LibraryInfo {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
-    (__ \ 'numKeeps).format[Int]
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'kind).format[LibraryKind]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: User, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -580,7 +588,8 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
       ownerId = owner.externalId,
-      numKeeps = keepCount
+      numKeeps = keepCount,
+      kind = lib.kind
     )
   }
 

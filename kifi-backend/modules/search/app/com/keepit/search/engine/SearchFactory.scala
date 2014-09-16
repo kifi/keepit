@@ -54,6 +54,8 @@ class SearchFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig): Seq[KifiSearch] = {
 
+    val currentTime = System.currentTimeMillis()
+
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
@@ -73,6 +75,7 @@ class SearchFactory @Inject() (
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
+        val parseDoneAt = System.currentTimeMillis()
 
         // if this is a library restricted search, add a library filter query
         filter.libraryId.map { libId => engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString))) }
@@ -81,8 +84,8 @@ class SearchFactory @Inject() (
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
 
-          val timeLogs = new SearchTimeLogs()
-          timeLogs.queryParsing = parser.totalParseTime
+          val timeLogs = new SearchTimeLogs(currentTime)
+          timeLogs.queryParsing(parseDoneAt)
 
           new KifiSearchImpl(
             userId,
@@ -137,6 +140,8 @@ class SearchFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig): Seq[KifiSearchNonUserImpl] = {
 
+    val currentTime = System.currentTimeMillis()
+
     // this non-user is treat as if he/she is a member of the library
     val libraryIdsFuture = Future.successful((LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
     val friendIdsFuture = Future.successful(LongArraySet.empty)
@@ -154,6 +159,7 @@ class SearchFactory @Inject() (
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
+        val parseDoneAt = System.currentTimeMillis()
 
         // this is a non-user, library restricted, search, add a library filter query
         engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString)))
@@ -162,8 +168,8 @@ class SearchFactory @Inject() (
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
 
-          val timeLogs = new SearchTimeLogs()
-          timeLogs.queryParsing = parser.totalParseTime
+          val timeLogs = new SearchTimeLogs(currentTime)
+          timeLogs.queryParsing(parseDoneAt)
 
           new KifiSearchNonUserImpl(
             libId,
