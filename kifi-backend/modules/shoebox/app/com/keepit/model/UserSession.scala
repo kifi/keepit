@@ -3,7 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.shoebox.model.Ids
-import Ids.{ UserSessionExternalId, UserSessionId }
+import Ids.{ UserSessionExternalId }
 import com.keepit.model.view.UserSessionView
 import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.DateTime
@@ -29,10 +29,8 @@ case class UserSession(
 }
 
 object UserSession {
-  implicit def toUserSessionId(id: Id[UserSession]): UserSessionId = id.copy()
-  implicit def toUserSessionExternalId(id: ExternalId[UserSession]): UserSessionExternalId = id.copy()
-  implicit def fromUserSessionId(id: UserSessionId): Id[UserSession] = id.copy()
-  implicit def fromUserSessionExternalId(id: UserSessionExternalId): ExternalId[UserSession] = id.copy()
+  implicit def toUserSessionExternalId(id: ExternalId[UserSession]): UserSessionExternalId = UserSessionExternalId(id.id)
+  implicit def fromUserSessionExternalId(id: UserSessionExternalId): ExternalId[UserSession] = ExternalId[UserSession](id.id)
 
   @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   private implicit val idFormat = Id.format[UserSession]

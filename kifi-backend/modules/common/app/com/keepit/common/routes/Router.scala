@@ -1,6 +1,6 @@
 package com.keepit.common.routes
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.shoebox.model.Ids
 import Ids.UserSessionExternalId
@@ -42,6 +42,7 @@ object ParamValue {
   implicit def intToParam(i: Int) = ParamValue(Some(i.toString))
   implicit def stateToParam[T](i: State[T]) = ParamValue(Some(i.value))
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(Some(i.id))
+  implicit def externalIdSurrogateToParam[T <: SurrogateExternalId](i: T) = ParamValue(Some(i.id))
   implicit def idToParam[T](i: Id[T]) = ParamValue(Some(i.id.toString))
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = i.map(e) getOrElse ParamValue(None)
   implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(Some(seqNum.value.toString))
