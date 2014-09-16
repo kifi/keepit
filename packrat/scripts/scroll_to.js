@@ -3,8 +3,8 @@
 
 function scrollTo(r, computeDuration) {
   var pad = 100;
-  var hWin = $(window).height();
-  var wWin = $(window).width();
+  var hWin = window.innerHeight;
+  var wWin = window.innerWidth;
   var sTop = $(document).scrollTop(), sTop2;
   var sLeft = $(document).scrollLeft(), sLeft2;
   var oTop = sTop + r.top;
