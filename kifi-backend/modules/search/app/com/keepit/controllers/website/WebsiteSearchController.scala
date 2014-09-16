@@ -1,7 +1,10 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.concurrent.ExecutionContext._
+import com.keepit.common.db.Id
 import com.keepit.controllers.util.SearchControllerUtil
+import com.keepit.controllers.util.SearchControllerUtil._
+import com.keepit.model.{ User, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.iteratee.Enumerator
 import com.google.inject.Inject
@@ -10,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.{ AugmentationCommander, SearchCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import play.api.libs.json.Json
@@ -52,64 +56,54 @@ class WebsiteSearchController @Inject() (
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+    auth: Option[String],
+    withUriSummary: Boolean = false) = {
 
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
+    def execSearch(userId: Id[User], acceptLangs: Seq[String], experiments: Set[ExperimentType], libraryAccessAuthorized: Boolean) = {
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None)
+      val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, library, libraryAccessAuthorized, maxHits, lastUUIDStr, context, predefinedConfig = None)
 
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+      val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
-    var decorationFutures: List[Future[String]] = Nil
+      var decorationFutures: List[Future[String]] = Nil
 
-    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher, shoeboxClient)(userId, _).map(Json.stringify)(immediate))
+      if (userId != nonUser) {
+        val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher, shoeboxClient)(userId, _).map(Json.stringify)(immediate))
+        decorationFutures = augmentationFuture :: decorationFutures
+      }
 
-    decorationFutures = augmentationFuture :: decorationFutures
+      if (withUriSummary) {
+        decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+      }
 
-    if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+      val decorationEnumerator = reactiveEnumerator(decorationFutures)
+
+      val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
+
+      Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
     }
 
-    val decorationEnumerator = reactiveEnumerator(decorationFutures)
-
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
-
-    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+    JsonAction.apply(
+      authenticatedAction = { request =>
+        val libraryAccessAuthorized = checkPermission(library, auth, request.request)
+        execSearch(request.userId, request.request.acceptLanguages.map(_.code), request.experiments, libraryAccessAuthorized)
+      },
+      unauthenticatedAction = { request =>
+        val libraryAccessAuthorized = checkPermission(library, auth, request)
+        execSearch(nonUser, request.acceptLanguages.map(_.code), Set[ExperimentType](), libraryAccessAuthorized)
+      }
+    )
   }
 
-  def nonUserSearch(
-    query: String,
-    filter: Option[String],
-    library: Option[String],
-    maxHits: Int,
-    lastUUIDStr: Option[String],
-    context: Option[String],
-    withUriSummary: Boolean = false) = JsonAction.authenticated { request => // new request type? > Andrew
-
-    import SearchControllerUtil._
-
-    val userId = request.userId
-    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
-
-    val plainResultFuture = searchCommander.search2(nonUser, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None)
-
-    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
-
-    var decorationFutures: List[Future[String]] = Nil
-
-    // TODO: augmentation
-    // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
-
-    if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+  private def checkPermission(library: Option[String], auth: Option[String], requestHeader: RequestHeader): Boolean = {
+    val cookie = Some(1) //requestHeader.cookies.get(???) // TODO
+    (library, auth, cookie) match {
+      case (Some(libPublicId), Some(authCode), Some(cookie)) =>
+        // TODO: call shoebox to check permission
+        true
+      case _ =>
+        false
     }
-
-    val decorationEnumerator = reactiveEnumerator(decorationFutures)
-
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
-
-    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
   //external (from the website)

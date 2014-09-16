@@ -103,6 +103,7 @@ trait SearchServiceClient extends ServiceClient {
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
@@ -397,7 +398,7 @@ class SearchServiceClientImpl(
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, false, maxHits, context, debug)
   }
 
   def distSearch2(
@@ -408,11 +409,12 @@ class SearchServiceClientImpl(
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug)
+    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, libraryAccessAuthorized, maxHits, context, debug)
   }
 
   private def distSearch(
@@ -424,6 +426,7 @@ class SearchServiceClientImpl(
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -437,6 +440,7 @@ class SearchServiceClientImpl(
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
     if (filter.isDefined) builder += ("filter", filter.get)
     if (library.isDefined) builder += ("library", library.get)
+    if (libraryAccessAuthorized) builder += ("libraryAccessAuthorized", true)
     if (context.isDefined) builder += ("context", context.get)
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
@@ -465,6 +469,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
   def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)

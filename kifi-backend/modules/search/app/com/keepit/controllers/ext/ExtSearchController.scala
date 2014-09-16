@@ -62,7 +62,7 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, false, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
 
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 

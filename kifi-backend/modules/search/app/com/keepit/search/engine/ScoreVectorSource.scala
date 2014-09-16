@@ -108,23 +108,25 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
   protected val userId: Long
   protected val friendIdsFuture: Future[Set[Long]]
-  protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])]
+  protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
   protected val monitoredAwait: MonitoredAwait
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
 
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
-  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
-    val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
+  lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
+    val (myLibIds, memberLibIds, trustedLibIds, authorizedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
 
     require(myLibIds.forall { libId => memberLibIds.contains(libId) }) // sanity check
 
-    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
   }
 
   var myOwnLibraryKeepCount = 0
   var memberLibraryKeepCount = 0
+  var trustedLibraryKeepCount = 0
+  var authorizedLibraryKeepCount = 0
   var discoverableKeepCount = 0
 
   @inline
@@ -282,7 +284,7 @@ class UriFromKeepsScoreVectorSource(
     protected val searcher: Searcher,
     protected val userId: Long,
     protected val friendIdsFuture: Future[Set[Long]],
-    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
@@ -371,6 +373,13 @@ class UriFromKeepsScoreVectorSource(
     // memberLibraryIds includes myOwnLibraryIds
     memberLibraryKeepCount += memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
 
+    trustedLibraryKeepCount += trustedLibraryIds.foldLeft(0) { (count, libId) => count + (if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.OTHERS) else 0) }
+
+    // load URIs from a library authorized to search as MEMBER
+    authorizedLibraryKeepCount += authorizedLibraryIds.foldLeft(0) { (count, libId) =>
+      count + (if (memberLibraryIds.findIndex(libId) < 0 && trustedLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0)
+    }
+
     discoverableKeepCount += myFriendIds.foldLeft(0) { (count, friendId) =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
       var cnt = 0
@@ -402,7 +411,7 @@ class LibraryScoreVectorSource(
     protected val searcher: Searcher,
     protected val userId: Long,
     protected val friendIdsFuture: Future[Set[Long]],
-    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with VisibilityEvaluator {
@@ -451,7 +460,7 @@ class LibraryFromKeepsScoreVectorSource(
     protected val searcher: Searcher,
     protected val userId: Long,
     protected val friendIdsFuture: Future[Set[Long]],
-    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {

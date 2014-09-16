@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.Library
 import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
 
-abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[String]) {
+abstract class SearchFilter(val libraryId: Option[Id[Library]], libraryAccessAuthorized: Boolean, context: Option[String]) {
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
@@ -13,27 +13,28 @@ abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[
   def includeFriends: Boolean
   def includeOthers: Boolean
   def isDefault = false
+  def isLibraryAccessAuthorized = libraryAccessAuthorized
 }
 
 object SearchFilter {
 
-  def apply(filter: Option[String], library: Option[String], context: Option[String])(implicit publicIdConfig: PublicIdConfiguration): SearchFilter = {
+  def apply(filter: Option[String], library: Option[String], libraryAccessAuthorized: Boolean, context: Option[String])(implicit publicIdConfig: PublicIdConfiguration): SearchFilter = {
     filter match {
       case Some("m") =>
-        SearchFilter.mine(library, context)
+        SearchFilter.mine(library, libraryAccessAuthorized, context)
       case Some("f") =>
-        SearchFilter.friends(library, context)
+        SearchFilter.friends(library, libraryAccessAuthorized, context)
       case Some("a") =>
-        SearchFilter.all(library, context)
+        SearchFilter.all(library, libraryAccessAuthorized, context)
       case _ =>
-        SearchFilter.default(library, context)
+        SearchFilter.default(library, libraryAccessAuthorized, context)
     }
   }
 
-  def default(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+  def default(libraryPublicId: Option[String] = None, libraryAccessAuthorized: Boolean = false, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
     val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-    new SearchFilter(libId, context) {
+    new SearchFilter(libId, libraryAccessAuthorized, context) {
       def includeMine = true
       def includeFriends = true
       def includeOthers = true
@@ -41,30 +42,30 @@ object SearchFilter {
     }
   }
 
-  def all(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+  def all(libraryPublicId: Option[String] = None, libraryAccessAuthorized: Boolean = false, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
     val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-    new SearchFilter(libId, context) {
+    new SearchFilter(libId, libraryAccessAuthorized, context) {
       def includeMine = true
       def includeFriends = true
       def includeOthers = false
     }
   }
 
-  def mine(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+  def mine(libraryPublicId: Option[String] = None, libraryAccessAuthorized: Boolean = false, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
     val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-    new SearchFilter(libId, context) {
+    new SearchFilter(libId, libraryAccessAuthorized, context) {
       def includeMine = true
       def includeFriends = false
       def includeOthers = false
     }
   }
 
-  def friends(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
+  def friends(libraryPublicId: Option[String] = None, libraryAccessAuthorized: Boolean = false, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
     val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 
-    new SearchFilter(libId, context) {
+    new SearchFilter(libId, libraryAccessAuthorized, context) {
       def includeMine = false
       def includeFriends = true
       def includeOthers = false

@@ -59,7 +59,7 @@ class SearchFactory @Inject() (
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryId)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryId, filter.isLibraryAccessAuthorized)
     val friendIdsFuture = getFriendIdsFuture(userId)
 
     val parser = new KQueryParser(
@@ -109,11 +109,16 @@ class SearchFactory @Inject() (
 
   def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
-  def getLibraryIdsFuture(userId: Id[User], libraryRestriction: Option[Id[Library]]): Future[(Set[Long], Set[Long], Set[Long])] = {
+  def getLibraryIdsFuture(userId: Id[User], library: Option[Id[Library]], libraryAccessAuthorized: Boolean): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
 
-    val trustedPublishedLibIds = libraryRestriction match {
+    val trustedPublishedLibIds = library match {
       case Some(libId) => LongArraySet.from(Array(libId.id)) // if this library is not public, it is ignored by the engine
       case None => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
+    }
+
+    val authorizedLibIds = library match {
+      case Some(libId) if libraryAccessAuthorized => LongArraySet.from(Array(libId.id))
+      case None => LongArraySet.empty
     }
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
@@ -127,12 +132,11 @@ class SearchFactory @Inject() (
       }
     }
 
-    future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds) }(immediate)
+    future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds, authorizedLibIds) }(immediate)
   }
 
   def getKifiNonUserSearch(
     shards: Set[Shard[NormalizedURI]],
-    libId: Id[Library],
     queryString: String,
     lang1: Lang,
     lang2: Option[Lang],
@@ -142,8 +146,17 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    // this non-user is treat as if he/she is a member of the library
-    val libraryIdsFuture = Future.successful((LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
+    require(filter.libraryId.isEmpty, "library must be specified")
+
+    val libId = filter.libraryId.get
+
+    val libraryIdsFuture = if (filter.isLibraryAccessAuthorized) {
+      // this non-user is treated as if he/she were a member of the library
+      Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId.id))))
+    } else {
+      // not authorized, but the library may be a published one
+      Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
+    }
     val friendIdsFuture = Future.successful(LongArraySet.empty)
 
     val parser = new KQueryParser(

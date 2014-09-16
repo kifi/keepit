@@ -10,7 +10,7 @@ import scala.util.Try
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -22,7 +22,6 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
-import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -59,6 +58,7 @@ trait SearchCommander {
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -74,6 +74,7 @@ trait SearchCommander {
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
@@ -128,7 +129,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, None, context)
+    val searchFilter = SearchFilter(filter, None, false, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -239,6 +240,7 @@ class SearchCommanderImpl @Inject() (
           query,
           filter,
           None,
+          false,
           maxHits,
           context,
           predefinedConfig,
@@ -251,7 +253,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, None, context)
+    val searchFilter = SearchFilter(filter, None, false, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -276,6 +278,7 @@ class SearchCommanderImpl @Inject() (
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     lastUUID: Option[String],
     context: Option[String],
@@ -293,7 +296,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, library, libraryAccessAuthorized, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -308,7 +311,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug).foreach { f =>
+      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, libraryAccessAuthorized, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new KifiShardResult(json))
       }
     }
@@ -317,7 +320,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
         Try {
-          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, library, maxHits, context, predefinedConfig, debug)
+          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, library, libraryAccessAuthorized, maxHits, context, predefinedConfig, debug)
         }
       ).future
     }
@@ -382,6 +385,7 @@ class SearchCommanderImpl @Inject() (
     query: String,
     filter: Option[String],
     library: Option[String],
+    libraryAccessAuthorized: Boolean,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
@@ -389,7 +393,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, library, libraryAccessAuthorized, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -398,7 +402,7 @@ class SearchCommanderImpl @Inject() (
       // logged in user
       searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
     } else {
-      searchFactory.getKifiNonUserSearch(localShards, searchFilter.libraryId.get, query, firstLang, secondLang, maxHits, searchFilter, config)
+      searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
     }
 
     val future = Future.traverse(searches) { search =>
