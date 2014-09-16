@@ -1,10 +1,13 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ NormalizedURI, User, URISummary }
+import com.keepit.model.{ NormalizedURI, User, URISummary, Library }
 import com.keepit.social.BasicUser
+import com.keepit.common.crypto.PublicId
 
 import com.kifi.macros.json
+
+import play.api.libs.json.{ Json, Writes }
 
 import org.joda.time.DateTime
 
@@ -19,6 +22,7 @@ object RecoAttributionKind {
 
 object RecoKind {
   object Keep extends RecoKind("keep")
+  object Library extends RecoKind("library")
 }
 
 @json case class RecoInfo(
@@ -37,17 +41,42 @@ object RecoKind {
 @json case class RecoMetaData(
   attribution: Seq[RecoAttributionInfo])
 
-@json case class RecoItemInfo(
+trait RecoItemInfo
+
+@json case class UriRecoItemInfo(
   id: ExternalId[NormalizedURI],
   title: Option[String],
   url: String,
   keepers: Seq[BasicUser],
   others: Int,
   siteName: Option[String],
-  summary: URISummary)
+  summary: URISummary) extends RecoItemInfo
 
-@json case class FullRecoInfo(
+@json case class LibRecoItemInfo(
+  id: PublicId[Library],
+  name: String,
+  url: String,
+  description: Option[String],
+  owner: BasicUser,
+  followers: Seq[BasicUser],
+  numFollowers: Int,
+  numKeeps: Int) extends RecoItemInfo
+
+object RecoItemInfo {
+  implicit val writes = new Writes[RecoItemInfo] {
+    def writes(obj: RecoItemInfo) = obj match {
+      case uri: UriRecoItemInfo => Json.toJson(uri)
+      case lib: LibRecoItemInfo => Json.toJson(lib)
+    }
+  }
+}
+
+case class FullRecoInfo(
   kind: RecoKind,
   metaData: Option[RecoMetaData],
   itemInfo: RecoItemInfo)
+
+object FullRecoInfo {
+  implicit val writes = Json.writes[FullRecoInfo]
+}
 

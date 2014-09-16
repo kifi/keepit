@@ -15,7 +15,7 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ Library, URLPatternRepo }
+import com.keepit.model.{ Library, URLPatternRepo, UserStates }
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -133,6 +133,12 @@ class ExtAuthController @Inject() (
       }).get
     } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
+
+  def getLoggedIn() = JsonAction(allowPending = true)(authenticatedAction = { request =>
+    Ok(Json.toJson(request.user.state == UserStates.ACTIVE))
+  }, unauthenticatedAction = { request =>
+    Ok(Json.toJson(false))
+  })
 
   def logOut = Action { implicit request => // code mostly copied from LoginPage.logout
     val user = for (

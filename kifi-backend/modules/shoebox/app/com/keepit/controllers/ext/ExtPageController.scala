@@ -28,12 +28,11 @@ class ExtPageController @Inject() (
     }
   }
 
-  def getPage() = JsonAction.authenticatedParseJsonAsync { request =>
+  def getPageInfo() = JsonAction.authenticatedParseJsonAsync { request =>
     val url = (request.body \ "url").as[String]
-    if (url.isEmpty) throw new Exception(s"empty url for json ${request.body} for user ${request.user}")
     URI.parse(url) match {
-      case Success(_) =>
-        pageCommander.getPageInfo(url, request.userId, request.experiments).map { info =>
+      case Success(uri) =>
+        pageCommander.getPageInfo(uri, request.userId, request.experiments).map { info =>
           Ok(Json.toJson(info))
         }
       case Failure(e) =>

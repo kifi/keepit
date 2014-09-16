@@ -33,7 +33,7 @@ class RecommendationsController @Inject() (
   }
 
   def topPublicRecos() = JsonAction.authenticatedAsync { request =>
-    commander.topPublicRecos().map { recos =>
+    commander.topPublicRecos(request.userId).map { recos =>
       Ok(Json.toJson(recos))
     }
   }
