@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.engine.SearchTimeLogs
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.user.UserIndexer
@@ -84,6 +85,7 @@ class MainSearcherFactory @Inject() (
     val searchers = shards.toSeq.map { shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
       val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+      val timeLogs = new SearchTimeLogs
 
       new MainSearcher(
         userId,
@@ -97,6 +99,7 @@ class MainSearcherFactory @Inject() (
         socialGraphInfo,
         clickBoostsFuture,
         clickHistoryFuture,
+        timeLogs,
         monitoredAwait
       )
     }

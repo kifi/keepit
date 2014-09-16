@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.DebugOption.DumpBuf
+import com.keepit.search.engine.DebugOption._
 import org.specs2.mutable.Specification
 
 class DebugOptionTest extends Specification {
@@ -20,6 +20,15 @@ class DebugOptionTest extends Specification {
 
       ids must beSome[Set[Long]]
       ids.get === Set(1L, 100L, 1000L)
+    }
+
+    "parse timing" in {
+      val res = "timing" match {
+        case Timing() => true
+        case _ => false
+      }
+
+      res === true
     }
 
     "ignore bogus options" in {
