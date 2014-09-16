@@ -273,8 +273,7 @@ angular.module('kifi')
 
           // TODO(yiping): implement error path.
           libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
-            // Show sent indication.
-            
+            result.sent = true;
           });
         };
 

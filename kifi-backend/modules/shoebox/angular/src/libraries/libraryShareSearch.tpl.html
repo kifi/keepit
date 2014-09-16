@@ -12,6 +12,7 @@
             </div>
           </div>
         </div>
+        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
       </div>
       <div ng-if="!result.id">
         <!-- TODO: use a better class name than cant-find; it actually shrinks the image and 
@@ -23,7 +24,7 @@
             {{result.name || result.email}}
           </div>
         </div>
-        <div class="social-invite-action"><div class="social-invite-button"></div></div>
+        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
       </div>
       <div class="clearfix"></div>
     </li>
