@@ -21,15 +21,16 @@ trait S3AsyncHelper {
     upload.addProgressListener(new ProgressListener {
       override def progressChanged(p1: ProgressEvent): Unit = {
         if (!p.isCompleted) {
-          if (p1.getEventCode == ProgressEvent.COMPLETED_EVENT_CODE) {
-            Try(upload.waitForUploadResult()) match {
-              case Success(succ) => p.complete(Success(succ))
-              case Failure(ex) => p.failure(ex)
-            }
-          } else if (p1.getEventCode == ProgressEvent.CANCELED_EVENT_CODE) {
-            p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
-          } else if (p1.getEventCode == ProgressEvent.FAILED_EVENT_CODE) {
-            p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
+          p1.getEventCode match {
+            case ProgressEvent.COMPLETED_EVENT_CODE =>
+              Try(upload.waitForUploadResult()) match {
+                case Success(succ) => p.complete(Success(succ))
+                case Failure(ex) => p.failure(ex)
+              }
+            case ProgressEvent.CANCELED_EVENT_CODE =>
+              p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
+            case ProgressEvent.FAILED_EVENT_CODE =>
+              p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
           }
         }
       }
@@ -44,12 +45,15 @@ trait S3AsyncHelper {
       val download = tm.download(bucketName, key, tf.file)
       download.addProgressListener(new ProgressListener {
         override def progressChanged(p1: ProgressEvent): Unit = {
-          if (p1.getEventCode == ProgressEvent.COMPLETED_EVENT_CODE) {
-            p.complete(Success(tf))
-          } else if (p1.getEventCode == ProgressEvent.CANCELED_EVENT_CODE) {
-            p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
-          } else if (p1.getEventCode == ProgressEvent.FAILED_EVENT_CODE) {
-            p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
+          if (!p.isCompleted) {
+            p1.getEventCode match {
+              case ProgressEvent.COMPLETED_EVENT_CODE =>
+                p.complete(Success(tf))
+              case ProgressEvent.CANCELED_EVENT_CODE =>
+                p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
+              case ProgressEvent.FAILED_EVENT_CODE =>
+                p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
+            }
           }
         }
       })
