@@ -46,10 +46,9 @@ class ExtKeepImageController @Inject() (
     }
   }
 
-  def loadPrevImageForKeep(userId: Id[User]) = Action.async { request =>
+  def loadPrevImageForKeep(libraryId: Id[Library], take: Int, drop: Int) = Action.async { request =>
     val keeps = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
-      keepRepo.getByUser(userId, None, None, 100)
+      keepRepo.getByLibrary(libraryId, take, drop)
     }
 
     val process = FutureHelpers.foldLeft(keeps)(0) {

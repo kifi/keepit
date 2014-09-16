@@ -79,6 +79,7 @@ class KeepImageCommanderImpl @Inject() (
 
       remoteImageF.flatMap { remoteImageOpt =>
         remoteImageOpt.map { imageUrl =>
+          val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
           fetchAndSet(imageUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
