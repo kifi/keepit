@@ -104,7 +104,9 @@ angular.module('kifi')
           rawRecos.forEach(function (rawReco) {
             recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
+          recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
+          $scope.loading = false;
         } else {
           // If the user has no recommendations, show some popular
           // keeps/libraries as recommendations.
@@ -112,12 +114,11 @@ angular.module('kifi')
             rawRecos.forEach(function (rawReco) {
               recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
             });
+            recoStateService.populate(recos);
+            $scope.recosState = 'noRecos';
+            $scope.loading = false;
           });
-          $scope.recosState = 'noRecos';
         }
-
-        recoStateService.populate(recos);
-        $scope.loading = false;
       });
     }
   }

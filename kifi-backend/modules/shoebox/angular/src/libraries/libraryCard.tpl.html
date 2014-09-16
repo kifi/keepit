@@ -1,0 +1,33 @@
+<div class="kf-keep">
+  <div class="kf-keep-body">
+    <div class="kf-keep-contents">
+      <div class="kf-keep-title">
+        <a class="kf-keep-title-link" ng-href="{{library.url}}" target="_blank" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
+      </div>
+
+      <div class="kf-keep-content-line">
+        <div class="kf-keep-info-wrap">
+          <div class="kf-keep-info">
+            <div class="kf-keep-subtitle">
+              <!-- owner -->
+              <div>
+                <img ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic">
+                {{library.owner.firstName}} {{library.owner.lastName}}
+              </div>
+              <!-- followers -->
+              <div ng-repeat="follower in library.followers">
+                <img ng-src="{{follower.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic">
+                {{follower.firstName}} {{follower.lastName}}
+              </div>
+              <!-- stats -->
+              <div>
+                Number of followers: {{library.numFollowers}} Number of keeps: {{library.numKeeps}}
+              </div>
+            </div>
+            <div class="kf-keep-description">{{library.description}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
