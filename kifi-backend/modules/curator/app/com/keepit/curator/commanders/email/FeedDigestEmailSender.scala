@@ -192,8 +192,7 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
-    // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
-    // TODO(josh) add textBody to EmailModule
+    // TODO(josh) add textBody
 
     val mainTemplate = views.html.email.feedDigest(emailData)
 
@@ -209,12 +208,14 @@ class FeedDigestEmailSender @Inject() (
       tips = Seq(EmailTips.FriendRecommendations)
     )
 
+    // FIXME (josh) commended out code is for testing
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    shoebox.processAndSendMail(emailToSend).map { sent =>
+    //    shoebox.processAndSendMail(emailToSend).map { sent =>
+    Future.successful(true).map { sent =>
       if (sent) {
-        db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
-        }
+        //        db.readWrite { implicit rw =>
+        //          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
+        //        }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
       }
       DigestRecoMail(userId, sent, digestRecos)
