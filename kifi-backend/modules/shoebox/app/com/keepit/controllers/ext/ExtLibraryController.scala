@@ -8,8 +8,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ LibraryMembershipRepo, Keep, KeepSource, Library, LibraryAccess }
-import com.keepit.social.BasicUser
+import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
 import play.api.libs.json._
 
 import scala.util.{ Success, Failure }
@@ -26,12 +25,8 @@ class ExtLibraryController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getLibraries() = JsonAction.authenticated { request =>
-    val basicSelf = BasicUser.fromUser(request.user)
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
-      val owner = if (lib.ownerId == request.userId)
-        basicSelf
-      else
-        db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+      val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
       LibraryData(
         id = Library.publicId(lib.id.get),
         name = lib.name,
