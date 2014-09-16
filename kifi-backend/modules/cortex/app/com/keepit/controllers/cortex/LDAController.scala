@@ -59,7 +59,8 @@ class LDAController @Inject() (
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     val scores1 = lda.userUriInterest(userId, uriId)
     val scores2 = lda.gaussianUserUriInterest(userId, uriId)
-    Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency)))
+    val score3 = lda.libraryInducedUserURIInterest(userId, uriId)
+    Ok(Json.toJson(LDAUserURIInterestScores(scores2.global, scores1.recency, score3)))
   }
 
   def batchUserURIsInterests() = Action(parse.tolerantJson) { request =>
