@@ -31,13 +31,16 @@ angular.module('kifi')
 
         // Data augmentation. May want to move out to own decorator service
         // like the keepDecoratorService.
-        if (scope.library.owner) {
-          scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
-        }
 
-        scope.library.followers.forEach(function (follower) {
-          follower.image = friendService.getPictureUrlForUser(follower);
-        });
+        function augmentData() {
+          if (scope.library.owner) {
+            scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
+          }
+
+          scope.library.followers.forEach(function (follower) {
+            follower.image = friendService.getPictureUrlForUser(follower);
+          });
+        }
 
         scope.followed = function () {
           return _.some(scope.library.followers, function (follower) {
@@ -52,8 +55,9 @@ angular.module('kifi')
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
-              image: friendService.getPictureUrlForUser(profileService.me)
+              pictureName: profileService.me.pictureName
             });
+            augmentData();
           }
         };
 
@@ -64,6 +68,8 @@ angular.module('kifi')
             });
           });
         };
+
+        augmentData();
 
 
       }
