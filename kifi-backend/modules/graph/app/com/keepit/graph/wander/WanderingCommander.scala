@@ -50,7 +50,11 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
         val wanderer = reader.getNewVertexReader()
         val scout = reader.getNewVertexReader()
         val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
-        scoutingWanderer.wander(wanderlust.steps, teleporter, resolver, journal)
+        if (wanderer.hasVertex(startingVertexId)) {
+          scoutingWanderer.wander(wanderlust.steps, teleporter, resolver, journal)
+        } else {
+          log.error(s"trying to start a random walk from non-existing vertex: ${startingVertexKind}: ${wanderlust.startingVertexDataId}. Return empty journal now.")
+        }
       }
       val end = clock.now()
       log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
