@@ -85,6 +85,7 @@ trait KeepImageHelper {
 
   protected val imageFilenameToFormat: String => Option[ImageFormat] = {
     case "jpeg" | "jpg" => Some(ImageFormat.JPG)
+    case "png" => Some(ImageFormat.PNG)
     case "tiff" => Some(ImageFormat("tiff"))
     case "bmp" => Some(ImageFormat("bmp"))
     case "gif" => Some(ImageFormat("gif"))
@@ -154,7 +155,7 @@ object ImageProcessState {
 
 sealed abstract class KeepImageSize(val name: String, val idealSize: ImageSize)
 object KeepImageSize {
-  case object Small extends KeepImageSize("icon", ImageSize(150, 150))
+  case object Small extends KeepImageSize("small", ImageSize(150, 150))
   case object Medium extends KeepImageSize("medium", ImageSize(400, 400))
   case object Large extends KeepImageSize("large", ImageSize(1000, 1000))
   case object XLarge extends KeepImageSize("xlarge", ImageSize(2000, 2000))

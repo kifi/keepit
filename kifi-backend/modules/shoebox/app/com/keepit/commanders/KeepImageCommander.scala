@@ -218,6 +218,7 @@ class KeepImageCommanderImpl @Inject() (
       }
     }.recover {
       case ex: SQLException =>
+        log.error("Could not persist keepimage", ex)
         ImageProcessState.DbPersistFailed(ex)
       case ex: Throwable =>
         ImageProcessState.CDNUploadFailed(ex)

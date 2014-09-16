@@ -6,7 +6,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.model.UploadResult
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -18,6 +18,7 @@ trait KeepImageStore {
   def get(key: String): Future[TemporaryFile]
 }
 
+@Singleton
 class KeepImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
     val s3Client: AmazonS3,

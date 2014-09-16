@@ -36,10 +36,8 @@ class KeepImageRepoImpl @Inject() (
     def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)
     def isOriginal = column[Boolean]("is_original", O.NotNull)
 
-    def pk = primaryKey("keep_image_i_id", id)
     def idxKeepId = index("keep_image_f_keep_id", keepId, unique = false)
-    def idxImageUrl = index("keep_image_u_image_path", imagePath, unique = true)
-    def idxSourceFileHashSize = index("keep_image_u_source_file_hash_size", (sourceFileHash, width, height), unique = true)
+    def idxSourceFileHashSize = index("keep_image_u_source_file_hash_size_keep_id", (sourceFileHash, width, height, keepId), unique = true)
 
     def * = (id.?, createdAt, updatedAt, state, keepId, imagePath, format, width, height, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((KeepImage.apply _).tupled, KeepImage.unapply _)
   }
