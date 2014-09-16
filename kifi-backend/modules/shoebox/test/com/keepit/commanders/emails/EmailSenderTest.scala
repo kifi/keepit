@@ -55,69 +55,102 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "FriendRequestAcceptedEmailSender" should {
-    def testFriendRequestAcceptedEmail(toUser: User)(implicit injector: Injector) = {
+  "FriendRequestMadeEmailSender" should {
+    def testFriendConnectionMade(toUser: User, category: NotificationCategory)(implicit injector: Injector) = {
       val outbox = inject[FakeOutbox]
-      val sender = inject[FriendRequestAcceptedEmailSender]
+      val sender = inject[FriendRequestMadeEmailSender]
       val friendUser = db.readWrite { implicit rw =>
         inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
       }
 
-      val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get), Duration(5, "seconds"))
+      val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category), Duration(5, "seconds"))
       outbox.size === 1
       outbox(0) === email
 
       email.fromName === Some("Billy Madison (via Kifi)")
       email.to === Seq(EmailAddress("johnny@gmail.com"))
-      email.subject === "Billy Madison accepted your Kifi friend request"
-      email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.FRIEND_ACCEPTED)
+      email.category === NotificationCategory.toElectronicMailCategory(category)
       val html = email.htmlBody.value
       html must contain("Hey Johnny")
-      html must contain("Billy accepted your Kifi")
-      html must contain("You and Billy Madison are now")
-      html must contain("utm_campaign=friendRequestAccepted")
-      html
+      (email, html)
     }
 
-    "sends email without PYMK tip" in {
-      withDb(modules: _*) { implicit injector =>
-        val toUser = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+    "friend request accepted email" in {
+      "sends email without PYMK tip" in {
+        withDb(modules: _*) { implicit injector =>
+          val toUser = db.readWrite { implicit rw =>
+            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+          }
+
+          val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+          abook.addFriendRecommendationsExpectations(toUser.id.get, Seq.empty)
+
+          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          email.subject === "Billy Madison accepted your Kifi friend request"
+          html must contain("Billy accepted your Kifi")
+          html must contain("You and Billy Madison are now")
+          html must contain("utm_campaign=friendRequestAccepted")
+
+          // weak PYMK tests
+          html must not contain "Find friends on Kifi to benefit from their keeps"
+          html must not contain "Aaron"
+          html must not contain "Bryan"
+          html must not contain "Anna"
+          html must not contain "Dean"
         }
+      }
 
-        val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-        abook.addFriendRecommendationsExpectations(toUser.id.get, Seq.empty)
+      "sends email with PYMK tip" in {
+        withDb(modules: _*) { implicit injector =>
+          val (toUser, friends) = db.readWrite { implicit rw =>
+            (
+              inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
+              inject[ShoeboxTestFactory].createUsers()
+            )
+          }
 
-        val html = testFriendRequestAcceptedEmail(toUser)
+          val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+          abook.addFriendRecommendationsExpectations(toUser.id.get,
+            Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
 
-        // weak PYMK tests
-        html must not contain "Aaron"
-        html must not contain "Bryan"
-        html must not contain "Anna"
-        html must not contain "Dean"
+          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+
+          // weak PYMK tests (just make sure it's there)
+          html must contain("Aaron")
+          html must contain("Bryan")
+          html must contain("Anna")
+          html must contain("Dean")
+        }
       }
     }
 
-    "sends email with PYMK tip" in {
-      withDb(modules: _*) { implicit injector =>
-        val (toUser, friends) = db.readWrite { implicit rw =>
-          (
-            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
-            inject[ShoeboxTestFactory].createUsers()
-          )
+    "connection made email" in {
+
+      "sends with PYMK" in {
+        withDb(modules: _*) { implicit injector =>
+          val (toUser, friends) = db.readWrite { implicit rw =>
+            (
+              inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
+              inject[ShoeboxTestFactory].createUsers()
+            )
+          }
+
+          val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+          abook.addFriendRecommendationsExpectations(toUser.id.get,
+            Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
+          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE)
+          email.subject === "You are now friends with Billy Madison on Kifi!"
+          html must contain("utm_campaign=connectionMade")
+          html must contain("You and Billy Madison are now")
+          html must contain("now friends with Billy Madison on Kifi. Enjoy Billy’s")
+          html must contain("message Billy directly")
+
+          // weak PYMK tests (just make sure it's there)
+          html must contain("Aaron")
+          html must contain("Bryan")
+          html must contain("Anna")
+          html must contain("Dean")
         }
-
-        val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-        abook.addFriendRecommendationsExpectations(toUser.id.get,
-          Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
-
-        val html = testFriendRequestAcceptedEmail(toUser)
-
-        // weak PYMK tests (just make sure it's there)
-        html must contain("Aaron")
-        html must contain("Bryan")
-        html must contain("Anna")
-        html must contain("Dean")
       }
     }
   }

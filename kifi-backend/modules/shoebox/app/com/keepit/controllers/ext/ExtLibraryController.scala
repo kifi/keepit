@@ -32,7 +32,7 @@ class ExtLibraryController @Inject() (
       Json.obj(
         "id" -> Library.publicId(lib.id.get).id,
         "name" -> lib.name,
-        "path" -> Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+        "path" -> Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
         "visibility" -> Json.toJson(lib.visibility))
     }
     Ok(Json.obj("libraries" -> Json.toJson(jsons)))

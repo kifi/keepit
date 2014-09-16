@@ -19,6 +19,8 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
     elizaServiceClient: ElizaServiceClient) {
 
   def apply(myUserId: Id[User], friendUserId: Id[User]) = {
+    // todo(josh) replace with FriendRequestMadeEmailSender
+
     //sending 'you are friends' email && Notification from auto-created connections from Facebook/LinkedIn
     val (friend, respondingUser, respondingUserImage) = db.readWrite { implicit session =>
       val respondingUser = userRepo.get(myUserId)

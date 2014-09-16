@@ -61,6 +61,11 @@ class KifiSearchImpl(
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
+    if (debugFlags != 0) {
+      if ((debugFlags & DebugOption.DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+    }
+
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiResultCollector created (${System.currentTimeMillis - currentTime})")
     engine.join(collector)
@@ -86,7 +91,7 @@ class KifiSearchImpl(
       if (highScore > 0.0f) highScore else max(othersHits.highScore, highScore)
     }
 
-    val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
+    val usefulPages = monitoredAwait.result(clickHistoryFuture, 100 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
 
     if (myHits.size > 0 && filter.includeMine) {
       myHits.toRankedIterator.foreach {

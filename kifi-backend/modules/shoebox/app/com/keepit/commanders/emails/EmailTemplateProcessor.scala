@@ -2,11 +2,12 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
-import com.keepit.common.db.Id
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTips }
+import com.keepit.common.mail.template.{ TipTemplate, EmailToSend, TagWrapper, tags, EmailTips }
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.mail.template.Tag._
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
@@ -17,9 +18,14 @@ import play.twirl.api.Html
 
 import scala.concurrent.Future
 
+case class ProcessedEmailResult(
+  subject: String,
+  htmlBody: LargeString,
+  textBody: Option[LargeString])
+
 @ImplementedBy(classOf[EmailTemplateProcessorImpl])
 trait EmailTemplateProcessor {
-  def process(module: EmailToSend): Future[Html]
+  def process(module: EmailToSend): Future[ProcessedEmailResult]
 }
 
 class EmailTemplateProcessorImpl @Inject() (
@@ -44,12 +50,15 @@ class EmailTemplateProcessorImpl @Inject() (
 
   def process(emailToSend: EmailToSend) = {
     val tipHtmlF = getTipHtml(emailToSend)
-    val templatesF = tipHtmlF.map(_.map(tipHtml => Seq(emailToSend.htmlTemplate, tipHtml))).
-      getOrElse(Future.successful(Seq(emailToSend.htmlTemplate)))
 
-    templatesF.flatMap[Html] { templates =>
+    val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt }
+
+    templatesF.flatMap[ProcessedEmailResult] { templates =>
       val html = views.html.email.black.layout(templates)
-      val needs = getNeededObjects(html, emailToSend)
+
+      val needs = getNeededObjects(html.body, emailToSend) ++
+        emailToSend.textTemplate.map { text => getNeededObjects(text.body, emailToSend) }.getOrElse(Set.empty) ++
+        getNeededObjects(emailToSend.subject, emailToSend)
 
       val userIds = needs.collect { case UserNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
@@ -62,13 +71,17 @@ class EmailTemplateProcessorImpl @Inject() (
         userImageUrls <- userImageUrlsF
       } yield {
         val input = DataNeededResult(users = users, imageUrls = userImageUrls)
-        evalHtml(html, input, emailToSend)
+        ProcessedEmailResult(
+          subject = evalTemplate(emailToSend.subject, input, emailToSend),
+          htmlBody = LargeString(evalTemplate(html.body, input, emailToSend)),
+          textBody = emailToSend.textTemplate.map(text => LargeString(evalTemplate(text.body, input, emailToSend)))
+        )
       }
     }
   }
 
-  private def evalHtml(html: Html, input: DataNeededResult, emailToSend: EmailToSend) = {
-    Html(tagRegex.replaceAllIn(html.body, { rMatch =>
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend) = {
+    tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
 
@@ -96,21 +109,24 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.baseUrl => config.applicationBaseUrl
         case tags.campaign => emailToSend.campaign.getOrElse("unknown")
       }
-    }))
+    })
   }
 
   private def getTipHtml(emailToSend: EmailToSend) = {
-    // get the first available Tip for this email that returns Some
-    val tipStream = emailToSend.tips.toStream.collect {
+    val predicate = (html: Option[Html]) => html.isDefined
+    val transform = (tip: EmailTips) => tip match {
       case EmailTips.FriendRecommendations => peopleRecommendationsTip.render(emailToSend)
-      case _ => None
     }
-    tipStream.find(_.isDefined).flatten
+
+    // get the first available Tip for this email that returns Some
+    FutureHelpers.findMatching[EmailTips, Option[Html]](emailToSend.tips, 1, predicate, transform).map { seqOpts =>
+      seqOpts.dropWhile(_.isEmpty).headOption.flatten
+    }
   }
 
   // used to gather the types of objects we need to replace the tags with real values
-  private def getNeededObjects(html: Html, emailToSend: EmailToSend) = {
-    tagRegex.findAllMatchIn(html.body).map[NeededObject] { rMatch =>
+  private def getNeededObjects(text: String, emailToSend: EmailToSend) = {
+    tagRegex.findAllMatchIn(text).map[NeededObject] { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
 

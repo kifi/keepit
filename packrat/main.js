@@ -8,8 +8,6 @@ var LZ = LZ || require('./lzstring.min').LZ;
 
 var THREAD_BATCH_SIZE = 8;
 
-//                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
-var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
 var hostRe = /^https?:\/\/([^\/?#]+)/;
 var emailRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
@@ -25,7 +23,6 @@ var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'un
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
-var ruleSet = {rules: {}};
 var urlPatterns;
 var guidePages;
 
@@ -44,7 +41,6 @@ function clearDataCache() {
   threadsById = {};
   messageData = {};
   contactSearchCache = null;
-  ruleSet = {rules: {}};
   urlPatterns = null;
   guidePages = null;
 }
@@ -129,8 +125,9 @@ function insertUpdateChronologically(arr, o, timePropName) {
 
 // ===== Server requests
 
+var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service === 'GET' || service === 'POST') { // shift args if service is missing
+  if (httpMethodRe.test(service)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data === 'function') {  // shift args if data is missing and done is present
@@ -261,7 +258,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs);
+  getUrlPatterns(getPrefs);
 }
 
 function onSocketDisconnect(why, sec) {
@@ -1429,7 +1426,7 @@ function awaitDeepLink(link, tabId, retrySec) {
     api.timers.clearTimeout(timeouts[tabId]);
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
-    if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
+    if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         api.tabs.emit(tab, 'guide', {
@@ -1602,7 +1599,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax('GET', '/ext/authed', function (loggedIn) {
+      ajax('GET', '/ext/auth', function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -1674,9 +1671,9 @@ function kififyWithPageData(tab, d) {
   if (!tab.engaged) {
     tab.engaged = true;
     if (!d.kept && !hide) {
-      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+      if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
-      } else if (ruleSet.rules.shown && d.shown) {
+      } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
       } else if (d.keepers.length) {
         tab.keepersSec = 20;
@@ -2148,11 +2145,10 @@ function getPrefs(next) {
   });
 }
 
-function getRules(next) {
-  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
-    log('[gotRules]', o);
-    if (o && Object.getOwnPropertyNames(o).length > 0) {
-      ruleSet = o.slider_rules;
+function getUrlPatterns(next) {
+  ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
+    log('[gotUrlPatterns]', o);
+    if (o && o.url_patterns) {
       urlPatterns = compilePatterns(o.url_patterns);
     }
     if (next) next();
@@ -2187,7 +2183,19 @@ function throttle(func, wait, opts) {  // underscore.js
     }
     return result;
   };
-};
+}
+
+//                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
+var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
+function sameOrLikelyRedirected(url1, url2) {
+  if (url1 === url2) {
+    return true;
+  }
+  var m1 = url1.match(domainRe);
+  var m2 = url2.match(domainRe);
+  // hostnames match exactly or core domain without subdomains and TLDs match (e.g. "google" in docs.google.fr and www.google.co.uk)
+  return m1[1] === m2[1] || m1[2] === (m2[2] || 0);
+}
 
 // ===== Session management
 
@@ -2198,7 +2206,7 @@ function authenticate(callback, retryMs) {
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
   }
-  ajax('POST', '/kifi/start', {
+  ajax('POST', '/ext/start', {
     installation: origInstId,
     version: api.version
   },
@@ -2216,7 +2224,6 @@ function authenticate(callback, retryMs) {
     logEvent.catchUp();
     mixpanel.catchUp();
 
-    ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
 
@@ -2271,7 +2278,7 @@ function deauthenticate() {
   log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
-  ajax('POST', '/ext/session/end');
+  ajax('DELETE', '/ext/auth');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

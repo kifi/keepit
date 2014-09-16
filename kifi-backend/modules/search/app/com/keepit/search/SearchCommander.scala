@@ -318,6 +318,8 @@ class SearchCommanderImpl @Inject() (
 
     var resultFutures = new ListBuffer[Future[KifiShardResult]]()
 
+    if (debug.isDefined) log.info(s"DEBUG MODE: ${debug.get}")
+
     if (dispatchPlan.nonEmpty) {
       // dispatch query
       searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug).foreach { f =>
@@ -421,6 +423,7 @@ class SearchCommanderImpl @Inject() (
     }
 
     val future = Future.traverse(searches) { search =>
+      if (debug.isDefined) search.debug(debug.get)
       SafeFuture { search.execute() }
     }
 
