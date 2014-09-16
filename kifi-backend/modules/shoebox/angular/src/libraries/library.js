@@ -225,11 +225,11 @@ angular.module('kifi')
 
         function populateDropDown(opt_query) {
           libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
-            if (!!contacts && contacts.length) {
+            if (contacts && contacts.length) {
               scope.results = contacts;
 
               scope.results.forEach(function (result) {
-                if (!!result.id) {
+                if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
                 }
               });
@@ -266,8 +266,8 @@ angular.module('kifi')
           // For now, we are only supporting inviting one person at a time.
           var invitees = [
             {
-              type: !!result.id ? 'user' : 'email',
-              id: !!result.id ? result.id : result.email,
+              type: result.id ? 'user' : 'email',
+              id: result.id ? result.id : result.email,
               access: 'read_only'  // Right now, we're only supporting read-only access.
             }
           ];

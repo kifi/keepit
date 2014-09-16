@@ -63,7 +63,7 @@ angular.module('kifi')
         return env.xhrBase + '/user/' + id + '/friend';
       },
       contactSearch: function (opt_query) {
-        return route('/user/contacts/search' + (!!opt_query ? '?query=' + opt_query : ''));
+        return route('/user/contacts/search' + (opt_query ? '?query=' + opt_query : ''));
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
