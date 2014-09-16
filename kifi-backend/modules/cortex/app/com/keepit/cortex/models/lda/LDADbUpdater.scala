@@ -130,7 +130,7 @@ class LDADbUpdaterImpl @Inject() (
 
   private def updateAction(uri: CortexURI): UpdateAction = {
     def isTwoWeeksOld(time: DateTime) = time.plusWeeks(2).getMillis < currentDateTime.getMillis
-    def isThreeDaysOld(time: DateTime) = time.plusDays(3).getMillis < currentDateTime.getMillis
+    def isOneDayOld(time: DateTime) = time.plusDays(1).getMillis < currentDateTime.getMillis
 
     val infoOpt = db.readOnlyReplica { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, representer.version) }
 
@@ -138,7 +138,7 @@ class LDADbUpdaterImpl @Inject() (
       case (SCRAPED.value, None) => CreateNewFeature
       case (SCRAPED.value, Some((updatedAt, URILDATopicStates.NOT_APPLICABLE))) if (isTwoWeeksOld(updatedAt)) => UpdateExistingFeature
       case (SCRAPED.value, Some((updatedAt, URILDATopicStates.INACTIVE))) => UpdateExistingFeature
-      case (SCRAPED.value, Some((updatedAt, URILDATopicStates.ACTIVE))) if (isThreeDaysOld(updatedAt)) => UpdateExistingFeature
+      case (SCRAPED.value, Some((updatedAt, URILDATopicStates.ACTIVE))) if (isOneDayOld(updatedAt)) => UpdateExistingFeature
       case (state, None) if (state != SCRAPED.value) => Ignore
       case (state, Some((_, URILDATopicStates.ACTIVE))) if (state != SCRAPED.value) => DeactivateExistingFeature
       case _ => Ignore
