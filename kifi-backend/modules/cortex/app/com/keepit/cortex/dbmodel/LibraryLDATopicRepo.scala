@@ -17,7 +17,7 @@ import scala.slick.jdbc.{ GetResult, StaticQuery }
 trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
-  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryTopicMean]
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
 }
 
 @Singleton
@@ -52,7 +52,7 @@ class LibraryLDATopicRepoImpl @Inject() (
     (for { r <- rows if r.libraryId === libId && r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).firstOption
   }
 
-  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryTopicMean] = {
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean] = {
     import StaticQuery.interpolation
     implicit val getLibraryFeature = GetResult(r => libraryTopicMeanMapper.nextValue(r))
     val q =
@@ -60,7 +60,7 @@ class LibraryLDATopicRepoImpl @Inject() (
            library_lda_topic as tp inner join cortex_library_membership as mem
            on tp.library_id = mem.library_id
            where mem.user_id = ${userId.id} and mem.state = 'active'
-           and tp.version = ${version.version} and tp.state = 'active'"""
+           and tp.version = ${version.version} and tp.state = 'active' and tp.num_of_evidence >= ${minEvidence} """
     q.as[LibraryTopicMean].list
   }
 }
