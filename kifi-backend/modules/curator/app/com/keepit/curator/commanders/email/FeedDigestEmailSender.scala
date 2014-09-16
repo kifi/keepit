@@ -192,8 +192,7 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
-    // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
-    // TODO(josh) add textBody to EmailModule
+    // TODO(josh) add textBody
 
     val mainTemplate = views.html.email.feedDigest(emailData)
 
@@ -204,7 +203,7 @@ class FeedDigestEmailSender @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = mainTemplate,
       senderUserId = Some(userId),
-      fromName = Some("Kifi"),
+      fromName = Some(Right("Kifi")),
       campaign = Some("digest"),
       tips = Seq(EmailTips.FriendRecommendations)
     )
@@ -256,7 +255,7 @@ class FeedDigestEmailSender @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = views.html.email.feedDigest(qaEmailData),
       senderUserId = None,
-      fromName = Some("Kifi"),
+      fromName = Some(Right("Kifi")),
       campaign = Some("digestQA")
     )
 

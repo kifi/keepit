@@ -28,7 +28,7 @@ class ResetPasswordEmailSender @Inject() (
 
     val resetUrl = config.applicationBaseUrl + routes.AuthController.setPasswordPage(reset.token)
     val emailToSend = EmailToSend(
-      fromName = Some("Kifi Support"),
+      fromName = Some(Right("Kifi Support")),
       from = SystemEmailAddress.SUPPORT,
       subject = "Kifi.com | Password reset requested",
       to = Right(resetEmailAddress),

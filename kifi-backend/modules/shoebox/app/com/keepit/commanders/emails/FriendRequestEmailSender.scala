@@ -24,7 +24,7 @@ class FriendRequestEmailSender @Inject() (
   def sendToUser(toUserId: Id[User], fromUserId: Id[User]): Future[ElectronicMail] = {
     val requestingUser = db.readOnlyReplica { implicit session => basicUserRepo.load(fromUserId) }
     val emailToSend = EmailToSend(
-      fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
+      fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
       to = Left(toUserId),

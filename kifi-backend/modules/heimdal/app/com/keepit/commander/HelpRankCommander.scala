@@ -34,31 +34,38 @@ class HelpRankCommander @Inject() (
 
   def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Future[Unit] = {
     log.info(s"[kifiHit($discoverer)] hit=$kifiHit")
-    db.readWriteAsync { implicit rw =>
-      val keepers = kifiHit.context.keepers
-      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
-      else {
-        kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
-          case Some(hit) =>
-            log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
-          case None =>
-            kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
-            shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
-              keeperIds foreach { keeperId =>
+    val keepers = kifiHit.context.keepers
+    if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) {
+      db.readWriteAsync { implicit rw =>
+        userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
+      }
+    } else {
+      implicit val dca = TransactionalCaching.Implicits.directCacheAccess
+      kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
+        case Some(hit) =>
+          log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+          Future.successful(Unit)
+        case None =>
+          kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
+          shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
+            keeperIds foreach { keeperId =>
+              db.readWrite { implicit rw =>
                 userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
-                  log.info(s"[kifiHit($discoverer)] getBookmarkByUriAndUser(${kifiHit.uriId},$keeperId)=$keepOpt")
-                  keepOpt match {
-                    case None =>
-                      log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
-                    case Some(keep) =>
-                      val saved = keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
-                      log.info(s"[kifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
-                  }
+              }
+              shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
+                log.info(s"[kifiHit($discoverer)] getBookmarkByUriAndUser(${kifiHit.uriId},$keeperId)=$keepOpt")
+                keepOpt match {
+                  case None =>
+                    log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
+                  case Some(keep) =>
+                    val saved = db.readWrite { implicit rw =>
+                      keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                    }
+                    log.info(s"[kifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
                 }
               }
             }
-        }
+          }
       }
     }
   }

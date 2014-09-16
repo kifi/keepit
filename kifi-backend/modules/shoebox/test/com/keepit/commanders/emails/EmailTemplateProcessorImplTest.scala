@@ -70,7 +70,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           to = Right(SystemEmailAddress.JOSH),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
-          fromName = Some("Kifi"),
+          fromName = Some(Right(firstName(id2) + "!!!")),
           subject = "hi " + firstName(id1) + " and " + firstName(id2),
           category = NotificationCategory.System.ADMIN,
           htmlTemplate = html1,
@@ -81,6 +81,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val processed = Await.result(outputF, Duration(5, "seconds"))
 
         processed.subject === "hi Aaron and Bryan"
+        processed.fromName === Some("Bryan!!!")
 
         val output = processed.htmlBody.value
         output must contain("privacy?utm_source=footerPrivacy&utm_medium=email&utm_campaign=tester")
@@ -97,6 +98,8 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         text must contain("unsub1 https://www.kifi.com/unsubscribe/")
         text must contain("unsub2 https://www.kifi.com/unsubscribe/")
         text must contain("unsub3 https://www.kifi.com/unsubscribe/")
+        text must contain("Unsubscribe here: https://www.kifi.com/unsubscribe/")
+        text must contain("Kifi.com | 883 N Shoreline Blvd, Mountain View, CA 94043, USA")
 
       }
     }
