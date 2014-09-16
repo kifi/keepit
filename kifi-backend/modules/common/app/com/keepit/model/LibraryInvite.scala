@@ -60,6 +60,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   }
 
   def generatePasscode() = {
+    // each word has length 4-8
     val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
     val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
     val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));

@@ -60,7 +60,7 @@ class ExtLibraryController @Inject() (
             val rawBookmark = info.as[RawBookmarkRepresentation]
             Ok(Json.toJson(keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
           case _ =>
-            BadRequest(Json.obj("error" -> "invalid_access"))
+            Forbidden
         }
     }
   }
@@ -74,11 +74,7 @@ class ExtLibraryController @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
         keepsCommander.unkeepFromLibrary(Seq(keepExtId), libraryId, request.userId) match {
           case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
-          case Right((unkeptKeeps, failures)) =>
-            Ok(Json.obj(
-              "unkept" -> Json.toJson(unkeptKeeps),
-              "failed" -> Json.toJson(failures)
-            ))
+          case Right(_) => NoContent
         }
     }
   }
