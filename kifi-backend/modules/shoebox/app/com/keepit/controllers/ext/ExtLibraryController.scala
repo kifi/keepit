@@ -8,7 +8,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model._
+import com.keepit.model.{ LibraryMembershipRepo, Keep, KeepSource, Library, LibraryAccess }
 import play.api.libs.json._
 
 import scala.util.{ Success, Failure }
@@ -72,9 +72,13 @@ class ExtLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_library_id"))
       case Success(libraryId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-        keepsCommander.unkeepFromLibrary(libraryId, keepExtId, request.userId) match {
+        keepsCommander.unkeepFromLibrary(Seq(keepExtId), libraryId, request.userId) match {
           case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
-          case Right(ki) => Ok(Json.toJson(ki))
+          case Right((unkeptKeeps, failures)) =>
+            Ok(Json.obj(
+              "unkept" -> Json.toJson(unkeptKeeps),
+              "failed" -> Json.toJson(failures)
+            ))
         }
     }
   }

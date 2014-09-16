@@ -27,7 +27,7 @@ case class LibraryMembership(
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
-  def hasWriteAccess(): Boolean = {
+  def hasWriteAccess: Boolean = {
     return access == LibraryAccess.READ_WRITE || access == LibraryAccess.OWNER
   }
 }

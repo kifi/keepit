@@ -459,22 +459,26 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def unkeepFromLibrary(libId: Id[Library], extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+  def unkeepFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
-      case Some(mem) if mem.hasWriteAccess() =>
-        db.readWrite { implicit session =>
-          val ownerId = libraryRepo.get(libId).ownerId
-          keepRepo.getByExtIdAndUser(extId, ownerId) match {
-            case Some(keep) if libId == keep.libraryId.get =>
-              // report who unkept
-              setKeepStateWithSession(keep, KeepStates.INACTIVE, userId)
-              Right(finalizeUnkeeping(Seq(keep), userId).head)
-            case _ => Left("keep_not_found")
-          }
+      case Some(mem) if mem.hasWriteAccess =>
+        val (unkeptKeeps, failedKeepIds) = db.readWrite { implicit s =>
+          val (validKeeps, failures) = keeps.map { kId =>
+            keepRepo.getByExtIdandLibraryId(kId, libId) match {
+              case Some(k) if libId == k.libraryId.get => Left(k)
+              case _ => Right(kId)
+            }
+          }.partition { k => k.isLeft }
+
+          val failedKeepIds = failures.map(f => f.right.get)
+          val unkeptKeeps = validKeeps.map(k => setKeepStateWithSession(k.left.get, KeepStates.INACTIVE, userId))
+          (unkeptKeeps, failedKeepIds)
         }
-      case None =>
+        val validUnkeeps = finalizeUnkeeping(unkeptKeeps, userId)
+        Right((validUnkeeps, failedKeepIds))
+      case _ =>
         Left("permission_denied")
     }
   }
