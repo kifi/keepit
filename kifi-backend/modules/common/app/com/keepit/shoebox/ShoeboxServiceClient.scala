@@ -86,8 +86,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
-  def getFriendRequestsViewBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]]
   def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]]
   def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
@@ -542,9 +541,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]] = {
     call(Shoebox.internal.getFriendRequestBySender(senderId)).map { r =>
-      r.json.as[JsArray].value.map { x => Json.fromJson[FriendRequest](x).get }
+      r.json.as[JsArray].value.map { x => Json.fromJson[Id[User]](x).get }
     }
   }
 

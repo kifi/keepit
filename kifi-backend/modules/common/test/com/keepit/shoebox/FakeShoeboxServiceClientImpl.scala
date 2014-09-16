@@ -118,9 +118,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   private val userExpIdCounter = new AtomicInteger(0)
   private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
-  private val friendRequestIdCounter = new AtomicInteger(0)
-  private def nextFriendRequestId = Id[FriendRequest](friendRequestIdCounter.incrementAndGet())
-
   private val userConnIdCounter = new AtomicInteger(0)
   private def nextUserConnId = Id[UserConnection](userConnIdCounter.incrementAndGet())
 
@@ -178,8 +175,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
   val allUserEmails = MutableMap[Id[User], Set[EmailAddress]]()
   val allUserValues = MutableMap[(Id[User], UserValueName), String]()
-  val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
-  val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
+  val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
@@ -340,12 +336,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveFriendRequests(requests: FriendRequest*) = {
+  def saveFriendRequests(requests: (Id[User], Id[User])*) = {
     requests.map { request =>
-      val id = request.id.getOrElse(nextFriendRequestId)
-      val requestWithId = request.copy(id = Some(id))
-      allFriendRequests(id) = requestWithId
-      allUserFriendRequests(requestWithId.senderId) = allUserFriendRequests.getOrElse(requestWithId.senderId, Nil) :+ requestWithId
+      allUserFriendRequests(request._1) = allUserFriendRequests.getOrElse(request._1, Nil) :+ request._2
     }
   }
 
@@ -604,7 +597,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     uriIds.map(HelpRankInfo(_, 0, 0))
   }
 
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
   }
 
