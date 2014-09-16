@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change($event)">
+  <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change()" ng-keydown="processKeyEvent($event)">
   <ul class="social-invite-dropdown" ng-show="showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-click="shareLibrary(result)" ng-mouseenter="onResultHover(result)" ng-class="{'selected': result.selected}">
       <div ng-if="result.id">

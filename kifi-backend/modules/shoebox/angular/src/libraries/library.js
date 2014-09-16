@@ -169,13 +169,11 @@ angular.module('kifi')
           $document.on('click', onClick);
           resultIndex = -1;
           clearSelection();
-          element.on('keydown', processKeyEvent);
         }
 
         function hideDropdown() {
           scope.showDropdown = false;
           $document.off('click', onClick);
-          element.off('keydown', processKeyEvent);
         }
 
         function onClick(e) {
@@ -192,35 +190,6 @@ angular.module('kifi')
           scope.results.forEach(function (result) {
             result.selected = false;
           });
-        }
-
-        function processKeyEvent (event) {
-          clearSelection();
-
-          function getNextIndex(index, direction) {
-            var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.results.length - 1) ? index : nextIndex;
-          }
-
-          switch (event.which) {
-            case keyIndices.KEY_UP:
-              resultIndex = getNextIndex(resultIndex, -1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_DOWN:
-              resultIndex = getNextIndex(resultIndex, 1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_ENTER:
-              scope.shareLibrary(scope.results[resultIndex]);
-
-              // After sharing, reset index.
-              resultIndex = -1;
-              break;
-            case keyIndices.KEY_ESC:
-              hideDropdown();
-              break;
-          }
         }
 
         function populateDropDown(opt_query) {
@@ -262,6 +231,36 @@ angular.module('kifi')
           populateDropDown(scope.search.name);
         }, 200);
 
+        scope.processKeyEvent = function ($event) {
+          function getNextIndex(index, direction) {
+            var nextIndex = index + direction;
+            return (nextIndex < 0 || nextIndex > scope.results.length - 1) ? index : nextIndex;
+          }
+
+          switch ($event.keyCode) {
+            case keyIndices.KEY_UP:
+              clearSelection();
+              resultIndex = getNextIndex(resultIndex, -1);
+              scope.results[resultIndex].selected = true;
+              break;
+            case keyIndices.KEY_DOWN:
+              clearSelection();
+              resultIndex = getNextIndex(resultIndex, 1);
+              scope.results[resultIndex].selected = true;
+              break;
+            case keyIndices.KEY_ENTER:
+              clearSelection();
+              scope.shareLibrary(scope.results[resultIndex]);
+
+              // After sharing, reset index.
+              resultIndex = -1;
+              break;
+            case keyIndices.KEY_ESC:
+              hideDropdown();
+              break;
+          }
+        };
+
         scope.shareLibrary = function (result) {
           // For now, we are only supporting inviting one person at a time.
           var invitees = [
@@ -272,12 +271,10 @@ angular.module('kifi')
             }
           ];
 
-          // console.log('Library ID: ' + scope.library.id + ' Invitee: ' + JSON.stringify(invitees));
-
           // TODO(yiping): implement error path.
           libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
             // Show sent indication.
-            // console.log('Library shared!');
+            
           });
         };
 
