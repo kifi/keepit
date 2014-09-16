@@ -97,19 +97,24 @@ class LDACommander @Inject() (
     }
   }
 
+  // admin
   def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI]): Option[LDAUserURIInterestScore] = {
     val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
-    val uriFeatOpt = db.readOnlyReplica { implicit s => uriTopicRepo.getFeature(uriId, wordRep.version) }
+    val uriFeatOpt = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
     libraryInducedUserURIInterestScore(libFeats, uriFeatOpt)
   }
 
-  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriLDAOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
+    val uriFeatOpt = uriLDAOpt.flatMap(_.feature)
+    val numWords = uriLDAOpt.map { _.numOfWords }.getOrElse(0)
+    val numTopicChanges = uriLDAOpt.map { _.timesFirstTopicChanged }.getOrElse(0)
     if (libFeats.size > 0 && uriFeatOpt.isDefined) {
       val uriFeat = uriFeatOpt.get.value
       val libsFeats = libFeats.map { _.value }
       val div = libsFeats.map { v => KL_divergence(v, uriFeat) }.min
       val score = (1f - div) max 0f
-      Some(LDAUserURIInterestScore(score, 1f)) // need to rethink confidence score
+      val confidence = computeURIConfidence(numWords, numTopicChanges)
+      Some(LDAUserURIInterestScore(score, confidence))
     } else None
   }
 
@@ -130,7 +135,7 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(projectToActive(uriFeatVec.value), userMean, userVar, userMean.map { _ / s })
-        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        val confidence = computeURIConfidence(uriFeat.numOfWords, uriFeat.timesFirstTopicChanged)
         Some(LDAUserURIInterestScore(exp(-1 * dist), confidence))
       case _ => None
     }
@@ -154,21 +159,20 @@ class LDACommander @Inject() (
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeatVec.value))
-        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        val confidence = computeURIConfidence(uriFeat.numOfWords, uriFeat.timesFirstTopicChanged)
         Some(LDAUserURIInterestScore(cosineDistance(u, v), confidence))
       case _ => None
     }
   }
 
-  private def topicChangePenalty(n: Int): Float = {
-    val alpha = n / 10f
-    exp(-alpha * alpha)
-  }
+  private def computeURIConfidence(numOfWords: Int, numTopicChanges: Int) = {
+    val alpha = numTopicChanges / 10f
+    val penalty = exp(-alpha * alpha)
 
-  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    // only consider uri confidence for now.
     val beta = (numOfWords - 50) / 50f
-    1f / (1 + exp(-1 * beta)).toFloat
+    val score = 1f / (1 + exp(-1 * beta)).toFloat
+
+    score * penalty
   }
 
   def sampleURIs(topicId: Int): Seq[(Id[NormalizedURI], Float)] = {

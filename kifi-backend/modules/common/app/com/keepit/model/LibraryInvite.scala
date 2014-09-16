@@ -27,7 +27,8 @@ case class LibraryInvite(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
     authToken: String = RandomStringUtils.randomAlphanumeric(32),
-    passCode: String = LibraryInvite.generatePasscode()) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
+    passCode: String = LibraryInvite.generatePasscode(),
+    message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -52,7 +53,8 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String] and
-    (__ \ 'passCode).format[String]
+    (__ \ 'passCode).format[String] and
+    (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
@@ -60,6 +62,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   }
 
   def generatePasscode() = {
+    // each word has length 4-8
     val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
     val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
     val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));

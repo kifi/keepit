@@ -7,8 +7,10 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.social.{ BasicUserUserIdCache, BasicUserUserIdKey, BasicUser }
 
 class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, basicUserCache: BasicUserUserIdCache) {
-  def load(userId: Id[User])(implicit session: RSession): BasicUser = basicUserCache.getOrElse(BasicUserUserIdKey(userId)) {
-    BasicUser.fromUser(userRepo.get(userId))
+  def load(userId: Id[User])(implicit session: RSession): BasicUser = {
+    basicUserCache.getOrElse(BasicUserUserIdKey(userId)) {
+      BasicUser.fromUser(userRepo.get(userId))
+    }
   }
 
   def loadAll(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], BasicUser] = {

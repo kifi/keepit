@@ -3,6 +3,7 @@ package com.keepit.cortex.models.lda
 import com.keepit.cortex.features._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.nlp.Stopwords
+import com.keepit.cortex.utils.TextUtils
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.google.inject.Inject
@@ -22,6 +23,6 @@ case class LDAURIRepresenter @Inject() (docRep: LDADocRepresenter, articleStore:
   override def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
 
   override def toDocument(article: Article): Document = {
-    Document(article.content.toLowerCase.split(" ")) // TODO(yingjie): Lucene tokenize
+    Document(TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(article.content))
   }
 }

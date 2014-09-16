@@ -148,7 +148,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"shortDescription":"asdf",
              |"url":"/ahsu/lib2",
              |"ownerId":"${user1.externalId}",
-             |"numKeeps":0
+             |"numKeeps":0,
+             |"kind":"user_created"
              |}
            """.stripMargin)
         Json.parse(contentAsString(result2)) must equalTo(expected)
@@ -220,6 +221,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"visibility":"secret",
                |"slug":"lib1",
                |"url":"/ahsu/lib1",
+               |"kind":"user_created",
                |"ownerId":"${user1.externalId}",
                |"collaborators":[],
                |"followers":[],
@@ -296,6 +298,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"visibility":"secret",
                |"slug":"lib1",
                |"url":"/ahsu/lib1",
+               |"kind":"user_created",
                |"ownerId":"${user1.externalId}",
                |"collaborators":[],
                |"followers":[],
@@ -368,6 +371,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"url":"/ahsu/lib1",
                   |"ownerId":"${user1.externalId}",
                   |"numKeeps":0,
+                  |"kind":"user_created",
                   |"access":"owner"
                 |}
               |],
@@ -380,6 +384,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"url":"/bhsu/lib2",
                     |"ownerId":"${user2.externalId}",
                     |"numKeeps":0,
+                    |"kind":"user_created",
                     |"access":"read_write"
                   |}
               | ]
@@ -429,6 +434,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
+
+        val inputJson2 = Json.obj(
+          "message" -> "Here is another invite!",
+          "invites" -> Seq(
+            Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_INSERT))
+        )
+        val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
+        val result2 = libraryController.inviteUsersToLibrary(pubId)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_INSERT.value}"}]"""))
+        db.readOnlyMaster { implicit s =>
+          val invitesToSquirtle = libraryInviteRepo.getWithLibraryId(lib1.id.get).filter(i => i.emailAddress.nonEmpty)
+          invitesToSquirtle.map(_.message) === Seq(None, Some("Here is another invite!"))
+        }
       }
     }
 
@@ -474,7 +494,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"visibility":"discoverable",
              |"url":"/bulbasaur/lib1",
              |"ownerId":"${user2.externalId}",
-             |"numKeeps":0
+             |"numKeeps":0,
+             |"kind":"user_created"
              |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)

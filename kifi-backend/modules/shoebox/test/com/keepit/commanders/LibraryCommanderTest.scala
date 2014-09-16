@@ -463,10 +463,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val thorEmail = EmailAddress("thorishere@gmail.com")
         val inviteList1 = Seq(
-          (Left(userIron.id.get), LibraryAccess.READ_ONLY),
-          (Left(userAgent.id.get), LibraryAccess.READ_ONLY),
-          (Left(userHulk.id.get), LibraryAccess.READ_ONLY),
-          (Right(thorEmail), LibraryAccess.READ_ONLY))
+          (Left(userIron.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
+          (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
         res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
@@ -484,7 +484,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE))
+        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
         res2.isRight === false
 
