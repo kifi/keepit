@@ -291,22 +291,23 @@ class UriFromKeepsScoreVectorSource(
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers, coreSize)
-    if (pq.size <= 0) return // no scorer
-
     val idMapper = reader.getIdMapper
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
-    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
-
-    val recencyScorer = getRecencyScorer(readerContext)
 
     val writer: DataBufferWriter = new DataBufferWriter
 
     // load all URIs in the network with no score (this supersedes the old URIGraphSearcher things)
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
     loadURIsInNetwork(idFilter, reader, idMapper, uriIdDocValues, writer, output)
+
+    // execute the query
+    val pq = createScorerQueue(scorers, coreSize)
+    if (pq.size <= 0) return // no scorer
+
+    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
+    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
+    val recencyScorer = getRecencyScorer(readerContext)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
