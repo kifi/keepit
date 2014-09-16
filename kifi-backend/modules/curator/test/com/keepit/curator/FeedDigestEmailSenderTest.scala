@@ -160,7 +160,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         // - excite has been sent already
         sumU43.feed.size === 2
 
-        pending("remove this line after test") // FIXME (josh) remove me
         // 2 sent to users
         // 2 copied to QA
         shoebox.sentMail.size === 4
