@@ -6,6 +6,8 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.common.db._
+import com.keepit.model.id.Types.UserSessionExternalId
+import com.keepit.model.view.UserSessionView
 import collection.mutable
 import scala.concurrent.Future
 import com.keepit.search._
@@ -471,10 +473,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = ???
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = ???
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 

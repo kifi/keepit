@@ -2,21 +2,21 @@ package com.keepit.social
 
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Provides, Singleton, Inject }
+import com.keepit.model.view.UserSessionView
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.akka.MonitoredAwait
 import play.api.Application
 import securesocial.core._
-import com.keepit.model.{ UserSessionStates, UserSession }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import scala.Some
 import securesocial.core.IdentityId
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.controller.{ RemoteActionAuthenticator, ActionAuthenticator }
 import securesocial.controllers.{ TemplatesPlugin, DefaultTemplatesPlugin }
+import com.keepit.model.id.Types._
 
 @AppScoped
 class RemoteSecureSocialAuthenticatorPlugin @Inject() (
@@ -32,8 +32,8 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject() (
         Left(new Error(ex))
     }
 
-  private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
-    id = session.externalId.id,
+  private def authenticatorFromSession(session: UserSessionView, externalId: UserSessionExternalId): Authenticator = Authenticator(
+    id = externalId.id,
     identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
@@ -41,9 +41,10 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject() (
   )
 
   def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {}
+
   def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
     val externalIdOpt = try {
-      Some(ExternalId[UserSession](id))
+      Some(UserSessionExternalId(id))
     } catch {
       case ex: Throwable => None
     }
@@ -51,7 +52,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject() (
     externalIdOpt flatMap { externalId =>
       val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds, s"get session for $externalId")
       result collect {
-        case s if s.isValid => authenticatorFromSession(s)
+        case s if s.valid => authenticatorFromSession(s, externalId)
       }
     }
   }

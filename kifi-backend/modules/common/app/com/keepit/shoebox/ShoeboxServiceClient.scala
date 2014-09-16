@@ -1,6 +1,9 @@
 package com.keepit.shoebox
 
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.model.id.Types.UserSessionExternalId
+import com.keepit.model.view.UserSessionView
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -77,7 +80,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -130,7 +133,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
-  userSessionExternalIdCache: UserSessionExternalIdCache,
+  userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
   userValueCache: UserValueCache,
@@ -476,13 +479,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
-    cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    cacheProvider.userSessionExternalIdCache.get(UserSessionViewExternalIdKey(sessionId)) match {
       case Some(session) => Promise.successful(Some(session)).future
       case None =>
         call(Shoebox.internal.getSessionByExternalId(sessionId)).map { r =>
           r.json match {
-            case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
+            case jso: JsObject => Json.fromJson[UserSessionView](jso).asOpt
             case _ => None
           }
         }

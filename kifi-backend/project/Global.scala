@@ -117,7 +117,8 @@ object PlayGlobal {
     "com.keepit.common.mail.EmailAddress",
     "com.keepit.common.crypto._",
     "org.joda.time.DateTime",
-    "com.keepit.common.time._"
+    "com.keepit.common.time._",
+    "com.keepit.model.id.Types._"
   )
 
   val _templateImports = Seq(
