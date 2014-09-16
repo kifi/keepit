@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, RawBookmarkRepresentation, LibraryCommander }
+import com.keepit.commanders.{ KeepData, KeepsCommander, RawBookmarkRepresentation, LibraryCommander, LibraryData }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -58,9 +58,11 @@ class ExtLibraryController @Inject() (
             }
             implicit val context = hcb.build
             val rawBookmark = info.as[RawBookmarkRepresentation]
-            Ok(Json.toJson(keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
+            val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+            // TODO: stop assuming keep is mine and removable
+            Ok(Json.toJson(KeepData(keepInfo.id.get, mine = true, removable = true)))
           case _ =>
-            Forbidden
+            Forbidden(Json.obj("error" -> "invalid_access"))
         }
     }
   }

@@ -59,13 +59,13 @@ case class KeepData(
   id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
-  library: LibraryData)
+  library: Option[LibraryData] = None)
 object KeepData {
   implicit val format: Format[KeepData] = (
     (__ \ 'id).format[ExternalId[Keep]] and
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
-    (__ \ 'library).format[LibraryData]
+    (__ \ 'library).formatNullable[LibraryData]
   )(KeepData.apply, unlift(KeepData.unapply))
 }
 
