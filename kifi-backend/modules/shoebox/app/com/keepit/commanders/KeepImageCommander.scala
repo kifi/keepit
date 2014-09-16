@@ -28,7 +28,7 @@ trait KeepImageCommander {
 
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage]
 
-  def autoSetKeepImage(keepId: Id[Keep], overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
+  def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
   def setKeepImage(imageUrl: String, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone]
   def setKeepImage(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone]
 
@@ -43,6 +43,9 @@ class KeepImageCommanderImpl @Inject() (
     db: Database,
     keepRepo: KeepRepo,
     uriSummaryCommander: URISummaryCommander,
+    imageInfoRepo: ImageInfoRepo,
+    s3UriImageStore: S3URIImageStore,
+    normalizedUriRepo: NormalizedURIRepo,
     keepImageRepo: KeepImageRepo) extends KeepImageCommander with KeepImageHelper with Logging {
 
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage] = {
@@ -52,15 +55,30 @@ class KeepImageCommanderImpl @Inject() (
     KeepImageSize.pickBest(idealSize, keepImages)
   }
 
-  private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](2.minutes)
-  def autoSetKeepImage(keepId: Id[Keep], overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
+  private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](1.minute)
+  def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean, overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
     val keep = db.readOnlyMaster { implicit session =>
       keepRepo.get(keepId)
     }
     autoSetConsolidator(keepId) { keepId =>
-      uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).flatMap { summary =>
-        log.info(summary.toString)
-        summary.imageUrl.map { imageUrl =>
+      val localLookup = db.readOnlyMaster { implicit session =>
+        imageInfoRepo.getLargestByUriWithPriority(keep.uriId).flatMap { imageInfo =>
+          val nuri = normalizedUriRepo.get(keep.uriId)
+          s3UriImageStore.getImageURL(imageInfo, nuri)
+        }
+      }
+      val remoteImageF = if (localOnly) {
+        Future.successful(localLookup)
+      } else {
+        localLookup.map(v => Future.successful(Some(v))).getOrElse {
+          uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).map { summary =>
+            summary.imageUrl
+          }
+        }
+      }
+
+      remoteImageF.flatMap { remoteImageOpt =>
+        remoteImageOpt.map { imageUrl =>
           fetchAndSet(imageUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
