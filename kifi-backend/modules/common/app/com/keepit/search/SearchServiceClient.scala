@@ -75,6 +75,8 @@ trait SearchServiceClient extends ServiceClient {
 
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
 
+  def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
+
   //
   // Distributed Search
   //
@@ -367,6 +369,10 @@ class SearchServiceClientImpl(
     call(Search.internal.searchMessages(userId, query, page)).map { r =>
       Json.fromJson[Seq[String]](r.json).get
     }
+  }
+
+  def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
+    call(Search.internal.augmentation(), Json.toJson(request)).map(_.json.as[ItemAugmentationResponse])
   }
 
   //

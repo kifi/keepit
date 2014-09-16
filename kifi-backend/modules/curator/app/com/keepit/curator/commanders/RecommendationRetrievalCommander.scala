@@ -16,8 +16,8 @@ import com.google.inject.{ Inject, Singleton }
 class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
 
   private def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
-    val basePenaltyFactor = Math.pow(0.95, timesDelivered) * Math.pow(0.8, timesClicked)
-    val votePenaltyFactor = goodBad.map { vote => if (vote) 0.95 else 0.5 }.getOrElse(1.0)
+    val basePenaltyFactor = Math.pow(0.97, timesDelivered) * Math.pow(0.8, timesClicked)
+    val votePenaltyFactor = goodBad.map { vote => if (vote) 0.97 else 0.5 }.getOrElse(1.0)
     val finalPenaltyFactor = Math.pow(basePenaltyFactor * votePenaltyFactor, if (heavyPenalty) 5 else 1)
     val adjustedScore = masterScore + recencyWeight * (4 * scores.recentInterestScore + 2 * scores.recencyScore)
     (adjustedScore * finalPenaltyFactor).toFloat
@@ -30,7 +30,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
       uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000)
     } map { reco =>
       (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
-    } filter (_._1 > 4.0f) sortBy (-1 * _._1) take 10
+    } filter (_._1 > 5.0f) sortBy (-1 * _._1) take 10
 
     SafeFuture {
       analytics.trackDeliveredItems(recos.map(_._2), Some(clientType))

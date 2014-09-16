@@ -80,12 +80,20 @@ POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
 
+# Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
+POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
+# Note: /ext/authed is deprecated. 3.2.12 and later use /ext/auth instead.
+GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+# Note: /ext/session/end is deprecated. 3.2.12 and later use DELETE /ext/auth instead.
 POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
+DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
+# Note: /ext/pageDetails will be replaced by /ext/page when we launch libraries.
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
+POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
 
 GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
@@ -109,7 +117,8 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
-POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id:PublicId[Library])
+POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
+DELETE  /ext/libraries/:id/keeps/:keepId @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
 
 ##########################################
 # Mobile
@@ -268,6 +277,8 @@ POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0, auth:Option[String] ?= None, passcode:Option[String] ?= None)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/collabs @com.keepit.controllers.website.LibraryController.getCollaborators(id: PublicId[Library], count: Int, offset: Int ?= 0, auth: Option[String] ?= None, passcode:Option[String] ?= None)
+POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
@@ -621,12 +632,13 @@ POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controlle
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
 GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
 GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5)
+POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
-GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering
+GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
 ##########################################
 # Common Healthcheck / service routes

@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.net.URI
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import scala.concurrent._
@@ -53,7 +54,7 @@ class URISummaryCommanderTestPagePeekerClient extends PagePeekerClient {
 }
 
 class URISummaryCommanderTestImageFetcher extends ImageFetcher {
-  override def fetchRawImage(url: String): Future[Option[BufferedImage]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyBufferedImage))
+  override def fetchRawImage(url: URI): Future[Option[BufferedImage]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyBufferedImage))
 }
 
 case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {

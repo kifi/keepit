@@ -103,7 +103,7 @@ class ScoreContextTest extends Specification {
   }
 
   "compute visibilities" in {
-    val visibilities = rnd.shuffle(Seq[Int](Visibility.RESTRICTED, Visibility.OTHERS, Visibility.NETWORK, Visibility.MEMBER, Visibility.OWNER, Visibility.HAS_SECONDARY_ID, Visibility.HAS_TERTIARY_ID))
+    val visibilities = rnd.shuffle(Seq[Int](Visibility.RESTRICTED, Visibility.OTHERS, Visibility.NETWORK, Visibility.MEMBER, Visibility.OWNER, Visibility.HAS_SECONDARY_ID))
 
     val buf = new DataBuffer
     val writer = new DataBufferWriter

@@ -10,20 +10,16 @@ class ArticleSearchResultTest extends Specification {
   val initialResult = ArticleSearchResult(
     last = None,
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
     mayHaveMoreHits = true,
-    scorings = Seq(),
     filter = Set(100L, 200L, 300L),
     uuid = ExternalId[ArticleSearchResult](),
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(),
-    svVariance = -1.0f,
-    svExistenceVar = -1.0f,
     toShow = false,
     lang = "fr"
   )
@@ -31,20 +27,16 @@ class ArticleSearchResultTest extends Specification {
   val nextResult = ArticleSearchResult(
     last = Some(initialResult.uuid),
     query = "scala query",
-    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false, Seq(Id[User](33)), 42)),
+    hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, -1.0F, true, false)),
     myTotal = 4242,
     friendsTotal = 3232,
     othersTotal = 5252,
     mayHaveMoreHits = true,
-    scorings = Seq(),
     filter = Set(100L, 200L, 300L),
     uuid = ExternalId[ArticleSearchResult](),
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(),
-    svVariance = -1.0f,
-    svExistenceVar = -1.0f,
     lang = "fr"
   )
 
@@ -69,18 +61,24 @@ class ArticleSearchResultTest extends Specification {
       legacyDeserialized === initialResult.copy(toShow = true)
     }
 
-    "deal with new ArticleSearchResult missing svVariance and svExistenceVar" in {
-      val fullJson = Json.toJson(initialResult)
-      val newJson = fullJson.as[JsObject] - "svVariance" - "svExistenceVar"
-      val newDeserialized = newJson.as[ArticleSearchResult]
-      newDeserialized === initialResult
-    }
-
     "deal with legacy ArticleHit missing textScore" in {
       val fullJson = Json.toJson(initialResult).as[JsObject]
       val hits = (fullJson \ "hits").as[JsArray].value
       val legacyHits = JsArray(hits.map(hit => hit.as[JsObject] - "textScore"))
       val legacyJson = fullJson - "hits" + ("hits" -> legacyHits)
+      legacyJson !== fullJson
+
+      val legacyDeserialized = legacyJson.as[ArticleSearchResult]
+      legacyDeserialized === initialResult
+    }
+
+    "deal with legacy ArticleHit missing keptByFriend" in {
+      val fullJson = Json.toJson(initialResult).as[JsObject]
+      val hits = (fullJson \ "hits").as[JsArray].value
+      val legacyHits = JsArray(hits.map(hit => hit.as[JsObject] - "keptByFriend"))
+      val legacyJson = fullJson - "hits" + ("hits" -> legacyHits)
+      legacyJson !== fullJson
+
       val legacyDeserialized = legacyJson.as[ArticleSearchResult]
       legacyDeserialized === initialResult
     }

@@ -734,16 +734,16 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         res1.isRight === true
         res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 6
-          keepToCollectionRepo.count === 9
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
 
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
         res2.isRight === true
-        res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
+        res2.right.get.unzip._1.map(_.title.get).sorted === Seq()
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 7
-          keepToCollectionRepo.count === 10
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
       }
     }

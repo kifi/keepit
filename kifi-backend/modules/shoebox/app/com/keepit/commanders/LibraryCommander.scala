@@ -68,7 +68,7 @@ class LibraryCommander @Inject() (
         ownerId = owner.externalId,
         description = lib.description,
         slug = lib.slug,
-        url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+        url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
         visibility = lib.visibility,
         collaborators = collabs,
         followers = follows,
@@ -226,9 +226,11 @@ class LibraryCommander @Inject() (
       case (_, Some(tag)) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
-            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
-          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+          // Swap to this when we remove the constraint:
+          //          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
+          //            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
+          //          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+          keepRepo.save(k.copy(libraryId = Some(libraryId), visibility = library.visibility))
         }
         val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
         Right(badKeeps.toSeq)
@@ -576,7 +578,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
+      url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
       ownerId = owner.externalId,
       numKeeps = keepCount
     )

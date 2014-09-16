@@ -384,6 +384,7 @@ class UserCommander @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
+  // todo(josh) replace with WelcomeEmailSender
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
     val olderUser: Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24 * 3600 * 1000)) //users older than 24h get the long form welcome email
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
@@ -464,6 +465,7 @@ class UserCommander @Inject() (
 
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
 
+  // todo(josh) replace with sender
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>
@@ -501,6 +503,7 @@ class UserCommander @Inject() (
   }
 
   def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUserId: Id[User], recipient: User): Unit = SafeFuture {
+    // todo(josh) replace with FriendRequestEmailSender
     val (requestingUser, requestingUserImage) = db.readWrite { implicit session =>
       val requestingUser = userRepo.get(myUserId)
       val destinationEmail = emailRepo.getByUser(recipient.id.get)

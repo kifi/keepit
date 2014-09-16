@@ -6,32 +6,30 @@ angular.module('kifi')
   '$scope',
   '$rootScope',
   '$analytics',
-  '$timeout',
   '$window',
-  'keepActionService',
-  'keepService',
   'recoActionService',
   'recoDecoratorService',
-  'tagService',
+  'recoStateService',
   'undoService',
-  function ($scope, $rootScope, $analytics, $timeout, $window, keepActionService, keepService,
-    recoActionService, recoDecoratorService, tagService, undoService) {
+  function ($scope, $rootScope, $analytics, $window,
+    recoActionService, recoDecoratorService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
-    $scope.recos = [];
-    $scope.loading = true;
+    $scope.recos = recoStateService.recosList;
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
     $scope.getMore = function (opt_recency) {
-      $scope.recos = [];
       $scope.loading = true;
      
+      recoStateService.empty();
       recoActionService.getMore(opt_recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
+          var recos = [];
           rawRecos.forEach(function (rawReco) {
-            $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
+          recoStateService.populate(recos);
 
           $scope.recosState = 'hasRecos';
         } else {
@@ -59,28 +57,19 @@ angular.module('kifi')
       });
     };
 
-    $scope.keepReco = function (reco, isPrivate) {
-      recoActionService.trackKeep(reco.recoKeep);
-
-      keepActionService.keepOne(reco.recoKeep, isPrivate).then(function (keptKeep) {
-        reco.recoKeep.id = keptKeep.id;
-        reco.recoKeep.isPrivate = keptKeep.isPrivate;
-
-        keepService.buildKeep(reco.recoKeep);
-        tagService.addToKeepCount(1);
-      });
-    };
-
     $scope.showPopular = function () {
       $scope.loading = true;
 
+      recoStateService.empty();
       recoActionService.getPopular().then(function (rawRecos) {
+        var recos = [];
         rawRecos.forEach(function (rawReco) {
-          $scope.recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+          recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
         });
+        recoStateService.populate(recos);
 
-        $scope.loading = false;
         $scope.recosState = 'hasPopularRecos';
+        $scope.loading = false;
       });
     };
 
@@ -102,29 +91,35 @@ angular.module('kifi')
       $scope.initialCardClosed = true;
     };
 
-    recoActionService.get().then(function (rawRecos) {
-      if (rawRecos.length > 0) {
-        rawRecos.forEach(function (rawReco) {
-          $scope.recos.push(recoDecoratorService.newUserRecommendation(rawReco));
-        });
+    // Load a new set of recommendations only on page refresh.
+    // Otherwise, load the recommendations we have previously shown.
+    if (recoStateService.recosList.length === 0) {
+      $scope.loading = true;
 
-        $scope.loading = false;
-        $scope.recosState = 'hasRecos';
-      } else {
-        $scope.recosState = 'noRecos';
+      recoStateService.empty();
+      recoActionService.get().then(function (rawRecos) {
+        var recos = [];
 
-        // If the user has no recommendations, show some popular
-        // keeps/libraries as recommendations.
-        recoActionService.getPopular().then(function (rawRecos) {
+        if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
-            $scope.recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
+          $scope.recosState = 'hasRecos';
+        } else {
+          // If the user has no recommendations, show some popular
+          // keeps/libraries as recommendations.
+          recoActionService.getPopular().then(function (rawRecos) {
+            rawRecos.forEach(function (rawReco) {
+              recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+            });
+          });
+          $scope.recosState = 'noRecos';
+        }
 
-          $scope.loading = false;
-        });
-      }
-
-    });
+        recoStateService.populate(recos);
+        $scope.loading = false;
+      });
+    }
   }
 ])
 
@@ -163,11 +158,19 @@ angular.module('kifi')
     $scope.submitImprovement = function (reco) {
       recoActionService.improve(reco.recoKeep, $scope.improvement.type);
     };
+
+    $scope.trackRecoKeep = function (recoKeep) {
+      recoActionService.trackKeep(recoKeep);
+    };
+
+    $scope.trackRecoClick = function (recoKeep) {
+      recoActionService.trackClick(recoKeep);
+    };
   }
 ])
 
-.directive('kfRecoDropdownMenu', ['$document', 'keyIndices', 'recoActionService',
-  function ($document, keyIndices, recoActionService) {
+.directive('kfRecoDropdownMenu', ['$document', 'recoActionService',
+  function ($document, recoActionService) {
     return {
       restrict: 'A',
       replace: true,

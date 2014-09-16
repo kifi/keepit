@@ -147,6 +147,7 @@ class ScraperServiceClientImpl @Inject() (
     val cacheProvider: ScraperCacheProvider) extends ScraperServiceClient with Logging {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(60000))
+  val superExtraLongTimeoutJustForEmbedly = CallTimeouts(responseTimeout = Some(250000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
   val httpClient = defaultHttpClient.withTimeout(longTimeout)
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
@@ -213,14 +214,14 @@ class ScraperServiceClientImpl @Inject() (
 
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = {
     val payload = Json.obj("url" -> url)
-    call(Scraper.internal.getEmbedlyInfo, payload).map { r =>
+    call(Scraper.internal.getEmbedlyInfo, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       Json.fromJson[Option[EmbedlyInfo]](r.json).get
     }
   }
 
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
     val payload = Json.obj("uri" -> uri, "minSize" -> minSize, "descriptionOnly" -> descriptionOnly)
-    call(Scraper.internal.getURISummaryFromEmbedly, payload).map { r =>
+    call(Scraper.internal.getURISummaryFromEmbedly, payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
       r.json.as[Option[URISummary]]
     }
   }

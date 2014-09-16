@@ -350,6 +350,8 @@ var api = (function createApi() {
           " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
           ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
           '  var s = document.createElement("SCRIPT");',
+          '  s.dataset.loading = true;',
+          '  s.addEventListener("load", function () { this.dataset.loading = false; });',
           '  s.src = url;',
           '  document.head.appendChild(s);',
           ' });',
@@ -500,8 +502,9 @@ var api = (function createApi() {
   }
 
   var onXhrLoadEnd = errors.wrap(function onXhrLoadEnd(done, fail) {
-    if (this.status >= 200 && this.status < 300 && /^application\/json/.test(this.getResponseHeader('Content-Type'))) {
-      if (done) done(JSON.parse(this.responseText));
+    var status = this.status;
+    if (status >= 200 && status < 300) {
+      if (done) done(status === 204 ? null : this.response);
     } else {
       if (fail) fail(this);
     }
@@ -616,7 +619,6 @@ var api = (function createApi() {
     },
     request: function(method, uri, data, done, fail) {
       var xhr = new XMLHttpRequest();
-      xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
       xhr.open(method, uri, true);
       if (data != null && data !== '') {
         if (typeof data !== 'string') {
@@ -624,6 +626,8 @@ var api = (function createApi() {
         }
         xhr.setRequestHeader('Content-Type', 'application/json; charset=utf-8');
       }
+      xhr.responseType = 'json';
+      xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
       xhr.send(data);
     },
     postRawAsForm: function(uri, data) {

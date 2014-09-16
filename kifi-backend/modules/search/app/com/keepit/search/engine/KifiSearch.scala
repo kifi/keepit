@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.logging.Logging
 import com.keepit.search.{ SearchTimeLogs, Searcher }
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
@@ -13,7 +14,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 
-abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) {
+abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends DebugOption { self: Logging =>
 
   def execute(): KifiShardResult
 
@@ -50,15 +51,11 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
     if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
-    } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
-      // has a library id
-      val r = getKeepRecord(h.libId, h.id).getOrElse(throw new Exception(s"missing keep record: library id = ${h.libId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
       // only a primary id (uri id)
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
+      KifiShardHit(h.id, h.score, h.visibility, -1L, -1L, r.title, r.url, null)
     }
   }
 

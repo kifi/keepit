@@ -43,7 +43,7 @@ object UrlPatterns {
     UrlPattern("""^https?://(www.)?tripadvisor\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Destination page on tripadvisor"),
     UrlPattern("""^https?://(www.)?medium\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Article on medium.com"),
     UrlPattern("""^https?://blog\.longreads\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Article on longreads.com"),
-    UrlPattern("""^https?://(www.)?youtube\.com[./?\#]watch""".r, 1.2f, "Videos on Youtube")
+    UrlPattern("""^https?://(www.)?youtube\.com[./?\#]watch""".r, 1.1f, "Videos on Youtube")
   )
 }
 

@@ -113,9 +113,8 @@ class WanderingAdminController @Inject() (
     promisedResult.future
   }
 
-  def uriWandering() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def uriWandering(steps: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val userId = request.userId
-    val steps = 100000
     val start = clock.now()
 
     graphClient.uriWander(userId, steps).map { uriScores =>

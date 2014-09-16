@@ -2,8 +2,10 @@ package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ JoinerManager, DataBuffer, HashJoin }
+import com.keepit.search.util.join.{ DataBufferReader, JoinerManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
+
+import scala.collection.mutable.ListBuffer
 
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging {
 
@@ -68,4 +70,26 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getTotalSize(): Int = totalSize
   def getCoreSize(): Int = coreSize
   def getMatchWeights(): Array[Float] = matchWeights
+
+  def dumpBuf(ids: Set[Long]): Unit = {
+    dataBuffer.scan(new DataBufferReader) { reader =>
+      // assuming the first datum is ID
+      val id = reader.nextLong()
+      if (ids.contains(id)) {
+        val visibility = reader.recordType
+        val id2 = if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
+        def scores: String = {
+          val out = new ListBuffer[(Int, Float)]
+          while (reader.hasMore()) {
+            val bits = reader.nextTaggedFloatBits()
+            val idx = DataBuffer.getTaggedFloatTag(bits)
+            val scr = DataBuffer.getTaggedFloatValue(bits)
+            out += ((idx, scr))
+          }
+          out.mkString("[", ", ", "]")
+        }
+        log.info(s"NE:BUF id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
+      }
+    }
+  }
 }

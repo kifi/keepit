@@ -1,34 +1,29 @@
 package com.keepit.controllers.ext
 
-import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.test._
-import org.specs2.mutable.Specification
-import play.api.libs.json._
-import play.api.test.Helpers._
-import play.api.test.FakeRequest
-import com.keepit.social.{ SocialId, SocialNetworks }
-import SocialNetworks.FACEBOOK
-import com.keepit.common.time._
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import securesocial.core._
-import org.joda.time.DateTime
-import play.api.libs.json.JsArray
-import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.json.JsString
-import scala.Some
-import securesocial.core.IdentityId
-import com.keepit.model.User
-import securesocial.core.OAuth2Info
-import com.keepit.model.SocialUserInfo
-import play.api.libs.json.JsObject
+import com.keepit.common.controller.{ AuthenticatedRequest, FakeActionAuthenticator }
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.model.{ SocialUserInfo, User }
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.{ SocialId, SocialNetworks }
+import com.keepit.test._
+
+import org.joda.time.DateTime
+import org.specs2.mutable.Specification
+
+import play.api.libs.json.{ Json, JsArray, JsObject, JsString, JsValue }
+import play.api.test.Helpers._
+import play.api.test.FakeRequest
+
+import securesocial.core.{ Authenticator, AuthenticationMethod, IdentityId, OAuth2Info, SocialUser }
 
 class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -61,10 +56,11 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val user = db.readWrite { implicit s =>
           val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
           val sui = socialUserInfoRepo.save(SocialUserInfo(
-            userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
+            userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = SocialNetworks.FACEBOOK,
             credentials = Some(su)))
           user
         }
+        inject[FakeActionAuthenticator].setUser(user)
 
         val cookie = Authenticator.create(su).right.get.toCookie
         //first round
@@ -83,6 +79,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         json1 \ "user" \ "firstName" === JsString("A")
         json1 \ "user" \ "lastName" === JsString("1")
         json1 \ "user" \ "id" === JsString(user.externalId.id)
+        json1 \ "libraryIds" must beAnInstanceOf[JsArray]
         json1 \ "installationId" === JsString(kifiInstallation1.externalId.id)
         json1 \ "rules" \ "version" must beAnInstanceOf[JsString]
         json1 \ "rules" \ "rules" must beAnInstanceOf[JsObject]

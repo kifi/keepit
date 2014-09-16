@@ -9,7 +9,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.model.{ Keep, NormalizedURI, User }
+import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import scala.math.exp
 
 @Singleton
@@ -23,6 +23,7 @@ class LDACommander @Inject() (
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo,
+    libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
   val numOfTopics: Int = wordRep.lda.dimension
@@ -50,6 +51,10 @@ class LDACommander @Inject() (
     db.readOnlyReplica { implicit s =>
       userTopicRepo.getByUser(userId, wordRep.version)
     }
+  }
+
+  def libraryTopic(libId: Id[Library]): Option[LibraryLDATopic] = {
+    db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, wordRep.version) }
   }
 
   // for admin
@@ -85,10 +90,27 @@ class LDACommander @Inject() (
           val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
           LDAUserURIInterestScores(s2.global, s1.recency)
         } else {
+          log.info("uri in junk topic. return zero scores for user")
           LDAUserURIInterestScores(None, None)
         }
       }
     }
+  }
+
+  def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI]): Option[LDAUserURIInterestScore] = {
+    val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
+    val uriFeatOpt = db.readOnlyReplica { implicit s => uriTopicRepo.getFeature(uriId, wordRep.version) }
+    libraryInducedUserURIInterestScore(libFeats, uriFeatOpt)
+  }
+
+  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+    if (libFeats.size > 0 && uriFeatOpt.isDefined) {
+      val uriFeat = uriFeatOpt.get.value
+      val libsFeats = libFeats.map { _.value }
+      val div = libsFeats.map { v => KL_divergence(v, uriFeat) }.min
+      val score = (1f - div) max 0f
+      Some(LDAUserURIInterestScore(score, 1f)) // need to rethink confidence score
+    } else None
   }
 
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
