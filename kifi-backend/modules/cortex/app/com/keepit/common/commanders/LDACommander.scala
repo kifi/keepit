@@ -83,15 +83,17 @@ class LDACommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
+      val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
       val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
         if (!isInJunkTopic(uriTopicOpt, junkTopics)) {
           val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
           val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-          LDAUserURIInterestScores(s2.global, s1.recency)
+          val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
+          LDAUserURIInterestScores(s2.global, s1.recency, s3)
         } else {
           log.info("uri in junk topic. return zero scores for user")
-          LDAUserURIInterestScores(None, None)
+          LDAUserURIInterestScores(None, None, None)
         }
       }
     }
@@ -122,8 +124,8 @@ class LDACommander @Inject() (
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
         val globalScore = computeGaussianInterestScore(userFeat.numOfEvidence, Some(userFeat), uriFeat, isRecent = false)
-        LDAUserURIInterestScores(globalScore, None)
-      case _ => LDAUserURIInterestScores(None, None)
+        LDAUserURIInterestScores(globalScore, None, None)
+      case _ => LDAUserURIInterestScores(None, None, None)
     }
   }
 
@@ -146,8 +148,8 @@ class LDACommander @Inject() (
       case (Some(uriFeat), Some(userFeat)) =>
         val globalScore = computeCosineInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
         val recencyScore = computeCosineInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
-        LDAUserURIInterestScores(globalScore, recencyScore)
-      case _ => LDAUserURIInterestScores(None, None)
+        LDAUserURIInterestScores(globalScore, recencyScore, None)
+      case _ => LDAUserURIInterestScores(None, None, None)
     }
   }
 
