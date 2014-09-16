@@ -139,7 +139,7 @@ class PageCommander @Inject() (
                 id = Library.publicId(lib.id.get),
                 name = lib.name,
                 visibility = lib.visibility,
-                url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
+                path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
               val mine = userId == keeperId.get
               val removable = (mine || userId == lib.ownerId)
               // right now assumes keep is "removable" if I own keep or I own library

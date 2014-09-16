@@ -8,7 +8,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ LibraryMembershipRepo, Keep, KeepSource, Library, LibraryAccess }
+import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
 import play.api.libs.json._
 
 import scala.util.{ Success, Failure }
@@ -25,18 +25,15 @@ class ExtLibraryController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getLibraries() = JsonAction.authenticated { request =>
-    val (libraries, _) = libraryCommander.getLibrariesByUser(request.userId)
-    val libsCanKeepTo = libraries.filter(_._1 != LibraryAccess.READ_ONLY)
-    val jsons = libsCanKeepTo.map { a =>
-      val lib = a._2
+    val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
       val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-      Json.obj(
-        "id" -> Library.publicId(lib.id.get).id,
-        "name" -> lib.name,
-        "path" -> Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
-        "visibility" -> Json.toJson(lib.visibility))
+      LibraryData(
+        id = Library.publicId(lib.id.get),
+        name = lib.name,
+        visibility = lib.visibility,
+        path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
     }
-    Ok(Json.obj("libraries" -> Json.toJson(jsons)))
+    Ok(Json.obj("libraries" -> datas))
   }
 
   def addKeep(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>

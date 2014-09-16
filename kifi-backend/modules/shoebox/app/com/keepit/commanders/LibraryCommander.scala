@@ -245,6 +245,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[Library] = {
+    db.readOnlyMaster { implicit s =>
+      libraryRepo.getByUser(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(_._2)
+    }
+  }
+
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
