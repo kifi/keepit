@@ -56,7 +56,6 @@ class LibraryCommander @Inject() (
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
 
       val keeps = keepRepo.getByLibrary(library.id.get, 10, 0)
-
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
       (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }
@@ -69,6 +68,7 @@ class LibraryCommander @Inject() (
         description = lib.description,
         slug = lib.slug,
         url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+        kind = lib.kind,
         visibility = lib.visibility,
         collaborators = collabs,
         followers = follows,
@@ -620,6 +620,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  kind: LibraryKind,
   ownerId: ExternalId[User],
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
@@ -636,6 +637,7 @@ object FullLibraryInfo {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
+    (__ \ 'kind).format[LibraryKind] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and
