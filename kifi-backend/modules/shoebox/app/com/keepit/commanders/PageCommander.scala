@@ -144,7 +144,7 @@ class PageCommander @Inject() (
               val removable = (mine || userId == lib.ownerId)
               // right now assumes keep is "removable" if I own keep or I own library
               // todo: for collaborators, users may have RW access so they can remove keeps that they don't own
-              KeepData(keepId, mine, removable, libData)
+              KeepData(keepId, mine, removable, Some(libData))
             }
             (keeperOpt, keepDataOpt)
           }.toSeq.unzip // separate & flatten to keepers & kept in which libraries

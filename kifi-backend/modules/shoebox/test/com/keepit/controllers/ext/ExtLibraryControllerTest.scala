@@ -120,18 +120,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.imagenius.com",
             "guided" -> false))
         val result1 = extLibraryController.addKeep(pubId1)(request1)
-        status(result1) must equalTo(OK)
+        status(result1) === OK
         contentType(result1) must beSome("application/json")
         val keep1 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).head }
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
-          s"""
-            |{
-              |"id":"${keep1.externalId}",
-              |"title":"kayne-fidence",
-              |"url":"http://www.imagenius.com",
-              |"isPrivate":false,
-              |"libraryId":"${pubId1.id}"}""".stripMargin
-        ))
+        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true}"""
 
         val request2 = FakeRequest("POST", path2).withBody(
           Json.obj(
@@ -139,18 +131,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.beyonceisbetter.com",
             "guided" -> false))
         val result2 = extLibraryController.addKeep(pubId2)(request2)
-        status(result2) must equalTo(OK)
+        status(result2) === OK
         contentType(result2) must beSome("application/json")
         val keep2 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib2.id.get, 10, 0).head }
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-            |{
-              |"id":"${keep2.externalId}",
-              |"title":"IMMA LET YOU FINISH",
-              |"url":"http://www.beyonceisbetter.com",
-              |"isPrivate":true,
-              |"libraryId":"${pubId2.id}"}""".stripMargin
-        ))
+        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true}"""
 
         val request3 = FakeRequest("POST", path3).withBody(
           Json.obj(
@@ -158,7 +142,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             "url" -> "http://www.beyonceisbetter.com",
             "guided" -> false))
         val result3 = extLibraryController.addKeep(pubId3)(request3)
-        status(result3) must equalTo(FORBIDDEN)
+        status(result3) === FORBIDDEN
       }
     }
 
