@@ -3,8 +3,9 @@ package com.keepit.model.view
 import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.model.id.Types.{ UserSessionExternalId, UserSessionId }
-import com.keepit.model.id.UserSessionRemoteModel
+import com.keepit.shoebox.model.{ Ids, UserSessionRemoteModel }
+import Ids.{ UserSessionExternalId, UserSessionId }
+import com.keepit.shoebox.model.UserSessionRemoteModel
 import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json._

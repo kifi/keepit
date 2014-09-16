@@ -2,7 +2,8 @@ package com.keepit.shoebox
 
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
-import com.keepit.model.id.Types.UserSessionExternalId
+import com.keepit.shoebox.model.Ids
+import Ids.UserSessionExternalId
 import com.keepit.model.view.UserSessionView
 
 import scala.concurrent.Future

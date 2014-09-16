@@ -2,7 +2,8 @@ package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.model._
-import com.keepit.model.id.Types.UserSessionExternalId
+import com.keepit.shoebox.model.Ids
+import Ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
