@@ -31,6 +31,7 @@ trait S3AsyncHelper {
               p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
             case ProgressEvent.FAILED_EVENT_CODE =>
               p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
+            case _ =>
           }
         }
       }
@@ -53,6 +54,7 @@ trait S3AsyncHelper {
                 p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
               case ProgressEvent.FAILED_EVENT_CODE =>
                 p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
+              case _ =>
             }
           }
         }

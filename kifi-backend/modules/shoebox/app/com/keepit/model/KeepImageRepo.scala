@@ -27,7 +27,7 @@ class KeepImageRepoImpl @Inject() (
   class KeepImageTable(tag: Tag) extends RepoTable[KeepImage](db, tag, "keep_image") {
 
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def imageUrl = column[String]("image_url", O.NotNull)
+    def imagePath = column[String]("image_path", O.NotNull)
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
@@ -38,10 +38,10 @@ class KeepImageRepoImpl @Inject() (
 
     def pk = primaryKey("keep_image_i_id", id)
     def idxKeepId = index("keep_image_f_keep_id", keepId, unique = false)
-    def idxImageUrl = index("keep_image_u_image_url", imageUrl, unique = true)
+    def idxImageUrl = index("keep_image_u_image_path", imagePath, unique = true)
     def idxSourceFileHashSize = index("keep_image_u_source_file_hash_size", (sourceFileHash, width, height), unique = true)
 
-    def * = (id.?, createdAt, updatedAt, state, keepId, imageUrl, format, width, height, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((KeepImage.apply _).tupled, KeepImage.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, keepId, imagePath, format, width, height, source, sourceFileHash, sourceImageUrl, isOriginal) <> ((KeepImage.apply _).tupled, KeepImage.unapply _)
   }
 
   def table(tag: Tag) = new KeepImageTable(tag)

@@ -8,7 +8,7 @@ CREATE TABLE keep_image (
   updated_at datetime NOT NULL,
   state varchar(20) NOT NULL,
   keep_id bigint(20) NOT NULL,
-  image_url varchar(92) NOT NULL,
+  image_path varchar(64) NOT NULL,
   image_format varchar(16) NOT NULL,
   width smallint unsigned NOT NULL,
   height smallint unsigned NOT NULL,

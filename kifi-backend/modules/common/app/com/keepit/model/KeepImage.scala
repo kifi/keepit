@@ -11,7 +11,7 @@ case class KeepImage(
     updatedAt: DateTime = currentDateTime,
     state: State[KeepImage] = KeepImageStates.ACTIVE,
     keepId: Id[Keep],
-    imageUrl: String,
+    imagePath: String,
     format: ImageFormat,
     width: Int,
     height: Int,
