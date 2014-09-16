@@ -5,7 +5,6 @@ import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.graph.simple.Vertex
 import scala.concurrent.Future
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
