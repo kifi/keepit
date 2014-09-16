@@ -17,9 +17,9 @@ angular.module('kifi')
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
-          util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
-          util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
-          return res.data;
+        util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
+        util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
+        return res.data;
       });
     });
 
