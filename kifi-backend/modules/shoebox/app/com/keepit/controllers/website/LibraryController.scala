@@ -185,10 +185,11 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         val invites = (request.body \ "invites").as[JsArray].value
+        val msgOpt = (request.body \ "message").asOpt[String]
+        val message = if (msgOpt == Some("")) None else msgOpt
 
         val validInviteList = db.readOnlyMaster { implicit s =>
           invites.map { i =>
-            val message = (i \ "message").asOpt[String]
             val access = (i \ "access").as[LibraryAccess]
             val id = (i \ "type").as[String] match {
               case "user" if userRepo.getOpt((i \ "id").as[ExternalId[User]]).nonEmpty =>
