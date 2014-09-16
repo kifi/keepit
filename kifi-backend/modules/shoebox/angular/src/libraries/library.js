@@ -3,8 +3,16 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', 'keepDecoratorService','$routeParams', 'libraryService', 'util', '$location',
-  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util, $location) {
+  '$scope',
+  '$rootScope',
+  '$location',
+  '$routeParams',
+  'keepDecoratorService',
+  'libraryService',
+  'profileService',
+  'util', 
+  function ($scope, $rootScope, $location, $routeParams,
+            keepDecoratorService, libraryService, profileService, util) {
     //
     // Internal data.
     //
@@ -63,6 +71,15 @@ angular.module('kifi')
         }
       };
       $rootScope.$emit('showGlobalModal', 'manageLibrary');
+    };
+
+    $scope.canBeShared = function (library) {
+      // Only user created (i.e. not Main or Secret) libraries can be shared.
+      // Of the user created libraries, public libraries can be shared by any Kifi user;
+      // discoverable/secret libraries can be shared only by the library owner.
+      return library.kind === 'user_created' && 
+             (library.visibility === 'published' ||
+              library.ownerId === profileService.me.id);
     };
 
     $scope.getSubtitle = function () {
@@ -152,6 +169,10 @@ angular.module('kifi')
         // Internal data.
         //
         var resultIndex = -1;
+        var shareButton = element.find('.kf-library-share-btn');
+        var shareMenu = element.find('.kf-library-share-menu');
+        var show = false;
+
 
         //
         // Scope data.
@@ -164,24 +185,34 @@ angular.module('kifi')
         //
         // Internal methods.
         //
+        function showMenu() {
+          shareMenu.show();
+          show = true;
+          $document.on('click', onClick);
+        }
+
+        function hideMenu() {
+          shareMenu.hide();
+          show = false;
+          $document.off('click', onClick);
+        }
+
         function showDropdown() {
           scope.showDropdown = true;
-          $document.on('click', onClick);
           resultIndex = -1;
+          scope.search.name = '';
           clearSelection();
         }
 
         function hideDropdown() {
           scope.showDropdown = false;
-          $document.off('click', onClick);
         }
 
         function onClick(e) {
-          // Clicking outside the dropdown menu will close the menu.
+          // Clicking outside the menu will close the menu.
           if (!element.find(e.target)[0]) {
             scope.$apply(function () {
-              scope.search.name = '';
-              hideDropdown();
+              hideMenu();
             });
           }
         }
@@ -214,6 +245,18 @@ angular.module('kifi')
             }
           });
         }
+
+
+        //
+        // DOM event listeners.
+        //
+        shareButton.on('click', function () {
+          if (show) {
+            hideMenu();
+          } else {
+            showMenu();
+          }
+        });
 
 
         //
