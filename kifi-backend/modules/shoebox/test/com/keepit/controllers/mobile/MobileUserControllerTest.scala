@@ -254,7 +254,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
             ],
             "total":4}""")
         val resString = contentAsString(result)
-        println(resString)
+        // println(resString) // can be removed?
         val res = Json.parse(resString)
         res must equalTo(expected)
       }

@@ -272,7 +272,6 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
               case None => j.as[EmailContactResult]
             }
           }
-          log.info(s"[search($query,$limit)] res(len=${js.length}):$js")
           js
         }
 

@@ -7,7 +7,6 @@ import org.specs2.mutable.Specification
 class DebugOptionTest extends Specification {
 
   def debugOption = new DebugOption with Logging {
-    def flags = debugFlags
     def ids = debugDumpBufIds
   }
 

@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.search.engine.{ Visibility, SearchFactory }
+import com.keepit.search.engine.{ DebugOption, Visibility, SearchFactory }
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResultMerger, KifiShardResult }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -385,6 +385,9 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): KifiShardResult = {
 
+    val debugOption = new DebugOption with Logging
+    if (debug.isDefined) debugOption.debug(debug.get)
+
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     val searchFilter = SearchFilter(filter, library, context)
@@ -392,15 +395,17 @@ class SearchCommanderImpl @Inject() (
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val searches = if (userId.id >= 0) {
+    val searches = if (userId.id < 0 || (debugOption.flags & DebugOption.AsNonUser.flag) != 0) {
+      val list = searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
+      log.info(s"NE: created KifiNonUserSearch size=${list.size}")
+      list
+    } else {
       // logged in user
       searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-    } else {
-      searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
     }
 
     val future = Future.traverse(searches) { search =>
-      if (debug.isDefined) search.debug(debug.get)
+      if (debug.isDefined) search.debug(debugOption)
       SafeFuture { search.execute() }
     }
 
