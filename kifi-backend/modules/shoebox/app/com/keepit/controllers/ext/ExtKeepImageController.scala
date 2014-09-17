@@ -3,6 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepImageCommander, KeepImageSize }
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -15,7 +16,7 @@ class ExtKeepImageController @Inject() (
     keepRepo: KeepRepo,
     userRepo: UserRepo,
     db: Database,
-    imageInfoRepo: ImageInfoRepo) extends Controller {
+    imageInfoRepo: ImageInfoRepo) extends ShoeboxServiceController {
 
   // unused, for reference
   def autoFetch() = Action.async(parse.tolerantJson) { request =>

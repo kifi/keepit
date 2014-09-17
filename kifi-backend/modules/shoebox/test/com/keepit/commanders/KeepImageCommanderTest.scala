@@ -118,7 +118,6 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             val res = bufferedImageToInputStream(null, ImageFormat.JPG)
             res.isSuccess === false
           }
-          1 === 1
 
         }
         helper === helper
@@ -128,7 +127,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     "hash files with MD5" in {
       withInjector(modules: _*) { implicit injector =>
         val helper = new KeepImageHelper {
-          val log = logger;
+          val log = logger
 
           val hashed1 = hashImageFile(fakeFile1.file)
           hashed1.isSuccess === true
@@ -137,8 +136,6 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           val hashed2 = hashImageFile(fakeFile2.file)
           hashed2.isSuccess === true
           hashed2.get.hash === "1b3d95541538044c2a26598fbe1d06ae"
-
-          1 === 1
 
         }
         helper === helper
