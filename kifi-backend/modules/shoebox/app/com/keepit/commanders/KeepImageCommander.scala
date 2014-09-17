@@ -13,6 +13,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store._
 import com.keepit.model._
 import org.imgscalr.Scalr
+import play.api.{ Mode, Play }
 import play.api.Play.current
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -331,7 +332,9 @@ class KeepImageCommanderImpl @Inject() (
             Future.failed(new RuntimeException(s"Unknown image type, ${headers.headers.get("Content-Type")}"))
           } else {
             val tempFile = TemporaryFile(prefix = "remote-file", suffix = "." + formatOpt.get.value)
-            tempFile.file.deleteOnExit()
+            if (!Play.maybeApplication.exists(_.mode == Mode.Test)) {
+              tempFile.file.deleteOnExit()
+            }
             val outputStream = new FileOutputStream(tempFile.file)
 
             val maxSize = 1024 * 1024 * 16
