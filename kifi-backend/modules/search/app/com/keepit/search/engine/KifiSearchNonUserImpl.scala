@@ -44,9 +44,9 @@ class KifiSearchNonUserImpl(
     }
 
     val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch)
-    log.info(s"NE: KifiResultCollector created (${timeLogs.elapsed()})")
+    log.info(s"NE: KifiNonUserResultCollector created (${timeLogs.elapsed()})")
     engine.join(collector)
-    log.info(s"NE: KifiResultCollector joined (${timeLogs.elapsed()})")
+    log.info(s"NE: KifiNonUserResultCollector joined (${timeLogs.elapsed()})")
 
     collector.getResults()
   }
@@ -55,16 +55,12 @@ class KifiSearchNonUserImpl(
     val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val total = textHits.totalHits
-
     val hits = createQueue(numHitsToReturn)
-
-    // compute high score excluding others (an orphan uri sometimes makes results disappear)
-    val highScore = textHits.highScore
 
     if (textHits.size > 0) {
       textHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          hit.normalizedScore = hit.score / highScore
+          hit.normalizedScore = hit.score
           hits.insert(hit)
       }
     }
@@ -73,7 +69,9 @@ class KifiSearchNonUserImpl(
     timeLogs.done()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
+    log.info(s"NE: total=${total}")
+
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), 0, 0, total, true)
   }
 
   override def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {

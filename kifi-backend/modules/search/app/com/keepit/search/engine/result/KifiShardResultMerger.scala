@@ -12,7 +12,6 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
-  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
