@@ -28,15 +28,25 @@ class KifiSearchNonUserImpl(
   def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): HitQueue = {
 
     val engine = engineBuilder.build()
+    log.info(s"NE: engine created (${timeLogs.elapsed()})")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    engine.execute(keepScoreSource)
+    val numRecs1 = engine.execute(keepScoreSource)
+    log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    engine.execute(articleScoreSource)
+    val numRec2 = engine.execute(articleScoreSource)
+    log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
+
+    if (debugFlags != 0) {
+      if ((debugFlags & DebugOption.DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+    }
 
     val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch)
+    log.info(s"NE: KifiResultCollector created (${timeLogs.elapsed()})")
     engine.join(collector)
+    log.info(s"NE: KifiResultCollector joined (${timeLogs.elapsed()})")
 
     collector.getResults()
   }
