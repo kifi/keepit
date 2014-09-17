@@ -552,11 +552,16 @@ class SearchCommanderImpl @Inject() (
     def getTotalTime: Long = (_endTime - _startTime)
 
     def send(): Unit = {
-      statsd.timing("extSearch.preSearchTime", elapsed(_presearch), ALWAYS)
-      statsd.timing("extSearch.searching", elapsed(_search), ALWAYS)
-      statsd.timing("extSearch.postSearchTime", elapsed(_postsearch), ALWAYS)
-      statsd.timing("extSearch.total", elapsed(_endTime), ALWAYS)
+      send("extSearch.preSearchTime", _presearch, ALWAYS)
+      send("extSearch.searching", _search, ALWAYS)
+      send("extSearch.postSearchTime", _postsearch, ALWAYS)
+      send("extSearch.total", _endTime, ALWAYS)
       statsd.incrementOne("extSearch.total", ONE_IN_TEN)
+    }
+
+    @inline
+    private def send(name: String, time: Long, frequency: Double) = {
+      if (time > 0L) statsd.timing(name, elapsed(time), frequency)
     }
 
     override def toString = {
