@@ -56,7 +56,6 @@ class LibraryCommander @Inject() (
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
 
       val keeps = keepRepo.getByLibrary(library.id.get, 10, 0)
-
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
       (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }
@@ -69,6 +68,7 @@ class LibraryCommander @Inject() (
         description = lib.description,
         slug = lib.slug,
         url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+        kind = lib.kind,
         visibility = lib.visibility,
         collaborators = collabs,
         followers = follows,
@@ -245,6 +245,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[Library] = {
+    db.readOnlyMaster { implicit s =>
+      libraryRepo.getByUser(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(_._2)
+    }
+  }
+
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
@@ -331,7 +337,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess)]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
       if (targetLib.ownerId != inviterId)
@@ -340,13 +346,14 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("cant_invite_to_system_generated_library"))
       else {
         val successInvites = for (i <- inviteList) yield {
-          val (inv, extId) = i._1 match {
+          val (recipient, access, msgOpt) = i
+          val (inv, extId) = recipient match {
             case Left(id) =>
-              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = i._2), Left(userRepo.get(id).externalId))
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(userRepo.get(id).externalId))
             case Right(email) =>
-              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, emailAddress = Some(email), access = i._2), Right(email))
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, emailAddress = Some(email), access = access, message = msgOpt), Right(email))
           }
-          (inv, (extId, i._2))
+          (inv, (extId, access))
         }
         val (inv1, res) = successInvites.unzip
         inviteBulkUsers(inv1)
@@ -619,6 +626,7 @@ case class FullLibraryInfo(
   description: Option[String],
   slug: LibrarySlug,
   url: String,
+  kind: LibraryKind,
   ownerId: ExternalId[User],
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
@@ -635,6 +643,7 @@ object FullLibraryInfo {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
+    (__ \ 'kind).format[LibraryKind] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and

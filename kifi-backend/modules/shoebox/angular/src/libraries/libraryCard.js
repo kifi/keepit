@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', ['friendService',
-  function (friendService) {
+.directive('kfLibraryCard', ['friendService', 'libraryService', 'profileService',
+  function (friendService, libraryService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -31,13 +31,47 @@ angular.module('kifi')
 
         // Data augmentation. May want to move out to own decorator service
         // like the keepDecoratorService.
-        if (scope.library.owner) {
-          scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
+
+        function augmentData() {
+          if (scope.library.owner) {
+            scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
+          }
+
+          scope.library.followers.forEach(function (follower) {
+            follower.image = friendService.getPictureUrlForUser(follower);
+          });
         }
 
-        scope.library.followers.forEach(function (follower) {
-          follower.image = friendService.getPictureUrlForUser(follower);
-        });
+        scope.followed = function () {
+          return _.some(scope.library.followers, function (follower) {
+            return follower.id === profileService.me.id;
+          });
+        };
+
+        scope.follow = function () {
+          if (!scope.followed()) {
+            libraryService.joinLibrary(scope.library.id);
+            scope.library.followers.push({
+              id: profileService.me.id,
+              firstName: profileService.me.firstName,
+              lastName: profileService.me.lastName,
+              pictureName: profileService.me.pictureName
+            });
+            augmentData();
+          }
+        };
+
+        scope.unfollow = function () {
+          libraryService.leaveLibrary(scope.library.id).then( function () {
+            _.remove(scope.library.followers, function (follower) {
+              return follower.id === profileService.me.id;
+            });
+          });
+        };
+
+        augmentData();
+
+
       }
     };
   }

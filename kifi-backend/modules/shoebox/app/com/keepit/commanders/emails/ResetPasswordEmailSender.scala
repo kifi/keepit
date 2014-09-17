@@ -33,7 +33,8 @@ class ResetPasswordEmailSender @Inject() (
       subject = "Kifi.com | Password reset requested",
       to = Right(resetEmailAddress),
       category = NotificationCategory.User.RESET_PASSWORD,
-      htmlTemplate = views.html.email.resetPasswordBlack(userId, resetUrl),
+      htmlTemplate = views.html.email.black.resetPassword(userId, resetUrl),
+      textTemplate = Some(views.html.email.black.resetPassword(userId, resetUrl)),
       campaign = Some("passwordReset")
     )
     emailTemplateSender.send(emailToSend)

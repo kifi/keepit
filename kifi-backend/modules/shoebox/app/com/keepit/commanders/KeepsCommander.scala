@@ -363,6 +363,7 @@ class KeepsCommander @Inject() (
     (individualKeeps ++ collectionKeeps).filter(filter).groupBy(_.id.get).values.flatten.toSeq
   }
 
+  // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
@@ -381,7 +382,6 @@ class KeepsCommander @Inject() (
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
-
     val library = db.readOnlyReplica { implicit session => // change to readOnlyReplica when we can be 100% sure every user has libraries
       libraryRepo.get(libraryId)
     }
@@ -459,13 +459,21 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def unkeepFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
+      case Left(why) => Left(why)
+      case Right((Seq(), _)) => Left("invalid_keep_id")
+      case Right((Seq(info), _)) => Right(info)
+    }
+  }
+
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
       case Some(mem) if mem.hasWriteAccess =>
         val (unkeptKeeps, failedKeepIds) = db.readWrite { implicit s =>
-          val (validKeeps, failures) = keeps.map { kId =>
+          val (validKeeps, failures) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId) match {
               case Some(k) if libId == k.libraryId.get => Left(k)
               case _ => Right(kId)
@@ -477,7 +485,7 @@ class KeepsCommander @Inject() (
           (unkeptKeeps, failedKeepIds)
         }
         val validUnkeeps = finalizeUnkeeping(unkeptKeeps, userId)
-        Right((validUnkeeps, failedKeepIds))
+        Right(validUnkeeps, failedKeepIds)
       case _ =>
         Left("permission_denied")
     }
