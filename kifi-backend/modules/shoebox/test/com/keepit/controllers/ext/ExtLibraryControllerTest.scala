@@ -139,7 +139,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "url" -> "http://www.beyonceisbetter.com",
           "guided" -> false))
         status(result3) === OK
-        contentAsString(result3) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true}"""
+        contentAsString(result3) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"libraryId":"${pubId2.id}"}"""
 
         // try to keep to someone else's library without sufficient access
         val result4 = addKeep(user1, pubId3, Json.obj(
