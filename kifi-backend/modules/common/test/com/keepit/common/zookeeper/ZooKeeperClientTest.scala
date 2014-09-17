@@ -13,7 +13,7 @@ class ZooKeeperClientTest extends Specification {
   args(skipAll = true)
 
   def withZKSession[T](block: ZooKeeperSession => T)(implicit node: Node, cleanup: Boolean = true): T = {
-    println(s"starting test with root path ${node.path}")
+    // println(s"starting test with root path ${node.path}") // can be removed?
     val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some({ zk1 => println(s"in callback, got $zk1") }))
     zkClient.session { zk =>
       try {
@@ -69,7 +69,7 @@ class ZooKeeperClientTest extends Specification {
     }
 
     "monitor node children with data watch" in {
-      println("monitoring")
+      // println("monitoring") // can be removed?
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         @volatile var latch: Option[CountDownLatch] = None
@@ -83,7 +83,7 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
           childMap = children.toMap
           updateCount.incrementAndGet()
-          println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
+          // println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""") // can be removed?
           latch.map(l => l.countDown())
         })
         awaitLatch
@@ -135,7 +135,7 @@ class ZooKeeperClientTest extends Specification {
     }
 
     "monitor node children without data watch" in {
-      println("monitoring")
+      // println("monitoring") // can be removed?
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         @volatile var latch: Option[CountDownLatch] = None
@@ -149,7 +149,7 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildren(parent, { (children: Seq[Node]) =>
           childSet = children.toSet
           updateCount.incrementAndGet()
-          println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
+          // println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""") // can be removed?
           latch.map(l => l.countDown())
         })
         awaitLatch
@@ -195,16 +195,16 @@ class ZooKeeperClientTest extends Specification {
       withZKSession { zk =>
         val parent = zk.createChild(node, "parent")
         zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
-          println("Service Instances: %s".format(children.mkString(", ")))
+          // println("Service Instances: %s".format(children.mkString(", "))) // can be removed?
         })
-        println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL))
-        println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL))
-        println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL))
+        // println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL)) // can be removed?
+        // println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL)) // can be removed?
+        // println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL)) // can be removed?
 
         zk.getChildren(parent).size === 3
 
         val other = zk.createChild(node, "other")
-        println(zk.createChild(other, "child"))
+        // println(zk.createChild(other, "child")) // can be removed?
       }(node, false)
       withZKSession { zk =>
         zk.getChildren(Node(s"${node.path}/other")).size === 1

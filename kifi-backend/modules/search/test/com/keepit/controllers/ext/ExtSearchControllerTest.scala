@@ -97,7 +97,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "experts":[]
           }
         """)
-        println(Json.parse(contentAsString(result)).toString)
+        // println(Json.parse(contentAsString(result)).toString) // can be removed?
         Json.parse(contentAsString(result)) === expected
       }
     }

@@ -271,7 +271,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
               case None => j.as[EmailContactResult]
             }
           }
-          println(s"[search($query,$limit)] res(len=${js.length}):$js")
+          // println(s"[search($query,$limit)] res(len=${js.length}):$js") // can be removed?
           js
         }
 
