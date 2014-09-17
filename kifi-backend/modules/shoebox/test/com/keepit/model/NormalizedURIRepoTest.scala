@@ -95,7 +95,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           val batch = UriIdAndSeqBatch(uris)
           batch.batch.size === 2
           val bin = ScalaMessagePack.write(batch)
-          println(s"bin size is ${bin.size}")
+          // println(s"bin size is ${bin.size}") // can be removed?
           val deserialized = ScalaMessagePack.read[UriIdAndSeqBatch](bin)
           deserialized.batch.size === 2
           uris(0) === deserialized.batch(0)
@@ -153,7 +153,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val all = uriRepo.all
           all.size === 2
-          println(all.mkString("\n"))
+          // println(all.mkString("\n")) // can be removed?
           normalizedURIInterner.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
@@ -194,7 +194,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite { implicit s =>
           val all = uriRepo.getByState(NormalizedURIStates.ACTIVE)
-          println(all.mkString("\n"))
+          // println(all.mkString("\n")) // can be removed?
           all.size === 2
         }
       }
@@ -297,8 +297,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       uriRepo.save(uri)
     } catch {
       case e: Throwable =>
-        println("fail to persist uri %s. Existing URIs in the db are: %s".
-          format(uri, uriRepo.all.map(_.toString).mkString("\n")))
+        // println("fail to persist uri %s. Existing URIs in the db are: %s".format(uri, uriRepo.all.map(_.toString).mkString("\n"))) // can be removed?
         throw e
     }
   }

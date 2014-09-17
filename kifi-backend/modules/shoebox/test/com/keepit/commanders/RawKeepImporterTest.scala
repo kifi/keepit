@@ -67,7 +67,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
-          println(bookmarks)
+          // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get
@@ -97,7 +97,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           val bookmarks = keepRepo.all
           bookmarks.count(k => k.libraryId == lib.id) === 5
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
-          println(bookmarks)
+          // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get

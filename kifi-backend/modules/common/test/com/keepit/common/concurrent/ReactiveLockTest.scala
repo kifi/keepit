@@ -29,7 +29,7 @@ class ReactiveLockTest extends Specification {
         output = output :+ 1
         val held = testLock.tryLock()
         if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-        println("I'm sync task number one")
+        // println("I'm sync task number one") // can be removed?
         Thread.sleep(20) //making sure this task takes a bit of time to provoke races if there are any
         testLock.unlock()
         output = output :+ 1
@@ -39,7 +39,7 @@ class ReactiveLockTest extends Specification {
         output = output :+ 2
         val held = testLock.tryLock()
         if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-        println("I'm sync task number two")
+        // println("I'm sync task number two") // can be removed?
         testLock.unlock()
         output = output :+ 2
       }
@@ -48,7 +48,7 @@ class ReactiveLockTest extends Specification {
         output = output :+ 3
         val held = testLock.tryLock()
         if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-        println("I'm sync task number three")
+        // println("I'm sync task number three") // can be removed?
         testLock.unlock()
         output = output :+ 3
       }
@@ -57,7 +57,7 @@ class ReactiveLockTest extends Specification {
         output = output :+ 4
         val held = testLock.tryLock()
         if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-        println("I'm sync task number four")
+        // println("I'm sync task number four") // can be removed?
         testLock.unlock()
         output = output :+ 4
       }
@@ -85,7 +85,7 @@ class ReactiveLockTest extends Specification {
           val held = testLock.tryLock()
           if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
           Thread.sleep(20) //making sure this task takes a bit of time to provoke races if there are any
-          println("I'm async task number one")
+          // println("I'm async task number one") // can be removed?
           testLock.unlock()
           output = output :+ 1
           true
@@ -97,7 +97,7 @@ class ReactiveLockTest extends Specification {
           output = output :+ 2
           val held = testLock.tryLock()
           if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-          println("I'm async task number two")
+          // println("I'm async task number two") // can be removed?
           testLock.unlock()
           output = output :+ 2
         }
@@ -108,7 +108,7 @@ class ReactiveLockTest extends Specification {
           output = output :+ 3
           val held = testLock.tryLock()
           if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-          println("I'm async task number three")
+          // println("I'm async task number three") // can be removed?
           testLock.unlock()
           output = output :+ 3
         }
@@ -119,7 +119,7 @@ class ReactiveLockTest extends Specification {
           output = output :+ 4
           val held = testLock.tryLock()
           if (!held) throw new IllegalStateException(s"There should be no concurrent access!")
-          println("I'm async task number four")
+          // println("I'm async task number four") // can be removed?
           testLock.unlock()
           output = output :+ 4
         }
@@ -141,9 +141,9 @@ class ReactiveLockTest extends Specification {
         runningCount must be_<=(2)
         runningCount must be_>=(1)
         rLock.running must be_<=(2)
-        println("I'm concurrent task number one being prevented from completing")
+        // println("I'm concurrent task number one being prevented from completing") // can be removed?
         taskCompletionPreventionLock.await(10, TimeUnit.SECONDS)
-        println("I'm concurrent task number one being done")
+        // println("I'm concurrent task number one being done") // can be removed?
         runningCounter.decrementAndGet()
       }
 
@@ -153,7 +153,7 @@ class ReactiveLockTest extends Specification {
         runningCount === 2
         rLock.running === 2
         rLock.running must be_<=(2)
-        println("I'm concurrent task number two")
+        // println("I'm concurrent task number two") // can be removed?
         taskCompletionPreventionLock.countDown()
         runningCounter.decrementAndGet()
       }
@@ -163,7 +163,7 @@ class ReactiveLockTest extends Specification {
         runningCount must be_<=(2)
         runningCount must be_>=(1)
         rLock.running must be_<=(2)
-        println("I'm concurrent task number three")
+        // println("I'm concurrent task number three") // can be removed?
         runningCounter.decrementAndGet()
       }
 
@@ -172,7 +172,7 @@ class ReactiveLockTest extends Specification {
         runningCount must be_<=(2)
         runningCount must be_>=(1)
         rLock.running must be_<=(2)
-        println("I'm concurrent task number four")
+        // println("I'm concurrent task number four") // can be removed?
         runningCounter.decrementAndGet()
       }
 

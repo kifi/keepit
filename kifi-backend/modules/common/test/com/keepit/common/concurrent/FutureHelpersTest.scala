@@ -37,7 +37,7 @@ class FutureHelpersTest extends Specification with Logging {
       var chunkDone = 0
       val input = Seq.fill(50) { util.Random.nextInt(Int.MaxValue) }
       val chunkCB = { chunkIdx: Int =>
-        println(s"[chunkySequentialExec] done with chunk#$chunkIdx")
+        // println(s"[chunkySequentialExec] done with chunk#$chunkIdx") // can be removed?
         chunkDone += 1
       }
       val resF = FutureHelpers.chunkySequentialExec(input, 10, chunkCB) { id =>
