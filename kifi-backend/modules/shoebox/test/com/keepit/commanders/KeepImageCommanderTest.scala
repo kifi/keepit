@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 
@@ -25,8 +26,18 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
   }
 
-  lazy val fakeFile1 = TemporaryFile(new File("test/data/image1.png"))
-  lazy val fakeFile2 = TemporaryFile(new File("test/data/image2.png"))
+  def fakeFile1 = {
+    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+    tf
+  }
+  def fakeFile2 = {
+    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
+    tf
+  }
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner"))
