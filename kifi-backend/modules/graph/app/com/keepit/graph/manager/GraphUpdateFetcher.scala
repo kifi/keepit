@@ -53,6 +53,8 @@ class GraphUpdateFetcherImpl @Inject() (
       case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).imap(_.map(EmailAccountGraphUpdate.apply))
 
       case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
+
+      case LibraryMembershipGraphUpdate => shoebox.getLibraryMembershipsChanged(seq.copy(), fetchSize).imap(_.map(LibraryMembershipGraphUpdate.apply))
     }
   }
 }

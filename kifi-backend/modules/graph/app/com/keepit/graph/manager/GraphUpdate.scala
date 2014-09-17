@@ -131,3 +131,14 @@ case object EmailContactGraphUpdate extends GraphUpdateKind[EmailContactGraphUpd
     EmailContactGraphUpdate(contact.userId, contact.abookId, contact.emailAccountId, contact.hidden, contact.deleted, contact.seq)
   }
 }
+
+case class LibraryMembershipGraphUpdate(userId: Id[User], libId: Id[Library], state: State[LibraryMembership], libMemSeq: SequenceNumber[LibraryMembership]) extends GraphUpdate {
+  type U = LibraryMembershipGraphUpdate
+  def kind = LibraryMembershipGraphUpdate
+  def seq = kind.seq(libMemSeq.value)
+}
+
+case object LibraryMembershipGraphUpdate extends GraphUpdateKind[LibraryMembershipGraphUpdate] {
+  val code = "library_membership_graph_update"
+  def apply(libView: LibraryMembershipView): LibraryMembershipGraphUpdate = LibraryMembershipGraphUpdate(libView.userId, libView.libraryId, libView.state, libView.seq)
+}

@@ -21,6 +21,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
     case emailAccountUpdate: EmailAccountGraphUpdate => processEmailAccountGraphUpdate(emailAccountUpdate)
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
+    case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -180,5 +181,16 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
       writer.saveEdge(update.emailAccountId, update.abookId, EmptyEdgeData)
       writer.saveEdge(update.abookId, update.emailAccountId, EmptyEdgeData)
     }
+  }
+
+  private def processLibraryMembershipGraphUpdate(update: LibraryMembershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case LibraryMembershipStates.ACTIVE =>
+      writer.saveVertex(UserData(update.userId))
+      writer.saveVertex(LibraryData(update.libId))
+      writer.saveEdge(update.userId, update.libId, EmptyEdgeData)
+      writer.saveEdge(update.libId, update.userId, EmptyEdgeData)
+    case _ =>
+      writer.removeEdgeIfExists(update.userId, update.libId, EmptyEdgeReader)
+      writer.removeEdgeIfExists(update.libId, update.userId, EmptyEdgeReader)
   }
 }
