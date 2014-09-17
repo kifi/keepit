@@ -17,6 +17,7 @@ class ExtKeepImageController @Inject() (
     db: Database,
     imageInfoRepo: ImageInfoRepo) extends Controller {
 
+  // unused, for reference
   def autoFetch() = Action.async(parse.tolerantJson) { request =>
     val keepId = (request.body \ "keepId").as[Id[Keep]]
     keepImageCommander.autoSetKeepImage(keepId, overwriteExistingChoice = true).map { result =>
@@ -24,6 +25,7 @@ class ExtKeepImageController @Inject() (
     }
   }
 
+  // unused, for reference
   def setImage() = Action.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     val keepId = (request.body \ "keepId").as[Id[Keep]]
@@ -32,6 +34,7 @@ class ExtKeepImageController @Inject() (
     }
   }
 
+  // unused, for reference
   def getBestImageForKeep() = Action(parse.tolerantJson) { request =>
     val sizePref = (request.body \ "size").as[String]
     val sizeOpt = KeepImageSize.imageSizeFromString(sizePref)

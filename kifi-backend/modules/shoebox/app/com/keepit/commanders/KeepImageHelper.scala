@@ -21,15 +21,15 @@ trait KeepImageHelper {
   protected def calcSizesForImage(image: BufferedImage): Set[Int] = {
     val sizes = KeepImageSize.allSizes.map { size =>
       calcResizeBoundingBox(image, size.idealSize)
-    }.filter(_.isDefined).map(_.get)
+    }.flatten
 
-    sizes.foldRight(Set[Int]()) {
-      case (b, a) =>
-        a.find(existingSize => Math.abs(b - existingSize) < 100) match {
-          case Some(alreadyHasACloseEnoughSize) => a
-          case None => a + b
-        }
-    }.filterNot(i => i == Math.max(image.getWidth, image.getHeight)) // throw out original size
+    var t = 0
+    sizes.sorted.flatMap { x =>
+      if (x - t > 100) {
+        t = x
+        Some(x)
+      } else None
+    }.filterNot(i => i == Math.max(image.getWidth, image.getHeight)).toSet
   }
 
   // Returns None if image can not be reasonably boxed to near the desired dimensions
@@ -158,7 +158,7 @@ object KeepImageSize {
   case object Small extends KeepImageSize("small", ImageSize(150, 150))
   case object Medium extends KeepImageSize("medium", ImageSize(400, 400))
   case object Large extends KeepImageSize("large", ImageSize(1000, 1000))
-  case object XLarge extends KeepImageSize("xlarge", ImageSize(2000, 2000))
+  case object XLarge extends KeepImageSize("xlarge", ImageSize(1500, 1500))
 
   val allSizes: Seq[KeepImageSize] = Seq(Small, Medium, Large, XLarge)
 

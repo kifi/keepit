@@ -1,7 +1,4 @@
 
-POST     /test1                      @com.keepit.controllers.ext.ExtKeepImageController.autoFetch()
-POST     /test2                      @com.keepit.controllers.ext.ExtKeepImageController.getBestImageForKeep()
-POST     /test3                      @com.keepit.controllers.ext.ExtKeepImageController.setImage()
 
 GET     /login                      @com.keepit.controllers.core.AuthController.loginPage
 GET     /ss/login                   com.keepit.social.providers.LoginPage.login

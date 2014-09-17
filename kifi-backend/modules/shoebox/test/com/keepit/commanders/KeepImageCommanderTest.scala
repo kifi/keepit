@@ -1,37 +1,25 @@
 package com.keepit.commanders
 
 import java.awt.image.BufferedImage
-import java.io.{ File, FileOutputStream, BufferedOutputStream }
+import java.io.File
 
 import com.google.inject.Injector
-import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ FakeMailModule, ElectronicMail }
-import com.keepit.common.store.{ KeepImageStore, FakeKeepImageStore, ImageSize, FakeShoeboxStoreModule }
+import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsError, JsSuccess, Json }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import scala.util.Success
 
 class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with Logging {
 
   val logger = log
 
-  def modules = Seq(
-    FakeScrapeSchedulerModule(),
-    FakeSearchServiceClientModule(),
-    FakeMailModule(),
-    FakeShoeboxStoreModule(),
-    FakeCryptoModule()
-  )
+  def modules = Seq()
 
   def dummyImage(width: Int, height: Int) = {
     new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
@@ -60,7 +48,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
   "KeepImageHelper" should {
     "calculate resize sizes for an image" in {
-      withDb(modules: _*) { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val helper = new KeepImageHelper {
           val log = logger
 
@@ -68,15 +56,16 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           calcSizesForImage(dummyImage(300, 100)).toSeq.sorted === Seq(150)
           calcSizesForImage(dummyImage(100, 700)).toSeq.sorted === Seq(150, 400)
           calcSizesForImage(dummyImage(300, 300)).toSeq.sorted === Seq(150)
-          calcSizesForImage(dummyImage(1001, 1001)).toSeq.sorted === Seq(150, 400)
-          calcSizesForImage(dummyImage(1999, 1999)).toSeq.sorted === Seq(150, 400, 1000)
+          calcSizesForImage(dummyImage(1001, 1001)).toSeq.sorted === Seq(150, 400, 1000)
+          calcSizesForImage(dummyImage(2000, 1500)).toSeq.sorted === Seq(150, 400, 1000, 1500)
+          calcSizesForImage(dummyImage(1500, 1400)).toSeq.sorted === Seq(150, 400, 1000)
         }
         helper === helper
       }
     }
 
     "convert format types in several ways" in {
-      withDb(modules: _*) { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val helper = new KeepImageHelper {
           val log = logger
 
@@ -104,7 +93,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     }
 
     "convert image to input stream" in {
-      withDb(modules: _*) { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val helper = new KeepImageHelper {
           val log = logger;
 
@@ -129,6 +118,26 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             val res = bufferedImageToInputStream(null, ImageFormat.JPG)
             res.isSuccess === false
           }
+          1 === 1
+
+        }
+        helper === helper
+      }
+    }
+
+    "hash files with MD5" in {
+      withInjector(modules: _*) { implicit injector =>
+        val helper = new KeepImageHelper {
+          val log = logger;
+
+          val hashed1 = hashImageFile(fakeFile1.file)
+          hashed1.isSuccess === true
+          hashed1.get.hash === "26dbdc56d54dbc94830f7cfc85031481"
+
+          val hashed2 = hashImageFile(fakeFile2.file)
+          hashed2.isSuccess === true
+          hashed2.get.hash === "1b3d95541538044c2a26598fbe1d06ae"
+
           1 === 1
 
         }
@@ -202,6 +211,8 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
+        // Dependant on image1.png — if changed, this needs to change too.
+        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "/keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
 
         val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100))
         keepImage2.get.id !== keepImage3.get.id
@@ -227,8 +238,6 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           keepImageRepo.getForKeepId(keep2.id.get).length === 0
           keepImageRepo.getBySourceHash(keepImage4.get.sourceFileHash).length === 2
         }
-
-        //commander.
 
         true === true
       }
