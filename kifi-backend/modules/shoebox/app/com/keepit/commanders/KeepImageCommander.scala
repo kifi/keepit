@@ -149,7 +149,7 @@ class KeepImageCommanderImpl @Inject() (
             }
           } else {
             // have existing KeepImages, use those
-            log.info(s"Existing stored images found: $existingSameHash")
+            log.info(s"[kic] Existing stored images found: $existingSameHash")
             val allForThisKeep = existingSameHash.filter(i => i.keepId == keepId)
             val activeForThisKeep = allForThisKeep.filter(i => i.state == KeepImageStates.ACTIVE)
             if (activeForThisKeep.nonEmpty) {
@@ -178,7 +178,7 @@ class KeepImageCommanderImpl @Inject() (
 
   private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
-      log.info(s"Persisting ${image.key} (${image.bytes} B)")
+      log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
       keepImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
         ImageProcessState.UploadedImage(image.key, image.format, image.image)
       }
@@ -213,7 +213,7 @@ class KeepImageCommanderImpl @Inject() (
             }.isEmpty
           }
 
-          log.info("Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
+          log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
           toDeactivate.foreach(keepImageRepo.save)
           (toActivate ++ toCreate).map(keepImageRepo.save)
         }
@@ -236,7 +236,7 @@ class KeepImageCommanderImpl @Inject() (
     validateAndLoadImageFile(sourceImage.file.file) match {
       case Success(image) =>
         val resizedImages = calcSizesForImage(image).map { boundingBox =>
-          log.info(s"Using bounding box $boundingBox px")
+          log.info(s"[kic] Using bounding box $boundingBox px")
           resizeImage(image, boundingBox).map { resizedImage =>
             bufferedImageToInputStream(resizedImage, outFormat).map {
               case (is, bytes) =>
@@ -271,7 +271,7 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   private def fetchAndHashLocalImage(file: TemporaryFile): Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"Fetching ${file.file.getAbsolutePath}")
+    log.info(s"[kic] Fetching ${file.file.getAbsolutePath}")
 
     val is = new BufferedInputStream(new FileInputStream(file.file))
     val formatOpt = Option(URLConnection.guessContentTypeFromStream(is)).flatMap { mimeType =>
@@ -283,10 +283,10 @@ class KeepImageCommanderImpl @Inject() (
 
     formatOpt match {
       case Some(format) =>
-        log.info(s"Fetched. format: $format, file: ${file.file.getAbsolutePath}")
+        log.info(s"[kic] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) =>
-            log.info(s"Hashed: ${hash.hash}")
+            log.info(s"[kic] Hashed: ${hash.hash}")
             Future.successful(Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, None)))
           case Failure(ex) =>
             Future.successful(Left(ImageProcessState.HashFailed(ex)))
@@ -297,13 +297,13 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   private def fetchAndHashRemoteImage(imageUrl: String): Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]] = {
-    log.info(s"Fetching $imageUrl")
+    log.info(s"[kic] Fetching $imageUrl")
     fetchRemoteImage(imageUrl).map {
       case (format, file) =>
-        log.info(s"Fetched. format: $format, file: ${file.file.getAbsolutePath}")
+        log.info(s"[kic] Fetched. format: $format, file: ${file.file.getAbsolutePath}")
         hashImageFile(file.file) match {
           case Success(hash) =>
-            log.info(s"Hashed: ${hash.hash}")
+            log.info(s"[kic] Hashed: ${hash.hash}")
             Right(ImageProcessState.ImageLoadedAndHashed(file, format, hash, Some(imageUrl)))
           case Failure(ex) =>
             Left(ImageProcessState.HashFailed(ex))
@@ -359,7 +359,7 @@ class KeepImageCommanderImpl @Inject() (
 
   private def resizeImage(image: BufferedImage, boundingBox: Int): Try[BufferedImage] = Try {
     val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
-    log.info(s"Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
+    log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
     img
   }
 
