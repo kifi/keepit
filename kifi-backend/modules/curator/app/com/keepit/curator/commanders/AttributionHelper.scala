@@ -21,7 +21,8 @@ class SeedAttributionHelper @Inject() (
     keepRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
     search: SearchServiceClient,
-    graph: GraphServiceClient) {
+    graph: GraphServiceClient,
+    libMemRepo: CuratorLibraryMembershipInfoRepo) {
 
   val MIN_KEEP_ATTR_SCORE = 2
   protected val MIN_USER_KEEP_SIZE = 20 // too few keeps means graph random walk may not return relevant results
@@ -30,14 +31,29 @@ class SeedAttributionHelper @Inject() (
     val userAttrFut = getUserAttribution(seeds)
     val keepAttrFut = keepAttributionFromCortex(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
+    val libraryAttrFut = getLibraryAttribution(seeds)
     for {
       userAttr <- userAttrFut
       keepAttr <- keepAttrFut
       topicAttr <- topicAttrFut
+      libraryAttr <- libraryAttrFut
     } yield {
       (0 until seeds.size).map { i =>
-        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i))
+        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i), libraryAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
+      }
+    }
+  }
+
+  private def getLibraryAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[LibraryAttribution]]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      seeds.map { seed =>
+        val libs = libMemRepo.getFollowedLibrariesWithUri(seed.userId, seed.uriId)
+        if (libs.isEmpty) {
+          None
+        } else {
+          Some(LibraryAttribution(libs.toSeq))
+        }
       }
     }
   }
