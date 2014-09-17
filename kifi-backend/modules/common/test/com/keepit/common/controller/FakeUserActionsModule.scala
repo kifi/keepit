@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
-import com.google.inject.{ Singleton, Provides }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ User, ExperimentType }
@@ -15,7 +16,9 @@ case class FakeUserActionsModule() extends UserActionsModule {
 }
 
 @Singleton
-class FakeUserActionsHelper() extends UserActionsHelper with Logging {
+class FakeUserActionsHelper @Inject() (
+    val impersonateCookie: ImpersonateCookie,
+    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with Logging {
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
