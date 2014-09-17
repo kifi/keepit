@@ -22,7 +22,6 @@ import scala.math.{ max, min }
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
@@ -50,14 +49,11 @@ class ExtPreferenceController @Inject() (
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  def getRules(version: String) = JsonAction.authenticated { request =>
+  def getRules() = JsonAction.authenticated { request =>
     db.readOnlyReplica { implicit s =>
-      val group = sliderRuleRepo.getGroup("default")
-      if (version != group.version) {
-        Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))
-      } else {
-        Ok(Json.obj())
-      }
+      Ok(Json.obj(
+        "slider_rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11
+        "url_patterns" -> urlPatternRepo.getActivePatterns()))
     }
   }
 

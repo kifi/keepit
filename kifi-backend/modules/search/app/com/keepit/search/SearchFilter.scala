@@ -17,6 +17,19 @@ abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[
 
 object SearchFilter {
 
+  def apply(filter: Option[String], library: Option[String], context: Option[String])(implicit publicIdConfig: PublicIdConfiguration): SearchFilter = {
+    filter match {
+      case Some("m") =>
+        SearchFilter.mine(library, context)
+      case Some("f") =>
+        SearchFilter.friends(library, context)
+      case Some("a") =>
+        SearchFilter.all(library, context)
+      case _ =>
+        SearchFilter.default(library, context)
+    }
+  }
+
   def default(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
     val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
 

@@ -17,9 +17,9 @@ angular.module('kifi')
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
-          util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
-          util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
-          return res.data;
+        util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
+        util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
+        return res.data;
       });
     });
 
@@ -37,6 +37,13 @@ angular.module('kifi')
 
     var keepsInLibraryService = new Clutch(function (libraryId, count, offset, authToken) {
       return $http.get(routeService.getKeepsInLibrary(libraryId, count, offset, authToken)).then(function (res) {
+        return res.data;
+      });
+    });
+
+    // TODO(yiping): figure out whether this service belongs so specifically within libraryService.
+    var contactSearchService = new Clutch(function (opt_query) {
+      return $http.get(routeService.contactSearch(opt_query)).then(function (res) {
         return res.data;
       });
     });
@@ -87,7 +94,7 @@ angular.module('kifi')
         }
         return libraryByUserSlugService.get(username, slug);
       },
-      
+
       getLibraryByUserSlug: function (username, slug, invalidateCache) {
         if (invalidateCache) {
           libraryByUserSlugService.expire(username, slug);
@@ -107,7 +114,7 @@ angular.module('kifi')
         if (!!lib) {
           var split = lib.url.split('/').filter(function (a) { return a.length !== 0; });
           return split[1];
-        } 
+        }
 
         return null;
       },
@@ -149,7 +156,41 @@ angular.module('kifi')
           return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
         }
         return $http.post(routeService.modifyLibrary(opts.id), opts);
+      },
+
+      getLibraryShareContacts: function (opt_query) {
+        return contactSearchService.get(opt_query);
+      },
+
+      shareLibrary: function (libraryId, opts) {
+        var required = ['invites'];
+        var missingFields = _.filter(required, function (v) {
+          return opts[v] === undefined;
+        });
+
+        if (missingFields.length > 0) {
+          return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+        }
+        return $http.post(routeService.shareLibrary(libraryId), opts);
+      },
+      joinLibrary: function (libraryId) {
+        var alreadyJoined = _.some(librarySummaries, function (library) {
+          return library.id === libraryId;
+        });
+        if (!alreadyJoined) {
+          return $http.post(routeService.joinLibrary(libraryId)).then( function (response) {
+            librarySummaries.push(response.data);
+          });
+        }
+      },
+      leaveLibrary: function (libraryId) {
+        return $http.post(routeService.leaveLibrary(libraryId)).then( function () {
+          _.remove(librarySummaries, function (library) {
+            return library.id === libraryId;
+          });
+        });
       }
+
     };
 
     return api;

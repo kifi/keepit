@@ -158,6 +158,7 @@ class KeepsCommander @Inject() (
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
@@ -362,6 +363,7 @@ class KeepsCommander @Inject() (
     (individualKeeps ++ collectionKeeps).filter(filter).groupBy(_.id.get).values.flatten.toSeq
   }
 
+  // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
@@ -380,7 +382,6 @@ class KeepsCommander @Inject() (
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
-
     val library = db.readOnlyReplica { implicit session => // change to readOnlyReplica when we can be 100% sure every user has libraries
       libraryRepo.get(libraryId)
     }
@@ -455,6 +456,41 @@ class KeepsCommander @Inject() (
       keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
     } flatMap { keep =>
       finalizeUnkeeping(Seq(keep), userId).headOption
+    }
+  }
+
+  def unkeepOneFromLibrary(keep: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    unkeepManyFromLibrary(Seq(keep), libId, userId) match {
+      case Left(fail) =>
+        Left(fail)
+      case Right((infos, failures)) =>
+        if (infos.isEmpty)
+          Left("invalid_keep_id")
+        else
+          Right(infos.head)
+    }
+  }
+  def unkeepManyFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+    db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
+    } match {
+      case Some(mem) if mem.hasWriteAccess =>
+        val (unkeptKeeps, failedKeepIds) = db.readWrite { implicit s =>
+          val (validKeeps, failures) = keeps.map { kId =>
+            keepRepo.getByExtIdandLibraryId(kId, libId) match {
+              case Some(k) if libId == k.libraryId.get => Left(k)
+              case _ => Right(kId)
+            }
+          }.partition { k => k.isLeft }
+
+          val failedKeepIds = failures.map(f => f.right.get)
+          val unkeptKeeps = validKeeps.map(k => setKeepStateWithSession(k.left.get, KeepStates.INACTIVE, userId))
+          (unkeptKeeps, failedKeepIds)
+        }
+        val validUnkeeps = finalizeUnkeeping(unkeptKeeps, userId)
+        Right(validUnkeeps, failedKeepIds)
+      case _ =>
+        Left("permission_denied")
     }
   }
 

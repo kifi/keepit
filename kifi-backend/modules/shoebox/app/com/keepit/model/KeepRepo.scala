@@ -46,6 +46,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   // Do not use:
   def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
 }
@@ -398,4 +399,10 @@ class KeepRepoImpl @Inject() (
     getCountByLibraryCompiled(libraryId, excludeState).run
   }
 
+  private def getByExtIdandLibraryIdCompiled(extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
+    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
+  }
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
+    getByExtIdandLibraryIdCompiled(extId, libraryId, excludeState).firstOption
+  }
 }

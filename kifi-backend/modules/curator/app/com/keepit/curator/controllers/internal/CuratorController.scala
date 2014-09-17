@@ -52,14 +52,14 @@ class CuratorController @Inject() (
     recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
   }
 
-  def triggerEmailToUser(code: String, userId: Id[User]) = Action {
+  def triggerEmailToUser(code: String, userId: Id[User]) = Action.async {
     code match {
       case "feed" =>
         log.info(s"trigger email $code to user $userId")
-        NoContent
+        feedEmailSender.sendToUser(userId).map(_ => NoContent)
       case _ =>
         log.warn(s"trigger email error: code $code not found")
-        BadRequest
+        Future.successful(BadRequest)
     }
   }
 

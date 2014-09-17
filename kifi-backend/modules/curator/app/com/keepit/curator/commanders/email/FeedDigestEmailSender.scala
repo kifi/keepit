@@ -133,33 +133,30 @@ class FeedDigestEmailSender @Inject() (
   }
 
   def processQueue(): Future[Unit] = {
-    def fetchFromQueue(): Future[Seq[Unit]] = {
-      log.info(s"fetching 5 messages from queue ${queue.queue.name}")
-      queue.nextBatchWithLock(1, 1 minute).flatMap { messages =>
-        log.info(s"locked ${messages.size} messages from queue ${queue.queue.name}")
-        Future.sequence(messages.map { message =>
+    def fetchFromQueue(): Future[Boolean] = {
+      log.info(s"[processQueue] fetching message from queue ${queue.queue.name}")
+      queue.nextWithLock(1 minute).flatMap { messageOpt =>
+        messageOpt map { message =>
           try {
-            sendToUser(message.body.userId).map { digestMail =>
-              if (digestMail.mailSent) log.info(s"consumed digest email for ${digestMail.userId}")
-              else log.warn(s"digest email was not mailed: $digestMail")
+            sendToUser(message.body.userId) map { digestMail =>
+              if (digestMail.mailSent) log.info(s"[processQueue] consumed digest email for ${digestMail.userId}")
+              else log.warn(s"[processQueue] digest email was not mailed: $digestMail")
               message.consume()
             } recover {
-              case e =>
-                airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
-            } map (_ => ())
+              case e => airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
+            } map (_ => true)
           } catch {
             case e: Throwable =>
               airbrake.notify(s"error sending digest email to ${message.body.userId} before future", e)
-              Future.successful(())
+              Future.successful(true)
           }
-        })
+        } getOrElse Future.successful(false)
       }
     }
 
-    val doneF = FutureHelpers.whilef(fetchFromQueue().map(_.size > 0))()
+    val doneF = FutureHelpers.whilef(fetchFromQueue())()
     doneF.onFailure {
-      case e =>
-        airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
+      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
     }
 
     doneF
@@ -192,8 +189,7 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
-    // TODO(josh) use the inlined template (feedDigestInlined) as soon as the base one is done/approved
-    // TODO(josh) add textBody to EmailModule
+    // TODO(josh) add textBody
 
     val mainTemplate = views.html.email.feedDigest(emailData)
 

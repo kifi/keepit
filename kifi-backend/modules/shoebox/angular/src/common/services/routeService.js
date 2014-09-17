@@ -62,6 +62,9 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
+      contactSearch: function (opt_query) {
+        return route('/user/contacts/search' + (opt_query ? '?query=' + opt_query : ''));
+      },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
@@ -115,6 +118,15 @@ angular.module('kifi')
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
+      },
+      shareLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/invite');
+      },
+      joinLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/join');
+      },
+      leaveLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/leave');
       }
     };
   }
