@@ -459,24 +459,21 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def unkeepOneFromLibrary(keep: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
-    unkeepManyFromLibrary(Seq(keep), libId, userId) match {
-      case Left(fail) =>
-        Left(fail)
-      case Right((infos, failures)) =>
-        if (infos.isEmpty)
-          Left("invalid_keep_id")
-        else
-          Right(infos.head)
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
+      case Left(why) => Left(why)
+      case Right((Seq(), _)) => Left("invalid_keep_id")
+      case Right((Seq(info), _)) => Right(info)
     }
   }
-  def unkeepManyFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
       case Some(mem) if mem.hasWriteAccess =>
         val (unkeptKeeps, failedKeepIds) = db.readWrite { implicit s =>
-          val (validKeeps, failures) = keeps.map { kId =>
+          val (validKeeps, failures) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId) match {
               case Some(k) if libId == k.libraryId.get => Left(k)
               case _ => Right(kId)
