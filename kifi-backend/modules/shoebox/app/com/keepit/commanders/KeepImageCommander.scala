@@ -13,6 +13,7 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store._
 import com.keepit.model._
 import org.imgscalr.Scalr
+import play.api.{ Mode, Play }
 import play.api.Play.current
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -231,7 +232,7 @@ class KeepImageCommanderImpl @Inject() (
   private def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed): Either[KeepImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
     def keygen(width: Int, height: Int, label: String = "") = {
-      "/keep/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
+      "keep/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
     }
     validateAndLoadImageFile(sourceImage.file.file) match {
       case Success(image) =>
