@@ -17,7 +17,7 @@ class DistributedSearchRouter(client: SearchServiceClient) extends CustomRouter 
   private[this] var dispatcher = Dispatcher[T](Vector.empty[ServiceInstance], () => ())
 
   private def getRandomizer(userId: Id[User]) = {
-    if (userId.id < 0) Dispatcher.defaultRandomizer else Dispatcher.randomizer(userId.id)
+    if (userId.id < 0L) Dispatcher.defaultRandomizer else Dispatcher.randomizer(userId.id)
   }
 
   def update(instances: Vector[ServiceInstance], forceReload: () => Unit): Unit = {

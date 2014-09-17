@@ -111,7 +111,7 @@ trait SearchControllerUtil {
   }
 
   def getLibraryContext(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): LibraryContext = {
-    val cookie = Some(1) //requestHeader.cookies.get(???) // TODO
+    val cookie = requestHeader.session.get("tbd")
     library match {
       case Some(libPublicId) =>
         val libId = Library.decodePublicId(PublicId[Library](libPublicId)).get.id

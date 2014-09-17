@@ -142,6 +142,8 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
           Visibility.MEMBER // the keep is in a library I am a member of
         }
       }
+    } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
+      Visibility.MEMBER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
         if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
@@ -165,6 +167,8 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
       } else {
         Visibility.MEMBER // a library I am a member of
       }
+    } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
+      Visibility.MEMBER // the keep is in an authorized library
     } else {
       if (visibilityDocValues.get(docId) == published) {
         Visibility.OTHERS // a published library
