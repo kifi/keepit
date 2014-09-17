@@ -4,12 +4,11 @@ import com.keepit.inject.AppScoped
 import com.google.inject.{ Provides, Singleton, Inject }
 import com.keepit.model.view.UserSessionView
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.shoebox.model.Ids
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import play.api.Application
 import securesocial.core._
-import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import securesocial.core.IdentityId
 import securesocial.core.providers.Token
@@ -17,7 +16,6 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.controller.{ RemoteActionAuthenticator, ActionAuthenticator }
 import securesocial.controllers.{ TemplatesPlugin, DefaultTemplatesPlugin }
-import Ids._
 
 @AppScoped
 class RemoteSecureSocialAuthenticatorPlugin @Inject() (

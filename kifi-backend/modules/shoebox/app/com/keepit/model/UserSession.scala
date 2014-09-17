@@ -2,8 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.shoebox.model.Ids
-import Ids.{ UserSessionExternalId }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.UserSessionView
 import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.DateTime

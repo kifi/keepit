@@ -15,8 +15,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.shoebox.model.Ids
-import Ids.UserSessionExternalId
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }

@@ -1,12 +1,12 @@
 package com.keepit.shoebox.model
 
-import com.keepit.common.db.{SurrogateExternalId, SurrogateExternalIdCompanion}
+import com.keepit.common.db.{ SurrogateExternalId, SurrogateExternalIdCompanion }
 
-object Ids {
+package ids {
   case class UserSessionExternalId(id: String) extends SurrogateExternalId
 
-  object UserSessionExternalId extends SurrogateExternalIdCompanion[Ids.UserSessionExternalId] {
-    def create(id: String): Ids.UserSessionExternalId = Ids.UserSessionExternalId(id)
+  object UserSessionExternalId extends SurrogateExternalIdCompanion[UserSessionExternalId] {
+    def create(id: String): UserSessionExternalId = UserSessionExternalId(id)
   }
 
 }

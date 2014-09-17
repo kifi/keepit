@@ -6,8 +6,7 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.shoebox.model.Ids
-import Ids.UserSessionExternalId
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.UserSessionView
 import collection.mutable
 import scala.concurrent.Future

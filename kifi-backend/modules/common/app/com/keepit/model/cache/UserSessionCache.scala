@@ -2,8 +2,7 @@ package com.keepit.model.cache
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.logging.AccessLog
-import com.keepit.shoebox.model.Ids
-import Ids.UserSessionExternalId
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.UserSessionView
 
 import scala.concurrent.duration.Duration
