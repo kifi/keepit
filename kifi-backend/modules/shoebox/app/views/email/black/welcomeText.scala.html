@@ -1,0 +1,10 @@
+@(toUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+
+Hey @firstName(toUserId), Welcome to kifi
+
+Please confirm your account by visiting the link below:
+@kifiUrl("confirmEmail")
+
+Have a great day,
+The Kifi team

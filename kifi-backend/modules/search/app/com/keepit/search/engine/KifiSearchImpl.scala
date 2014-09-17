@@ -24,7 +24,7 @@ class KifiSearchImpl(
     articleSearcher: Searcher,
     keepSearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
-    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,

@@ -156,7 +156,7 @@ class FeedDigestEmailSender @Inject() (
 
     val doneF = FutureHelpers.whilef(fetchFromQueue())()
     doneF.onFailure {
-      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
+      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextWithLock failed", e)
     }
 
     doneF
@@ -189,16 +189,13 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
-    // TODO(josh) add textBody
-
-    val mainTemplate = views.html.email.feedDigest(emailData)
-
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.head.title}",
       to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplate = mainTemplate,
+      htmlTemplate = views.html.email.feedDigest(emailData),
+      textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
       campaign = Some("digest"),
@@ -251,6 +248,7 @@ class FeedDigestEmailSender @Inject() (
       to = Right(SystemEmailAddress.FEED_QA),
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = views.html.email.feedDigest(qaEmailData),
+      textTemplate = Some(views.html.email.feedDigest(qaEmailData)),
       senderUserId = None,
       fromName = Some(Right("Kifi")),
       campaign = Some("digestQA")

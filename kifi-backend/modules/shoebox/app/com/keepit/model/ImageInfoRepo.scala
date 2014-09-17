@@ -17,6 +17,8 @@ import scala.slick.jdbc.StaticQuery
 trait ImageInfoRepo extends Repo[ImageInfo] with SeqNumberFunction[ImageInfo] {
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo]
   def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, provider: Option[ImageProvider])(implicit ro: RSession): Option[ImageInfo]
+
+  def getLargestByUriWithPriority(id: Id[NormalizedURI])(implicit ro: RSession): Option[ImageInfo]
 }
 
 @Singleton
@@ -130,6 +132,22 @@ class ImageInfoRepoImpl @Inject() (
     }
     if (candidates.nonEmpty) {
       Some(candidates.minBy(_.priority.getOrElse(Int.MaxValue)))
+    } else {
+      None
+    }
+  }
+
+  // If this exists after KeepImage migration, tell Andrew to clean up his messes
+  def getLargestByUriWithPriority(id: Id[NormalizedURI])(implicit ro: RSession): Option[ImageInfo] = {
+    val minSize = ImageSize(150, 150)
+    val candidates = (for (
+      f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
+        f.width > minSize.width && f.height > minSize.height
+    ) yield f).list()
+    if (candidates.nonEmpty) {
+      val lowestPrio = candidates.groupBy(_.priority.getOrElse(Int.MaxValue)).minBy(_._1)._2
+      val best = lowestPrio.maxBy(c => c.width.getOrElse(0) * c.height.getOrElse(0))
+      Some(best)
     } else {
       None
     }

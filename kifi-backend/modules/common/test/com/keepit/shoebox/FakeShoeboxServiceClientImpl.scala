@@ -684,6 +684,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       cc = emailToSend.cc,
       subject = emailToSend.subject,
       htmlBody = LargeString(emailToSend.htmlTemplate.body),
+      textBody = emailToSend.textTemplate.map(_.body),
       category = emailToSend.category,
       senderUserId = emailToSend.senderUserId
     )

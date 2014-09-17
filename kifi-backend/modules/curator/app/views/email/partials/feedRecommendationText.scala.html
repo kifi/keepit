@@ -1,0 +1,15 @@
+@(reco: com.keepit.curator.commanders.email.DigestReco)
+@import com.keepit.common.mail.template.helpers._
+
+@reco.topic.map { topic =>
+Recommended because it’s trending in a topic you’re interested in: @topic
+}
+@reco.title
+@reco.readTime.map { readTime =>
+@readTime read
+}
+@reco.description
+
+Visit Page: @reco.viewPageUrl
+@reco.keepers.message
+

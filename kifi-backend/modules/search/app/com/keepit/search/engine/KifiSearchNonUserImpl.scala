@@ -11,7 +11,6 @@ import org.apache.lucene.search._
 import scala.concurrent.{ Future, Promise }
 
 class KifiSearchNonUserImpl(
-    libId: Id[Library],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
@@ -19,7 +18,7 @@ class KifiSearchNonUserImpl(
     articleSearcher: Searcher,
     keepSearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
-    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs) extends KifiSearch(articleSearcher, keepSearcher, timeLogs) with Logging {
 

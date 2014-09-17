@@ -1,16 +1,17 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
+import scala.math.max
 
 class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Logging {
 
-  private[this] var _socialGraphInfo: Long = 0
-  private[this] var _clickBoost: Long = 0
-  private[this] var _queryParsing: Long = 0
-  private[this] var _personalizedSearcher: Long = 0
-  private[this] var _search: Long = 0
-  private[this] var _processHits: Long = 0
-  private[this] var _endTime: Long = 0
+  private[this] var _socialGraphInfo: Long = 0L
+  private[this] var _clickBoost: Long = 0L
+  private[this] var _queryParsing: Long = 0L
+  private[this] var _personalizedSearcher: Long = 0L
+  private[this] var _search: Long = 0L
+  private[this] var _processHits: Long = 0L
+  private[this] var _endTime: Long = 0L
 
   def socialGraphInfo(now: Long = System.currentTimeMillis()): Unit = { _socialGraphInfo = now }
   def clickBoost(now: Long = System.currentTimeMillis()): Unit = { _clickBoost = now }
@@ -23,13 +24,18 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
   def elapsed(time: Long = System.currentTimeMillis()): Long = (time - startTime)
 
   def send(): Unit = {
-    statsd.timing("mainSearch.socialGraphInfo", elapsed(_socialGraphInfo), ALWAYS)
-    statsd.timing("mainSearch.queryParsing", elapsed(_queryParsing), ALWAYS)
-    statsd.timing("mainSearch.getClickboost", elapsed(_clickBoost), ALWAYS)
-    statsd.timing("mainSearch.personalizedSearcher", elapsed(_personalizedSearcher), ALWAYS)
-    statsd.timing("mainSearch.LuceneSearch", elapsed(_search), ALWAYS)
-    statsd.timing("mainSearch.processHits", elapsed(_processHits), ALWAYS)
-    statsd.timing("mainSearch.total", elapsed(_endTime), ALWAYS)
+    send("mainSearch.socialGraphInfo", _socialGraphInfo, ALWAYS)
+    send("mainSearch.queryParsing", _queryParsing, ALWAYS)
+    send("mainSearch.getClickboost", _clickBoost, ALWAYS)
+    send("mainSearch.personalizedSearcher", _personalizedSearcher, ALWAYS)
+    send("mainSearch.LuceneSearch", _search, ALWAYS)
+    send("mainSearch.processHits", _processHits, ALWAYS)
+    send("mainSearch.total", _endTime, ALWAYS)
+  }
+
+  @inline
+  private def send(name: String, time: Long, frequency: Double) = {
+    if (time > 0L) statsd.timing(name, elapsed(time), frequency)
   }
 
   private def timeLine: List[(String, Long)] = {
@@ -40,7 +46,7 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
       ("personalizedSearcher", _personalizedSearcher),
       ("luceneSearch", _search),
       ("processHits", _processHits)
-    ).sortBy(_._2)
+    ).filter(_._2 > 0L).sortBy(_._2)
   }
 
   override def toString() = {

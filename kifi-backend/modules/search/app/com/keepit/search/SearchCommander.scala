@@ -10,7 +10,7 @@ import scala.util.Try
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -22,7 +22,6 @@ import com.keepit.search.result._
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
-import scala.math
 
 @ImplementedBy(classOf[SearchCommanderImpl])
 trait SearchCommander {
@@ -58,7 +57,7 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -73,7 +72,7 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
@@ -101,8 +100,7 @@ class SearchCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     override val searchClient: SearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait,
-    implicit val publicIdConfig: PublicIdConfiguration) extends SearchCommander with Sharding with Logging {
+    monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
 
   private[this] lazy val compatibilitySupport = new SearchCommanderBackwardCompatibilitySupport(shards, searchFactory, mainSearcherFactory)
 
@@ -128,7 +126,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, None, context)
+    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -238,7 +236,7 @@ class SearchCommanderImpl @Inject() (
           experiments,
           query,
           filter,
-          None,
+          LibraryContext.None,
           maxHits,
           context,
           predefinedConfig,
@@ -251,7 +249,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, None, context)
+    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -275,7 +273,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     lastUUID: Option[String],
     context: Option[String],
@@ -381,7 +379,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
@@ -398,7 +396,7 @@ class SearchCommanderImpl @Inject() (
       // logged in user
       searchFactory.getKifiSearch(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
     } else {
-      searchFactory.getKifiNonUserSearch(localShards, searchFilter.libraryId.get, query, firstLang, secondLang, maxHits, searchFilter, config)
+      searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
     }
 
     val future = Future.traverse(searches) { search =>
@@ -554,11 +552,16 @@ class SearchCommanderImpl @Inject() (
     def getTotalTime: Long = (_endTime - _startTime)
 
     def send(): Unit = {
-      statsd.timing("extSearch.preSearchTime", elapsed(_presearch), ALWAYS)
-      statsd.timing("extSearch.searching", elapsed(_search), ALWAYS)
-      statsd.timing("extSearch.postSearchTime", elapsed(_postsearch), ALWAYS)
-      statsd.timing("extSearch.total", elapsed(_endTime), ALWAYS)
+      send("extSearch.preSearchTime", _presearch, ALWAYS)
+      send("extSearch.searching", _search, ALWAYS)
+      send("extSearch.postSearchTime", _postsearch, ALWAYS)
+      send("extSearch.total", _endTime, ALWAYS)
       statsd.incrementOne("extSearch.total", ONE_IN_TEN)
+    }
+
+    @inline
+    private def send(name: String, time: Long, frequency: Double) = {
+      if (time > 0L) statsd.timing(name, elapsed(time), frequency)
     }
 
     override def toString = {

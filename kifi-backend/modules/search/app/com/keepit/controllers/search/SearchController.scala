@@ -75,7 +75,11 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
-    val library = (searchRequest \ "library").asOpt[String]
+    val library = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
+      case (Some(libId), _) => LibraryContext.Authorized(libId)
+      case (None, Some(libId)) => LibraryContext.NotAuthorized(libId)
+      case _ => LibraryContext.None
+    }
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
     val debug = (searchRequest \ "debug").asOpt[String]
