@@ -110,3 +110,26 @@ trait DestinationWeightsQuerier {
     edgeWeights
   }
 }
+
+trait NeighborQuerier {
+  def getNeighbors(reader: GlobalVertexReader, component: Component, outGoing: Boolean): Set[VertexId] = {
+    val edgeReader = if (outGoing) {
+      reader.outgoingEdgeReader.reset()
+      reader.outgoingEdgeReader
+    } else {
+      reader.incomingEdgeReader.reset()
+      reader.incomingEdgeReader
+    }
+
+    val nbs = mutable.Set[VertexId]()
+
+    while (edgeReader.moveToNextComponent()) {
+      if (edgeReader.component == component) {
+        while (edgeReader.moveToNextEdge()) {
+          nbs += edgeReader.destination
+        }
+      }
+    }
+    nbs.toSet
+  }
+}
