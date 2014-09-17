@@ -8,14 +8,23 @@ angular.module('kifi')
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
-    $scope.$watch(function () {
-      // TODO: is this too inefficient? Will this be called too many times?
-      return $scope.keeps.length + ',' + tagService.allTags.length;
-    }, function () {
+    // Whenever new keeps are loaded or when tags have been added or removed,
+    // sync up the keep tags with the current list of tags.
+    function joinTags() {
       if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
         util.joinTags($scope.keeps, tagService.allTags);
       }
+    }
+    $scope.$watch(function () {
+      return $scope.keepsLoading;
+    }, function (newVal, oldVal) {
+      if (!newVal && oldVal) {
+        joinTags();
+      }
     });
+    $scope.$watch(function () {
+      return tagService.allTags.length;
+    }, joinTags);
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY, selection) {
       var draggedKeeps = selection.getSelected($scope.keeps);

@@ -118,6 +118,7 @@ angular.module('kifi')
       $scope.keeps.unshift(keep);
     });
 
+
     //
     // On HomeCtrl initialization.
     //
