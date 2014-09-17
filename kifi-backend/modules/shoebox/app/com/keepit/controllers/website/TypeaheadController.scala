@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller._
-import play.api.libs.json._
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActionsHelper, UserAPIController }
+import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.commanders.{ EmailContactResult, UserContactResult, TypeaheadCommander }
 
