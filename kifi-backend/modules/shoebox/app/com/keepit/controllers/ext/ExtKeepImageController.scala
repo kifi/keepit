@@ -55,13 +55,13 @@ class ExtKeepImageController @Inject() (
       keepRepo.getByLibrary(libraryId, take, drop)
     }
 
-    val process = FutureHelpers.foldLeft(keeps)(0) {
-      case (count, keep) =>
-        keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = true, overwriteExistingChoice = false).map { _ =>
-          count + 1
+    val process = FutureHelpers.foldLeft(keeps)("") {
+      case (resp, keep) =>
+        keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = true, overwriteExistingChoice = false).map { s =>
+          resp + "\n" + s.toString
         }
     }
-    process.map(c => Ok(c.toString))
+    process.map(c => Ok(c))
   }
 
 }
