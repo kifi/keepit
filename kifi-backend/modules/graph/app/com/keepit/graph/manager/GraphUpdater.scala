@@ -98,6 +98,9 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
     val userVertexId: VertexDataId[UserReader] = update.userId
+    val libVertexId: VertexDataId[LibraryReader] = update.libId
+
+    writer.removeVertexIfExists(keepVertexId) // build the vertex and its neighbors from empty state. (e.g. LibraryId can change, this removes old links)
 
     update.state match {
 
@@ -105,6 +108,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
         writer.saveVertex(KeepData(keepVertexId))
         writer.saveVertex(UriData(uriVertexId))
         writer.saveVertex(UserData(userVertexId))
+        writer.saveVertex(LibraryData(libVertexId))
 
         writer.saveEdge(userVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
         writer.saveEdge(uriVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
@@ -112,8 +116,11 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
         writer.saveEdge(keepVertexId, userVertexId, EmptyEdgeData)
         writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
 
-      case _ =>
-        writer.removeVertexIfExists(keepVertexId)
+        writer.saveEdge(libVertexId, keepVertexId, EmptyEdgeData)
+        writer.saveEdge(keepVertexId, libVertexId, EmptyEdgeData)
+
+      case _ => // do nothing
+
     }
   }
 
