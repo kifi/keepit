@@ -231,7 +231,7 @@ class KeepImageCommanderImpl @Inject() (
   private def buildPersistSet(sourceImage: ImageProcessState.ImageLoadedAndHashed): Either[KeepImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
     val outFormat = inputFormatToOutputFormat(sourceImage.format)
     def keygen(width: Int, height: Int, label: String = "") = {
-      "/keep/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
+      "keep/" + sourceImage.hash.hash + "_" + width + "x" + height + label + "." + outFormat.value
     }
     validateAndLoadImageFile(sourceImage.file.file) match {
       case Success(image) =>
