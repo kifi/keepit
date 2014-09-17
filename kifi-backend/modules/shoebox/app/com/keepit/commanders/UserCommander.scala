@@ -48,7 +48,7 @@ import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.commanders.emails.{ SendEmailToNewUserFriendsHelper, SendEmailToNewUserContactsHelper, EmailOptOutCommander }
+import com.keepit.commanders.emails.{ EmailSenderProvider, ContactJoinedEmailSender, FriendRequestEmailSender, FriendConnectionMadeEmailSender, EmailOptOutCommander }
 import com.keepit.common.db.slick.Database.Replica
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -125,8 +125,7 @@ class UserCommander @Inject() (
     fortytwoConfig: FortyTwoConfig,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
-    sendEmailToNewUserFriendsHelper: SendEmailToNewUserFriendsHelper,
-    sendEmailToNewUserContactsHelper: SendEmailToNewUserContactsHelper,
+    emailSender: EmailSenderProvider,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -351,7 +350,7 @@ class UserCommander @Inject() (
         db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
 
         // get users who have this user's email in their contacts
-        abookServiceClient.getUsersWithContact(email).map {
+        abookServiceClient.getUsersWithContact(email) flatMap {
           case contacts if contacts.size > 0 => {
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
@@ -360,7 +359,7 @@ class UserCommander @Inject() (
             val toNotify = contacts.diff(alreadyConnectedUsers) - newUserId
 
             log.info("sending new user contact notifications to: " + toNotify)
-            sendEmailToNewUserContactsHelper(newUser, toNotify)
+            val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
 
             elizaServiceClient.sendGlobalNotification(
               userIds = toNotify,
@@ -373,11 +372,11 @@ class UserCommander @Inject() (
               category = NotificationCategory.User.CONTACT_JOINED
             )
 
-            toNotify
+            Future.sequence(emailsF.toSeq) map (_ => toNotify)
           }
           case _ => {
             log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
-            Set.empty
+            Future.successful(Set.empty)
           }
         }
       }
@@ -470,27 +469,13 @@ class UserCommander @Inject() (
     //sending 'friend request accepted' email && Notification
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>
       val respondingUser = userRepo.get(myUserId)
-      val destinationEmail = emailRepo.getByUser(friend.id.get)
       val respondingUserImage = userAvatarImageUrl(respondingUser)
-      val targetUserImage = userAvatarImageUrl(friend)
-      val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
-
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = None,
-        from = SystemEmailAddress.NOTIFICATIONS,
-        fromName = Some(s"${respondingUser.firstName} ${respondingUser.lastName} (via Kifi)"),
-        to = List(destinationEmail),
-        subject = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your Kifi friend request",
-        htmlBody = views.html.email.friendRequestAcceptedInlined(friend.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
-        textBody = Some(views.html.email.friendRequestAcceptedText(friend.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-        category = NotificationCategory.User.FRIEND_ACCEPTED)
-      )
-
       (respondingUser, respondingUserImage)
-
     }
 
-    elizaServiceClient.sendGlobalNotification(
+    val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
+
+    val notifF = elizaServiceClient.sendGlobalNotification(
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
       body = s"Now you will enjoy ${respondingUser.firstName}'s keeps in your search results and you can message ${respondingUser.firstName} directly.",
@@ -500,30 +485,20 @@ class UserCommander @Inject() (
       sticky = false,
       category = NotificationCategory.User.FRIEND_ACCEPTED
     )
+
+    emailF flatMap (_ => notifF)
   }
 
   def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUserId: Id[User], recipient: User): Unit = SafeFuture {
-    // todo(josh) replace with FriendRequestEmailSender
     val (requestingUser, requestingUserImage) = db.readWrite { implicit session =>
       val requestingUser = userRepo.get(myUserId)
-      val destinationEmail = emailRepo.getByUser(recipient.id.get)
       val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
-      val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = None,
-        from = SystemEmailAddress.NOTIFICATIONS,
-        fromName = Some(s"${requestingUser.firstName} ${requestingUser.lastName} (via Kifi)"),
-        to = List(destinationEmail),
-        subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
-        htmlBody = views.html.email.friendRequestInlined(recipient.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body,
-        textBody = Some(views.html.email.friendRequestText(recipient.firstName, requestingUser.firstName + " " + requestingUser.lastName, requestingUserImage, unsubLink).body),
-        category = NotificationCategory.User.FRIEND_REQUEST)
-      )
-
       (requestingUser, requestingUserImage)
     }
 
-    elizaServiceClient.sendGlobalNotification(
+    val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
+
+    val friendReqF = elizaServiceClient.sendGlobalNotification(
       userIds = Set(recipient.id.get),
       title = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request",
       body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
@@ -537,6 +512,8 @@ class UserCommander @Inject() (
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
         }
       }
+
+    emailF flatMap (_ => friendReqF)
   }
 
   def friend(myUserId: Id[User], friendUserId: ExternalId[User]): (Boolean, String) = {

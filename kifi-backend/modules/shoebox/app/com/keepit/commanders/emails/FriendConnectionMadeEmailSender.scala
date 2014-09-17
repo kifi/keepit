@@ -7,18 +7,16 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
 import com.keepit.common.mail.template.helpers.fullName
 import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ NotificationCategory, PasswordResetRepo, User }
+import com.keepit.model.{ NotificationCategory, User }
 
 import scala.concurrent.Future
 
 class FriendConnectionMadeEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    passwordResetRepo: PasswordResetRepo,
-    basicUserRepo: BasicUserRepo,
-    config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
+
+  def apply(toUserId: Id[User], friendUserId: Id[User], category: NotificationCategory): Future[ElectronicMail] =
+    sendToUser(toUserId, friendUserId, category)
 
   def sendToUser(toUserId: Id[User], friendUserId: Id[User], category: NotificationCategory): Future[ElectronicMail] = {
     val (subject, campaign) = category match {

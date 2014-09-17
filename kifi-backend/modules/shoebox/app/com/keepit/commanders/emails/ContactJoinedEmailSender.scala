@@ -7,27 +7,26 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, NotificationCategory }
 
 import scala.concurrent.Future
 
 class ContactJoinedEmailSender @Inject() (
-    basicUserRepo: BasicUserRepo,
     emailTemplateSender: EmailTemplateSender,
-    config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendToUser(toUserId: Id[User], otherUserId: Id[User]): Future[ElectronicMail] = {
+  def apply(toUserId: Id[User], contactUserId: Id[User]): Future[ElectronicMail] =
+    sendToUser(toUserId, contactUserId)
+
+  def sendToUser(toUserId: Id[User], contactUserId: Id[User]): Future[ElectronicMail] = {
     val emailToSend = EmailToSend(
-      fromName = Some(Left(otherUserId)),
+      fromName = Some(Left(contactUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"${fullName(otherUserId)} joined Kifi. Want to connect?",
+      subject = s"${fullName(contactUserId)} joined Kifi. Want to connect?",
       to = Left(toUserId),
       category = NotificationCategory.User.CONTACT_JOINED,
-      htmlTemplate = views.html.email.black.contactJoined(toUserId, otherUserId),
-      textTemplate = Some(views.html.email.black.contactJoinedText(toUserId, otherUserId)),
+      htmlTemplate = views.html.email.black.contactJoined(toUserId, contactUserId),
+      textTemplate = Some(views.html.email.black.contactJoinedText(toUserId, contactUserId)),
       campaign = Some("contactJoined")
     )
     emailTemplateSender.send(emailToSend)

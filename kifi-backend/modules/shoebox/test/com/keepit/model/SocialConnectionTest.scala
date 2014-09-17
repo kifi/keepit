@@ -1,9 +1,11 @@
 package com.keepit.model
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.test.ShoeboxTestInjector
 import java.io.File
 import org.specs2.mutable._
 import play.api.libs.json._
@@ -12,13 +14,22 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.google.inject.Injector
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialId }
-import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
-  val socialConnectionTestModules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), FakeShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val socialConnectionTestModules = Seq(
+    FakeHttpClientModule(),
+    FakeShoeboxStoreModule(),
+    FakeShoeboxServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeMailModule(),
+    FakeABookServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    FakeSocialGraphModule()
+  )
 
   private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[SocialUserInfo] = {
     inject[FacebookSocialGraph].extractFriends(json)
