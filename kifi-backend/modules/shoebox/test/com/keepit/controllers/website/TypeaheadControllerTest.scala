@@ -30,6 +30,7 @@ import com.keepit.common.core._
 class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
+    FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
@@ -75,12 +76,13 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         }
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "陳家洛", 0, RichContact(EmailAddress("chan@jing.com"), Some("陳家洛 電郵")))))
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
+          println(s"res=$s")
           Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
@@ -140,7 +142,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, contacts)
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
@@ -205,7 +207,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, contacts)
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
@@ -260,7 +262,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "mrkrabs", 0, RichContact(u5, Some("Krabs")))))
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "sandysquirrel", 0, RichContact(u4, Some("SandySquirrel")))))
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url

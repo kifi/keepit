@@ -17,3 +17,6 @@ abstract class WebsiteController(val actionAuthenticator: ActionAuthenticator) e
   object AnyAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions
 
 }
+
+abstract class WebController(val userActionsHelper: UserActionsHelper) extends ServiceController with UserActions {
+}
