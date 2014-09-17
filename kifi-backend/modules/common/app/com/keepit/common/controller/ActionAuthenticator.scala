@@ -60,16 +60,18 @@ trait ActionAuthenticator extends SecureSocial {
     onSocialAuthenticated: SecuredRequest[T] => Future[Result],
     onUnauthenticated: Request[T] => Future[Result]): Action[T]
 
+  def getSecureSocialUser[A](implicit request: Request[A]): Option[Identity] = {
+    for (
+      authenticator <- SecureSocial.authenticatorFromRequest;
+      user <- UserService.find(authenticator.identityId)
+    ) yield {
+      user
+    }
+  }
+
   object SecureSocialUserAwareAction extends ActionBuilder[RequestWithUser] {
     def invokeBlock[A](request: Request[A], block: (RequestWithUser[A]) => Future[Result]): Future[Result] = {
-      implicit val req = request
-      val user = for (
-        authenticator <- SecureSocial.authenticatorFromRequest;
-        user <- UserService.find(authenticator.identityId)
-      ) yield {
-        user
-      }
-      block(RequestWithUser(user, request))
+      block(RequestWithUser(getSecureSocialUser(request), request))
     }
   }
 

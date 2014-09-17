@@ -14,7 +14,7 @@ class SocialUserSerializerTest extends Specification {
         Some("andrew@42.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
       val serializer = SocialUserSerializer.userSerializer
       val json = serializer.writes(user)
-      println(json)
+      // println(json) // can be removed?
       val newUser = serializer.reads(json).get
       user === newUser
     }

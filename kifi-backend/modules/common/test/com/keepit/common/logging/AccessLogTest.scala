@@ -16,7 +16,7 @@ class AccessLogTest extends Specification with CommonTestInjector {
       val access = accessLog.timer(Access.HTTP_OUT)
       //do something
       val line = accessLog.format(access.done(remoteServiceType = "host42", method = "POST"))
-      println(line)
+      // println(line) // can be removed?
       line === "t:2013-05-31 04:03:02.004\ttype:HTTP_OUT\tduration:3\tmethod:POST\tremoteServiceType:host42"
     }
   }

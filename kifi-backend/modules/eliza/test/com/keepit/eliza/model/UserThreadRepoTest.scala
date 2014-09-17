@@ -80,7 +80,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             replyable = true
           ))
           userThreadRepo.count === 1
-          println(userThreadRepo.all)
+          // println(userThreadRepo.all) // can be removed?
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))
           toMail.size === 1
           toMail.head.id.get === thread1.id.get

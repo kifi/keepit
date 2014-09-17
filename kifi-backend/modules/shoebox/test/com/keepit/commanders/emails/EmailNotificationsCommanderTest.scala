@@ -42,7 +42,7 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
         commander.sendUnreadMessages(threadItems, otherParticipantIds, recipientUserId, title, deepLocator, None)
 
         val outbox = inject[FakeOutbox]
-        println(outbox.head.htmlBody)
+        // println(outbox.head.htmlBody) // can be removed?
         outbox.head.to.map(_.address) === Seq("joe@gmail.com")
         outbox.head.htmlBody.contains(s"https://www.kifi.com/users/${william.externalId}/pics/112/0.jpg") === true
         outbox.head.htmlBody.contains(s"https://www.kifi.com/users/${george.externalId}/pics/112/0.jpg") === true

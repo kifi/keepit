@@ -47,17 +47,14 @@ class ScraperURISummaryCommanderImpl @Inject() (
    */
   private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
     uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) => {
+      case Success(result) =>
         val (url, size) = result
         val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
-
         callback.syncSaveImageInfo(imageInfoWithUrl)
         Some(imageInfoWithUrl)
-      }
-      case Failure(ex) => {
+      case Failure(ex) =>
         airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
-      }
     }
   }
 

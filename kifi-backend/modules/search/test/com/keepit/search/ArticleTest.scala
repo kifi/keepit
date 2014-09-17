@@ -28,9 +28,9 @@ class ArticleTest extends Specification {
         titleLang = Some(Lang("en")),
         contentLang = Some(Lang("en"))
       )
-      println(implicitly[DateTimeZone])
+      // println(implicitly[DateTimeZone]) // can be removed?
       val json = Json.toJson(article)
-      println(json)
+      // println(json) // can be removed?
       val newArticle = json.as[Article]
       article === newArticle
     }
@@ -58,7 +58,7 @@ class ArticleTest extends Specification {
         contentLang = None
       )
       val json = Json.toJson(article)
-      println(json)
+      // println(json) // can be removed?
       val newArticle = json.as[Article]
       article === newArticle
     }

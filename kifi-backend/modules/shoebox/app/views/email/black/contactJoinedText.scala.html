@@ -1,0 +1,11 @@
+@(toUserId: Id[User], otherUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+
+Hi @firstName(toUserId),
+@fullName(otherUserId) just joined kifi.
+
+Visit the link below to add @firstName(otherUserId) as a friend:
+@inviteContactUrl(otherUserId, "addFriendBtn")
+
+Have a great day,
+The Kifi team
