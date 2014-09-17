@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
 import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, Result }
 
@@ -41,11 +42,34 @@ trait UserActions { self: Controller =>
   private def buildUserRequest[A](userId: Id[User])(implicit request: Request[A]) =
     UserRequest(request, userId, userActionsHelper.getUserOpt.map(_.get), userActionsHelper.getUserExperiments)
 
+  private def getOrigin[A](request: Request[A]): Option[String] = {
+    request.headers.get("Origin").filter { uri =>
+      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
+    }
+  }
+
+  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
+    getOrigin(request) map { h =>
+      res.withHeaders(
+        "Access-Control-Allow-Origin" -> h,
+        "Access-Control-Allow-Credentials" -> "true"
+      )
+    } getOrElse res
+  }
+
+  private def maybeAugmentKcid[A](res: Result)(implicit request: Request[A]): Result = { // for campaign tracking
+    request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
+      res.addingToSession("kcid" -> kcid)(request)
+    } getOrElse res
+  }
+
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) => block(buildUserRequest(userId))
+        case Some(userId) =>
+          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
         case None => Future.successful(Unauthorized)
       }
     }
@@ -55,14 +79,10 @@ trait UserActions { self: Controller =>
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) => block(buildUserRequest(userId))
+        case Some(userId) =>
+          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
         case None =>
-          block(NonUserRequest(request)) map { res =>
-            // for campaign tracking
-            request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
-              res.addingToSession("kcid" -> kcid)(request)
-            } getOrElse res
-          }
+          block(NonUserRequest(request)).map(maybeAugmentKcid(_))
       }
     }
   }
