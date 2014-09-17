@@ -18,6 +18,7 @@ angular.module('kifi')
         var resultIndex = -1;
         var shareButton = element.find('.kf-library-share-btn');
         var shareMenu = element.find('.kf-library-share-menu');
+        var searchInput = element.find('input');
         var show = false;
 
 
@@ -26,33 +27,25 @@ angular.module('kifi')
         //
         scope.results = [];
         scope.search = {};
-        scope.showDropdown = false;
 
 
         //
         // Internal methods.
         //
         function showMenu() {
-          shareMenu.show();
-          show = true;
+          resultIndex = -1;
+          clearSelection();
+          scope.search.name = '';
           $document.on('click', onClick);
+          show = true;
+          shareMenu.show();
+          searchInput.focus();
         }
 
         function hideMenu() {
-          shareMenu.hide();
-          show = false;
           $document.off('click', onClick);
-        }
-
-        function showDropdown() {
-          scope.showDropdown = true;
-          resultIndex = -1;
-          scope.search.name = '';
-          clearSelection();
-        }
-
-        function hideDropdown() {
-          scope.showDropdown = false;
+          show = false;
+          shareMenu.hide();
         }
 
         function onClick(e) {
@@ -80,12 +73,6 @@ angular.module('kifi')
                   result.image = friendService.getPictureUrlForUser(result);
                 }
               });
-
-              if (scope.results.length > 0) {
-                showDropdown();
-              } else {
-                hideDropdown();
-              }
             } else {
               // TODO(yiping): show backfill cards when length is less than 5.
               scope.results = [];
@@ -129,11 +116,13 @@ angular.module('kifi')
 
           switch ($event.keyCode) {
             case keyIndices.KEY_UP:
+              $event.preventDefault();  // Otherwise browser will move cursor to start of input.
               clearSelection();
               resultIndex = getNextIndex(resultIndex, -1);
               scope.results[resultIndex].selected = true;
               break;
             case keyIndices.KEY_DOWN:
+              $event.preventDefault();  // Otherwise browser will move cursor to end of input.
               clearSelection();
               resultIndex = getNextIndex(resultIndex, 1);
               scope.results[resultIndex].selected = true;
@@ -146,7 +135,7 @@ angular.module('kifi')
               resultIndex = -1;
               break;
             case keyIndices.KEY_ESC:
-              hideDropdown();
+              hideMenu();
               break;
           }
         };
