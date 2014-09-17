@@ -65,18 +65,18 @@ trait SurrogateExternalId {
   override def toString = id
 }
 
-trait SurrogateExternalIdCompanion[T <: SurrogateExternalId] {
+abstract class SurrogateExternalIdCompanion[T <: SurrogateExternalId] {
 
-  def create(id: String): T
+  def apply(id: String): T
 
   implicit def format: Format[T] = Format(
-    __.read[String].map(create),
+    __.read[String].map(apply),
     new Writes[T] { def writes(o: T) = JsString(o.id) }
   )
 
   def asOpt(id: String): Option[T] = {
     if (ExternalId.UUIDPattern.pattern.matcher(id).matches())
-      Some(create(id))
+      Some(apply(id))
     else None
   }
 
