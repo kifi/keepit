@@ -7,8 +7,9 @@ angular.module('kifi')
   'friendService',
   'keyIndices',
   'libraryService',
+  'socialService',
   'util',
-  function ($document, friendService, keyIndices, libraryService, util) {
+  function ($document, friendService, keyIndices, libraryService, socialService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -96,15 +97,14 @@ angular.module('kifi')
 
               if (contacts.length < 5) {
                 scope.results.push({
-                  emailHelp: true
+                  custom: 'email'
                 });
               }
             } else {
-              scope.results = [];
-
-              scope.results.push({
-                emailHelp: true
-              });
+              scope.results = [
+                {custom: 'email'},
+                {custom: 'importGmail'}
+              ];
 
               if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
                 resultIndex = 0;
@@ -177,6 +177,18 @@ angular.module('kifi')
         };
 
         scope.shareLibrary = function (result) {
+          // Validate custom (new) email.
+          if (result.custom && result.custom === 'email') {
+            if (!util.validateEmail(scope.search.name)) {
+              return;
+            }
+          }
+
+          // For import Gmail contacts.
+          if (result.custom && result.custom === 'importGmail') {
+            socialService.importGmail();
+          }
+
           // For now, we are only supporting inviting one person at a time.
           var invitees = [
             {
@@ -196,6 +208,10 @@ angular.module('kifi')
           clearSelection();
           result.selected = true;
           resultIndex = _.indexOf(scope.results, result);
+        };
+
+        scope.onResultUnhover = function (result) {
+          result.selected = false;
         };
       }
     };
