@@ -209,7 +209,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
         // Dependant on image1.png — if changed, this needs to change too.
-        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "/keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
+        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
 
         val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100))
         keepImage2.get.id !== keepImage3.get.id
