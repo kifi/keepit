@@ -56,7 +56,13 @@ trait UserActions { self: Controller =>
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
         case Some(userId) => block(buildUserRequest(userId))
-        case None => block(NonUserRequest(request))
+        case None =>
+          block(NonUserRequest(request)) map { res =>
+            // for campaign tracking
+            request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
+              res.addingToSession("kcid" -> kcid)(request)
+            } getOrElse res
+          }
       }
     }
   }
