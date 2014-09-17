@@ -67,7 +67,7 @@ class AugmentationCommanderImpl @Inject() (
     else {
       val ItemAugmentationRequest(items, context) = itemAugmentationRequest
 
-      val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, None, false).imap {
+      val futureLibraryFilter = searchFactory.getLibraryIdsFuture(context.userId, LibraryContext.None).imap {
         case (_, followedLibraries, _, _) => followedLibraries.map(Id[Library](_))
       }
 

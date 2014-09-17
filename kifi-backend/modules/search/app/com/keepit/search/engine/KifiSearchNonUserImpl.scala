@@ -11,7 +11,6 @@ import org.apache.lucene.search._
 import scala.concurrent.{ Future, Promise }
 
 class KifiSearchNonUserImpl(
-    libId: Id[Library],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,

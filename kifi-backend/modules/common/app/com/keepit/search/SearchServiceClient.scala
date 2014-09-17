@@ -102,8 +102,7 @@ trait SearchServiceClient extends ServiceClient {
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
-    libraryAccessAuthorized: Boolean,
+    libraryId: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
@@ -398,7 +397,7 @@ class SearchServiceClientImpl(
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, false, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, LibraryContext.None, maxHits, context, debug)
   }
 
   def distSearch2(
@@ -408,13 +407,12 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
-    libraryAccessAuthorized: Boolean,
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, libraryAccessAuthorized, maxHits, context, debug)
+    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug)
   }
 
   private def distSearch(
@@ -425,8 +423,7 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
-    libraryAccessAuthorized: Boolean,
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -439,8 +436,11 @@ class SearchServiceClientImpl(
     builder += ("lang1", firstLang.lang)
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
     if (filter.isDefined) builder += ("filter", filter.get)
-    if (library.isDefined) builder += ("library", library.get)
-    if (libraryAccessAuthorized) builder += ("libraryAccessAuthorized", true)
+    library match {
+      case LibraryContext.Authorized(libId) => builder += ("authorizedLibrary", libId)
+      case LibraryContext.NotAuthorized(libId) => builder += ("library", libId)
+      case _ =>
+    }
     if (context.isDefined) builder += ("context", context.get)
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build

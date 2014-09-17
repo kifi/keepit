@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.concurrent.ExecutionContext._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.controllers.util.SearchControllerUtil._
@@ -11,9 +12,8 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ WebsiteController, SearchServiceController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.{ AugmentationCommander, SearchCommander }
+import com.keepit.search.{ LibraryContext, AugmentationCommander, SearchCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import play.api.libs.json.Json
@@ -24,7 +24,8 @@ class WebsiteSearchController @Inject() (
     shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    searchCommander: SearchCommander) extends WebsiteController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
+    searchCommander: SearchCommander,
+    implicit val publicIdConfig: PublicIdConfiguration) extends WebsiteController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -59,9 +60,9 @@ class WebsiteSearchController @Inject() (
     auth: Option[String],
     withUriSummary: Boolean = false) = {
 
-    def execSearch(userId: Id[User], acceptLangs: Seq[String], experiments: Set[ExperimentType], libraryAccessAuthorized: Boolean) = {
+    def execSearch(userId: Id[User], acceptLangs: Seq[String], experiments: Set[ExperimentType], libCtx: LibraryContext) = {
 
-      val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, library, libraryAccessAuthorized, maxHits, lastUUIDStr, context, predefinedConfig = None)
+      val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libCtx, maxHits, lastUUIDStr, context, predefinedConfig = None)
 
       val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
@@ -85,25 +86,12 @@ class WebsiteSearchController @Inject() (
 
     JsonAction.apply(
       authenticatedAction = { request =>
-        val libraryAccessAuthorized = checkPermission(library, auth, request.request)
-        execSearch(request.userId, request.request.acceptLanguages.map(_.code), request.experiments, libraryAccessAuthorized)
+        execSearch(request.userId, request.acceptLanguages.map(_.code), request.experiments, getLibraryContext(library, auth, request))
       },
       unauthenticatedAction = { request =>
-        val libraryAccessAuthorized = checkPermission(library, auth, request)
-        execSearch(nonUser, request.acceptLanguages.map(_.code), Set[ExperimentType](), libraryAccessAuthorized)
+        execSearch(nonUser, request.acceptLanguages.map(_.code), Set[ExperimentType](), getLibraryContext(library, auth, request))
       }
     )
-  }
-
-  private def checkPermission(library: Option[String], auth: Option[String], requestHeader: RequestHeader): Boolean = {
-    val cookie = Some(1) //requestHeader.cookies.get(???) // TODO
-    (library, auth, cookie) match {
-      case (Some(libPublicId), Some(authCode), Some(cookie)) =>
-        // TODO: call shoebox to check permission
-        true
-      case _ =>
-        false
-    }
   }
 
   //external (from the website)

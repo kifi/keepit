@@ -59,7 +59,7 @@ class SearchFactory @Inject() (
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryId, filter.isLibraryAccessAuthorized)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getFriendIdsFuture(userId)
 
     val parser = new KQueryParser(
@@ -78,7 +78,11 @@ class SearchFactory @Inject() (
         val parseDoneAt = System.currentTimeMillis()
 
         // if this is a library restricted search, add a library filter query
-        filter.libraryId.map { libId => engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString))) }
+        filter.libraryContext match {
+          case LibraryContext.Authorized(libId) => addLibraryFilter(engBuilder, libId)
+          case LibraryContext.NotAuthorized(libId) => addLibraryFilter(engBuilder, libId)
+          case _ =>
+        }
 
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
@@ -109,16 +113,16 @@ class SearchFactory @Inject() (
 
   def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
-  def getLibraryIdsFuture(userId: Id[User], library: Option[Id[Library]], libraryAccessAuthorized: Boolean): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
+  def getLibraryIdsFuture(userId: Id[User], library: LibraryContext): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
 
     val trustedPublishedLibIds = library match {
-      case Some(libId) => LongArraySet.from(Array(libId.id)) // if this library is not public, it is ignored by the engine
-      case None => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
+      case LibraryContext.NotAuthorized(libId) => LongArraySet.from(Array(libId)) // if this library is not public, it is ignored by the engine
+      case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
     }
 
     val authorizedLibIds = library match {
-      case Some(libId) if libraryAccessAuthorized => LongArraySet.from(Array(libId.id))
-      case None => LongArraySet.empty
+      case LibraryContext.Authorized(libId) => LongArraySet.from(Array(libId))
+      case _ => LongArraySet.empty
     }
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
@@ -146,16 +150,13 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    require(filter.libraryId.isEmpty, "library must be specified")
-
-    val libId = filter.libraryId.get
-
-    val libraryIdsFuture = if (filter.isLibraryAccessAuthorized) {
-      // this non-user is treated as if he/she were a member of the library
-      Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId.id))))
-    } else {
-      // not authorized, but the library may be a published one
-      Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
+    val libraryIdsFuture = filter.libraryContext match {
+      case LibraryContext.Authorized(libId) => // this non-user is treated as if he/she were a member of the library
+        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId))))
+      case LibraryContext.NotAuthorized(libId) => // not authorized, but the library may be a published one
+        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(libId)), LongArraySet.empty))
+      case _ =>
+        throw new IllegalArgumentException("library must be specified")
     }
     val friendIdsFuture = Future.successful(LongArraySet.empty)
 
@@ -174,8 +175,8 @@ class SearchFactory @Inject() (
       case Some(engBuilder) =>
         val parseDoneAt = System.currentTimeMillis()
 
-        // this is a non-user, library restricted, search, add a library filter query
-        engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString)))
+        // this is a non-user, library restricted search, add a library filter query
+        addLibraryFilter(engBuilder, filter.libraryContext.get)
 
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
@@ -185,7 +186,6 @@ class SearchFactory @Inject() (
           timeLogs.queryParsing(parseDoneAt)
 
           new KifiSearchNonUserImpl(
-            libId,
             numHitsToReturn,
             filter,
             config,
@@ -201,4 +201,6 @@ class SearchFactory @Inject() (
       case None => Seq.empty[KifiSearchNonUserImpl]
     }
   }
+
+  private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
 }
