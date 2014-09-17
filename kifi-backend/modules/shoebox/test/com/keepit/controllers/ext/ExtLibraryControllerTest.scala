@@ -181,6 +181,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("DontChoke", "Throw") }
 
+        // test unkeep from own library again (should be idempotent)
+        status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("DontChoke", "Throw") }
+
         // test incorrect unkeep from own library (keep exists but in wrong library)
         status(removeKeep(user1, pubId2, keep2.externalId)) === BAD_REQUEST
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("DontChoke", "Throw") }
