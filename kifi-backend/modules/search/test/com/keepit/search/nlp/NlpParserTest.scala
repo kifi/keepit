@@ -11,28 +11,28 @@ class NlpParserTest extends Specification {
       var tagged = NlpParser.getTaggedSegments(sent)
       tagged === List(("NP", "Chinese restaurant"), ("PP", "in bay area"))
       var t2 = System.currentTimeMillis()
-      println(s"nlp parser time elapesed: ${t2 - t1}")
+      // println(s"nlp parser time elapesed: ${t2 - t1}") // can be removed?
 
       t1 = System.currentTimeMillis()
       sent = "how to convert raw to jpeg"
       tagged = NlpParser.getTaggedSegments(sent)
       t2 = System.currentTimeMillis()
 
-      println(s"nlp parser time elapesed: ${t2 - t1}")
+      // println(s"nlp parser time elapesed: ${t2 - t1}") // can be removed?
 
       t1 = System.currentTimeMillis()
       sent = "yellowstone national park hotels"
       tagged = NlpParser.getTaggedSegments(sent)
       t2 = System.currentTimeMillis()
       tagged === List(("VP", "yellowstone national park hotels")) // TODO: better segmentation (finer)
-      println(s"nlp parser time elapesed: ${t2 - t1}")
+      // println(s"nlp parser time elapesed: ${t2 - t1}") // can be removed?
 
       t1 = System.currentTimeMillis()
       sent = "machine learning and natrual language processing"
       tagged = NlpParser.getTaggedSegments(sent)
       t2 = System.currentTimeMillis()
       tagged === List(("NP", "machine learning"), ("NP", "natrual language processing"))
-      println(s"nlp parser time elapesed: ${t2 - t1}")
+      // println(s"nlp parser time elapesed: ${t2 - t1}") // can be removed?
       1 === 1
     }
   }

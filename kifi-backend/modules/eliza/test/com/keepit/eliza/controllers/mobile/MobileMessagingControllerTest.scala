@@ -442,7 +442,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val result = action(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        println(s"thread = $thread")
+        // println(s"thread = $thread") // can be removed?
 
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 2

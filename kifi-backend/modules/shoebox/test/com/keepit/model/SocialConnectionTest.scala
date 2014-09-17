@@ -50,7 +50,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size)
+          inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -131,7 +131,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size)
+          inject[SocialUserImportFriends].importFriends(socialUser, extractFacebookFriendInfo(json)).size
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -211,7 +211,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(filename))).mkString)
           }
-          println(inject[SocialUserImportFriends].importFriends(socialUser, jsons flatMap extractFacebookFriendInfo).size)
+          inject[SocialUserImportFriends].importFriends(socialUser, jsons flatMap extractFacebookFriendInfo).size
         }
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))

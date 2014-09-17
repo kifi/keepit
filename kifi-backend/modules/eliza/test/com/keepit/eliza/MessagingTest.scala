@@ -138,7 +138,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val notifications: Seq[JsObject] = Await.result(notificationCommander.getLatestUnreadSendableNotifications(user3, 20, includeUriSummary = false), Duration(4, "seconds"))._1.map(_.obj)
         notifications.length === 1
         val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy(_.lastName)
-        println(participants)
+        // println(participants) // can be removed?
         participants.length === 3
         participants(0).lastName.endsWith(user1.id.toString) === true
         participants(1).lastName.endsWith(user2.id.toString) === true

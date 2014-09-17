@@ -101,7 +101,8 @@ object Global {
     Keys.fork := false,
     aggregate in update := false,
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DoubleIndentClassDeclaration, true),
+    javaOptions in Test += "-Dlogger.resource=test-logger.xml"
   )
 
 }

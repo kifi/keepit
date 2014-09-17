@@ -22,7 +22,7 @@ class LockManagerTest extends Specification with NoConcurrentExecutionContext {
   implicit lazy val lockMgr = new LockManager(zkClient)
 
   def withZKSession[T](block: (ZooKeeperSession) => T)(implicit node: Node, cleanup: Boolean = true): T = {
-    println(s"starting test with root path ${node.path}")
+    // println(s"starting test with root path ${node.path}") // can be removed?
     zkClient.session { zk =>
       try {
         zk.create(node)

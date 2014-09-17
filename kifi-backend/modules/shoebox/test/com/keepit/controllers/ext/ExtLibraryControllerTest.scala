@@ -113,6 +113,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val pubId2 = Library.publicId(lib2.id.get)
         val pubId3 = Library.publicId(lib3.id.get)
 
+        // keep to own library
         val result1 = addKeep(user1, pubId1, Json.obj(
           "title" -> "kayne-fidence",
           "url" -> "http://www.imagenius.com",
@@ -120,8 +121,9 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(result1) === OK
         contentType(result1) must beSome("application/json")
         val keep1 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).head }
-        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true}"""
+        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true,"libraryId":"${pubId1.id}"}"""
 
+        // keep to someone else's library
         val result2 = addKeep(user1, pubId2, Json.obj(
           "title" -> "IMMA LET YOU FINISH",
           "url" -> "http://www.beyonceisbetter.com",
@@ -129,13 +131,22 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(result2) === OK
         contentType(result2) must beSome("application/json")
         val keep2 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib2.id.get, 10, 0).head }
-        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true}"""
+        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"libraryId":"${pubId2.id}"}"""
 
-        val result3 = addKeep(user1, pubId3, Json.obj(
+        // keep to someone else's library again (should be idempotent)
+        val result3 = addKeep(user1, pubId2, Json.obj(
           "title" -> "IMMA LET YOU FINISH",
           "url" -> "http://www.beyonceisbetter.com",
           "guided" -> false))
-        status(result3) === FORBIDDEN
+        status(result3) === OK
+        contentAsString(result3) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"libraryId":"${pubId2.id}"}"""
+
+        // try to keep to someone else's library without sufficient access
+        val result4 = addKeep(user1, pubId3, Json.obj(
+          "title" -> "IMMA LET YOU FINISH",
+          "url" -> "http://www.beyonceisbetter.com",
+          "guided" -> false))
+        status(result4) === FORBIDDEN
       }
     }
 
@@ -178,6 +189,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s => keepRepo.count } === 3
 
         // test unkeep from own library
+        status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("DontChoke", "Throw") }
+
+        // test unkeep from own library again (should be idempotent)
         status(removeKeep(user1, pubId1, keep1.externalId)) === NO_CONTENT
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("DontChoke", "Throw") }
 
