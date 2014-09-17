@@ -332,9 +332,7 @@ class KeepImageCommanderImpl @Inject() (
             Future.failed(new RuntimeException(s"Unknown image type, ${headers.headers.get("Content-Type")}"))
           } else {
             val tempFile = TemporaryFile(prefix = "remote-file", suffix = "." + formatOpt.get.value)
-            if (!Play.maybeApplication.exists(_.mode == Mode.Test)) {
-              tempFile.file.deleteOnExit()
-            }
+            tempFile.file.deleteOnExit()
             val outputStream = new FileOutputStream(tempFile.file)
 
             val maxSize = 1024 * 1024 * 16
