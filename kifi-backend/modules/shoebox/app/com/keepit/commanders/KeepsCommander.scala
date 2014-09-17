@@ -459,7 +459,18 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def unkeepFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+  def unkeepOneFromLibrary(keep: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    unkeepManyFromLibrary(Seq(keep), libId, userId) match {
+      case Left(fail) =>
+        Left(fail)
+      case Right((infos, failures)) =>
+        if (infos.isEmpty)
+          Left("invalid_keep_id")
+        else
+          Right(infos.head)
+    }
+  }
+  def unkeepManyFromLibrary(keeps: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
@@ -477,7 +488,7 @@ class KeepsCommander @Inject() (
           (unkeptKeeps, failedKeepIds)
         }
         val validUnkeeps = finalizeUnkeeping(unkeptKeeps, userId)
-        Right((validUnkeeps, failedKeepIds))
+        Right(validUnkeeps, failedKeepIds)
       case _ =>
         Left("permission_denied")
     }

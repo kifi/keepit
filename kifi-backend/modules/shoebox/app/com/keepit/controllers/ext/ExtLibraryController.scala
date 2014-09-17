@@ -71,9 +71,9 @@ class ExtLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_library_id"))
       case Success(libraryId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-        keepsCommander.unkeepFromLibrary(Seq(keepExtId), libraryId, request.userId) match {
+        keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
           case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
-          case Right(_) => NoContent
+          case Right(info) => NoContent
         }
     }
   }

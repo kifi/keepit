@@ -196,7 +196,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         // test incorrect unkeep from own library (keep exists but in wrong library)
         val request2 = FakeRequest("POST", com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(pubId2, keep2.externalId).url)
         val result2 = extLibraryController.removeKeep(pubId2, keep2.externalId)(request2)
-        status(result2) must equalTo(NO_CONTENT)
+        status(result2) must equalTo(BAD_REQUEST)
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title).flatten === Seq("DontChoke", "Throw") }
 
         // test unkeep from someone else's library (have RW access)
