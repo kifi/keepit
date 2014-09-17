@@ -1,32 +1,16 @@
-@(emailData: com.keepit.curator.commanders.email.AllDigestRecos)
+@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
 @import com.keepit.common.mail.template.helpers._
 
-Hello,
+This Week’s Recommended List
 
 This digest is a recommended list based on your interests and recent activity on Kifi.
-@emailData.recos.map { reco =>
-@reco.topic.map { topic =>
-Recommended because it’s trending in a topic you’re interested in: @topic
-}
-@reco.title
-@{reco.domain.getOrElse("") + reco.readTime.map(" | " + _ + " read").getOrElse("")}
-
-@reco.description
-
-View: @reco.viewPageUrl
-Send: @reco.sendPageUrl
-Keep: @reco.keepUrl
-
-@reco.keepers.message
+@if(!allRecos.isFacebookConnected) {
+You can also Connect Facebook to access recommendations from your friends’ best keeps.
+@baseUrl/link/facebook?redirect=recommendations
 }
 
-Follow us on Facebook: @kifiFacebookUrl
-Follow us on Twitter: @kifiTwitterUrl
+@allRecos.recos.map { reco =>
+@partials.feedRecommendationText(reco)
+}
 
-Available on the App Store: @iTunesAppStoreUrl
-
-Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA
-Go to @unsubscribeUrl to unsubscribe from updates like this.
-
-(c) 2014 FortyTwo, Inc. All rights reserved.
-
+View Full List: @baseUrl/recommendations

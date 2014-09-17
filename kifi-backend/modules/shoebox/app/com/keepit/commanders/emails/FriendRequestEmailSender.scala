@@ -29,7 +29,8 @@ class FriendRequestEmailSender @Inject() (
       subject = s"${requestingUser.firstName} ${requestingUser.lastName} sent you a friend request.",
       to = Left(toUserId),
       category = NotificationCategory.User.FRIEND_REQUEST,
-      htmlTemplate = views.html.email.friendRequestBlack(toUserId, fromUserId),
+      htmlTemplate = views.html.email.black.friendRequest(toUserId, fromUserId),
+      textTemplate = Some(views.html.email.black.friendRequestText(toUserId, fromUserId)),
       campaign = Some("friendRequest")
     )
     emailTemplateSender.send(emailToSend)
