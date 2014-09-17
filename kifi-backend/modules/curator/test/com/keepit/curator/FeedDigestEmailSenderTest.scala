@@ -170,7 +170,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         }
 
         mail42.senderUserId.get must beEqualTo(Id[User](42))
-        val mail42body = mail42.htmlBody.toString
+        val mail42body = mail42.htmlBody.value
+        val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
         mail42body must contain(">www.kifi.com<")
         mail42body must contain(">Google<")
@@ -178,19 +179,26 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         // check that uri's for the recos are in the emails
         mail42body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
         mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42text must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
         mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
         mail42body must contain("2 friends and 1 other kept this")
+        mail42text must contain("2 friends and 1 other kept this")
         mail42body must contain("1 friend and 2 others kept this")
+        mail42text must contain("1 friend and 2 others kept this")
 
         // read times
         mail42body must contain("45 min")
         mail42body must contain("15 min")
+        mail42text must contain("45 min")
+        mail42text must contain("15 min")
 
         // TopicAttribution
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
+        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
+        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
