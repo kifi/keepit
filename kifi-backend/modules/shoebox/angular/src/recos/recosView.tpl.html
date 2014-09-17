@@ -56,6 +56,9 @@
           <div ng-if="reason.kind === 'users'">
             Because lots of users kept it
           </div>
+          <div ng-if="reason.kind === 'library'">
+            Because it's in a Library you follow: <a ng-href="{{reason.url}}" ng-attr-title="{{reason.name}}">{{reason.name}}</a>
+          </div>
         </div>
         <div class="kf-reason-bullet-container" ng-if="hasTwoOrMoreReasons()">
           <span ng-repeat="reason in reasons" class="kf-reason-bullet" ng-class="{'kf-dark-reason-bullet': $index === reasonIndex}">&bull;</span>
