@@ -397,9 +397,7 @@ class SearchCommanderImpl @Inject() (
 
     val searches = if (userId.id < 0 || (debugOption.flags & DebugOption.AsNonUser.flag) != 0) {
       try {
-        val list = searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
-        log.info(s"NE: created KifiNonUserSearch size=${list.size}")
-        list
+        searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
       } catch {
         case e: Exception =>
           log.error("unable to create KifiNonUserSearch", e)
