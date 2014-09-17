@@ -159,6 +159,7 @@ class KeepsCommander @Inject() (
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    keepImageCommander: KeepImageCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
