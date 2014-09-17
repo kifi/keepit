@@ -18,8 +18,6 @@ import scala.concurrent.duration.Duration
 
 class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with Logging {
 
-  args(skipAll = true)
-  
   val logger = log
 
   def modules = Seq()
