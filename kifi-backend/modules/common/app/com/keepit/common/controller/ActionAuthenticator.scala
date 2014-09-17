@@ -90,11 +90,6 @@ class RemoteActionAuthenticator @Inject() (
 
   implicit private[this] val executionContext = ExecutionContext.immediate
 
-  //  protected def getUserOptF(implicit request: Request[_]): Future[Option[User]] = getUserIdOpt match {
-  //    case Some(userId) => shoeboxClient.getUser(userId)
-  //    case None => Future.successful(None)
-  //  }
-
   private def getExperiments(userId: Id[User]): Future[Set[ExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
   private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[Result]): (SecuredRequest[T] => Future[Result]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
