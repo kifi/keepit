@@ -1,9 +1,6 @@
 package com.keepit.common.controller
 
-import com.keepit.common.logging.Logging
 import play.api.http.ContentTypes
-import play.api.mvc._
-import play.api.libs.json._
 
 abstract class WebsiteController(val actionAuthenticator: ActionAuthenticator) extends ServiceController with ActionsBuilder {
 
@@ -16,7 +13,4 @@ abstract class WebsiteController(val actionAuthenticator: ActionAuthenticator) e
   }
   object AnyAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions
 
-}
-
-abstract class WebController(val userActionsHelper: UserActionsHelper) extends ServiceController with UserActions {
 }
