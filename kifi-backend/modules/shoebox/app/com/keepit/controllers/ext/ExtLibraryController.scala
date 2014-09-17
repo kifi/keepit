@@ -36,12 +36,10 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
-  def addKeep(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def addKeep(libraryPubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
+    Library.decodePublicId(libraryPubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
-
       case Success(libraryId) =>
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getOpt(request.userId, libraryId)
@@ -56,17 +54,20 @@ class ExtLibraryController @Inject() (
             implicit val context = hcb.build
             val rawBookmark = info.as[RawBookmarkRepresentation]
             val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
-            // TODO: stop assuming keep is mine and removable
-            Ok(Json.toJson(KeepData(keepInfo.id.get, mine = true, removable = true)))
+            Ok(Json.toJson(KeepData(
+              keepInfo.id.get,
+              mine = true, // TODO: stop assuming keep is mine and removable
+              removable = true,
+              secret = keepInfo.isPrivate,
+              libraryId = Library.publicId(libraryId))))
           case _ =>
             Forbidden(Json.obj("error" -> "invalid_access"))
         }
     }
   }
 
-  def removeKeep(pubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    Library.decodePublicId(libraryPubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_library_id"))
       case Success(libraryId) =>
