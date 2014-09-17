@@ -82,8 +82,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          println(s"res=$s")
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("陳")
@@ -148,7 +147,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("chan") // chan@jing.com
@@ -213,7 +212,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("chan") // chan@jing.com (deduped)
@@ -273,7 +272,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
               case None => j.as[EmailContactResult]
             }
           }
-          println(s"[search($query,$limit)] res(len=${js.length}):$js")
+          log.info(s"[search($query,$limit)] res(len=${js.length}):$js")
           js
         }
 

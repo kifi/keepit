@@ -1,15 +1,11 @@
 package com.keepit.common.controller
 
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.UserExperimentCommander
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.model.{ KifiInstallation, ExperimentType, User }
+import com.keepit.model.{ ExperimentType, KifiInstallation, User }
 import play.api.mvc._
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T]
@@ -28,12 +24,12 @@ trait UserRequest[T] extends MaybeUserRequest[T] {
 case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T]
 case class SimplePartialNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with PartialNonUserRequest[T]
 case class SimpleUserRequest[T](
+    request: Request[T],
     userId: Id[User],
     userF: Future[User],
     experimentsF: Future[Set[ExperimentType]],
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
-    adminUserId: Option[Id[User]] = None,
-    request: Request[T]) extends WrappedRequest(request) with UserRequest[T] {
+    adminUserId: Option[Id[User]] = None) extends WrappedRequest(request) with UserRequest[T] {
   lazy val user = Await.result(userF, 5 seconds)
   lazy val experiments = Await.result(experimentsF, 5 seconds)
 }
@@ -54,13 +50,14 @@ trait UserActions { self: Controller =>
 
   protected def userActionsHelper: UserActionsHelper
 
+  private def buildUserRequest[A](userId: Id[User])(implicit request: Request[A]) =
+    SimpleUserRequest(request, userId, userActionsHelper.getUserOpt.map(_.get), userActionsHelper.getUserExperiments)
+
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) =>
-          println(s"[invokeBlock] userId=$userId")
-          block(SimpleUserRequest(userId, userActionsHelper.getUserOpt.map(_.get), userActionsHelper.getUserExperiments, None, None, request))
+        case Some(userId) => block(buildUserRequest(userId))
         case None => Future.successful(Unauthorized)
       }
     }
@@ -70,7 +67,7 @@ trait UserActions { self: Controller =>
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) => block(SimpleUserRequest(userId, userActionsHelper.getUserOpt.map(_.get), userActionsHelper.getUserExperiments, None, None, request))
+        case Some(userId) => block(buildUserRequest(userId))
         case None => block(SimpleNonUserRequest(request))
       }
     }

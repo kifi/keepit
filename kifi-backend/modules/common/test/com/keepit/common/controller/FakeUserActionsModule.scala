@@ -27,11 +27,7 @@ class FakeUserActionsHelper() extends UserActionsHelper with Logging {
     this
   }
 
-  override def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = {
-    val res = fixedUser.flatMap(_.id)
-    println(s"res=$res")
-    res
-  }
+  override def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = fixedUser.flatMap(_.id)
   def getUserOpt(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
   def isAdmin(userId: Id[User]): Boolean = fixedExperiments.contains(ExperimentType.ADMIN)
   def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
