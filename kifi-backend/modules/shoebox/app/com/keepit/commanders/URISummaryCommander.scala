@@ -182,7 +182,16 @@ class URISummaryCommander @Inject() (
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-    scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+    try {
+      scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+    } catch {
+      case timeout: TimeoutException =>
+        db.readWrite { implicit session =>
+          val failImageInfo = imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
+          airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
+        }
+        Future.successful(Some(URISummary(title = nUri.title)))
+    }
   }
 
   /**
@@ -213,16 +222,14 @@ class URISummaryCommander @Inject() (
    */
   private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
     uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) => {
+      case Success(result) =>
         val (url, size) = result
         val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
         db.readWrite { implicit session => imageInfoRepo.save(imageInfoWithUrl) }
         Some(imageInfoWithUrl)
-      }
-      case Failure(ex) => {
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage()}")
+      case Failure(ex) =>
+        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
-      }
     }
   }
 
