@@ -52,7 +52,7 @@ class KifiSearchNonUserImpl(
   }
 
   def execute(): KifiShardResult = {
-    val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn)
 
     val total = textHits.totalHits
     val hits = createQueue(numHitsToReturn)
