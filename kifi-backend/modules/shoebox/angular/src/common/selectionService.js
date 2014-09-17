@@ -67,11 +67,11 @@ angular.module('kifi')
     };
 
     Selection.prototype.getSelected = function (keeps) {
-      var that = this;
+      var selected = this.selected;
 
       return keeps.filter(function (keep) {
-        return keep.id in that.selected;
-      }) || [];
+        return keep.id in selected;
+      });
     };
 
     Selection.prototype.getFirstSelected = function () {

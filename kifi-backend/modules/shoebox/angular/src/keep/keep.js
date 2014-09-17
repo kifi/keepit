@@ -340,10 +340,6 @@ angular.module('kifi')
         });
 
         // Dragging.
-        scope.$watch('editMode.enabled', function () {
-          element.attr('draggable', true);
-        });
-
         tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });
         });
