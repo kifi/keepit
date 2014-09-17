@@ -18,6 +18,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.ws.WS
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -60,11 +61,12 @@ class KeepImageCommanderImpl @Inject() (
     val keep = db.readOnlyMaster { implicit session =>
       keepRepo.get(keepId)
     }
+    log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
       val localLookup = db.readOnlyMaster { implicit session =>
         imageInfoRepo.getLargestByUriWithPriority(keep.uriId).flatMap { imageInfo =>
           val nuri = normalizedUriRepo.get(keep.uriId)
-          s3UriImageStore.getImageURL(imageInfo, nuri)
+          s3UriImageStore.getImageURL(imageInfo, nuri) tap { u => log.info(s"[kic] Got image URL $u") }
         }
       }
       val remoteImageF = if (localOnly) {
@@ -79,8 +81,9 @@ class KeepImageCommanderImpl @Inject() (
 
       remoteImageF.flatMap { remoteImageOpt =>
         remoteImageOpt.map { imageUrl =>
+          log.info(s"[kic] Using $imageUrl")
           val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
-          fetchAndSet(imageUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
+          fetchAndSet(realUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
         }
