@@ -112,9 +112,9 @@ var tile = tile || function() {  // idempotent for Chrome
           } else if (!me) {
             toggleLoginDialog();
           } else if (tile && tile.dataset.kept) {
-            api.port.emit('unkeep', withUrls({}));
+            api.port.emit('unkeep');
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), how: e.altKey ? 'private' : 'public'}));
+            api.port.emit('keep', withUrls({title: authoredTitle(), secret: e.altKey}));
           }
           e.preventDefault();
         }

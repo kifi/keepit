@@ -125,7 +125,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         if (this.parentNode.classList.contains('kifi-keep-side')) {
-          keepPage('public', e.originalEvent.guided);
+          keepPage(null, e.originalEvent.guided); // TODO: send library ID
         } else {
           showKeepBox();
         }
@@ -307,23 +307,22 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function keepPage(how, guided) {
-    log('[keepPage]', how, guided ? 'guided' : '');
+  function keepPage(libraryId, guided) {
+    log('[keepPage]', libraryId, guided ? 'guided' : '');
     justKept = true;
-    var title = authoredTitle();
-    api.port.emit('keep', withUrls({title: title, how: how, guided: guided}));
+    api.port.emit('keep', withUrls({title: authoredTitle(), libraryId: libraryId, guided: guided}));
   }
 
-  function unkeepPage() {
-    log('[unkeepPage]', document.URL);
+  function unkeepPage(libraryId) {
+    log('[unkeepPage]', libraryId, document.URL);
     justKept = false;
-    api.port.emit('unkeep', withUrls({}));
+    api.port.emit('unkeep', libraryId);
   }
 
   function hoverfuFriends($tip, keepers) {
     return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
-      var friend = keepers.filter(hasId($pic.data('id')))[0];
+      var friend = keepers.filter(idIs($pic.data('id')))[0];
       render('html/friend_card', {
         friend: friend
       }, function (html) {
@@ -440,7 +439,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     return arr;
   }
 
-  function hasId(id) {
+  function idIs(id) {
     return function (o) {return o.id == id};
   }
 

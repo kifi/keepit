@@ -23,6 +23,7 @@
       "meta.js",
       "deps.js",
       "listeners.js",
+      "polyfills.js",
       "api.js",
       "rwsocket.js",
       "socket_commander.js",

@@ -6,11 +6,19 @@
 // @require scripts/render.js
 // @require scripts/listen.js
 
-var keepBox = (function () {
+var keepBox = keepBox || (function () {
   'use strict';
-  var $box, librariesById;
+  var $box;
 
-  var handlers = {};
+  if (!Array.prototype.find) {
+    Array.prototype.find = function (predicate, thisArg) {
+      for (var i = 0, n = this.length, val; i < n; i++) {
+        if (predicate.call(thisArg, (val = this[i]), i, this)) {
+          return val;
+        }
+      }
+    };
+  }
 
   return {
     show: function ($parent, howKept, keepPage, unkeepPage) {
@@ -18,8 +26,8 @@ var keepBox = (function () {
       if ($box) {
         hide();
       }
-      api.port.emit('get_libraries', function (libs) {
-        show($parent, libs, howKept, keepPage, unkeepPage);
+      api.port.emit('keeps_and_libraries', function (data) {
+        show($parent, data, howKept, keepPage, unkeepPage);
       });
     },
     hide: function () {
@@ -36,10 +44,10 @@ var keepBox = (function () {
     }
   };
 
-  function show($parent, libraries, howKept, keepPage, unkeepPage) {
+  function show($parent, data, howKept, keepPage, unkeepPage) {
     log('[keepBox:show]');
-    librariesById = libraries.reduce(indexById, {});
-    var partitionedLibs = partitionLibs(libraries, howKept);
+    var librariesById = data.libraries.reduce(indexById, {});
+    var partitionedLibs = partitionLibs(data.libraries, data.keeps);
     $box = $(render('html/keeper/keep_box', {
       inLibs: partitionedLibs[0],
       recentLibs: partitionedLibs[1],
@@ -67,19 +75,19 @@ var keepBox = (function () {
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
       if (e.which === 1) {
-        unkeepPage();
+        unkeepPage($(this).prev().data('id'));
         hide(e, 'action');
       }
     })
     .on('click', '.kifi-keep-box-save', function (e) {
-      keepPage($(this).prevAll('.kifi-keep-box-lib').hasClass('kifi-secret') ? 'private' : 'public');
+      keepPage($(this).prevAll('.kifi-keep-box-lib').data('id'));
       hide(e, 'action');
     })
     .appendTo($parent);
 
     $(document).data('esc').add(hide);
 
-    api.port.on(handlers);
+    // api.port.on(handlers);
 
     $box.layout()
     .on('transitionend', onShown)
@@ -96,7 +104,7 @@ var keepBox = (function () {
 
   function hide(e, trigger) {
     log('[keepBox:hide]');
-    api.port.off(handlers);
+    // api.port.off(handlers);
     $(document).data('esc').remove(hide);
     $box.css('overflow', '')
       .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
@@ -129,15 +137,15 @@ var keepBox = (function () {
     });
   }
 
-  function partitionLibs(libs, howKept) {
+  function partitionLibs(libs, keeps) {
     var inLibs = [];
     var recentLibs = [];
     var otherLibs = [];
-    var inPathRe = howKept === 'public' ? /\/main$/ : howKept === 'private' ? /\/secret$/ : /^$/;
     for (var i = 0; i < libs.length; i++) {
       var lib = libs[i];
-      if (inPathRe.test(lib.path)) {
-        lib.removable = true;
+      var keep = keeps.find(libraryIdIs(lib.id));
+      if (keep) {
+        lib.removable = keep.removable;
         inLibs.push(lib);
       } else {
         otherLibs.push(lib);
@@ -149,5 +157,9 @@ var keepBox = (function () {
   function indexById(o, item) {
     o[item.id] = item;
     return o;
+  }
+
+  function libraryIdIs(id) {
+    return function (o) {return o.libraryId === id};
   }
 }());

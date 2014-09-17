@@ -99,17 +99,26 @@ function PageData(o) {
 }
 PageData.prototype = {
   update: function (o) {
-    this.kept = o.kept;
-    this.keepId = o.keepId;
+    this.keeps = o.keeps || [];
     this.position = o.position;
     this.neverOnSite = o.neverOnSite;
     this.sensitive = o.sensitive;
     this.shown = o.shown;
     this.keepers = o.keepers || [];
-    this.keeps = o.keeps || 0;
   },
-  otherKeeps: function () {
-    return this.keeps - this.keepers.length - (this.kept === 'public');
+  howKept: function () {
+    var keeps = this.keeps;
+    if (keeps.length) {
+      var mine = keeps.filter(isMine);
+      if (mine.length) {
+        return mine.every(isSecret) ? 'private' : 'public';
+      }
+      return 'other';
+    }
+    return null;
+  },
+  findKeep: function (libraryId) {
+    return this.keeps.filter(libraryIdIs(libraryId))[0] || null;
   }
 };
 
@@ -529,77 +538,97 @@ api.port.on({
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
     var d = pageData[tab.nUri];
-    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps()} : {keepers: []});
+    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: 0} : {keepers: []});
   },
-  keep: function(data, _, tab) {
+  keep: function (data, _, tab) {
     log('[keep]', data);
     var d = pageData[tab.nUri];
     if (!d) {
       api.tabs.emit(tab, 'kept', {fail: true});
     } else if (!d.state) {
       d.state = 'keeping';
-      ajax('POST', '/ext/keeps', {
+      var libraryId = data.libraryId || libraryIds[data.secret ? 1 : 0];
+      ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         title: data.title,
         url: data.url,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private',
         guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
         delete d.state;
-        d.kept = data.how;
-        d.keepId = keep.id;
-        if (d.kept !== 'private') {
-          d.keeps++;
+        // main and secret are mutually exclusive
+        // var i = libraryIds.indexOf(libraryId);
+        // if (i >= 0) {
+        //   d.keeps = d.keeps.filter(libraryIdIsNot(libraryIds[1 - i]));
+        // }
+        // TODO: replace line below with code above once server supports keeping into multiple libraries
+        d.keeps = d.keeps.filter(isNotMine);
+        var j = d.keeps.findIndex(libraryIdIs(libraryId));
+        if (j >= 0) {
+          d.keeps[j] = keep;
+        } else {
+          d.keeps.push(keep);
         }
-        forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
-          setIcon(tab, data.how);
+        var how = d.howKept();
+        forEachTabAt(tab.url, tab.nUri, function (tab) {
+          setIcon(!!how, tab);
+          api.tabs.emit(tab, 'kept', {kept: how});
         });
         updateKifiAppTabs('update_keeps');
-      }, function fail() {
-        log('[keep:fail]', data.url);
+      }, function fail(o) {
+        log('[keep:fail]', data.url, o);
         delete d.state;
         forEachTabAt(tab.url, tab.nUri, function (tab) {
-          api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
+          api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
         });
       });
-      forEachTabAt(tab.url, tab.nUri, function (tab) {
-        api.tabs.emit(tab, 'kept', {kept: data.how});
-      });
+      var i = libraryIds.indexOf(libraryId);
+      if (i >= 0 && !d.keeps.length) {
+        api.tabs.emit(tab, 'kept', {kept: i === 0 ? 'public' : 'private'});
+      }
     }
   },
-  unkeep: function(_, __, tab) {
+  unkeep: function (libraryId, _, tab) {
     var d = pageData[tab.nUri];
-    log('[unkeep]', d && d.keepId || '', d && d.state || '');
-    if (!d || !d.keepId) {
+    if (!d) {
+      log('[unkeep] fail', libraryId || '');
       api.tabs.emit(tab, 'kept', {fail: true});
-    } else if (!d.state) {
-      ajax('POST', '/ext/keeps/' + d.keepId + '/unkeep', function done(o) {
-        log('[unkeep:done]', o);
-        if (d.kept !== 'private') {
-          d.keeps = Math.max(0, d.keeps - 1);
-        }
-        delete d.state;
-        delete d.kept;
-        delete d.keepId;
-        forEachTabAt(tab.url, tab.nUri, function (tab) {
-          setIcon(tab, false);
+    } else if (d.state) {
+      log('[unkeep] ignoring', libraryId || '', d.state);
+    } else {
+      var keep = d.findKeep(libraryId || libraryIds[0]) || d.findKeep(libraryIds[1]);
+      if (!keep) {
+        log('[unkeep] fail', libraryId || '');
+        api.tabs.emit(tab, 'kept', {fail: true});
+      } else {
+        log('[unkeep] ', libraryId || '', keep);
+        d.state = 'unkeeping';
+        ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function done() {
+          log('[unkeep:done]');
+          delete d.state;
+          d.keeps = d.keeps.filter(idIsNot(keep.id));
+          var how = d.howKept();
+          forEachTabAt(tab.url, tab.nUri, function (tab) {
+            setIcon(!!how, tab);
+            api.tabs.emit(tab, 'kept', {kept: how});
+          });
+          updateKifiAppTabs('update_keeps');
+        }, function fail() {
+          log('[unkeep:fail]', d.keepId);
+          delete d.state;
+          api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
         });
-        updateKifiAppTabs('update_keeps');
-      }, function fail() {
-        log('[unkeep:fail]', d.keepId);
-        delete d.state;
-        api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
-      });
-      forEachTabAt(tab.url, tab.nUri, function (tab) {
-        api.tabs.emit(tab, 'kept', {kept: null});
-      });
+        if (d.keeps.length === 1) {
+          api.tabs.emit(tab, 'kept', {kept: null});
+        }
+      }
     }
   },
-  get_libraries: function (_, respond) {
+  keeps_and_libraries: function (_, respond, tab) {
+    var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
-      respond(o.libraries);
+      respond({keeps: d ? d.keeps : [], libraries: o.libraries});
     }, respond);
   },
   keeper_shown: function(data, _, tab) {
@@ -996,14 +1025,14 @@ api.port.on({
         var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
         if (!data.includeSelf) {
           contacts = contacts.filter(idIsNot(me.id));
-        } else if (!contacts.some(hasId(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
+        } else if (!contacts.some(idIs(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, me);
         }
-        if (!contacts.some(hasId(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
+        if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, SUPPORT);
         }
         var results = contacts.map(toContactResult, {sf: sf, q: data.q});
-        if (results.length < data.n && data.q && !data.participants.some(hasId(data.q)) && !results.some(hasEmail(data.q))) {
+        if (results.length < data.n && data.q && !data.participants.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
           results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
         }
         respond(results);
@@ -1637,7 +1666,7 @@ function kifify(tab) {
       kififyWithPageData(tab, d);
     }
   } else {
-    ajax('POST', '/ext/pageDetails', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
+    ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
       }
@@ -1663,12 +1692,12 @@ function stashTabByNormUri(tab, uri) {
 
 function kififyWithPageData(tab, d) {
   log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '');
-  setIcon(tab, d.kept);
+  setIcon(!!d.howKept(), tab);
   if (silence) return;
 
   var hide = d.neverOnSite || !enabled('keeper') || d.sensitive && enabled('sensitive');
   api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
-    kept: d.kept,
+    kept: d.howKept(),
     position: d.position,
     hide: hide,
     showKeeperIntro: prefs && prefs.showKeeperIntro
@@ -1772,7 +1801,7 @@ function isUnread(th) {
 }
 
 function paneIsOpen(tabId) {
-  var hasThisTabId = hasId(tabId);
+  var hasThisTabId = idIs(tabId);
   for (var loc in tabsByLocator) {
     if (tabsByLocator[loc].some(hasThisTabId)) {
       return true;
@@ -1780,7 +1809,7 @@ function paneIsOpen(tabId) {
   }
 }
 
-function setIcon(tab, kept) {
+function setIcon(kept, tab) {
   log('[setIcon] tab:', tab.id, 'kept:', kept);
   api.icon.set(tab, (kept ? 'icons/k_blue' : 'icons/k_dark') + (silence ? '.paused' : '') + '.png');
 }
@@ -2090,7 +2119,7 @@ function appendUserResult(contacts, n, user) {
 function reTest(s) {
   return function (re) {return re.test(s)};
 }
-function hasId(id) {
+function idIs(id) {
   return function (o) {return o.id === id};
 }
 function idIsNot(id) {
@@ -2102,8 +2131,23 @@ function getId(o) {
 function getName(o) {
   return o.name;
 }
-function hasEmail(email) {
+function emailIs(email) {
   return function (o) {return o.email === email};
+}
+function isMine(o) {
+  return o.mine;
+}
+function isNotMine(o) {
+  return !o.mine;
+}
+function isSecret(o) {
+  return o.secret;
+}
+function libraryIdIs(id) {
+  return function (o) {return o.libraryId === id};
+}
+function libraryIdIsNot(id) {
+  return function (o) {return o.libraryId !== id};
 }
 function getThreadId(n) {
   return n.thread;
@@ -2206,7 +2250,7 @@ function sameOrLikelyRedirected(url1, url2) {
 
 // ===== Session management
 
-var me, prefs, experiments, eip, socket, silence, onLoadingTemp;
+var me, libraryIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   var origInstId = stored('installation_id');
@@ -2223,6 +2267,7 @@ function authenticate(callback, retryMs) {
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user);
+    libraryIds = data.libraryIds;
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(
@@ -2269,7 +2314,7 @@ function clearSession() {
       delete tab.focusCallbacks;
     });
   }
-  me = prefs = experiments = eip = null;
+  me = libraryIds = prefs = experiments = eip = null;
   if (socket) {
     socket.close();
     socket = null;
