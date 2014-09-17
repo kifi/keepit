@@ -58,5 +58,7 @@ trait DebugOption { self: Logging =>
     log.info(s"""NE: trustedLibs: ${visibilityEvaluator.trustedLibraryIds.toSeq.sorted.mkString(",")}""")
     log.info(s"""NE: myOwnLibKeepCount: ${visibilityEvaluator.myOwnLibraryKeepCount}""")
     log.info(s"""NE: memberLibKeepCount: ${visibilityEvaluator.memberLibraryKeepCount}""")
+    log.info(s"""NE: trustedLibKeepCount: ${visibilityEvaluator.trustedLibraryKeepCount}""")
+    log.info(s"""NE: authorizedLibKeepCount: ${visibilityEvaluator.authorizedLibraryKeepCount}""")
   }
 }
