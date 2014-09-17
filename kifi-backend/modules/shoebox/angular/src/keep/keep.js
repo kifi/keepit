@@ -33,7 +33,7 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepContent', [
+.directive('kfKeepCard', [
   '$document',
   '$rootScope',
   '$rootElement',
@@ -57,7 +57,7 @@ angular.module('kifi')
         stopDraggingKeeps: '&'
       },
       replace: true,
-      templateUrl: 'keep/keepContent.tpl.html',
+      templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
         if (!scope.keep) {
           return;
