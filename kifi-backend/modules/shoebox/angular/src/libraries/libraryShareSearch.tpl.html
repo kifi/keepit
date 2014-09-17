@@ -1,7 +1,8 @@
 <div>
   <button class="kf-library-share-btn">Send</button>
   <div class="kf-library-share-menu social-invite-search">
-    <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change()" ng-keydown="processKeyEvent($event)">
+    <input class="kf-library-share-message-input" type="text" ng-model="share.message" placeholder="Write something?">
+    <input class="kf-library-share-search-input" type="text" ng-model="search.name" placeholder="Search people" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)">
     <ul class="social-invite-dropdown">
       <li class="social-invite-element" ng-repeat="result in results" ng-click="shareLibrary(result)" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'selected': result.selected}">
         <div ng-if="result.id">
@@ -9,9 +10,7 @@
           <div>
             <div class="social-invite-summary">
               <div class="social-invite-name">{{result.name}}</div>
-              <div class="social-invite-network">
-                Your friend on Kifi
-              </div>
+              <div class="social-invite-network">Your friend on Kifi</div>
             </div>
           </div>
           <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>

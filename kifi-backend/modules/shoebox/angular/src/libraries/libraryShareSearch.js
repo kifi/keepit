@@ -24,7 +24,7 @@ angular.module('kifi')
         var resultIndex = -1;
         var shareButton = element.find('.kf-library-share-btn');
         var shareMenu = element.find('.kf-library-share-menu');
-        var searchInput = element.find('input');
+        var searchInput = element.find('.kf-library-share-search-input');
         var show = false;
 
         
@@ -33,6 +33,7 @@ angular.module('kifi')
         //
         scope.results = [];
         scope.search = {};
+        scope.share = {};
         scope.email = 'Send to any email';
         scope.emailHelp = 'Type the email address';
 
@@ -130,7 +131,7 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        scope.onInputFocus = function () {
+        scope.onSearchInputFocus = function () {
           // For empty state (when user has not inputted a query), show the contacts
           // that the user has most recently sent messages to.
           if (!scope.search.name) {
@@ -138,7 +139,7 @@ angular.module('kifi')
           }
         };
 
-        scope.change = _.debounce(function () {
+        scope.onSearchInputChange = _.debounce(function () {
           populateDropDown(scope.search.name);
         }, 200);
 
@@ -189,17 +190,24 @@ angular.module('kifi')
             socialService.importGmail();
           }
 
-          // For now, we are only supporting inviting one person at a time.
-          var invitees = [
-            {
-              type: result.id ? 'user' : 'email',
-              id: result.id ? result.id : (result.email ? result.email : scope.search.name),
-              access: 'read_only'  // Right now, we're only supporting read-only access.
-            }
-          ];
+          
+          var opts = {
+            invites: [
+              // For now, we are only supporting inviting one person at a time.
+              {
+                type: result.id ? 'user' : 'email',
+                id: result.id ? result.id : (result.email ? result.email : scope.search.name),
+                access: 'read_only'  // Right now, we're only supporting read-only access.
+              }
+            ]
+          };
+
+          if (scope.share.message) {
+            opts.message = scope.share.message;
+          }
 
           // TODO(yiping): implement error path.
-          libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
+          libraryService.shareLibrary(scope.library.id, opts).then(function () {
             result.sent = true;
           });
         };
