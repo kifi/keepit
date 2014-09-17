@@ -2,8 +2,13 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService',
-  function ($document, friendService, keyIndices, libraryService) {
+.directive('kfLibraryShareSearch', [
+  '$document',
+  'friendService',
+  'keyIndices',
+  'libraryService',
+  'util',
+  function ($document, friendService, keyIndices, libraryService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -21,12 +26,14 @@ angular.module('kifi')
         var searchInput = element.find('input');
         var show = false;
 
-
+        
         //
         // Scope data.
         //
         scope.results = [];
         scope.search = {};
+        scope.email = 'Send to any email';
+        scope.emailHelp = 'Type the email address';
 
 
         //
@@ -64,18 +71,45 @@ angular.module('kifi')
         }
 
         function populateDropDown(opt_query) {
+          // Update the email address and email help text being displayed.
+          if (opt_query) {
+            scope.email = opt_query;
+            scope.emailHelp = 'Keep typing the email address';
+          }
+
           libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
             if (contacts && contacts.length) {
-              scope.results = contacts;
+              scope.results = _.clone(contacts);
 
               scope.results.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
                 }
               });
+
+              if (opt_query) {
+                resultIndex = 0;
+                scope.results[resultIndex].selected = true;
+              } else {
+                resultIndex = -1;
+              }
+
+              if (contacts.length < 5) {
+                scope.results.push({
+                  emailHelp: true
+                });
+              }
             } else {
-              // TODO(yiping): show backfill cards when length is less than 5.
               scope.results = [];
+
+              scope.results.push({
+                emailHelp: true
+              });
+
+              if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
+                resultIndex = 0;
+                scope.results[resultIndex].selected = true;
+              }
             }
           });
         }
@@ -129,7 +163,9 @@ angular.module('kifi')
               break;
             case keyIndices.KEY_ENTER:
               clearSelection();
-              scope.shareLibrary(scope.results[resultIndex]);
+              if (resultIndex !== -1) {
+                scope.shareLibrary(scope.results[resultIndex]);
+              }
 
               // After sharing, reset index.
               resultIndex = -1;
@@ -145,7 +181,7 @@ angular.module('kifi')
           var invitees = [
             {
               type: result.id ? 'user' : 'email',
-              id: result.id ? result.id : result.email,
+              id: result.id ? result.id : (result.email ? result.email : scope.search.name),
               access: 'read_only'  // Right now, we're only supporting read-only access.
             }
           ];

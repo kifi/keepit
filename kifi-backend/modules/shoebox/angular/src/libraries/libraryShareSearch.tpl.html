@@ -16,7 +16,7 @@
           </div>
           <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
         </div>
-        <div ng-if="!result.id">
+        <div ng-if="!result.id && !result.emailHelp">
           <!-- TODO: use a better class name than cant-find; it actually shrinks the image and 
                is not necessarily related to not being able to find contacts.-->
           <img src="/img/email-icon.png" class="social-invite-image cant-find">
@@ -28,6 +28,20 @@
           </div>
           <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
         </div>
+
+        <!-- Send to any email -->
+        <div ng-if="result.emailHelp">
+          <div>
+            <img src="/img/email-icon.png" class="social-invite-image cant-find">
+            <div class="social-invite-summary">
+              <div class="social-invite-name">{{email}}</div>
+              <div class="social-invite-network">{{emailHelp}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import from Gmail -->
+
         <div class="clearfix"></div>
       </li>
     </ul>
