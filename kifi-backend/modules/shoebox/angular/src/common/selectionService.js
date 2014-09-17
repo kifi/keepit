@@ -67,10 +67,10 @@ angular.module('kifi')
     };
 
     Selection.prototype.getSelected = function (keeps) {
-      var self = this;
+      var that = this;
 
       return keeps.filter(function (keep) {
-        return keep.id in self.selected;
+        return keep.id in that.selected;
       }) || [];
     };
 
