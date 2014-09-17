@@ -1,0 +1,44 @@
+<div class="kf-keep">
+  <div class="kf-keep-body">
+    <div class="kf-keep-contents">
+      <div class="kf-keep-title">
+        <a class="kf-keep-title-link" ng-href="{{library.url}}" target="_blank" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
+      </div>
+
+      <div class="kf-keep-content-line">
+        <div class="kf-keep-info-wrap">
+          <div class="kf-keep-info">
+            <div class="kf-keep-subtitle">
+              <!-- stats -->
+              <div>
+                Keeps: {{library.numKeeps}} Followers: {{library.numFollowers}}
+              </div>
+              <!-- owner -->
+              <div>
+                Curator:
+                <img ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic">
+                {{library.owner.firstName}} {{library.owner.lastName}}
+              </div>
+              <!-- followers -->
+              <div> Followers:
+                <span ng-repeat="follower in library.followers">
+                  <img ng-src="{{follower.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic" title="{{follower.firstName + ' ' + follower.lastName}}">
+                </span>
+              </div>
+            </div>
+            <div class="kf-keep-description">{{library.description}}</div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="kf-keep-footer">
+    <span ng-if="!followed()" class="kf-keep-footer-link" ng-click="follow()">
+      <a ng-click="follow()" href="javascript:"> Follow </a>
+    </span>
+    <span ng-if="followed()" class="kf-keep-footer-link">
+      <a ng-click="unfollow()" href="javascript:"> Unfollow </a>
+    </div>
+  </div>
+</div>

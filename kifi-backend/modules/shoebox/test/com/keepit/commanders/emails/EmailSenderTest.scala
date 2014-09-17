@@ -51,6 +51,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain("Hey Billy,")
         html must contain("utm_source=confirmEmail&utm_medium=email&utm_campaign=welcomeEmail")
+
+        val text = email.textBody.get.value
+        text must contain("Hey Billy,")
       }
     }
   }
@@ -72,7 +75,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       email.category === NotificationCategory.toElectronicMailCategory(category)
       val html = email.htmlBody.value
       html must contain("Hey Johnny")
-      (email, html)
+
+      email
     }
 
     "friend request accepted email" in {
@@ -85,7 +89,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get, Seq.empty)
 
-          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          val email = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your Kifi friend request"
           html must contain("Billy accepted your Kifi")
           html must contain("You and Billy Madison are now")
@@ -97,6 +102,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           html must not contain "Bryan"
           html must not contain "Anna"
           html must not contain "Dean"
+
+          val text = email.textBody.get.value
+          text must contain("Billy accepted your Kifi")
+          text must contain("You and Billy Madison are now")
         }
       }
 
@@ -113,13 +122,18 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
 
-          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          val email = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          val html = email.htmlBody.value
 
           // weak PYMK tests (just make sure it's there)
           html must contain("Aaron")
           html must contain("Bryan")
           html must contain("Anna")
           html must contain("Dean")
+
+          val text = email.textBody.get.value
+          text must contain("Billy accepted your Kifi")
+          text must contain("You and Billy Madison are now")
         }
       }
     }
@@ -138,7 +152,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
-          val (email, html) = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE)
+          val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE)
+          val html = email.htmlBody.value
+          val text = email.textBody.get.value
           email.subject === "You are now friends with Billy Madison on Kifi!"
           html must contain("utm_campaign=connectionMade")
           html must contain("You and Billy Madison are now")
@@ -150,6 +166,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           html must contain("Bryan")
           html must contain("Anna")
           html must contain("Dean")
+
+          text must contain("You and Billy Madison are now")
+          text must contain("now friends with Billy Madison on Kifi. Enjoy Billy's")
+          text must contain("message Billy directly")
         }
       }
     }
@@ -178,6 +198,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy")
         html must contain("Johnny Manziel wants to be your kifi friend")
         html must contain("utm_campaign=friendRequest")
+
+        val text = email.textBody.get.value
+        text must contain("Hi Billy")
+        text must contain("Johnny Manziel wants to be your kifi friend")
+        text must contain("Add Johnny by visiting the link below")
       }
     }
   }
@@ -207,6 +232,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Johnny Manziel just joined kifi.")
         html must contain("utm_campaign=contactJoined")
         html must contain("friend=" + fromUser.externalId)
+
+        val text = email.textBody.get.value
+        text must contain("Hi Billy,")
+        text must contain("Johnny Manziel just joined kifi.")
+        text must contain("to add Johnny as a friend")
+        text must contain("friend=" + fromUser.externalId)
       }
     }
   }
@@ -234,6 +265,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy,")
         html must contain(s"TEST_MODE/password/$token")
         html must contain("utm_campaign=passwordReset")
+
+        val text = email.textBody.get.value
+        text must contain("Hi Billy,")
+        text must contain(s"TEST_MODE/password/$token")
       }
     }
 
@@ -255,6 +290,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain("Yay, you are on the kifi ANDROID wait list!")
         html must contain("utm_campaign=mobile_app_waitlist")
+
+        val text = email.textBody.get.value
+        text must contain("Yay, you are on the kifi ANDROID wait list!")
       }
     }
   }

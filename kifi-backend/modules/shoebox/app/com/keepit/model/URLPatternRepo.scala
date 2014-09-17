@@ -13,7 +13,7 @@ trait URLPatternRepo extends Repo[URLPattern] {
 }
 
 @Singleton
-class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, ruleRepo: SliderRuleRepo) extends DbRepo[URLPattern] with URLPatternRepo {
+class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URLPattern] with URLPatternRepo {
   import scala.slick.lifted.Query
   import db.Driver.simple._
   import DBSession._
@@ -32,7 +32,6 @@ class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock,
   override def save(pattern: URLPattern)(implicit session: RWSession): URLPattern = {
     val newPattern = super.save(pattern)
     activePatternsCache.set(null)
-    ruleRepo.getByName("url").foreach(ruleRepo.save(_)) // update timestamp of corresponding rule(s)
     newPattern
   }
 

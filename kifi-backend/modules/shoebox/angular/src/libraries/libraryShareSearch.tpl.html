@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change($event)">
+  <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change()" ng-keydown="processKeyEvent($event)">
   <ul class="social-invite-dropdown" ng-show="showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-click="shareLibrary(result)" ng-mouseenter="onResultHover(result)" ng-class="{'selected': result.selected}">
       <div ng-if="result.id">
@@ -12,6 +12,7 @@
             </div>
           </div>
         </div>
+        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
       </div>
       <div ng-if="!result.id">
         <!-- TODO: use a better class name than cant-find; it actually shrinks the image and 
@@ -23,7 +24,7 @@
             {{result.name || result.email}}
           </div>
         </div>
-        <div class="social-invite-action"><div class="social-invite-button"></div></div>
+        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
       </div>
       <div class="clearfix"></div>
     </li>

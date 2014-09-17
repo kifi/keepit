@@ -2,7 +2,8 @@
   owner: User,
   keepCount: Int,
   contributors: Seq[User],
-  followers: Seq[User]
+  followers: Seq[User],
+  publicId: com.keepit.common.crypto.PublicId[Library]
 )
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
@@ -10,9 +11,12 @@
     <tr>
       <th>Name</th><td>@library.name</td>
     </tr>
-    <tr>
-      <th>Id</th><td>@library.id</td>
-    </tr>
+      <tr>
+          <th>Id</th><td>@library.id</td>
+      </tr>
+      <tr>
+          <th>Public Id</th><td>@publicId.id</td>
+      </tr>
     <tr>
       <th>Owner</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, owner.externalId)" height=25 width=25>@owner.firstName @owner.lastName</td>
     </tr>

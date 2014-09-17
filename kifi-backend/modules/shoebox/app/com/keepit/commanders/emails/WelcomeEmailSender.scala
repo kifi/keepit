@@ -28,7 +28,8 @@ class WelcomeEmailSender @Inject() (
       subject = "Let's get started with Kifi",
       to = Left(userId),
       category = NotificationCategory.User.WELCOME,
-      htmlTemplate = views.html.email.welcomeBlack(userId),
+      htmlTemplate = views.html.email.black.welcome(userId),
+      textTemplate = Some(views.html.email.black.welcomeText(userId)),
       campaign = Some("welcomeEmail")
     )
     emailTemplateSender.send(emailToSend)

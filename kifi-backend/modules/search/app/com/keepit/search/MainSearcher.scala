@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.search.engine.SearchTimeLogs
 import com.keepit.search.graph.bookmark.BookmarkRecord
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
@@ -39,13 +40,13 @@ class MainSearcher(
     socialGraphInfo: SocialGraphInfo,
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
+    val timeLogs: SearchTimeLogs,
     monitoredAwait: MonitoredAwait)(implicit private val clock: Clock,
         private val fortyTwoServices: FortyTwoServices) extends Logging {
 
   private[this] var parsedQuery: Option[Query] = None
 
   private[this] val currentTime = currentDateTime.getMillis()
-  private[this] val timeLogs = new SearchTimeLogs()
   private[this] val idFilter = filter.idFilter
   private[this] val isInitialSearch = idFilter.isEmpty
 
@@ -105,26 +106,23 @@ class MainSearcher(
 
     parsedQuery = parser.parsedQuery
 
-    timeLogs.queryParsing = parser.totalParseTime
+    timeLogs.queryParsing()
 
     parsedQuery.map { articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
-      val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
+      timeLogs.personalizedSearcher()
 
       val weight = personalizedSearcher.createWeight(articleQuery)
 
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val mySearchUris = socialGraphInfo.mySearchUris
       val friendSearchUris = socialGraphInfo.friendSearchUris
+      timeLogs.socialGraphInfo()
 
-      val tClickBoosts = currentDateTime.getMillis()
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
-
-      val tLucene = currentDateTime.getMillis()
+      timeLogs.clickBoost()
 
       personalizedSearcher.search(weight) { (scorer, reader) =>
         val visibility = ArticleVisibility(reader)
@@ -146,7 +144,7 @@ class MainSearcher(
           doc = scorer.nextDoc()
         }
       }
-      timeLogs.search = currentDateTime.getMillis() - tLucene
+      timeLogs.search()
     }
     (myHits, friendsHits, othersHits)
   }
@@ -154,8 +152,6 @@ class MainSearcher(
   def search(): PartialSearchResult = {
     val now = currentDateTime
     val (myHits, friendsHits, othersHits) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
-
-    val tProcessHits = currentDateTime.getMillis()
 
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
     val friendsUriEdgeAccessors = socialGraphInfo.friendsUriEdgeAccessors
@@ -310,9 +306,8 @@ class MainSearcher(
 
     val shardHits = toDetailedSearchHits(hitList)
 
-    timeLogs.processHits = currentDateTime.getMillis() - tProcessHits
-    timeLogs.socialGraphInfo = socialGraphInfo.socialGraphInfoTime
-    timeLogs.total = currentDateTime.getMillis() - now.getMillis()
+    timeLogs.processHits()
+    timeLogs.done()
     timing()
 
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, show)
@@ -452,29 +447,5 @@ class MutableArticleHit(
     users = newUsers
     bookmarkCount = newBookmarkCount
     this
-  }
-}
-
-class SearchTimeLogs(
-    var socialGraphInfo: Long = 0,
-    var getClickBoost: Long = 0,
-    var queryParsing: Long = 0,
-    var personalizedSearcher: Long = 0,
-    var search: Long = 0,
-    var processHits: Long = 0,
-    var total: Long = 0) extends Logging {
-  def send(): Unit = {
-    statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo, ALWAYS)
-    statsd.timing("mainSearch.queryParsing", queryParsing, ALWAYS)
-    statsd.timing("mainSearch.getClickboost", getClickBoost, ALWAYS)
-    statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher, ALWAYS)
-    statsd.timing("mainSearch.LuceneSearch", search, ALWAYS)
-    statsd.timing("mainSearch.processHits", processHits, ALWAYS)
-    statsd.timing("mainSearch.total", total, ALWAYS)
-  }
-
-  override def toString() = {
-    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
-      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
   }
 }

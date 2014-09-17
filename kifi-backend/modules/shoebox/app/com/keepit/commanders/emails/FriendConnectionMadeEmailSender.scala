@@ -36,7 +36,8 @@ class FriendConnectionMadeEmailSender @Inject() (
       subject = subject,
       to = Left(toUserId),
       category = category,
-      htmlTemplate = views.html.email.friendConnectionMadeBlack(toUserId, friendUserId, category),
+      htmlTemplate = views.html.email.black.friendConnectionMade(toUserId, friendUserId, category),
+      textTemplate = Some(views.html.email.black.friendConnectionMadeText(toUserId, friendUserId, category)),
       campaign = campaign,
       tips = Seq(EmailTips.FriendRecommendations)
     )

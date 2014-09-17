@@ -121,6 +121,12 @@ angular.module('kifi')
       },
       shareLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/invite');
+      },
+      joinLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/join');
+      },
+      leaveLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/leave');
       }
     };
   }
