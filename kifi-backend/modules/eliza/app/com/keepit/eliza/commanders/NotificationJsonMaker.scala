@@ -1,6 +1,8 @@
 package com.keepit.eliza.commanders
 
+import java.util.concurrent.TimeoutException
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ ImageType, URISummary, URISummaryRequest, NormalizedURI }
@@ -25,7 +27,8 @@ private[commanders] case class NotificationJson(obj: JsObject) extends AnyVal
 @Singleton
 private[commanders] class NotificationJsonMaker @Inject() (
     shoebox: ShoeboxServiceClient,
-    summaryCache: InboxUriSummaryCache) {
+    summaryCache: InboxUriSummaryCache,
+    airbreak: AirbrakeNotifier) {
 
   private val uriSummaryRequestLimiter = new ReactiveLock(2)
 
@@ -114,16 +117,23 @@ private[commanders] class NotificationJsonMaker @Inject() (
   }
 
   private def fetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[URISummary] = uriSummaryRequestLimiter.withLockFuture {
-    shoebox.getUriSummary(
-      URISummaryRequest(
-        url = url,
-        imageType = ImageType.IMAGE,
-        minSize = ImageSize(65, 95),
-        withDescription = false,
-        waiting = true,
-        silent = false
+    try {
+      shoebox.getUriSummary(
+        URISummaryRequest(
+          url = url,
+          imageType = ImageType.IMAGE,
+          minSize = ImageSize(65, 95),
+          withDescription = false,
+          waiting = true,
+          silent = false
+        )
       )
-    )
+    } catch {
+      case e: TimeoutException =>
+        //if we're timing out then we better not try again
+        airbreak.notify(s"can't fetch uri summary $uriId -> $url", e)
+        Future.successful(URISummary())
+    }
   }
 
 }
