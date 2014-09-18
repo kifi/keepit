@@ -1,6 +1,6 @@
 package com.keepit.common.crypto
 
-import java.security.{ Security, SecureRandom }
+import java.security.{ MessageDigest, Security, SecureRandom }
 import org.apache.commons.codec.binary.{ Base32, Base64 }
 import javax.crypto.Cipher
 import javax.crypto.spec.{ IvParameterSpec, SecretKeySpec }
@@ -40,6 +40,14 @@ object CryptoSupport {
 
   def generateAES128key() = {
     toBase64(randomBytes(16))
+  }
+
+  private val sha = MessageDigest.getInstance("SHA-256")
+  def generateHexSha256(s: String): String = {
+    sha.digest(s.getBytes)
+      .foldLeft("")((s: String, b: Byte) => s +
+        Character.forDigit((b & 0xf0) >> 4, 16) +
+        Character.forDigit(b & 0x0f, 16))
   }
 
   Security.addProvider(new BouncyCastleProvider())

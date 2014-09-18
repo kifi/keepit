@@ -1,11 +1,28 @@
 .kf-library-share
   .social-invite-element
-    &:hover
-      cursor: pointer
-
-    &.selected
+    &.kf-library-share-selected
       background-color: #eee
 
+.kf-library-share-btn
+  display: block
+
+.kf-library-share-menu
+  display: none
+  width: 345px
+
+  input  // TODO(yiping): need class name instead
+    width: 321px
+
+  &.social-invite-search
+    .social-invite-dropdown
+      .social-invite-element.social-invite-element
+        width: 325px
+
+.kf-library-share-actionable
+  &:hover
+    cursor: pointer
+
 .kf-library-share-sent
+.kf-library-share-following  // TODO(yiping): break out into its own style and color
   padding-top: 18px
   color: green

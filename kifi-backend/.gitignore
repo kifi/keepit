@@ -11,7 +11,6 @@ app_version.txt
 access*
 cx.properties
 bin
-data
 dist
 kifi-backend.sublime-project
 kifi-backend.sublime-workspace

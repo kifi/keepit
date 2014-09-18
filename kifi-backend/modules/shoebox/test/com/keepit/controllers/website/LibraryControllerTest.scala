@@ -232,27 +232,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |}
           }""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
-
-        // test authentication token
-        inject[FakeActionAuthenticator].setUser(user2)
-        val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
-        val result2 = libraryController.getLibraryById(pubId1)(request2)
-        status(result2) must equalTo(BAD_REQUEST)
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1, Some(lib1.universalLink)).url)
-        val result3 = libraryController.getLibraryById(pubId1, Some(lib1.universalLink))(request3)
-        status(result3) must equalTo(OK)
-        Json.parse(contentAsString(result3)) must equalTo(expected)
-
-        // test read_only if you have an invite & working passcode
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
-        }
-        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url)
-        val result4 = libraryController.getLibraryById(pubId = pubId1, passcode = Some("asdf"))(request4)
-        status(result4) must equalTo(OK)
-        Json.parse(contentAsString(result4)) must equalTo(expected)
       }
     }
+
     "get library by path" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -309,24 +291,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |}}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
-
-        // test authentication token
-        inject[FakeActionAuthenticator].setUser(user2)
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
-        val result3 = libraryController.getLibraryByPath(extInput, slugInput)(request3)
-        status(result3) must equalTo(BAD_REQUEST)
-        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput, Some(lib1.universalLink)).url)
-        val result4 = libraryController.getLibraryByPath(extInput, slugInput, Some(lib1.universalLink))(request4)
-        status(result4) must equalTo(OK)
-        Json.parse(contentAsString(result4)) must equalTo(expected)
-
-        // test read_only if you have an invite & correct passcode
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, passCode = "asdf"))
-        }
-        val request5 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url)
-        val result5 = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput, passcode = Some("qwer"))(request5)
-        status(result5) must equalTo(BAD_REQUEST)
       }
     }
 
@@ -517,10 +481,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
 
+          // Bulba owns this library
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          // Aaron has membership to Bulba's library
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
           (userA, userB, library1)
         }
 
@@ -627,16 +593,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            }
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
-
-        // test authentication token
-        inject[FakeActionAuthenticator].setUser(user2)
-        val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0).url)
-        val result2 = libraryController.getKeeps(pubId1, 10, 0)(request2)
-        status(result2) must equalTo(BAD_REQUEST)
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0, Some(lib1.universalLink)).url)
-        val result3 = libraryController.getKeeps(pubId1, 10, 0, Some(lib1.universalLink))(request3)
-        status(result3) must equalTo(OK)
-        Json.parse(contentAsString(result3)) must equalTo(expected1)
       }
     }
 

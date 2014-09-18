@@ -131,34 +131,25 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }
 
-class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
 
   import KifiResultCollector._
+
+  require(matchingThreshold <= 1.0f)
 
   private[this] val hits = createQueue(maxHitsPerCategory)
 
   override def collect(ctx: ScoreContext): Unit = {
-    val id = ctx.id
-    val visibility = ctx.visibility
-    if (visibility != Visibility.RESTRICTED) {
-      // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-      val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
+    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
 
-      if (matching > 0.0f) {
-        // compute score
-        var score = 0.0f
-
-        if (matching >= matchingThreshold) {
-          score = ctx.score() * matching
-        }
-
-        if (score > 0.0f && visibility != Visibility.RESTRICTED) {
-          hits.insert(id, score, score, visibility, ctx.secondaryId)
-        }
+    if (matching >= matchingThreshold) {
+      val score = ctx.score() * matching
+      if (score > 0.0f) {
+        hits.insert(ctx.id, score, score, Visibility.OTHERS | (ctx.visibility & Visibility.HAS_SECONDARY_ID), ctx.secondaryId)
       }
     }
   }
 
   def getResults(): HitQueue = hits
 }
-

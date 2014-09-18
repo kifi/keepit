@@ -33,7 +33,7 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepContent', [
+.directive('kfKeepCard', [
   '$document',
   '$rootScope',
   '$rootElement',
@@ -57,19 +57,35 @@ angular.module('kifi')
         stopDraggingKeeps: '&'
       },
       replace: true,
-      templateUrl: 'keep/keepContent.tpl.html',
+      templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
-        // TODO(yiping): organize the code in here better (into sections).
         if (!scope.keep) {
           return;
         }
 
-        scope.addingTag = { enabled: false };
-
+        //
+        // Internal data.
+        //
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
 
+        var tagDragMask = element.find('.kf-tag-drag-mask');
+        var mouseX, mouseY;
+
+
+        //
+        // Scope data.
+        //
+        scope.addingTag = {enabled: false};
+        scope.isDragTarget = false;
+        scope.isDragging = false;
+        scope.librariesEnabled = libraryService.isAllowed();
+
+
+        //
+        // Internal methods.
+        //
         function bolded(text, start, len) {
           return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
         }
@@ -100,34 +116,6 @@ angular.module('kifi')
           keep.descHtml = formatDesc(keep.siteName || keep.url);
         }
 
-        scope.showSmallImage = function (keep) {
-          return keep.hasSmallImage && !useBigLayout;
-        };
-
-        scope.showBigImage = function (keep) {
-          return keep.hasBigImage || (keep.summary && useBigLayout);
-        };
-
-        scope.hasTag = function (keep) {
-          return keep.tagList && keep.tagList.length > 0;
-        };
-
-        scope.showTags = function (keep) {
-          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
-        };
-
-        scope.showAddTag = function () {
-          scope.addingTag.enabled = true;
-        };
-
-        scope.togglePrivate = function (keep) {
-          keepActionService.togglePrivateOne(keep);
-        };
-
-        scope.triggerInstall = function () {
-          $rootScope.$emit('showGlobalModal', 'installExtension');
-        };
-
         function keepOne (keep, isPrivate) {
           keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
              keep.buildKeep(keptItem);
@@ -140,41 +128,6 @@ angular.module('kifi')
             scope.keepCallback({ 'keep': keep });
           }
         }
-
-        scope.keepPublic = function (keep) {
-          keepOne(keep, false);
-        };
-
-        scope.keepPrivate = function (keep) {
-          keepOne(keep, true);
-        };
-
-        scope.unkeep = function (keep) {
-          keepActionService.unkeepOne(keep).then(function () {
-            keep.makeUnkept();
-
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
-            });
-
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-            tagService.addToKeepCount(-1);
-          });
-        };
-
-        scope.getSingleSelectedKeep = function (keep) {
-          return [keep];
-        };
-
-        scope.onCheck = function (e, keep) {
-          // needed to prevent previewing
-          e.stopPropagation();
-          return scope.toggleSelect(keep);
-        };
-
-        scope.$watch('keep.url', function () {
-          updateSiteDescHtml(scope.keep);
-        });
 
         function sizeImage(keep) {
           if (!keep || !keep.summary || !keep.summary.description) {
@@ -286,6 +239,83 @@ angular.module('kifi')
           }
         }
 
+
+        //
+        // Scope methods.
+        //
+        scope.showSmallImage = function (keep) {
+          return keep.hasSmallImage && !useBigLayout;
+        };
+
+        scope.showBigImage = function (keep) {
+          return keep.hasBigImage || (keep.summary && useBigLayout);
+        };
+
+        scope.hasTag = function (keep) {
+          return keep.tagList && keep.tagList.length > 0;
+        };
+
+        scope.showTags = function (keep) {
+          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
+        };
+
+        scope.showAddTag = function () {
+          scope.addingTag.enabled = true;
+        };
+
+        scope.togglePrivate = function (keep) {
+          keepActionService.togglePrivateOne(keep);
+        };
+
+        scope.triggerInstall = function () {
+          $rootScope.$emit('showGlobalModal', 'installExtension');
+        };
+
+        scope.keepPublic = function (keep) {
+          keepOne(keep, false);
+        };
+
+        scope.keepPrivate = function (keep) {
+          keepOne(keep, true);
+        };
+
+        scope.unkeep = function (keep) {
+          keepActionService.unkeepOne(keep).then(function () {
+            keep.makeUnkept();
+
+            undoService.add('Keep deleted.', function () {
+              keepOne(keep);
+            });
+
+            libraryService.addToLibraryCount(keep.libraryId, -1);
+            tagService.addToKeepCount(-1);
+          });
+        };
+
+        scope.getSingleSelectedKeep = function (keep) {
+          return [keep];
+        };
+
+        scope.onCheck = function (e, keep) {
+          // needed to prevent previewing
+          e.stopPropagation();
+          return scope.toggleSelect(keep);
+        };
+
+        // TODO: bind to 'drop' event
+        scope.onTagDrop = function (tag) {
+          tagService.addKeepToTag(tag, scope.keep);
+          scope.isDragTarget = false;
+        };
+
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch('keep.url', function () {
+          updateSiteDescHtml(scope.keep);
+        });
+
         scope.$on('resizeImage', function () {
           maybeSizeImage(scope.keep);
         });
@@ -303,27 +333,13 @@ angular.module('kifi')
           }
         });
 
-        updateSiteDescHtml(scope.keep);
-
-        // For libraries.
-        scope.librariesEnabled = libraryService.isAllowed();
-
         scope.$watch(function () {
           return libraryService.librarySummaries.length;
         }, function () {
           scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
         });
 
-        // For dragging.
-        var tagDragMask = element.find('.kf-tag-drag-mask');
-        scope.isDragTarget = false;
-
-        // TODO: bind to 'drop' event
-        scope.onTagDrop = function (tag) {
-          tagService.addKeepToTag(tag, scope.keep);
-          scope.isDragTarget = false;
-        };
-
+        // Dragging.
         tagDragMask.on('dragenter', function () {
           scope.$apply(function () { scope.isDragTarget = true; });
         });
@@ -332,8 +348,6 @@ angular.module('kifi')
           scope.$apply(function () { scope.isDragTarget = false; });
         });
 
-        scope.isDragging = false;
-        var mouseX, mouseY;
         element.on('mousemove', function (e) {
           mouseX = e.pageX - util.offset(element).left;
           mouseY = e.pageY - util.offset(element).top;
@@ -360,9 +374,11 @@ angular.module('kifi')
           e.preventDefault();
         });
 
-        scope.$watch('editMode.enabled', function () {
-          element.attr('draggable', true);
-        });
+
+        //
+        // On link.
+        //
+        updateSiteDescHtml(scope.keep);
       }
     };
   }

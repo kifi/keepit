@@ -217,6 +217,7 @@ case class URISummary(
   imageWidth: Option[Int] = None,
   imageHeight: Option[Int] = None,
   wordCount: Option[Int] = None)
+
 object URISummary {
   implicit val format: Format[URISummary] = (
     (__ \ 'imageUrl).formatNullable[String] and

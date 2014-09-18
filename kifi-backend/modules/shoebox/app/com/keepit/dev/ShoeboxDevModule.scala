@@ -1,6 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.mail._
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
@@ -25,6 +26,7 @@ import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
+  userActionsModule = ProdShoeboxUserActionsModule(),
   mailModule = DevMailModule(),
   reaperModule = DevReaperModule(),
   storeModule = ShoeboxDevStoreModule(),

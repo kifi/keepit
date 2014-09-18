@@ -1,19 +1,20 @@
 package com.keepit.controllers.util
 
 import com.keepit.common.concurrent.ExecutionContext._
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.model.{ Library, User, NormalizedURI }
 import com.keepit.search.engine.result.KifiPlainResult
-import com.keepit.search.result.{ ResultUtil, DecoratedResult, KifiSearchResult }
+import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.search.result.DecoratedResult
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
@@ -107,5 +108,21 @@ trait SearchControllerUtil {
     libraryIds.map { libId =>
       libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
     }.toMap
+  }
+
+  def getLibraryContext(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): LibraryContext = {
+    val cookie = requestHeader.session.get("tbd")
+    library match {
+      case Some(libPublicId) =>
+        val libId = Library.decodePublicId(PublicId[Library](libPublicId)).get.id
+        (auth, cookie) match {
+          case (Some(auth), Some(cookie)) =>
+            LibraryContext.NotAuthorized(libId) // TODO: call shoebox to check permission
+          case _ =>
+            LibraryContext.NotAuthorized(libId)
+        }
+      case _ =>
+        LibraryContext.None
+    }
   }
 }

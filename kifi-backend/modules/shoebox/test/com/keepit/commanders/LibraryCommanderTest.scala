@@ -375,6 +375,41 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "can user view library" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+        val libraryCommander = inject[LibraryCommander]
+
+        val userWidow = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          user
+        }
+        // test can view (permission denied)
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        // test can view if library is published
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libMurica) === true
+
+        // test can view if user has membership
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libShield) === true
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
+            authToken = "token", passCode = "blarg"))
+        }
+        // test can view if user has invite
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
+
+        // test can view if non-user provides correct authtoken & passphrase
+        libraryCommander.canViewLibrary(None, libScience) === false
+        libraryCommander.canViewLibrary(None, libScience, inviteToken = Some("token"),
+          passCode = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+      }
+    }
+
     "intern user system libraries" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]

@@ -90,7 +90,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       db.readOnlyMaster { implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
-        println(uris mkString "\n")
+        // println(uris mkString "\n") // can be removed?
         uris.size === 2
       }
 
@@ -133,9 +133,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, visibility = Keep.isPrivateToVisibility(false), libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, visibility = lib1.visibility, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, visibility = Keep.isPrivateToVisibility(false), libraryId = Some(lib1.id.get)))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, visibility = lib1.visibility, libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
@@ -149,7 +149,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       db.readOnlyMaster { implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
-        println(uris mkString "\n")
+        // println(uris mkString "\n") // can be removed?
         uris.size === 2
       }
 
@@ -169,7 +169,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       db.readWrite { implicit s =>
         val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-        println(keeps mkString "\n")
+        // println(keeps mkString "\n") // can be removed?
         keeps.size === 2
       }
 
@@ -223,7 +223,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       db.readWrite { implicit s =>
         val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-        println(keeps mkString "\n")
+        // println(keeps mkString "\n") // can be removed?
         keeps.size === 1
       }
 

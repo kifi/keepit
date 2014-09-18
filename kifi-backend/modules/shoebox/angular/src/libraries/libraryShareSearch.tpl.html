@@ -1,32 +1,64 @@
-<div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Search for users" ng-focus="onInputFocus()" ng-change="change()" ng-keydown="processKeyEvent($event)">
-  <ul class="social-invite-dropdown" ng-show="showDropdown">
-    <li class="social-invite-element" ng-repeat="result in results" ng-click="shareLibrary(result)" ng-mouseenter="onResultHover(result)" ng-class="{'selected': result.selected}">
-      <div ng-if="result.id">
-        <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
-        <div>
+<div>
+  <button class="kf-library-share-btn">Send</button>
+  <div class="kf-library-share-menu social-invite-search">
+    <input class="kf-library-share-message-input" type="text" ng-model="share.message" placeholder="Write something?">
+    <input class="kf-library-share-search-input" type="text" ng-model="search.name" placeholder="Search people" ng-focus="onSearchInputFocus()" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)">
+    <ul class="social-invite-dropdown">
+      <li class="social-invite-element" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'kf-library-share-selected': result.selected, 'kf-library-share-actionable': result.actionable}">
+        <!-- Kifi friend -->
+        <div ng-if="result.id">
+          <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="social-invite-image">
+          <div>
+            <div class="social-invite-summary">
+              <div class="social-invite-name">{{result.name}}</div>
+              <div class="social-invite-network">Your friend on Kifi</div>
+            </div>
+          </div>
+          <!-- TODO(yiping): probably factor this button/notification thing out into its own directive.
+               It's being repeated down below for email contacts. :( -->
+          <button ng-show="!result.sent && !result.isFollowing" ng-click="shareLibraryKifiFriend(result)">Share</button>
+          <div ng-show="result.isFollowing" class="kf-library-share-following">Following</div>
+          <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
+        </div>
+
+        <!-- Existing email contact -->
+        <div ng-if="!result.id && !result.custom">
+          <!-- TODO: use a better class name than cant-find; it actually shrinks the image and 
+               is not necessarily related to not being able to find contacts.-->
+          <img src="/img/email-icon.png" class="social-invite-image cant-find">
           <div class="social-invite-summary">
-            <div class="social-invite-name">{{result.name}}</div>
+            <div class="social-invite-name">Email to</div>
             <div class="social-invite-network">
-              Your friend on Kifi
+              {{result.name || result.email}}
+            </div>
+          </div>
+          <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)">Share</button>
+          <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
+        </div>
+
+        <!-- Send to any email -->
+        <div ng-if="result.custom === 'email'" ng-click="shareLibraryNewEmail(result)">
+          <div>
+            <img src="/img/email-icon.png" class="social-invite-image cant-find">
+            <div class="social-invite-summary">
+              <div class="social-invite-name">{{email}}</div>
+              <div class="social-invite-network">{{emailHelp}}</div>
             </div>
           </div>
         </div>
-        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
-      </div>
-      <div ng-if="!result.id">
-        <!-- TODO: use a better class name than cant-find; it actually shrinks the image and 
-             is not necessarily related to not being able to find contacts.-->
-        <img src="/img/email-icon.png" class="social-invite-image cant-find">
-        <div class="social-invite-summary">
-          <div class="social-invite-name">Email to</div>
-          <div class="social-invite-network">
-            {{result.name || result.email}}
+
+        <!-- Import from Gmail -->
+        <div ng-if="result.custom === 'importGmail'" ng-click="importGmail()">
+          <div>
+            <img src="/img/email-icon.png" class="social-invite-image cant-find">
+            <div class="social-invite-summary">
+              <div class="social-invite-name">Import Gmail contacts</div>
+            </div>
           </div>
         </div>
-        <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
-      </div>
-      <div class="clearfix"></div>
-    </li>
-  </ul>
+
+        <div class="clearfix"></div>
+      </li>
+    </ul>
+  </div>
 </div>

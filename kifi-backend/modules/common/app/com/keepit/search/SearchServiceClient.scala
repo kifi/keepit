@@ -102,7 +102,7 @@ trait SearchServiceClient extends ServiceClient {
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    libraryId: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
@@ -397,7 +397,7 @@ class SearchServiceClientImpl(
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, LibraryContext.None, maxHits, context, debug)
   }
 
   def distSearch2(
@@ -407,7 +407,7 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -423,7 +423,7 @@ class SearchServiceClientImpl(
     secondLang: Option[Lang],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -436,7 +436,11 @@ class SearchServiceClientImpl(
     builder += ("lang1", firstLang.lang)
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
     if (filter.isDefined) builder += ("filter", filter.get)
-    if (library.isDefined) builder += ("library", library.get)
+    library match {
+      case LibraryContext.Authorized(libId) => builder += ("authorizedLibrary", libId)
+      case LibraryContext.NotAuthorized(libId) => builder += ("library", libId)
+      case _ =>
+    }
     if (context.isDefined) builder += ("context", context.get)
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
@@ -465,6 +469,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
   def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)

@@ -684,6 +684,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       cc = emailToSend.cc,
       subject = emailToSend.subject,
       htmlBody = LargeString(emailToSend.htmlTemplate.body),
+      textBody = emailToSend.textTemplate.map(_.body),
       category = emailToSend.category,
       senderUserId = emailToSend.senderUserId
     )
@@ -699,5 +700,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
     val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { LibraryMembership.toLibraryMembershipView(_) }
     Future.successful(changed)
+  }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], accessToken: Option[String], passPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+    Future.successful(true)
   }
 }

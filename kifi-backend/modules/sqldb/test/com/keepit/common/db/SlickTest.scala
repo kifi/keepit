@@ -78,7 +78,7 @@ class SlickTest extends Specification with SqlDbTestInjector {
 
           def getByNameSqlInterpulationSqlInjection(name: String)(implicit session: ROSession): Seq[String] = {
             val q = sql"select name from foo where name='#$name'".as[String]
-            println(q.getStatement)
+            // println(q.getStatement) // can be removed?
             q.list
           }
         }

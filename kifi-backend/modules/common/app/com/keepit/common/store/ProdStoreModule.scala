@@ -1,5 +1,6 @@
 package com.keepit.common.store
 
+import com.amazonaws.services.s3.transfer.TransferManager
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provider, Provides, Singleton }
@@ -23,6 +24,12 @@ trait ProdStoreModule extends StoreModule {
   @Provides
   def amazonS3Client(basicAWSCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(basicAWSCredentials)
+  }
+
+  @Singleton
+  @Provides
+  def transferManager(s3client: AmazonS3): TransferManager = {
+    new TransferManager(s3client)
   }
 
   @Singleton
@@ -60,6 +67,12 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
   @Provides
   def amazonS3Client(awsCredentials: BasicAWSCredentials): AmazonS3 = {
     new AmazonS3Client(awsCredentials)
+  }
+
+  @Singleton
+  @Provides
+  def transferManager(s3client: AmazonS3): TransferManager = {
+    new TransferManager(s3client)
   }
 
   @Singleton

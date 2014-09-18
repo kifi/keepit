@@ -95,7 +95,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
             "experts":[]
           }
         """)
-        println(Json.parse(contentAsString(result)).toString)
+        // println(Json.parse(contentAsString(result)).toString) // can be removed?
         Json.parse(contentAsString(result)) === expected
       }
     }
@@ -199,7 +199,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -214,7 +214,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
