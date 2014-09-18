@@ -209,7 +209,7 @@ class LibraryCommander @Inject() (
 
   def canViewLibrary(userId: Option[Id[User]], lib: Library,
     inviteAuthToken: Option[String] = None,
-    passcode: Option[HashedPassPhrase] = None): Boolean = {
+    passCode: Option[HashedPassPhrase] = None): Boolean = {
 
     lib.visibility == LibraryVisibility.PUBLISHED || // published library
       db.readOnlyMaster { implicit s =>
@@ -218,11 +218,12 @@ class LibraryCommander @Inject() (
             libraryMembershipRepo.getOpt(userId = id, libraryId = lib.id.get).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = lib.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty
           case None =>
-            if (passcode.nonEmpty && inviteAuthToken.nonEmpty)
+            if (passCode.nonEmpty && inviteAuthToken.nonEmpty)
               libraryInviteRepo.getWithLibraryId(libraryId = lib.id.get)
-                .exists(i =>
-                  HashedPassPhrase.generateHashedPhrase(i.passCode) == passcode.get &&
-                    i.authToken == inviteAuthToken.get)
+                .exists { i =>
+                  HashedPassPhrase.generateHashedPhrase(i.passCode) == passCode.get &&
+                    i.authToken == inviteAuthToken.get
+                }
             else
               false
         }

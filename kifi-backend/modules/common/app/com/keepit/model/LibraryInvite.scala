@@ -77,7 +77,7 @@ object HashedPassPhrase {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, HashedPassPhrase]] = {
       stringBinder.bind(key, params) map {
         case Right(phrase) => Right(HashedPassPhrase(phrase))
-        case _ => Left("Not a valid Public Id")
+        case _ => Left("Not a valid pass phrase")
       }
     }
     override def unbind(key: String, hash: HashedPassPhrase): String = {

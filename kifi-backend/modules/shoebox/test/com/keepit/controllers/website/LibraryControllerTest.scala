@@ -270,12 +270,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result1 = libraryController.getLibraryByPath(extInput, slugInput1)(request1)
         status(result1) must equalTo(BAD_REQUEST)
 
-        // test can view if you have an invite & correct invite auth token & passcode
+        // test can view if user has an invite
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT, authToken = "token", passCode = "asdf"))
+          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
         }
         val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput1).url)
-        val result2 = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput1, authToken = Some("token"), passcode = Some(HashedPassPhrase.generateHashedPhrase("qwer")))(request2)
+        val result2 = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput1)(request2)
         status(result2) must equalTo(OK)
 
         // test can view if library is published
@@ -287,6 +287,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput3).url)
         val result4 = libraryController.getLibraryByPath(extInput, slugInput3)(request4)
         status(result4) must equalTo(OK)
+
+        // test if non-user provides correct invitation
       }
     }
 
