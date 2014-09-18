@@ -1,10 +1,12 @@
 package com.keepit.graph.manager
 
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.graph.GraphTestHelper
 import com.keepit.graph.model._
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
 import com.keepit.graph.test.GraphTestInjector
 import com.keepit.graph.utils.NeighborQuerier
+import com.keepit.model.{ LibraryStates, Library }
 import org.specs2.mutable.Specification
 
 class GraphManagerTest extends Specification with GraphTestInjector with GraphTestHelper with NeighborQuerier {
@@ -52,6 +54,17 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[KeepReader](1))
           nbs = getNeighbors(v, (KeepReader, UriReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[UriReader].id } === Set(1)
+        }
+
+        val libUpdate = LibraryGraphUpdate(libId = Id[Library](1), state = LibraryStates.INACTIVE, libSeq = SequenceNumber[Library](10))
+        manager.update(libUpdate)
+        manager.readOnly { reader =>
+          val v = reader.getNewVertexReader()
+          v.hasVertex(VertexId(Id[Library](1))) === false
+
+          v.moveTo(VertexDataId[UserReader](1))
+          val nbs = getNeighbors(v, (UserReader, LibraryReader, EmptyEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[LibraryReader].id } === Set(2)
         }
 
       }
