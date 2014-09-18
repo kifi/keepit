@@ -16,16 +16,12 @@ import scala.math.max
 
 class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWithUser, val collectionSearcher: CollectionSearcherWithUser, filter: SearchFilter, monitoredAwait: MonitoredAwait) {
 
-  private[this] val startTime: Long = System.currentTimeMillis
-
   lazy val (myUriEdgeAccessor, mySearchUris: LongArraySet, part1End) = {
     monitoredAwait.result(part1, 5 seconds, s"getting SocialGraphInfo.my* for user Id $userId")
   }
   lazy val (friendsUriEdgeAccessors, friendSearchUris: LongArraySet, friendEdgeSet, part2End) = {
     monitoredAwait.result(part2, 5 seconds, s"getting SocialGraphInfo.friends* for user Id $userId")
   }
-
-  lazy val socialGraphInfoTime = max(part1End, part2End) - startTime
 
   // initialize user's social graph info in two parts
 
