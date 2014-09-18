@@ -4,7 +4,7 @@ import com.keepit.graph.GraphTestHelper
 import com.keepit.graph.model._
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
 import com.keepit.graph.test.GraphTestInjector
-import com.keepit.graph.wander.NeighborQuerier
+import com.keepit.graph.utils.NeighborQuerier
 import org.specs2.mutable.Specification
 
 class GraphManagerTest extends Specification with GraphTestInjector with GraphTestHelper with NeighborQuerier {

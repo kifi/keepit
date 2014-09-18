@@ -142,3 +142,14 @@ case object LibraryMembershipGraphUpdate extends GraphUpdateKind[LibraryMembersh
   val code = "library_membership_graph_update"
   def apply(libView: LibraryMembershipView): LibraryMembershipGraphUpdate = LibraryMembershipGraphUpdate(libView.userId, libView.libraryId, libView.state, libView.seq)
 }
+
+case class LibraryGraphUpdate(libId: Id[Library], state: State[Library], libSeq: SequenceNumber[Library]) extends GraphUpdate {
+  type U = LibraryGraphUpdate
+  def kind = LibraryGraphUpdate
+  def seq = kind.seq(libSeq.value)
+}
+
+case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
+  val code = "library_graph_update"
+  def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
+}
