@@ -1,25 +1,27 @@
 package com.keepit.curator
 
-import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.commanders.email.FeedDigestEmailSender
+import com.keepit.curator.model.{ SeedAttribution, TopicAttribution, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.queue.{ FakeFeedDigestEmailQueue, FakeFeedDigestEmailQueueModule, SendFeedDigestToUserMessage }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ SocialUserInfo, User }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.social.{ SocialNetworks, SocialId }
-import commanders.email.{ FeedDigestEmailSender, DigestRecoMail }
-import com.keepit.curator.model.{ TopicAttribution, UserAttribution, SeedAttribution, UriRecommendationRepo }
+import com.keepit.social.{ SocialId, SocialNetworks }
+import com.kifi.franz.SQSQueue
 import org.specs2.mutable.Specification
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
 
-import concurrent.duration.Duration
-import concurrent.{ Await, Future }
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
   val modules = Seq(
@@ -32,9 +34,42 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeSearchServiceClientModule(),
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
-    FakeABookServiceClientModule())
+    FakeABookServiceClientModule(),
+    FakeFeedDigestEmailQueueModule())
 
   "FeedDigestEmailSender" should {
+
+    "adds and processes jobs from a queue" in {
+      withDb(modules: _*) { implicit injector =>
+        val shoebox = shoeboxClientInstance()
+        val fakeQueue = inject[SQSQueue[SendFeedDigestToUserMessage]].asInstanceOf[FakeFeedDigestEmailQueue]
+
+        val sender = inject[FeedDigestEmailSender]
+        val user1 = makeUser(42, shoebox)
+        val user2 = makeUser(43, shoebox)
+
+        Await.ready(sender.addToQueue(), Duration(5, "seconds"))
+        fakeQueue.messages.size === 2
+        fakeQueue.lockedMessages.size === 0
+        fakeQueue.consumedMessages.size === 0
+
+        Await.ready(sender.processQueue(), Duration(5, "seconds"))
+        // expect messages to fail to be consumed b/c of missing social user infos
+        fakeQueue.messages.size === 0
+        fakeQueue.lockedMessages.size === 2
+        fakeQueue.consumedMessages.size === 0
+
+        // stub requirements for messages to be consumed
+        shoebox.socialUserInfosByUserId(user1.id.get) = List()
+        shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
+        fakeQueue.unlockAll()
+
+        Await.ready(sender.processQueue(), Duration(5, "seconds"))
+        fakeQueue.messages.size === 0
+        fakeQueue.lockedMessages.size === 0
+        fakeQueue.consumedMessages.size === 2
+      }
+    }
 
     "sends not-already-pushed keeps to users" in {
       withDb(modules: _*) { implicit injector =>
@@ -113,12 +148,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           ).map(tuple => saveUriModels(tuple, shoebox))
         }
 
-        val sendFuture: Future[Seq[DigestRecoMail]] = sender.send()
-        val summaries = Await.result(sendFuture, Duration(5, "seconds"))
-
-        summaries.size === 8
-        val sumU42 = summaries.find(_.userId.id == 42).get
-        val sumU43 = summaries.find(_.userId.id == 43).get
+        val sumU42F = sender.sendToUser(user1.id.get)
+        val sumU43F = sender.sendToUser(user2.id.get)
+        val sumU42 = Await.result(sumU42F, Duration(5, "seconds"))
+        val sumU43 = Await.result(sumU43F, Duration(5, "seconds"))
 
         sumU42.feed.size === 2
 
@@ -137,7 +170,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         }
 
         mail42.senderUserId.get must beEqualTo(Id[User](42))
-        val mail42body = mail42.htmlBody.toString
+        val mail42body = mail42.htmlBody.value
+        val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
         mail42body must contain(">www.kifi.com<")
         mail42body must contain(">Google<")
@@ -145,25 +179,26 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         // check that uri's for the recos are in the emails
         mail42body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
         mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42text must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
         mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
         mail42body must contain("2 friends and 1 other kept this")
+        mail42text must contain("2 friends and 1 other kept this")
         mail42body must contain("1 friend and 2 others kept this")
+        mail42text must contain("1 friend and 2 others kept this")
 
         // read times
         mail42body must contain("45 min")
         mail42body must contain("15 min")
+        mail42text must contain("45 min")
+        mail42text must contain("15 min")
 
         // TopicAttribution
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
-
-        // Friend Recommendations
-        friends.slice(0, 4).foreach { user =>
-          mail42body must contain(s"""?friend=<%kf% ["userExternalId",${user.id.get}] %kf%>&subtype=digestPymk""")
-        }
-        mail42body must not contain friends(5).externalId.toString
+        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
+        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
@@ -174,8 +209,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must not contain savedRecoModels(5)._1.externalId.toString
 
         mail43body must contain("5 others kept this")
-        mail43body must contain("https://url.com/u44.jpg")
-        mail43body must contain("https://url.com/u48.jpg")
 
         // check that uri's for the recos are in the emails
         mail43body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)

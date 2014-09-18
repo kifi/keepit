@@ -1,19 +1,17 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.search.{ SearchTimeLogs, Searcher }
+import com.keepit.common.logging.Logging
+import com.keepit.search.Searcher
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
 import com.keepit.search.engine.result.{ KifiShardResult, KifiShardHit, KifiResultCollector }
 import com.keepit.search.graph.keep.{ KeepFields, KeepRecord }
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanClause.Occur
-import org.apache.lucene.search.{ TermQuery, BooleanQuery }
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 
-abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) {
+abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends DebugOption { self: Logging =>
 
   def execute(): KifiShardResult
 
@@ -24,20 +22,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   @inline def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   def getKeepRecord(keepId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
-    keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, keepId)
-  }
-
-  def getKeepRecord(libId: Long, uriId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
-    val q = new BooleanQuery()
-    q.add(new TermQuery(new Term(KeepFields.uriField, uriId.toString)), Occur.MUST)
-    q.add(new TermQuery(new Term(KeepFields.libraryField, libId.toString)), Occur.MUST)
-
-    keepSearcher.search(q) { (scorer, reader) =>
-      if (scorer.nextDoc() < NO_MORE_DOCS) {
-        return keepSearcher.getDecodedDocValue(KeepFields.recordField, reader, scorer.docID())
-      }
-    }
-    None
+    if (keepId >= 0) keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, keepId) else None
   }
 
   def getArticleRecord(uriId: Long): Option[ArticleRecord] = {
@@ -46,25 +31,21 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   }
 
   def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
-    val visibility = h.visibility
-    if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
+    if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
-    } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
-      // has a library id
-      val r = getKeepRecord(h.libId, h.id).getOrElse(throw new Exception(s"missing keep record: library id = ${h.libId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
-      // only a primary id (uri id)
+      // has a primary id (uri id) only
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url, null)
+      KifiShardHit(h.id, h.score, h.visibility, -1L, -1L, r.title, r.url, null)
     }
   }
 
   def timing(): Unit = {
     SafeFuture {
       timeLogs.send()
+      if ((debugFlags & DebugOption.Timing.flag) != 0) log.info(timeLogs.toString)
     }
   }
 }

@@ -27,7 +27,7 @@ GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMess
 # Search Website API
 ##########################################
 GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String], withUriSummary: Boolean ?= false)
-GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], withUriSummary: Boolean ?= false)
+GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], withUriSummary: Boolean ?= false)
 GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
@@ -85,5 +85,6 @@ GET         /internal/search/cache/warmResultClick        @com.keepit.controller
 GET         /internal/search/spell/suggest        @com.keepit.controllers.search.SpellCorrectorController.correct(input: String, enableBoost: Boolean)
 
 GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
+POST        /internal/search/augmentation   @com.keepit.controllers.search.SearchController.augmentation()
 
 ->          /        common.Routes

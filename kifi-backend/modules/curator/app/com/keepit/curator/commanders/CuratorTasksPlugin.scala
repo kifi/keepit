@@ -5,7 +5,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
-import email.{ EngagementEmailTypes, EngagementEmailActor }
+import email.{ FeedDigestMessage, EngagementEmailActor }
 import us.theatr.akka.quartz.QuartzActor
 
 import scala.concurrent.duration._
@@ -23,26 +23,27 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnLeader(system, 2 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 5 minutes, 5 minutes, "complete data ingestion") {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 3 minutes, 2 minutes, "recommendation precomputation") {
       generationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnLeader(system, 2 minutes, 2 minutes) {
+    scheduleTaskOnLeader(system, 5 minutes, 5 minutes, "public feed precomputation") {
       feedCommander.precomputePublicFeeds()
     }
-    scheduleTaskOnLeader(system, 1 hours, 5 hours) {
+    scheduleTaskOnLeader(system, 1 hours, 5 hours, "recommendation reaper") {
       cleanupCommander.cleanupLowMasterScoreRecos()
     }
-    scheduleTaskOnLeader(system, 1 hours, 10 hours) {
+    scheduleTaskOnLeader(system, 1 hours, 5 hours, "public feed reaper") {
       cleanupCommander.cleanupLowMasterScoreFeeds()
     }
 
-    scheduleRecommendationEmail()
+    scheduleTaskOnLeader(system, 10 minutes, 10 minutes, emailActor.ref, FeedDigestMessage.Send)
+    scheduleFeedDigestEmails()
   }
 
-  private def scheduleRecommendationEmail(): Unit = {
+  private def scheduleFeedDigestEmails(): Unit = {
     // computes UTC hour for current 9am ET (EDT or EST)
     val nowET = currentDateTime(zones.ET)
     val offsetMillisToUtc = zones.ET.getOffset(nowET)
@@ -51,6 +52,6 @@ class CuratorTasksPlugin @Inject() (
 
     // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
     val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 3" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
-    cronTaskOnLeader(quartz, emailActor.ref, cronTime, EngagementEmailTypes.FEED)
+    cronTaskOnLeader(quartz, emailActor.ref, cronTime, FeedDigestMessage.Queue)
   }
 }

@@ -38,7 +38,7 @@ class EmailNotificationsCommander @Inject() (
       val allUsers: Map[Id[User], User] = (otherParticipants :+ recipient) map { u => u.id.get -> u } toMap
       val authorFirstLast: Seq[String] = otherParticipants.map(user => user.firstName + " " + user.lastName).sorted
       val link = deepLinkRepo.getByLocatorAndUser(deepLocator, recipientUserId)
-      val url = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()
+      val url = com.keepit.controllers.email.routes.EmailDeepLinkController.handle(link.token.value).toString()
       val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, threadItems, url, title, allUsers).body
       val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, threadItems, url, title, allUsers).body
 

@@ -25,7 +25,7 @@ class DataBufferTest extends Specification {
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
-      buf.numPages === 3
+      buf.numPages must beGreaterThan(1)
 
       var result = new ArrayBuffer[(Int, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
@@ -42,7 +42,7 @@ class DataBufferTest extends Specification {
       val writer = new DataBufferWriter
 
       var recType = 0
-      val expected = (0 until 200).map { id =>
+      val expected = (0 until 500).map { id =>
         val datum = (recType, true, rand.nextLong, rand.nextInt, rand.nextInt.toShort, rand.nextFloat(), false)
         buf.alloc(writer, recType, 18)
         writer.putLong(datum._3)
@@ -52,7 +52,7 @@ class DataBufferTest extends Specification {
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
-      buf.numPages === 2
+      buf.numPages must beGreaterThan(1)
 
       var result = new ArrayBuffer[(Int, Boolean, Long, Int, Short, Float, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>

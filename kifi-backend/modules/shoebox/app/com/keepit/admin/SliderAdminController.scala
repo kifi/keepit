@@ -25,7 +25,6 @@ import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  sliderRuleRepo: SliderRuleRepo,
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   domainTagRepo: DomainTagRepo,
@@ -38,32 +37,6 @@ class SliderAdminController @Inject() (
   heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
     extends AdminController(actionAuthenticator) {
-
-  def getRules = AdminHtmlAction.authenticated { implicit request =>
-    val groupName = "default"
-    val group = db.readOnlyReplica { implicit session =>
-      sliderRuleRepo.getGroup(groupName)
-    }
-    Ok(html.admin.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
-  }
-
-  def saveRules = AdminHtmlAction.authenticated { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val groupName = body("group").head
-    val ruleGroup = db.readWrite { implicit session =>
-      sliderRuleRepo.getGroup(groupName).rules.foreach { rule =>
-        val newRule = rule
-          .withState(if (body.contains(rule.name)) SliderRuleStates.ACTIVE else SliderRuleStates.INACTIVE)
-          .withParameters(body.get(rule.name + "Params").map { arr => JsArray(arr.map(Json.parse)) })
-        if (newRule != rule) {
-          sliderRuleRepo.save(newRule)
-        }
-      }
-      sliderRuleRepo.getGroup(groupName)
-    }
-    eliza.sendToAllUsers(Json.arr("slider_rules", ruleGroup.compactJson))
-    Redirect(routes.SliderAdminController.getRules)
-  }
 
   def getPatterns = AdminHtmlAction.authenticated { implicit request =>
     val patterns = db.readOnlyReplica { implicit session =>

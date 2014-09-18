@@ -9,7 +9,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.eliza.model.MessageHandle
 import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
-import com.keepit.common.mail.{ EmailToSend, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -167,6 +167,7 @@ object Shoebox extends Service {
     def addInteractions(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteractions", Param("userId", userId))
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
   }
 }
 
@@ -213,6 +214,7 @@ object Search extends Service {
     def updateUserIndex() = ServiceRoute(POST, "/internal/search/user/update")
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
+    def augmentation() = ServiceRoute(POST, "/internal/search/augmentation")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
@@ -356,7 +358,6 @@ object Cortex extends Service {
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
     def ldaConfigurations() = ServiceRoute(GET, "/internal/cortex/lda/confs")
     def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
-    def getLDAFeatures() = ServiceRoute(POST, "/internal/cortex/lda/ldaFeatures")
     def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId))
     def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
@@ -365,6 +366,7 @@ object Cortex extends Service {
     def unamedTopics(limit: Int) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit))
     def getTopicNames() = ServiceRoute(POST, "/internal/cortex/lda/getTopicNames")
     def explainFeed() = ServiceRoute(POST, "/internal/cortex/lda/explainFeed")
+    def libraryTopic(libId: Id[Library]) = ServiceRoute(GET, "/internal/cortex/lda/libraryTopic", Param("libId", libId))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
@@ -397,7 +399,7 @@ object Curator extends Service {
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
     def triggerEmail(code: String) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
-    def resetUserRecoGenState(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/resetUserRecoGenState", Param("userId", userId))
+    def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
   }
 }
 

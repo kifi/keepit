@@ -11,7 +11,7 @@ trait GlobalSeedIngestionHelper {
 }
 
 trait PersonalSeedIngestionHelper {
-  //triggers ingestions of up to maxItem RawSeedItems for the given user. Returns true if there might be more items to be ingested, false otherwise
-  def apply(userId: Id[User], maxItems: Int): Future[Boolean]
+  //triggers ingestions of RawSeedItems for the given user. Returns true if there might be more items to be ingested, false otherwise
+  def apply(userId: Id[User], force: Boolean = false): Future[Boolean]
 }
 

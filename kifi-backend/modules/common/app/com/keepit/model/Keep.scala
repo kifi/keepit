@@ -75,7 +75,7 @@ object Keep {
     }
   }
 
-  def visibilityToIsPrivate(visibility: LibraryVisibility) = {
+  private def visibilityToIsPrivate(visibility: LibraryVisibility) = {
     visibility match {
       case LibraryVisibility.PUBLISHED | LibraryVisibility.DISCOVERABLE => false
       case LibraryVisibility.SECRET => true

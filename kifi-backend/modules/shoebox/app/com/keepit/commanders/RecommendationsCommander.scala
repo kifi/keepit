@@ -11,19 +11,24 @@ import com.keepit.model.{
   URISummary,
   KeepRepo,
   KeepStates,
-  Keep
+  Keep,
+  LibraryRepo,
+  Library,
+  ExperimentType,
+  UserRepo
 }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.{
   RecoInfo,
   RecommendationClientType,
   FullRecoInfo,
-  RecoItemInfo,
+  UriRecoItemInfo,
   RecoMetaData,
   SeedAttribution,
   RecoAttributionInfo,
   RecoAttributionKind,
-  RecoKind
+  RecoKind,
+  LibRecoItemInfo
 }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
@@ -41,9 +46,13 @@ class RecommendationsCommander @Inject() (
     curator: CuratorServiceClient,
     db: Database,
     nUriRepo: NormalizedURIRepo,
+    libRepo: LibraryRepo,
+    userRepo: UserRepo,
+    libCommander: LibraryCommander,
     uriSummaryCommander: URISummaryCommander,
     basicUserRepo: BasicUserRepo,
-    keepRepo: KeepRepo) {
+    keepRepo: KeepRepo,
+    userExperimentCommander: LocalUserExperimentCommander) {
 
   def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
@@ -90,8 +99,8 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  private def constructRecoItemInfo(nUri: NormalizedURI, uriSummary: URISummary, reco: RecoInfo): RecoItemInfo = {
-    RecoItemInfo(
+  private def constructRecoItemInfo(nUri: NormalizedURI, uriSummary: URISummary, reco: RecoInfo): UriRecoItemInfo = {
+    UriRecoItemInfo(
       id = nUri.externalId,
       title = nUri.title,
       url = nUri.url,
@@ -107,6 +116,22 @@ class RecommendationsCommander @Inject() (
   }
 
   private def contstructAttributionInfos(attr: SeedAttribution): Seq[RecoAttributionInfo] = {
+    val libraryAttrInfos = attr.library.map { libAttrs =>
+      libAttrs.libraries.map { libId =>
+        val (lib, owner): (Library, User) = db.readOnlyReplica { implicit session =>
+          val lib = libRepo.get(libId)
+          val owner = userRepo.get(lib.ownerId)
+          (lib, owner)
+        }
+        RecoAttributionInfo(
+          kind = RecoAttributionKind.Library,
+          name = Some(lib.name),
+          url = Some(Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)),
+          when = None
+        )
+      }
+    } getOrElse Seq.empty
+
     val keepAttrInfos = attr.keep.map { keepAttr =>
       keepAttr.keeps.map { keepId =>
         db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
@@ -122,14 +147,16 @@ class RecommendationsCommander @Inject() (
       }
     } getOrElse Seq.empty
 
-    attr.topic.map { topicAttr =>
-      keepAttrInfos :+ RecoAttributionInfo(
+    val topicAttrInfos = attr.topic.map { topicAttr =>
+      Seq(RecoAttributionInfo(
         kind = RecoAttributionKind.Topic,
         name = Some(topicAttr.topicName),
         url = None,
         when = None
-      )
-    } getOrElse keepAttrInfos
+      ))
+    } getOrElse Seq.empty
+
+    libraryAttrInfos ++ keepAttrInfos ++ topicAttrInfos
   }
 
   def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
@@ -151,8 +178,8 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def topPublicRecos(): Future[Seq[FullRecoInfo]] = {
-    curator.topPublicRecos().flatMap { recos =>
+  def topPublicRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
+    val uriRecosFut = curator.topPublicRecos().flatMap { recos =>
       val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }
@@ -166,7 +193,41 @@ class RecommendationsCommander @Inject() (
           )
         }
       })
+    }
 
+    if (userExperimentCommander.userHasExperiment(userId, ExperimentType.LIBRARIES)) {
+      for (uriRecos <- uriRecosFut; libRecos <- topPublicLibraryRecos(userId)) yield libRecos ++ uriRecos
+    } else {
+      uriRecosFut
+    }
+
+  }
+
+  def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
+    Future.sequence(db.readOnlyReplica { implicit session =>
+      Seq[Id[Library]](Id[Library](24138)).map(libRepo.get)
+    }.map { lib =>
+      libCommander.createFullLibraryInfo(userId, lib).map(lib.ownerId -> _)
+    }).map {
+      libInfosWithOwner =>
+        libInfosWithOwner.map {
+          case (ownerId, libInfo) =>
+            val item = LibRecoItemInfo(
+              id = libInfo.id,
+              name = libInfo.name,
+              url = libInfo.url,
+              description = libInfo.description,
+              owner = db.readOnlyReplica { implicit session => basicUserRepo.load(ownerId) },
+              followers = libInfo.followers,
+              numFollowers = libInfo.numFollowers,
+              numKeeps = libInfo.numKeeps)
+
+            FullRecoInfo(
+              kind = RecoKind.Library,
+              metaData = None,
+              itemInfo = item
+            )
+        }
     }
   }
 

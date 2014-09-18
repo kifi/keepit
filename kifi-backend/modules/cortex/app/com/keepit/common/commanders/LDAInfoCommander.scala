@@ -63,6 +63,7 @@ class LDAInfoCommander @Inject() (
   }
 
   val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
+  val inactiveTopics = currentConfig.configs.filter { case (id, conf) => !conf.isActive }.map { case (id, _) => id.toInt }.toSet
 
   def topicConfigs(fromId: Int, toId: Int): Map[String, LDATopicConfiguration] = {
     assume(fromId <= toId && toId < numOfTopics && fromId >= 0)

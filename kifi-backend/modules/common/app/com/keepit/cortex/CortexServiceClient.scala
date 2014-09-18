@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
-import com.keepit.model.{ Keep, User, NormalizedURI, Word2VecKeywords }
+import com.keepit.model._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.net.CallTimeouts
@@ -35,7 +35,6 @@ trait CortexServiceClient extends ServiceClient {
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
-  def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])]
@@ -44,6 +43,7 @@ trait CortexServiceClient extends ServiceClient {
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]]
+  def libraryTopic(libId: Id[Library]): Future[Option[Array[Float]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -147,13 +147,6 @@ class CortexServiceClientImpl(
     broadcast(Cortex.internal.saveEdits(), payload)
   }
 
-  def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]] = {
-    val payload = Json.toJson(uris)
-    call(Cortex.internal.getLDAFeatures, payload).map { r =>
-      (r.json).as[Seq[Array[Float]]]
-    }
-  }
-
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = {
     call(Cortex.internal.getSparseLDAFeaturesChanged(modelVersion, seqNum, fetchSize), callTimeouts = longTimeout).map { response =>
       val publishedModelVersion = (response.json \ "modelVersion").as[ModelVersion[DenseLDA]]
@@ -217,6 +210,10 @@ class CortexServiceClientImpl(
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = {
     val payload = Json.obj("user" -> userId, "uris" -> uriIds)
     call(Cortex.internal.explainFeed(), payload).map { r => (r.json).as[Seq[Seq[Id[Keep]]]] }
+  }
+
+  def libraryTopic(libId: Id[Library]): Future[Option[Array[Float]]] = {
+    call(Cortex.internal.libraryTopic(libId)).map { r => (r.json).as[Option[Array[Float]]] }
   }
 
 }

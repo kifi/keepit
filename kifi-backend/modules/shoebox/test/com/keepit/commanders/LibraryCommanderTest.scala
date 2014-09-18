@@ -1,12 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
-
+  implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
@@ -180,9 +180,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryRepo.count === 0
         }
 
-        val noInvites = Seq.empty[ExternalId[User]]
-        val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
-        val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
+        val noInvites = None
+        val inv2 = Some(userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil)
+        val inv3 = Some(userHulk.externalId :: Nil)
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -192,9 +192,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
           visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv3, followers = noInvites)
-
-        val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
-          visibility = LibraryVisibility.DISCOVERABLE, collaborators = inv2, followers = inv3)
 
         val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
@@ -209,7 +206,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
         add3.isRight === true
         add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
         libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
@@ -379,6 +375,41 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "can user view library" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+        val libraryCommander = inject[LibraryCommander]
+
+        val userWidow = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          user
+        }
+        // test can view (permission denied)
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        // test can view if library is published
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libMurica) === true
+
+        // test can view if user has membership
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libShield) === true
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
+            authToken = "token", passPhrase = "blarg"))
+        }
+        // test can view if user has invite
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
+
+        // test can view if non-user provides correct authtoken & passphrase
+        libraryCommander.canViewLibrary(None, libScience) === false
+        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+      }
+    }
+
     "intern user system libraries" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -467,10 +498,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val thorEmail = EmailAddress("thorishere@gmail.com")
         val inviteList1 = Seq(
-          (Left(userIron.id.get), LibraryAccess.READ_ONLY),
-          (Left(userAgent.id.get), LibraryAccess.READ_ONLY),
-          (Left(userHulk.id.get), LibraryAccess.READ_ONLY),
-          (Right(thorEmail), LibraryAccess.READ_ONLY))
+          (Left(userIron.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
+          (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
         res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
@@ -488,7 +519,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE))
+        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
         res2.isRight === false
 
@@ -738,16 +769,16 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         res1.isRight === true
         res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 6
-          keepToCollectionRepo.count === 9
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
 
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
         res2.isRight === true
-        res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
+        res2.right.get.unzip._1.map(_.title.get).sorted === Seq()
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 7
-          keepToCollectionRepo.count === 10
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 6
         }
       }
     }

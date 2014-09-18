@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
+import com.keepit.common.crypto.{ CryptoSupport, ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
@@ -13,6 +13,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration.Duration
 import scala.util.Random
 
@@ -27,7 +28,8 @@ case class LibraryInvite(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
     authToken: String = RandomStringUtils.randomAlphanumeric(32),
-    passCode: String = LibraryInvite.generatePasscode()) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
+    passPhrase: String = LibraryInvite.generatePassPhrase(),
+    message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -52,18 +54,43 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String] and
-    (__ \ 'passCode).format[String]
+    (__ \ 'passPhrase).format[String] and
+    (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
   }
 
-  def generatePasscode() = {
+  def generatePassPhrase(): String = {
+    // each word has length 4-8
     val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
     val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
     val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));
     randomAdverb + " " + randomAdjective + " " + randomNoun
+  }
+}
+
+case class HashedPassPhrase(value: String)
+object HashedPassPhrase {
+  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[HashedPassPhrase] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, HashedPassPhrase]] = {
+      stringBinder.bind(key, params) map {
+        case Right(phrase) => Right(HashedPassPhrase(phrase))
+        case _ => Left("Not a valid pass phrase")
+      }
+    }
+    override def unbind(key: String, hash: HashedPassPhrase): String = {
+      stringBinder.unbind(key, hash.value)
+    }
+  }
+
+  implicit def format: Format[HashedPassPhrase] =
+    Format(__.read[String].map(HashedPassPhrase(_)),
+      new Writes[HashedPassPhrase] { def writes(o: HashedPassPhrase) = JsString(o.value) })
+
+  def generateHashedPhrase(value: String): HashedPassPhrase = {
+    HashedPassPhrase(CryptoSupport.generateHexSha256(value))
   }
 }
 

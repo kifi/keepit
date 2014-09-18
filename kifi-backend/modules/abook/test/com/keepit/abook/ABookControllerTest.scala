@@ -33,7 +33,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
     while (predicate() && maxTries > tries) {
       f()
       if (predicate()) {
-        println("sleeping tries=" + tries)
+        // println("sleeping tries=" + tries) // can be removed?
         Thread.sleep(10)
         tries += 1
       }
@@ -52,14 +52,14 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         val controller = inject[ABookController] // setup
 
         var result = controller.uploadContacts(Id[User](1), ABookOrigins.IOS)(uploadRequest)
-        println(s"[ios-upload] result=$result")
+        // println(s"[ios-upload] result=$result") // can be removed?
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val s = contentAsString(result)
         s !== null
         val json = Json.parse(s)
         var abookInfo = Json.fromJson[ABookInfo](json).get
-        println(s"[ios-upload] abookInfo=$abookInfo")
+        // println(s"[ios-upload] abookInfo=$abookInfo") // can be removed?
         abookInfo.origin === ABookOrigins.IOS
         abookInfo.numContacts must beSome(3)
         abookInfo.state !== ABookInfoStates.UPLOAD_FAILURE
@@ -86,14 +86,14 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         val uploadRequest = FakeRequest("POST", uploadRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
         val controller = inject[ABookController] // setup
         var result = controller.uploadContacts(Id[User](1), ABookOrigins.IOS)(uploadRequest)
-        println(s"[ios-upload] result=$result")
+        // println(s"[ios-upload] result=$result") // can be removed?
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val s = contentAsString(result)
         s !== null
         val json = Json.parse(s)
         var abookInfo = Json.fromJson[ABookInfo](json).get
-        println(s"[ios-upload] abookInfo=$abookInfo")
+        // println(s"[ios-upload] abookInfo=$abookInfo") // can be removed?
         abookInfo.origin === ABookOrigins.IOS
         abookInfo.numContacts must beSome(3)
         abookInfo.state !== ABookInfoStates.UPLOAD_FAILURE
@@ -116,7 +116,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         var content = contentAsString(resultQ)
         content !== null
         var contacts = Json.fromJson[Seq[RichContact]](Json.parse(content)).get
-        println(s"[query-all] result(${contacts.length}):${contacts.mkString(",")}")
+        // println(s"[query-all] result(${contacts.length}):${contacts.mkString(",")}") // can be removed?
         contacts !== null
         contacts.isEmpty !== true
         contacts.length === 4
@@ -128,7 +128,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         content = contentAsString(resultQ)
         content !== null
         var hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
-        println(s"[query-0] result(${hits.length}):${hits.mkString(",")}")
+        // println(s"[query-0] result(${hits.length}):${hits.mkString(",")}") // can be removed?
         hits !== null
         hits.isEmpty === true
         hits.length === 0
@@ -140,7 +140,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         content = contentAsString(resultQ)
         content !== null
         hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
-        println(s"[query-search] result(${hits.length}):${hits.mkString(",")}")
+        // println(s"[query-search] result(${hits.length}):${hits.mkString(",")}") // can be removed?
         hits !== null
         hits.isEmpty !== true
         hits.length === 1
@@ -152,7 +152,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
         content = contentAsString(resultQ)
         content !== null
         hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
-        println(s"[query-limit] result(${hits.length}):${hits.mkString(",")}")
+        // println(s"[query-limit] result(${hits.length}):${hits.mkString(",")}") // can be removed?
         hits !== null
         hits.isEmpty !== true
         hits.length === 3

@@ -105,23 +105,18 @@ class AdminLDAController @Inject() (
     futureMsg.map(msg => Ok(JsString(msg)))
   }
 
-  def userTopicDump(userId: Id[User], limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val uris = db.readOnlyReplica { implicit s => keepRepo.getLatestKeepsURIByUser(userId, limit, includePrivate = false) }
-    cortex.getLDAFeatures(uris).map { feats =>
-      Ok(Json.toJson(feats))
-    }
-  }
-
   def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
     score.map { score =>
-      val (globalScore, recencyScore) = (score.global, score.recency)
+      val (globalScore, recencyScore, libScore) = (score.global, score.recency, score.libraryInduced)
       val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
       val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
-      Ok(globalMsg + "; " + recencyMsg)
+      val libMsg = "libScore: " + libScore.map { _.toString }.getOrElse("n/a")
+      val msg = List(globalMsg, recencyMsg, libMsg).mkString("\n")
+      Ok(msg.replaceAll("\n", "\n<br>"))
     }
   }
 
@@ -178,5 +173,22 @@ class AdminLDAController @Inject() (
         val words = topicWords.map { case words => getFormatted(words) }
         Ok(html.admin.unamedTopics(topicInfo, words))
     }
+  }
+
+  def libraryTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val libId = Id[Library](body.get("libId").get.toLong)
+
+    val msgFut = cortex.libraryTopic(libId).flatMap { feat =>
+      feat match {
+        case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+        case None => Future.successful("not enough information")
+      }
+    }
+
+    msgFut.map { msg =>
+      Ok(msg)
+    }
+
   }
 }

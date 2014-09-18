@@ -14,6 +14,7 @@ import com.keepit.social.SocialNetworkType
 import scala.util.Try
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.amazon.{ MyInstanceInfo, AmazonInstanceInfo }
+import com.keepit.common.time._
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -116,6 +117,8 @@ class HeimdalContextBuilder {
     request match {
       case authRequest: AuthenticatedRequest[_] =>
         this += ("userCreatedAt", authRequest.user.createdAt)
+        val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - authRequest.user.createdAt.getMillis) / (24 * 3600 * 1000)
+        this += ("daysSinceUserJoined", daysSinceUserJoined - daysSinceUserJoined % 0.01)
         authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
         addExperiments(authRequest.experiments)
         Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
@@ -187,6 +190,7 @@ class HeimdalContextBuilder {
     }
     this.data.remove("kifiInstallationId")
     this.data.remove("userCreatedAt")
+    this.data.remove("daysSinceUserJoined")
   }
 }
 

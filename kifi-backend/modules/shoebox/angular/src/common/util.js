@@ -15,6 +15,8 @@ angular.module('util', [])
       trimInput: function (input) {
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },
+      // TODO(yiping): conform this to the test being used by the extension.
+      // This one is valid for abc@example and does not need the '.' while that for the extension does.
       validateEmail: function (input) {
         var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/; // jshint ignore:line
         return emailAddrRe.test(input);
@@ -52,13 +54,62 @@ angular.module('util', [])
         var _y = rawDom.getBoundingClientRect().top + scrollY;
         return { left: _x, top: _y };
       },
-      isIE: function() {
+      isIE: function () {
         // Feature detection should be preferred to browser detection, so this function should be avoided.
         return (
           (navigator.appName === 'Microsoft Internet Explorer') ||
           ((navigator.appName === 'Netscape') &&
            (/Trident/.exec(navigator.userAgent) != null))
         );
+      },
+      formatTitleFromUrl: function (url) {
+        var aUrlParser = document.createElement('a');
+        var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
+        var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
+        var fileNameToSpaceRe = /[\/._-]/g;
+
+        aUrlParser.href = url;
+
+        var domain = aUrlParser.hostname;
+        var domainIdx = url.indexOf(domain);
+        var domainMatch = domain.match(secLevDomainRe);
+        if (domainMatch) {
+          domainIdx += domainMatch.index;
+          domain = domainMatch[0];
+        }
+
+        var fileName = aUrlParser.pathname;
+        var fileNameIdx = url.indexOf(fileName, domainIdx + domain.length);
+        var fileNameMatch = fileName.match(fileNameRe);
+        if (fileNameMatch) {
+          fileNameIdx += fileNameMatch.index;
+          fileName = fileNameMatch[0];
+        }
+        fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
+
+        return domain + (fileName ? ' · ' + fileName : '');
+      },
+      joinTags: function (keeps, tags) {
+        var idMap = _.reduce(tags, function (map, tag) {
+          if (tag && tag.id) {
+            map[tag.id] = tag;
+          }
+          return map;
+        }, {});
+
+        var that = this;
+        _.forEach(keeps, function (keep) {
+          var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
+            return idMap[tagId] || null;
+          }).filter(function (tag) {
+            return tag != null;
+          });
+          keep.tagList = that.replaceArrayInPlace(keep.tagList, newTagList);
+        });
+      },
+      validateUrl: function (keepUrl) {
+        // Extremely simple for now, can be developed in the future
+        return keepUrl.indexOf('.') !== -1;
       }
     };
   }

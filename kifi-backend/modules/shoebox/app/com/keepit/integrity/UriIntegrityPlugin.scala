@@ -73,13 +73,13 @@ class UriIntegrityActor @Inject() (
           }
           case Some(currentPrimary) => {
 
-            def save(duplicate: Keep, primary: Keep, forcePrivate: Boolean): (Option[Keep], Option[Keep]) = {
+            def save(duplicate: Keep, primary: Keep, libraryId: Option[Id[Library]], visibility: LibraryVisibility): (Option[Keep], Option[Keep]) = {
               val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
               val deadBm = keepRepo.save(
                 duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
               )
               val liveBm = keepRepo.save(
-                (if (forcePrivate) primary.copy(visibility = Keep.isPrivateToVisibility(true)) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+                primary.copy(visibility = visibility, libraryId = libraryId).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
               )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))
@@ -91,13 +91,13 @@ class UriIntegrityActor @Inject() (
                 // if one of them is private, make the surviving keep private to true to be safe
                 if (oldBm.createdAt.getMillis < currentPrimary.createdAt.getMillis ||
                   (oldBm.createdAt.getMillis == currentPrimary.createdAt.getMillis && oldBm.id.get.id < currentPrimary.id.get.id)) {
-                  save(duplicate = oldBm, primary = currentPrimary, forcePrivate = oldBm.isPrivate || currentPrimary.isPrivate)
+                  save(duplicate = oldBm, primary = currentPrimary, libraryId = currentPrimary.libraryId, visibility = currentPrimary.visibility)
                 } else {
-                  save(duplicate = currentPrimary, primary = oldBm, forcePrivate = oldBm.isPrivate || currentPrimary.isPrivate)
+                  save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
                 }
               } else {
                 // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
-                save(duplicate = currentPrimary, primary = oldBm, false)
+                save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
               }
             } else {
               // oldBm is already inactive ro duplicate, do nothing

@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.model._
@@ -13,14 +14,14 @@ import com.keepit.search.SearchCommander
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.JsString
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
-    shoeboxClient: ShoeboxServiceClient,
+    val shoeboxClient: ShoeboxServiceClient,
     searchCommander: SearchCommander,
-    amazonInstanceInfo: AmazonInstanceInfo) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
+    amazonInstanceInfo: AmazonInstanceInfo,
+    implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -41,7 +42,7 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt, withUriSummary)
+    val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, None, debugOpt, withUriSummary)
 
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -62,9 +63,10 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
+    val libCtxFuture = getLibraryContextFuture(library, None, request)
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, libCtxFuture, maxHits, lastUUIDStr, context, None, debugOpt)
 
-    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
+    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     var decorationFutures: List[Future[String]] = Nil
 
@@ -72,7 +74,7 @@ class ExtSearchController @Inject() (
     // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
 
     if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
     }
 
     val decorationEnumerator = reactiveEnumerator(decorationFutures)

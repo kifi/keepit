@@ -23,25 +23,6 @@ class InMemoryLDAModelStore extends InMemoryStatModelStore[DenseLDA] with LDAMod
   val formatter = DenseLDAFormatter
 }
 
-trait LDAURIFeatureStore extends FloatVecFeatureStore[Id[NormalizedURI], NormalizedURI, DenseLDA]
-
-class S3BlobLDAURIFeatureStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)
-    extends S3BlobFloatVecFeatureStore[Id[NormalizedURI], NormalizedURI, DenseLDA] with LDAURIFeatureStore {
-  val prefix = FeatureStorePrefix.URIFeature.denseLDA
-}
-
-class InMemoryLDAURIFeatureStore extends InMemoryFloatVecFeatureStore[Id[NormalizedURI], NormalizedURI, DenseLDA] with LDAURIFeatureStore
-
-trait LDAURIFeatureCommitStore extends CommitInfoStore[NormalizedURI, DenseLDA]
-
-class S3LDAURIFeatureCommitStore(bucketName: S3Bucket,
-    amazonS3Client: AmazonS3,
-    accessLog: AccessLog) extends S3CommitInfoStore[NormalizedURI, DenseLDA](bucketName, amazonS3Client, accessLog) with LDAURIFeatureCommitStore {
-  val prefix = CommitInfoStorePrefix.URIFeature.denseLDA
-}
-
-class InMemoryLDAURIFeatureCommitStore extends InMemoryCommitInfoStore[NormalizedURI, DenseLDA] with LDAURIFeatureCommitStore
-
 trait LDATopicWordsStore extends VersionedStore[String, DenseLDA, DenseLDATopicWords]
 
 class S3LDATopicWordsStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[DenseLDATopicWords] = DenseLDATopicWordsFormmater)

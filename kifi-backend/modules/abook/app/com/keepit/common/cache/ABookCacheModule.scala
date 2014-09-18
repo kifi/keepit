@@ -46,7 +46,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -150,7 +150,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (outerRepo, 1 day))
+    new EContactCache(stats, accessLog, (outerRepo, 30 day))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

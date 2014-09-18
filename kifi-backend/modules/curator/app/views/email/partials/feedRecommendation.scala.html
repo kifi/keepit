@@ -1,4 +1,6 @@
 @(reco: com.keepit.curator.commanders.email.DigestReco)
+@import com.keepit.common.mail.template.helpers._
+
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" data-reco-id="@reco.uri.externalId">
     <tr>
         <td valign="top">
@@ -94,8 +96,8 @@
                                                         <td align="left">
                                                             <table border="0" cellspacing="0" cellpadding="0" align="left">
                                                                 <tr>
-                                                                    @reco.keepers.friendsToShow.map { user =>
-                                                                    <td width="28" style="padding-right:1px;"><img src="@user.avatarUrl" width="28" height="27" alt="@user.firstName" style="display:block;" border="0"/></td>
+                                                                    @reco.keepers.friendsToShow.map { userId =>
+                                                                    <td width="28" style="padding-right:1px;"><img src="@avatarUrl(userId)" width="28" height="27" alt="@firstName(userId)" style="display:block;" border="0"/></td>
                                                                     }
                                                                 </tr>
                                                             </table>

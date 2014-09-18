@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService', 'profileService',
+  'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, keepService, installService, profileService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -142,6 +142,11 @@ angular.module('kifi')
         case 'installExtensionError':
           $scope.modal = 'install_extension_error';
           $scope.data.showInstallErrorModal = true;
+          break;
+        case 'manageLibrary':
+          $scope.modal = 'manage_library';
+          $scope.data.showManageLibraryModal = true;
+          break;
       }
     });
 
@@ -180,6 +185,10 @@ angular.module('kifi')
       $scope.data.showImportModal = false;
     };
 
+    $scope.hideModal = function () {
+      $scope.modal = null;
+    };
+
     $scope.disableBookmarkImport = true;
 
     $scope.allowUpload = function (elem) {
@@ -204,6 +213,31 @@ angular.module('kifi')
       return false;
     };
 
+    function uploadBookmarkFileHelper(file, makePublic) {
+      var deferred = $q.defer();
+      if (file) {
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+        xhr.upload.addEventListener('progress', function (e) {
+          deferred.notify({'name': 'progress', 'event': e});
+        });
+        xhr.addEventListener('load', function () {
+          deferred.resolve(JSON.parse(xhr.responseText));
+        });
+        xhr.addEventListener('error', function (e) {
+          deferred.reject(e);
+        });
+        xhr.addEventListener('loadend', function (e) {
+          deferred.notify({'name': 'loadend', 'event': e});
+        });
+        xhr.open('POST', routeService.uploadBookmarkFile(makePublic), true);
+        xhr.send(file);
+      } else {
+        deferred.reject({'error': 'no file'});
+      }
+      return deferred.promise;
+    }
+
     $scope.uploadBookmarkFile = function ($event, makePublic) {
       if (!$scope.disableBookmarkImport) {
         var $file = $rootElement.find('.bookmark-file-upload');
@@ -224,7 +258,7 @@ angular.module('kifi')
           $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
           $scope.importFilename = '';
 
-          keepService.uploadBookmarkFile(file, makePublic).then(function success(result) {
+          uploadBookmarkFileHelper(file, makePublic).then(function success(result) {
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
             if (!result.error) { // success!
@@ -276,8 +310,6 @@ angular.module('kifi')
         if (moveWindow) {
           $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
         }
-      } else {
-        keepService.unselectAll();
       }
       $scope.editMode.enabled = !$scope.editMode.enabled;
     };

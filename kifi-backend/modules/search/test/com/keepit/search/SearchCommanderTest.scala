@@ -4,9 +4,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import com.keepit.common.akka.MonitoredAwait
-import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.search.sharding.ActiveShards
@@ -15,7 +13,6 @@ import com.keepit.search.sharding.ShardSpecParser
 class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
-  private val publicIdConfig = PublicIdConfiguration("secret key")
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
@@ -44,8 +41,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           inject[AirbrakeNotifier],
           inject[SearchServiceClient],
           inject[ShoeboxServiceClient],
-          inject[MonitoredAwait],
-          publicIdConfig)
+          inject[MonitoredAwait])
 
         val res = searchCommander.search(
           userId = users(0).id.get,
@@ -54,7 +50,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           query = "keepit",
           filter = None,
           maxHits = 3,
-          lastUUIDStr = None,
+          lastUUID = None,
           context = None,
           predefinedConfig = Some(searchConfig),
           withUriSummary = false)
@@ -63,7 +59,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         res.friendsTotal === 1
         res.othersTotal === 2
 
-        val expected = List( // with neither score nor scoring
+        val expected = List( // without score, textScore, scoring
           Json.parse(s"""
             {
               "uriId":1,
@@ -100,8 +96,8 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         )
 
         res.hits.size === 2
-        res.hits(0).json - "score" - "scoring" === expected(0)
-        res.hits(1).json - "score" - "scoring" === expected(1)
+        res.hits(0).json - "score" - "textScore" - "scoring" === expected(0)
+        res.hits(1).json - "score" - "textScore" - "scoring" === expected(1)
       }
     }
   }

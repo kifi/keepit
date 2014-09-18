@@ -10,16 +10,15 @@ import com.keepit.serializer.TraversableFormat
 import com.keepit.common.logging.Logging
 import scala.math._
 
-case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
+case class ArticleHit(uriId: Id[NormalizedURI], score: Float, textScore: Float, isMyBookmark: Boolean, keptByFriend: Boolean)
 
 object ArticleHit {
   implicit val format = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'score).format[Float] and
+    (__ \ 'textScore).formatNullable[Float].inmap(_.getOrElse(-1f), Some.apply[Float]) and
     (__ \ 'isMyBookmark).format[Boolean] and
-    (__ \ 'isPrivate).format[Boolean] and
-    (__ \ 'users).format(TraversableFormat.seq(Id.format[User])) and
-    (__ \ 'bookmarkCount).format[Int]
+    (__ \ 'keptByFriend).formatNullable[Boolean].inmap(_.getOrElse(false), Some.apply[Boolean])
   )(ArticleHit.apply, unlift(ArticleHit.unapply))
 }
 
@@ -31,17 +30,13 @@ case class ArticleSearchResult(
   friendsTotal: Int,
   othersTotal: Int,
   mayHaveMoreHits: Boolean,
-  scorings: Seq[Scoring],
   filter: Set[Long],
   millisPassed: Int,
   pageNumber: Int,
   previousHits: Int,
   uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = -1.0f, // semantic vector variance
-  svExistenceVar: Float = -1.0f,
   toShow: Boolean = true,
-  collections: Set[Long] = Set.empty[Long],
   lang: String = "en")
 
 object ArticleSearchResult extends Logging {
@@ -53,17 +48,13 @@ object ArticleSearchResult extends Logging {
     (__ \ 'friendsTotal).format[Int] and
     (__ \ 'othersTotal).format[Int] and
     (__ \ 'mayHaveMoreHits).format[Boolean] and
-    (__ \ 'scorings).format(TraversableFormat.seq[Scoring]) and
     (__ \ 'filter).format[Set[Long]] and
     (__ \ 'millisPassed).format[Int] and
     (__ \ 'pageNumber).format[Int] and
     (__ \ 'previousHits).format[Int] and
     (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
     (__ \ 'time).format[DateTime] and
-    (__ \ 'svVariance).format[Float] and
-    (__ \ 'svExistenceVar).format[Float] and
     (__ \ 'toShow).formatNullable[Boolean].inmap(_.getOrElse(true), Some.apply[Boolean]) and
-    (__ \ 'collections).format[Set[Long]] and
     (__ \ 'lang).format[String]
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))
 }

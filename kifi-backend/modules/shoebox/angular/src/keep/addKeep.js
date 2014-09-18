@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepService', 'libraryService',
-  function ($document, $rootScope, $location, keyIndices, keepService, libraryService) {
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'tagService', 'util',
+  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, tagService, util) {
 
     return {
       restrict: 'A',
@@ -31,7 +31,11 @@ angular.module('kifi')
           scope.$apply(function () {
             switch (e.which) {
               case keyIndices.KEY_ENTER:
-                scope.keepUrl();
+                if (scope.librariesEnabled) {
+                  scope.keepToLibrary();
+                } else {
+                  scope.keepUrl();
+                }
                 break;
               case keyIndices.KEY_TAB:
                 focusState = (focusState + 1) % 3;
@@ -77,18 +81,27 @@ angular.module('kifi')
 
         scope.keepUrl = function () {
           var url = (scope.state.input) || '';
-          if (url && keepService.validateUrl(url)) {
+          if (url && util.validateUrl(url)) {
             $location.path('/');
-            return keepService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
-              scope.resetAndHide();
+
+            return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal','genericError');
+                $rootScope.$emit('showGlobalModal', 'genericError');
               } else if (result.alreadyKept && result.alreadyKept.length) {
+                scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                keepService.fetchFullKeepInfo(result.keeps[0]);
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
+                  tagService.addToKeepCount(1);
+
+                  scope.$emit('keepAdded', '', keep);
+                  scope.resetAndHide();
+                });
               }
-            });
+            }); 
           } else {
             scope.state.invalidUrl = true;
           }
@@ -96,16 +109,26 @@ angular.module('kifi')
 
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
-          if (url && keepService.validateUrl(url)) {
-            return keepService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
-              scope.resetAndHide();
+          if (url && util.validateUrl(url)) {
+            return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal','genericError');
-              } else if (result.alreadyKept && result.alreadyKept.length) {
+                $rootScope.$emit('showGlobalModal', 'genericError');
+              } else if (result.alreadyKept.length > 0) {
+                scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
               } else {
-                libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
-                keepService.fetchFullKeepInfo(result.keeps[0]);
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
+
+                  libraryService.fetchLibrarySummaries(true);
+                  libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
+                  tagService.addToKeepCount(1);
+
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.data.selectedLibraryId), keep);
+                  scope.resetAndHide();
+                });
               }
             });
           } else {
@@ -113,14 +136,17 @@ angular.module('kifi')
           }
         };
 
-        scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
-          return lib.access !== 'read_only';
-        });
-        scope.data = scope.data || {};
-        scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
-          return lib.name === 'Main Library';
-        }).id;
+
         scope.librariesEnabled = libraryService.isAllowed();
+        if (scope.librariesEnabled) {
+          scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+            return lib.access !== 'read_only';
+          });
+          scope.data = scope.data || {};
+          scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
+            return lib.name === 'Main Library';
+          }).id;          
+        }
 
         scope.$watch('shown', function (shown) {
           if (shown) {

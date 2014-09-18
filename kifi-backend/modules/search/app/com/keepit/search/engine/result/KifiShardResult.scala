@@ -10,7 +10,7 @@ import play.api.libs.json._
 
 class KifiShardResult(val json: JsValue) extends AnyVal {
   def hits: Seq[KifiShardHit] = (json \ "hits").as[JsArray] match {
-    case JsArray(hits) => hits.map { json => new KifiShardHit(json.as[JsObject]) }
+    case JsArray(hits) => hits.map { hit => new KifiShardHit(hit.as[JsObject]) }
     case _ => Seq.empty
   }
   def myTotal: Int = (json \ "myTotal").as[Int]
@@ -54,25 +54,27 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
   def score: Float = (json \ "score").as[Float]
   def visibility: Int = (json \ "visibility").as[Int]
   def libraryId: Option[Long] = (json \ "libId").asOpt[Long]
+  def keepId: Option[Long] = (json \ "keepId").asOpt[Long]
   def title: String = titleJson.as[String]
   def url: String = urlJson.as[String]
-  def keepId: Option[ExternalId[Keep]] = keepIdJson.asOpt[String].map(ExternalId[Keep])
+  def externalId: Option[ExternalId[Keep]] = externalIdJson.asOpt[String].map(ExternalId[Keep])
+  def finalScore: Float = (json \ "finalScore").asOpt[Float].getOrElse(-1f)
 
   def titleJson: JsValue = json \ "title"
   def urlJson: JsValue = json \ "url"
-  def keepIdJson: JsValue = json \ "keepId"
+  def externalIdJson: JsValue = json \ "externalId"
 
   def set(key: String, value: JsValue): KifiShardHit = {
     new KifiShardHit((json - key) + (key -> value))
   }
+
+  def withFinalScore(value: Float): KifiShardHit = {
+    set("finalScore", JsNumber(value.toDouble))
+  }
 }
 
 object KifiShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Option[Long], title: String, url: String, keepId: ExternalId[Keep]): KifiShardHit = {
-    apply(id, score, visibility, libraryId.getOrElse(-1L), title, url, keepId)
-  }
-
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, title: String, url: String, keepId: ExternalId[Keep]): KifiShardHit = {
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: String, url: String, externalId: ExternalId[Keep]): KifiShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
@@ -83,7 +85,8 @@ object KifiShardHit extends Logging {
       ))
 
       if (libraryId >= 0) { json = json + ("libId" -> JsNumber(libraryId)) }
-      if (keepId != null) { json = json + ("keepId" -> JsString(keepId.id)) }
+      if (keepId >= 0) { json = json + ("keepId" -> JsNumber(keepId)) }
+      if (externalId != null) { json = json + ("externalId" -> JsString(externalId.id)) }
       new KifiShardHit(json)
     } catch {
       case e: Throwable =>

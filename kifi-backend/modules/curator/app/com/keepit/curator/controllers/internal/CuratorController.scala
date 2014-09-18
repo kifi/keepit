@@ -1,16 +1,18 @@
 package com.keepit.curator.controllers.internal
 
 import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.curator.commanders.email.FeedDigestEmailSender
-import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander }
+import com.keepit.curator.commanders.email.FeedDigestMessage.{ Queue, Send }
+import com.keepit.curator.commanders.email.{ EngagementEmailActor, FeedDigestEmailSender }
+import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander, SeedIngestionCommander }
 import com.keepit.curator.model.RecommendationClientType
 import com.keepit.model.{ User, UriRecommendationScores, NormalizedURI, UriRecommendationFeedback }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsArray, JsString, Json }
 import play.api.mvc.Action
 
 import concurrent.Future
@@ -19,9 +21,11 @@ class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
     curatorAnalytics: CuratorAnalytics,
     recoGenCommander: RecommendationGenerationCommander,
+    seedCommander: SeedIngestionCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
     recoRetrievalCommander: RecommendationRetrievalCommander,
-    engagaementFeedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
+    feedDigestActor: ActorInstance[EngagementEmailActor],
+    feedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
@@ -48,34 +52,30 @@ class CuratorController @Inject() (
     recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
   }
 
-  def triggerEmailToUser(code: String, userId: Id[User]) = Action.async { request =>
+  def triggerEmailToUser(code: String, userId: Id[User]) = Action.async {
     code match {
       case "feed" =>
-        shoebox.getUsers(Seq(userId)).flatMap[Seq[Id[User]]] { users =>
-          Future.sequence {
-            users map { user =>
-              log.info("sending to user: " + user)
-              engagaementFeedEmailSender.sendToUser(user).map(_.userId)
-            }
-          }
-        } map { userIds => Ok(JsString("users: " + userIds.map(_.id).mkString(","))) }
-
-      case _ => Future.successful(Ok(JsString(s"error: code $code not found")))
+        log.info(s"trigger email $code to user $userId")
+        feedEmailSender.sendToUser(userId).map(_ => NoContent)
+      case _ =>
+        log.warn(s"trigger email error: code $code not found")
+        Future.successful(BadRequest)
     }
   }
 
-  def triggerEmail(code: String) = Action.async { request =>
+  def triggerEmail(code: String) = Action {
     code match {
       case "feed" =>
-        engagaementFeedEmailSender.send().map { res =>
-          Ok(JsString("users: " + res.map(_.userId.id).mkString(", ")))
-        }
-
-      case _ => Future.successful(Ok(JsString(s"error: code $code not found")))
+        feedDigestActor.ref ! Queue
+        NoContent
+      case _ =>
+        log.warn(s"trigger email error: code $code not found")
+        BadRequest
     }
   }
 
-  def resetUserRecoGenState(userId: Id[User]) = Action.async { request =>
-    recoGenCommander.resetUser(userId).map { u => Ok }
+  def refreshUserRecos(userId: Id[User]) = Action { request =>
+    SafeFuture(seedCommander.forceIngestGraphData(userId), Some("Force ingesting Graph Data to refresh Recos"))
+    Ok
   }
 }

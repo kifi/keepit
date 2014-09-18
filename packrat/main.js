@@ -8,8 +8,6 @@ var LZ = LZ || require('./lzstring.min').LZ;
 
 var THREAD_BATCH_SIZE = 8;
 
-//                          | sub -| |-------- country domain --------|--- generic domain ---|---- IP v4 address ----| name -| |.||-- port? --|
-var domainRe = /^https?:\/\/[^\/:]*?([^.:\/]+\.[^.:\/]{2,3}\.[^.\/]{2}|[^.:\/]+\.[^.:\/]{2,6}|\d{1,3}(?:\.\d{1,3}){3}|[^.:\/]+)\.?(?::\d{2,5})?(?:$|\/|#)/;
 var hostRe = /^https?:\/\/([^\/?#]+)/;
 var emailRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
@@ -26,7 +24,6 @@ var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'un
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
-var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
@@ -48,7 +45,6 @@ function clearDataCache() {
   threadsById = {};
   messageData = {};
   contactSearchCache = null;
-  ruleSet = {rules: {}};
   urlPatterns = null;
   tags = null;
   tagsById = null;
@@ -60,13 +56,14 @@ function clearDataCache() {
 (function (ab) {
   ab.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
   ab.addReporter(function airbrake(notice, opts) {
+    log.apply(null, ['#c00', '[airbrake]'].concat(notice.errors));
     notice.params = breakLoops(notice.params);
     notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
     notice.context.version = api.version;
     notice.context.userAgent = api.browser.userAgent;
     notice.context.userId = me && me.id;
     api.request('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, function (o) {
-      log('#c00', '[airbrake] report', o.id, o.url);
+      log('[airbrake]', o.url);
     });
   });
   api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
@@ -84,8 +81,14 @@ function clearDataCache() {
       var o2 = {};
       for (var k in o) {
         if (o.hasOwnProperty(k)) {
-          if (++n > 1000) break;
-          o2[k] = visit(o[k], d + 1);
+          if (++n > 100) break;
+          var v;
+          try {
+            v = o[k];
+          } catch (e) {
+            continue;
+          }
+          o2[k] = visit(v, d + 1);
         }
       }
       return o2;
@@ -165,8 +168,9 @@ function insertUpdateChronologically(arr, o, timePropName) {
 
 // ===== Server requests
 
+var httpMethodRe = /^(?:GET|HEAD|POST|PUT|DELETE)$/;
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
-  if (service === 'GET' || service === 'POST') { // shift args if service is missing
+  if (httpMethodRe.test(service)) { // shift args if service is missing
     fail = done, done = data, data = uri, uri = method, method = service, service = 'api';
   }
   if (typeof data === 'function') {  // shift args if data is missing and done is present
@@ -209,15 +213,13 @@ function onGetFail(uri, done, failures, req) {
 
 // ===== Event logging
 
-var mixpanel = {
+var tracker = {
   enabled: true,
   queue: [],
   batch: [],
   sendBatch: function () {
     if (this.batch.length > 0) {
-      var json = JSON.stringify(this.batch);
-      var dataString = 'data=' + api.util.btoa(unescape(encodeURIComponent(json)));
-      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
+      ajax('POST', '/ext/events', this.batch);
       this.batch.length = 0;
     }
   },
@@ -240,7 +242,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log('#aaa', '[mixpanel.track] %s %o', eventName, properties);
+      log('#aaa', '[tracker.track] %s %o', eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -297,7 +299,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getRules(getPrefs.bind(null, getTags));
+  getUrlPatterns(getPrefs.bind(null, getTags));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -744,15 +746,8 @@ api.port.on({
   },
   set_max_results: function(n, respond) {
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
-    mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
-  },
-  stop_showing_keeper_intro: function() {
-    ajax('POST', '/ext/pref/showKeeperIntro?show=false');
-    api.tabs.each(function (tab) {
-      api.tabs.emit(tab, 'hide_keeper_intro');
-    });
-    if (prefs) prefs.showKeeperIntro = false;
   },
   stop_showing_external_messaging_intro: function(action) {
     ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
@@ -760,7 +755,7 @@ api.port.on({
       api.tabs.emit(tab, 'hide_external_messaging_intro');
     });
     if (prefs) prefs.showExtMsgIntro = false;
-    mixpanel.track('user_was_notified', {
+    tracker.track('user_was_notified', {
       action: 'click',
       subaction: action,
       channel: 'kifi',
@@ -769,23 +764,19 @@ api.port.on({
     });
   },
   track_showing_external_messaging_intro: function() {
-    mixpanel.track('user_was_notified', {
+    tracker.track('user_was_notified', {
       action: 'open',
       channel: 'kifi',
       subchannel: 'tooltip',
       category: 'extMsgFTUE'
     });
   },
-  set_show_search_intro: function(show) {
-    ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
-    if (prefs) prefs.showSearchIntro = show;
-  },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    mixpanel.track('user_clicked_pane', {
+    tracker.track('user_clicked_pane', {
       type: source,
       action: 'importGmail',
       subsource: 'composeTypeahead'
@@ -994,7 +985,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-      mixpanel.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
+      tracker.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
       if (loc === '/messages:unread') {
         store('unread', true);
       } else if (loc === '/messages:all') {
@@ -1052,7 +1043,7 @@ api.port.on({
         });
       }
     }
-    mixpanel.track('user_changed_setting', {
+    tracker.track('user_changed_setting', {
       category:
         ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
         ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' :
@@ -1124,7 +1115,7 @@ api.port.on({
   open_tab: function (data) {
     api.tabs.open(webBaseUri() + data.path);
     if (data.source === 'keeper') {
-      mixpanel.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
+      tracker.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
     }
   },
   close_tab: function (_, __, tab) {
@@ -1278,10 +1269,10 @@ api.port.on({
     unsilence(false);
   },
   track_guide: function (stepParts) {
-    mixpanel.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
+    tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
   },
   track_guide_choice: function (pageIdx) {
-    mixpanel.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
   },
   resume_guide: function (step, _, tab) {
     if (guidePages) {
@@ -1293,7 +1284,7 @@ api.port.on({
     }
   },
   end_guide: function (stepParts) {
-    mixpanel.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
+    tracker.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
       guidePages = null;
     }
@@ -1583,7 +1574,7 @@ function awaitDeepLink(link, tabId, retrySec) {
     api.timers.clearTimeout(timeouts[tabId]);
     delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
-    if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
+    if (tab && sameOrLikelyRedirected(link.url || link.nUri, tab.nUri || tab.url)) {
       log('[awaitDeepLink]', tabId, link);
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         api.tabs.emit(tab, 'guide', {
@@ -1770,7 +1761,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax('GET', '/ext/authed', function (loggedIn) {
+      ajax('GET', '/ext/auth', function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -1835,17 +1826,16 @@ function kififyWithPageData(tab, d) {
     kept: d.kept,
     position: d.position,
     hide: hide,
-    tags: d.tags,
-    showKeeperIntro: prefs && prefs.showKeeperIntro
+    tags: d.tags
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
     if (!d.kept && !hide) {
-      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+      if (urlPatterns && urlPatterns.some(reTest(tab.url))) {
         log('[initTab]', tab.id, 'restricted');
-      } else if (ruleSet.rules.shown && d.shown) {
+      } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
       } else if (d.keepers.length) {
         tab.keepersSec = 20;
@@ -2331,11 +2321,10 @@ function getPrefs(next) {
   });
 }
 
-function getRules(next) {
-  ajax('GET', '/ext/pref/rules', {version: ruleSet.version}, function gotRules(o) {
-    log('[gotRules]', o);
-    if (o && Object.getOwnPropertyNames(o).length > 0) {
-      ruleSet = o.slider_rules;
+function getUrlPatterns(next) {
+  ajax('GET', '/ext/pref/rules', function gotUrlPatterns(o) {
+    log('[gotUrlPatterns]', o);
+    if (o && o.url_patterns) {
       urlPatterns = compilePatterns(o.url_patterns);
     }
     if (next) next();
@@ -2370,7 +2359,19 @@ function throttle(func, wait, opts) {  // underscore.js
     }
     return result;
   };
-};
+}
+
+//                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
+var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
+function sameOrLikelyRedirected(url1, url2) {
+  if (url1 === url2) {
+    return true;
+  }
+  var m1 = url1.match(domainRe);
+  var m2 = url2.match(domainRe);
+  // hostnames match exactly or core domain without subdomains and TLDs match (e.g. "google" in docs.google.fr and www.google.co.uk)
+  return m1[1] === m2[1] || m1[2] === (m2[2] || 0);
+}
 
 // ===== Session management
 
@@ -2381,7 +2382,7 @@ function authenticate(callback, retryMs) {
   if (!origInstId) {
     store('prompt_to_import_bookmarks', true);
   }
-  ajax('POST', '/kifi/start', {
+  ajax('POST', '/ext/start', {
     installation: origInstId,
     version: api.version
   },
@@ -2397,9 +2398,8 @@ function authenticate(callback, retryMs) {
       elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (eip ? '&eip=' + eip : ''),
       socketHandlers, onSocketConnect, onSocketDisconnect);
     logEvent.catchUp();
-    mixpanel.catchUp();
+    tracker.catchUp();
 
-    ruleSet = data.rules;
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
 
@@ -2454,7 +2454,7 @@ function deauthenticate() {
   log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
-  ajax('POST', '/ext/session/end');
+  ajax('DELETE', '/ext/auth');
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

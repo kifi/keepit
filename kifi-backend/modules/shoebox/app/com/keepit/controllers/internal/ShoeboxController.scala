@@ -9,7 +9,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail, LocalPostOffice }
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -57,6 +58,8 @@ class ShoeboxController @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
+  libraryCommander: LibraryCommander,
+  libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -443,5 +446,15 @@ class ShoeboxController @Inject() (
     }
     userInteractionCommander.addInteractions(userId, interactions)
     Ok
+  }
+
+  def canViewLibrary() = Action(parse.tolerantJson) { request =>
+    val json = request.body
+    val libraryId = (json \ "libraryId").as[Id[Library]]
+    val userIdOpt = (json \ "userId").asOpt[Id[User]]
+    val authToken = (json \ "authToken").asOpt[String]
+    val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
+    val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
+    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
 }

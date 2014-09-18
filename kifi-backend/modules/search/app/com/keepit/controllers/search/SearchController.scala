@@ -75,7 +75,11 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
-    val library = (searchRequest \ "library").asOpt[String]
+    val library = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
+      case (Some(libId), _) => LibraryContext.Authorized(libId)
+      case (None, Some(libId)) => LibraryContext.NotAuthorized(libId)
+      case _ => LibraryContext.None
+    }
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
     val debug = (searchRequest \ "debug").asOpt[String]
@@ -194,6 +198,13 @@ class SearchController @Inject() (
         Ok(html.admin.explainResult(query, userId, uriId, explanation))
       case None =>
         Ok("shard not found")
+    }
+  }
+
+  def augmentation() = Action.async(parse.json) { implicit request =>
+    augmentationCommander.augmentation(request.body.as[ItemAugmentationRequest]).map { augmentationResponse =>
+      val json = Json.toJson(augmentationResponse)
+      Ok(json)
     }
   }
 }

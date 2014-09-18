@@ -100,7 +100,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
@@ -174,7 +174,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
@@ -243,7 +243,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
@@ -261,7 +261,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         db.readWrite { implicit s =>
           val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-          println(keeps mkString "\n")
+          // println(keeps mkString "\n") // can be removed?
           keeps.size === 2
         }
 
@@ -320,7 +320,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         db.readWrite { implicit s =>
           val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-          println(keeps mkString "\n")
+          // println(keeps mkString "\n") // can be removed?
           keeps.size === 1
         }
 

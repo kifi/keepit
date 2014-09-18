@@ -5,7 +5,7 @@ import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
-import com.keepit.model.{ Keep, User, NormalizedURI }
+import com.keepit.model.{ Library, Keep, User, NormalizedURI }
 import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
@@ -36,6 +36,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], LDATopicFeature)]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
+  def getLibraryURIFeatures(libId: Id[Library], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
 }
 
 @Singleton
@@ -209,5 +210,17 @@ class URILDATopicRepoImpl @Inject() (
 
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)] = {
     (for { r <- rows if r.version === version && r.uriId === uriId && r.state === URILDATopicStates.ACTIVE } yield (r.firstTopic, r.firstTopicScore)).firstOption
+  }
+
+  def getLibraryURIFeatures(libId: Id[Library], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature] = {
+    import StaticQuery.interpolation
+    import scala.slick.jdbc.GetResult
+    implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
+    val q =
+      sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
+           on ck.uri_id = tp.uri_id
+           where ck.library_id = ${libId.id} and ck.state = 'active' and tp.version = ${version.version}
+           and tp.state = 'active' and tp.num_words > ${min_num_words}"""
+    q.as[LDATopicFeature].list
   }
 }

@@ -64,9 +64,6 @@ var tile = tile || function() {  // idempotent for Chrome
       api.require(['styles/insulate.css', 'styles/keeper/tile.css'], function() {
         if (!o.hide) {
           tile.style.display = '';
-          if (o.showKeeperIntro && !/\.(?:kifi|google)\./.test(location.hostname) && document.hasFocus()) {
-            setTimeout(api.require.bind(api, 'scripts/keeper_intro.js', api.noop), 5000);
-          }
         }
         tile.offsetHeight;
         tileCard.classList.remove('kifi-0s');
@@ -115,7 +112,7 @@ var tile = tile || function() {  // idempotent for Chrome
           } else if (tile && tile.dataset.kept) {
             api.port.emit('unkeep', withUrls({}));
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), how: 'public'}));
+            api.port.emit('keep', withUrls({title: authoredTitle(), how: e.altKey ? 'private' : 'public'}));
           }
           e.preventDefault();
         }

@@ -9,7 +9,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.model.{ Keep, NormalizedURI, User }
+import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import scala.math.exp
 
 @Singleton
@@ -20,10 +20,10 @@ class LDACommander @Inject() (
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo,
+    libTopicRepo: LibraryLDATopicRepo,
     userStatUpdatePlugin: LDAUserStatDbUpdatePlugin) extends Logging {
 
   val numOfTopics: Int = wordRep.lda.dimension
@@ -47,14 +47,14 @@ class LDACommander @Inject() (
     docRep(doc).map { _.vectorize }
   }
 
-  def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
-    ldaRetriever.getByKeys(ids, wordRep.version)
-  }
-
   def userTopicMean(userId: Id[User]): Option[UserLDAInterests] = {
     db.readOnlyReplica { implicit s =>
       userTopicRepo.getByUser(userId, wordRep.version)
     }
+  }
+
+  def libraryTopic(libId: Id[Library]): Option[LibraryLDATopic] = {
+    db.readOnlyReplica { implicit s => libTopicRepo.getActiveByLibraryId(libId, wordRep.version) }
   }
 
   // for admin
@@ -76,24 +76,56 @@ class LDACommander @Inject() (
   }
 
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
+
+    def isInJunkTopic(uriTopicOpt: Option[URILDATopic], junks: Set[Int]): Boolean = uriTopicOpt.exists(x => x.firstTopic.exists(t => junks.contains(t.index)))
+
+    val junkTopics = infoCommander.inactiveTopics
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
+      val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
       val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
-        val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
-        val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
-        LDAUserURIInterestScores(s2.global, s1.recency)
+        if (!isInJunkTopic(uriTopicOpt, junkTopics)) {
+          val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
+          val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+          val s3 = libraryInducedUserURIInterestScore(libFeats, uriTopicOpt)
+          LDAUserURIInterestScores(s2.global, s1.recency, s3)
+        } else {
+          log.info("uri in junk topic. return zero scores for user")
+          LDAUserURIInterestScores(None, None, None)
+        }
       }
     }
+  }
+
+  // admin
+  def libraryInducedUserURIInterest(userId: Id[User], uriId: Id[NormalizedURI]): Option[LDAUserURIInterestScore] = {
+    val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, wordRep.version) }
+    val uriFeatOpt = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
+    libraryInducedUserURIInterestScore(libFeats, uriFeatOpt)
+  }
+
+  private def libraryInducedUserURIInterestScore(libFeats: Seq[LibraryTopicMean], uriLDAOpt: Option[URILDATopic]): Option[LDAUserURIInterestScore] = {
+    val uriFeatOpt = uriLDAOpt.flatMap(_.feature)
+    val numWords = uriLDAOpt.map { _.numOfWords }.getOrElse(0)
+    val numTopicChanges = uriLDAOpt.map { _.timesFirstTopicChanged }.getOrElse(0)
+    if (libFeats.size > 0 && uriFeatOpt.isDefined) {
+      val uriFeat = uriFeatOpt.get.value
+      val libsFeats = libFeats.map { _.value }
+      val div = libsFeats.map { v => KL_divergence(v, uriFeat) }.min
+      val score = (1f - div) max 0f
+      val confidence = computeURIConfidence(numWords, numTopicChanges)
+      Some(LDAUserURIInterestScore(score, confidence))
+    } else None
   }
 
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
         val globalScore = computeGaussianInterestScore(userFeat.numOfEvidence, Some(userFeat), uriFeat, isRecent = false)
-        LDAUserURIInterestScores(globalScore, None)
-      case _ => LDAUserURIInterestScores(None, None)
+        LDAUserURIInterestScores(globalScore, None, None)
+      case _ => LDAUserURIInterestScores(None, None, None)
     }
   }
 
@@ -105,7 +137,7 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(projectToActive(uriFeatVec.value), userMean, userVar, userMean.map { _ / s })
-        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        val confidence = computeURIConfidence(uriFeat.numOfWords, uriFeat.timesFirstTopicChanged)
         Some(LDAUserURIInterestScore(exp(-1 * dist), confidence))
       case _ => None
     }
@@ -116,8 +148,8 @@ class LDACommander @Inject() (
       case (Some(uriFeat), Some(userFeat)) =>
         val globalScore = computeCosineInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
         val recencyScore = computeCosineInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
-        LDAUserURIInterestScores(globalScore, recencyScore)
-      case _ => LDAUserURIInterestScores(None, None)
+        LDAUserURIInterestScores(globalScore, recencyScore, None)
+      case _ => LDAUserURIInterestScores(None, None, None)
     }
   }
 
@@ -129,21 +161,20 @@ class LDACommander @Inject() (
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeatVec.value))
-        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        val confidence = computeURIConfidence(uriFeat.numOfWords, uriFeat.timesFirstTopicChanged)
         Some(LDAUserURIInterestScore(cosineDistance(u, v), confidence))
       case _ => None
     }
   }
 
-  private def topicChangePenalty(n: Int): Float = {
-    val alpha = n / 10f
-    exp(-alpha * alpha)
-  }
+  private def computeURIConfidence(numOfWords: Int, numTopicChanges: Int) = {
+    val alpha = numTopicChanges / 10f
+    val penalty = exp(-alpha * alpha)
 
-  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    // only consider uri confidence for now.
     val beta = (numOfWords - 50) / 50f
-    1f / (1 + exp(-1 * beta)).toFloat
+    val score = 1f / (1 + exp(-1 * beta)).toFloat
+
+    score * penalty
   }
 
   def sampleURIs(topicId: Int): Seq[(Id[NormalizedURI], Float)] = {

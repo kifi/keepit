@@ -95,7 +95,7 @@ class LDAUserDbUpdaterImpl @Inject() (
       }
       val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (snaphShotChanged) { curator.resetUserRecoGenState(user) }
+      if (snaphShotChanged) { curator.refreshUserRecos(user) }
     }
   }
 

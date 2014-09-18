@@ -63,7 +63,7 @@ object ServiceType {
 
   case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5)
 
-  case object CURATOR extends ServiceType("CURATOR", "MV", loadFactor = 1) {
+  case object CURATOR extends ServiceType("CURATOR", "CU", loadFactor = 1) {
     override val minInstances = 0
     override val warnInstances = 0
   }

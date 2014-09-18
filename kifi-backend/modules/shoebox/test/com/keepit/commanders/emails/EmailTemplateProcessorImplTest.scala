@@ -2,7 +2,8 @@ package com.keepit.commanders.emails
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail.{ SystemEmailAddress, EmailToSend }
+import com.keepit.common.mail.SystemEmailAddress
+import com.keepit.common.mail.template.{ helpers, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -14,7 +15,7 @@ import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
 import play.twirl.api.Html
-import com.keepit.model.Email.placeholders._
+import com.keepit.common.mail.template.helpers._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -52,7 +53,15 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
         """.stripMargin)
-        val html2 = Html("")
+
+        val text1 = Html(
+          s"""
+          |${firstName(id2)} ${lastName(id2)} and ${fullName(id1)} joined!
+          |${avatarUrl(id3)}
+          |unsub1 $unsubscribeUrl
+          |unsub2 ${unsubscribeUrl(id3)}
+          |unsub3 ${unsubscribeUrl(user3.primaryEmail.get)}
+           """.stripMargin)
 
         val processor = inject[EmailTemplateProcessorImpl]
         val emailToSend = EmailToSend(
@@ -61,22 +70,37 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           to = Right(SystemEmailAddress.JOSH),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
-          fromName = Some("Kifi"),
-          subject = "hi",
+          fromName = Some(Right(firstName(id2) + "!!!")),
+          subject = "hi " + firstName(id1) + " and " + firstName(id2),
           category = NotificationCategory.System.ADMIN,
-          htmlTemplates = Seq(html1, html2)
+          htmlTemplate = html1,
+          textTemplate = Some(text1)
         )
 
         val outputF = processor.process(emailToSend)
-        val output = Await.result(outputF, Duration(5, "seconds")).body
+        val processed = Await.result(outputF, Duration(5, "seconds"))
 
+        processed.subject === "hi Aaron and Bryan"
+        processed.fromName === Some("Bryan!!!")
+
+        val output = processed.htmlBody.value
         output must contain("privacy?utm_source=footerPrivacy&utm_medium=email&utm_campaign=tester")
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
-        output must contain("""<img src="http://cloudfront/1_100x100_0" alt="Aaron Paul"/>""")
-        output must contain("""<img src="http://cloudfront/2_100x100_0" alt="Bryan Cranston"/>""")
-        output must contain("""<img src="http://cloudfront/3_100x100_0" alt="Anna Gunn"/>""")
-        output must contain("""<img src="http://cloudfront/4_100x100_0" alt="Dean Norris"/>""")
+        output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
+        output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
+        output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
+        output must contain("""<img src="https://cloudfront/users/4/pics/100/0.jpg" alt="Dean Norris"/>""")
+
+        val text = processed.textBody.get.value
+        text must contain("Bryan Cranston and Aaron Paul joined!")
+        text must contain("https://cloudfront/users/3/pics/100/0.jpg")
+        text must contain("unsub1 https://www.kifi.com/unsubscribe/")
+        text must contain("unsub2 https://www.kifi.com/unsubscribe/")
+        text must contain("unsub3 https://www.kifi.com/unsubscribe/")
+        text must contain("Unsubscribe here: https://www.kifi.com/unsubscribe/")
+        text must contain("Kifi.com | 883 N Shoreline Blvd, Mountain View, CA 94043, USA")
+
       }
     }
   }

@@ -1,12 +1,14 @@
 package com.keepit.shoebox
 
+import com.keepit.common.mail.template.EmailToSend
+
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailToSend, EmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
@@ -14,7 +16,7 @@ import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper._
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.social._
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
@@ -114,6 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def processAndSendMail(email: EmailToSend): Future[Boolean]
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -148,6 +151,7 @@ class ShoeboxServiceClientImpl @Inject() (
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
   val extraLongTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val superExtraLongTimeoutJustForEmbedly = CallTimeouts(responseTimeout = Some(250000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
@@ -623,9 +627,15 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = extraLongTimeout).map { r =>
+    val tracer = new StackTrace()
+    val timeout = if (request.waiting) superExtraLongTimeoutJustForEmbedly else longTimeout
+    val res = call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = timeout).map { r =>
       r.json.as[URISummary]
     }
+    res.onFailure {
+      case t: Throwable => airbrakeNotifier.notify(s"call to getUriSummary failed on request $request", tracer.withCause(t))
+    }
+    res
   }
 
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
@@ -634,7 +644,7 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
       val missingKeysSeq = missing.toSeq
       val request = Json.obj("uriIds" -> missingKeysSeq.map(_.id))
-      call(Shoebox.internal.getUriSummaries, request, callTimeouts = longTimeout).map { r =>
+      call(Shoebox.internal.getUriSummaries, request, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
         Json.fromJson[Seq[URISummary]](r.json).get
       } map { uriSummaries =>
         (missingKeysSeq zip uriSummaries) toMap
@@ -721,5 +731,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryMembershipView]] }
+  }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+    val body = Json.obj(
+      "libraryId" -> libraryId,
+      "userId" -> userId,
+      "authToken" -> authToken,
+      "passPhrase" -> Json.toJson(hashedPassPhrase))
+    call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 }

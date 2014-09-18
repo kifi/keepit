@@ -3,7 +3,8 @@ package com.keepit.commanders
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
-import scala.concurrent._
+import scala.concurrent.Future
+import java.util.concurrent.TimeoutException
 import com.keepit.model._
 import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -182,7 +183,16 @@ class URISummaryCommander @Inject() (
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
    */
   private def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize = ImageSize(0, 0), descriptionOnly: Boolean = false): Future[Option[URISummary]] = {
-    scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+    try {
+      scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
+    } catch {
+      case timeout: TimeoutException =>
+        val failImageInfo = db.readWrite { implicit session =>
+          imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
+        }
+        airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
+        Future.successful(Some(URISummary(title = nUri.title)))
+    }
   }
 
   /**
@@ -213,16 +223,14 @@ class URISummaryCommander @Inject() (
    */
   private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
     uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) => {
+      case Success(result) =>
         val (url, size) = result
         val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
         db.readWrite { implicit session => imageInfoRepo.save(imageInfoWithUrl) }
         Some(imageInfoWithUrl)
-      }
-      case Failure(ex) => {
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage()}")
+      case Failure(ex) =>
+        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
-      }
     }
   }
 

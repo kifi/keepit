@@ -55,7 +55,7 @@ var iframeDialog = function () {
   function buildAndShow(config, origin, data, name) {
     api.require('scripts/' + config.templatePath + '.js', function () {
       $dialog = $(render(config.templatePath, {
-        logo: api.url('images/kifi_logo.png'),
+        logo: api.url('images/keeper/tile_logo.svg'),
         iframeSrc: origin + '/blank.html#' + Object.keys(data).reduce(function (f, k) {return (f ? f + '&' : '') + k + '=' + data[k]}, '')
       }));
       $dialog.find('.kifi-dialog-box').css({

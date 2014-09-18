@@ -4,7 +4,8 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.LargeString
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ LocalPostOffice, ElectronicMailRepo, ElectronicMail, EmailToSend }
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ LocalPostOffice, ElectronicMailRepo, ElectronicMail }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.UserEmailAddressRepo
 
@@ -25,7 +26,7 @@ class EmailTemplateSenderImpl @Inject() (
     config: FortyTwoConfig) extends EmailTemplateSender with Logging {
 
   def send(mailToSend: EmailToSend) = {
-    htmlPreProcessor.process(mailToSend) map { html =>
+    htmlPreProcessor.process(mailToSend) map { result =>
       val toAddresses = Seq(mailToSend.to match {
         case Left(userId) => db.readOnlyReplica { implicit sess => emailAddrRepo.getByUser(userId) }
         case Right(address) => address
@@ -35,9 +36,10 @@ class EmailTemplateSenderImpl @Inject() (
         from = mailToSend.from,
         to = toAddresses,
         cc = mailToSend.cc,
-        subject = mailToSend.subject,
-        htmlBody = LargeString(html.body),
-        fromName = mailToSend.fromName,
+        subject = result.subject,
+        htmlBody = result.htmlBody,
+        textBody = result.textBody,
+        fromName = result.fromName,
         category = mailToSend.category
       )
 

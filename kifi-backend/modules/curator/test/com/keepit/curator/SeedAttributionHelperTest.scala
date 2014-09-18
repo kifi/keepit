@@ -83,7 +83,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
           }
         }
 
-        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, fakeGraph) {
+        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, fakeGraph, inject[CuratorLibraryMembershipInfoRepo]) {
           override val MIN_USER_KEEP_SIZE = 0
         }
         val itemsWithAttr = Await.result(attrHelper.getAttributions(scoredItems), Duration(5, "seconds"))

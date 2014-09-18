@@ -23,6 +23,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withLastPushedAt: Boolean = false)(implicit session: RWSession): Unit
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
+  def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -148,7 +149,10 @@ class UriRecommendationRepoImpl @Inject() (
       ) yield (row.state, row.updatedAt)).
         update((UriRecommendationStates.INACTIVE, currentDateTime)) > 0) || updated
     }
+  }
 
+  def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {
+    (for (row <- byUser(userId)(rows)) yield row.uriId).list.toSet
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

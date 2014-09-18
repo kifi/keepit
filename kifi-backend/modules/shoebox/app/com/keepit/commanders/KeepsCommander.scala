@@ -158,6 +158,8 @@ class KeepsCommander @Inject() (
     clock: Clock,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
+    keepImageCommander: KeepImageCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
@@ -362,6 +364,7 @@ class KeepsCommander @Inject() (
     (individualKeeps ++ collectionKeeps).filter(filter).groupBy(_.id.get).values.flatten.toSeq
   }
 
+  // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
@@ -380,7 +383,6 @@ class KeepsCommander @Inject() (
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
-
     val library = db.readOnlyReplica { implicit session => // change to readOnlyReplica when we can be 100% sure every user has libraries
       libraryRepo.get(libraryId)
     }
@@ -436,6 +438,7 @@ class KeepsCommander @Inject() (
       keeps.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
     }
     finalizeUnkeeping(keeps, userId)
+    keeps map KeepInfo.fromKeep
   }
 
   def unkeepBatch(ids: Seq[ExternalId[Keep]], userId: Id[User])(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[ExternalId[Keep]]) = {
@@ -447,22 +450,58 @@ class KeepsCommander @Inject() (
       val keeps = successes.map(_._2).flatten.map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
       (keeps, failures.map(_._1))
     }
-    (finalizeUnkeeping(keeps, userId), failures)
+    finalizeUnkeeping(keeps, userId)
+    (keeps map KeepInfo.fromKeep, failures)
   }
 
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit session =>
       keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
-    } flatMap { keep =>
-      finalizeUnkeeping(Seq(keep), userId).headOption
+    } map { keep =>
+      finalizeUnkeeping(Seq(keep), userId)
+      KeepInfo.fromKeep(keep)
     }
   }
 
-  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
+  def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
+    unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
+      case Left(why) => Left(why)
+      case Right((Seq(), _)) => Left("invalid_keep_id")
+      case Right((Seq(info), _)) => Right(info)
+    }
+  }
+
+  def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])] = {
+    db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
+    } match {
+      case Some(mem) if mem.hasWriteAccess =>
+        var keepsToFinalize = Seq.empty[Keep]
+        val (keeps, invalidKeepIds) = db.readWrite { implicit s =>
+          val (keeps, invalidKeepIds) = keepIds.map { kId =>
+            keepRepo.getByExtIdandLibraryId(kId, libId, excludeState = None) match {
+              case Some(k) if (k.isActive) =>
+                keepsToFinalize = k +: keepsToFinalize
+                Left(setKeepStateWithSession(k, KeepStates.INACTIVE, userId))
+              case Some(k) =>
+                Left(k)
+              case None =>
+                Right(kId)
+            }
+          }.partition(_.isLeft)
+          (keeps.map(_.left.get), invalidKeepIds.map(_.right.get))
+        }
+        finalizeUnkeeping(keepsToFinalize, userId)
+        Right((keeps map KeepInfo.fromKeep, invalidKeepIds))
+      case _ =>
+        Left("permission_denied")
+    }
+  }
+
+  private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
-    keeps map KeepInfo.fromKeep
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {

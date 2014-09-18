@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import com.google.inject.Inject
@@ -65,6 +66,7 @@ class AuthHelper @Inject() (
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     secureSocialClientIds: SecureSocialClientIds,
+    resetPasswordEmailSender: ResetPasswordEmailSender,
     fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
 
   def authHandler(request: Request[_], res: Result)(f: => (Seq[Cookie], Session) => Result) = {
@@ -160,6 +162,14 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
+  private def saveKifiCampaignId(userId: Id[User], kcid: String): Unit = {
+    db.readWrite { implicit session =>
+      if (userValueRepo.getValueStringOpt(userId, UserValueName.KIFI_CAMPAIGN_ID).isEmpty) {
+        userValueRepo.setValue(userId, UserValueName.KIFI_CAMPAIGN_ID, kcid)
+      }
+    }
+  }
+
   def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
@@ -180,6 +190,8 @@ class AuthHelper @Inject() (
         if (agent.canRunExtensionIfUpToDate) Some("/install") else None
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
+
+    request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -263,36 +275,24 @@ class AuthHelper @Inject() (
     }
   }
 
-  def doForgotPassword(implicit request: Request[JsValue]): Result = {
+  def doForgotPassword(implicit request: Request[JsValue]): Future[Result] = {
     (request.body \ "email").asOpt[String] map { emailAddrStr =>
       db.readOnlyMaster { implicit session =>
         getResetEmailAddresses(emailAddrStr)
       } match {
         case Some((userId, verifiedEmailAddressOpt)) =>
           val emailAddresses = Set(EmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
-          db.readWrite { implicit session =>
-            emailAddresses.map { resetEmailAddress =>
-              // TODO: Invalidate both reset tokens the first time one is used.
-              val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
-              val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
-              postOffice.sendMail(ElectronicMail(
-                fromName = Some("Kifi Support"),
-                from = SystemEmailAddress.SUPPORT,
-                to = Seq(resetEmailAddress),
-                subject = "Kifi.com | Password reset requested",
-                htmlBody = views.html.email.resetPassword(resetUrl).body,
-                category = NotificationCategory.User.RESET_PASSWORD
-              ))
-            }
+          val emailsF = Future.sequence(emailAddresses.map { email => resetPasswordEmailSender.sendToUser(userId, email) }.toSeq)
+          emailsF.map { e =>
+            Ok(Json.obj("addresses" -> emailAddresses.map { email =>
+              if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
+            }))
           }
-          Ok(Json.obj("addresses" -> emailAddresses.map { email =>
-            if (email.address == emailAddrStr) emailAddrStr else AuthController.obscureEmailAddress(email.address)
-          }))
         case _ =>
           log.warn(s"Could not reset password because supplied email address $emailAddrStr not found.")
-          BadRequest(Json.obj("error" -> "no_account"))
+          Future.successful(BadRequest(Json.obj("error" -> "no_account")))
       }
-    } getOrElse BadRequest("0")
+    } getOrElse Future.successful(BadRequest("0"))
   }
 
   def doSetPassword(implicit request: Request[JsValue]): Result = {

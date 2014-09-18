@@ -42,7 +42,7 @@ class GithubExtractorTest extends Specification {
     "parse a pull request" in {
       val scraped = setup("https://github.com/kangax/fabric.js/pull/381", "githubcom_pullrequest.txt")
 
-      println(scraped)
+      // println(scraped) // can be removed?
       scraped.contains("Kienz opened this pull request") === true
       scraped.contains("Only if pointer is over targetCorner") === true
       scraped.contains("andrewconner") === false

@@ -2,6 +2,7 @@ package com.keepit.curator
 
 import com.keepit.abook.ABookServiceClientModule
 import com.keepit.common.cache.CacheModule
+import com.keepit.curator.queue.FeedDigestEmailQueueModule
 import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.SearchServiceClientModule
@@ -32,4 +33,5 @@ abstract class CuratorModule(
   val secureSocialModule = RemoteSecureSocialModule()
   val curatorSlickModule = CuratorSlickModule()
   val dbSequencingModule = CuratorDbSequencingModule()
+  val feedDigestQueueModule: FeedDigestEmailQueueModule
 }

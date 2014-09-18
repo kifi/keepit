@@ -31,7 +31,7 @@ class UrlTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[Database].readOnlyMaster { implicit session =>
-          println(repo.all)
+          // println(repo.all) // can be removed?
           repo.get("http://cnn.com", nuri4.id.get).isDefined === false
           repo.get("http://www.google.com/#1", nuri1.id.get).isDefined === true
           repo.getByNormUri(nuri3.id.get).size === 0
