@@ -18,7 +18,7 @@ angular.module('util', [])
       // TODO(yiping): conform this to the test being used by the extension.
       // This one is valid for abc@example and does not need the '.' while that for the extension does.
       validateEmail: function (input) {
-        var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/; // jshint ignore:line
+        var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
         return emailAddrRe.test(input);
       },
       replaceArrayInPlace: function (oldArray, newArray) {

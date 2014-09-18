@@ -8,6 +8,7 @@
     <div class="kf-library-follow" ng-if="canBeFollowed(library)">
       <button class="kf-library-follow-btn" ng-click="followLibrary(library.id)">Follow</button>
     </div>
+    <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
     <div class="kf-subtitle">
       <div class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>
