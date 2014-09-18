@@ -74,12 +74,14 @@ trait UserActions { self: Controller =>
     } getOrElse res
   }
 
+  private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] =
+    block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
+
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) =>
-          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
+        case Some(userId) => buildUserAction(userId, block)
         case None => Future.successful(Unauthorized)
       }
     }
@@ -89,10 +91,21 @@ trait UserActions { self: Controller =>
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
+        case Some(userId) => buildUserAction(userId, block)
+        case None => block(NonUserRequest(request)).map(maybeAugmentKcid(_))
+      }
+    }
+  }
+
+  object AdminUserAction extends ActionBuilder[UserRequest] {
+    def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
+      implicit val req = request
+      userActionsHelper.getUserIdOpt match {
         case Some(userId) =>
-          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
-        case None =>
-          block(NonUserRequest(request)).map(maybeAugmentKcid(_))
+          userActionsHelper.isAdmin(userId) flatMap { isAdmin =>
+            buildUserAction(userId, block)
+          }
+        case None => Future.successful(Unauthorized)
       }
     }
   }
