@@ -202,7 +202,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],

@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.search.engine.{ KifiSearch, DebugOption, Visibility, SearchFactory }
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResultMerger, KifiShardResult }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -57,7 +56,7 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -273,7 +272,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUID: Option[String],
     context: Option[String],
@@ -291,14 +290,15 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, library, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
-
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
     // TODO: use user profile info as a bias
     val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
+
+    val library = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
+    val searchFilter = SearchFilter(filter, library, context)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     timing.presearch
 

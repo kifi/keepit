@@ -21,7 +21,7 @@ import com.keepit.search.graph.library.LibraryIndexer
 
 class WebsiteSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
-    shoeboxClient: ShoeboxServiceClient,
+    val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
@@ -60,21 +60,21 @@ class WebsiteSearchController @Inject() (
     auth: Option[String],
     withUriSummary: Boolean = false) = {
 
-    def execSearch(userId: Id[User], acceptLangs: Seq[String], experiments: Set[ExperimentType], libCtx: LibraryContext) = {
+    def execSearch(userId: Id[User], acceptLangs: Seq[String], experiments: Set[ExperimentType], libCtxFuture: Future[LibraryContext]) = {
 
-      val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libCtx, maxHits, lastUUIDStr, context, predefinedConfig = None)
+      val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libCtxFuture, maxHits, lastUUIDStr, context, predefinedConfig = None)
 
       val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
       var decorationFutures: List[Future[String]] = Nil
 
       if (userId != nonUser) {
-        val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher, shoeboxClient)(userId, _).map(Json.stringify)(immediate))
+        val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
         decorationFutures = augmentationFuture :: decorationFutures
       }
 
       if (withUriSummary) {
-        decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+        decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
       }
 
       val decorationEnumerator = reactiveEnumerator(decorationFutures)
@@ -86,10 +86,10 @@ class WebsiteSearchController @Inject() (
 
     JsonAction.apply(
       authenticatedAction = { request =>
-        execSearch(request.userId, request.acceptLanguages.map(_.code), request.experiments, getLibraryContext(library, auth, request))
+        execSearch(request.userId, request.acceptLanguages.map(_.code), request.experiments, getLibraryContextFuture(library, auth, request))
       },
       unauthenticatedAction = { request =>
-        execSearch(nonUser, request.acceptLanguages.map(_.code), Set[ExperimentType](), getLibraryContext(library, auth, request))
+        execSearch(nonUser, request.acceptLanguages.map(_.code), Set[ExperimentType](), getLibraryContextFuture(library, auth, request))
       }
     )
   }
