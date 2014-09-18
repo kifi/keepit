@@ -135,6 +135,8 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
 
   import KifiResultCollector._
 
+  require(matchingThreshold <= 1.0f)
+
   private[this] val hits = createQueue(maxHitsPerCategory)
 
   override def collect(ctx: ScoreContext): Unit = {
@@ -145,12 +147,7 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
       val score = ctx.score() * matching
       if (score > 0.0f) {
         hits.insert(ctx.id, score, score, Visibility.OTHERS | (ctx.visibility & Visibility.HAS_SECONDARY_ID), ctx.secondaryId)
-        log.info(s"NE: collected id=${ctx.id} id2=${ctx.secondaryId} vis=${ctx.visibility} match=$matching scr=${ctx.score}")
-      } else {
-        log.info(s"NE: rejected by score id=${ctx.id} id2=${ctx.secondaryId} vis=${ctx.visibility} match=$matching scr=${ctx.score}")
       }
-    } else {
-      log.info(s"NE: rejected by matching id=${ctx.id} id2=${ctx.secondaryId} vis=${ctx.visibility} match=$matching scr=${ctx.score}")
     }
   }
 

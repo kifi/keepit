@@ -43,7 +43,7 @@ class KifiSearchNonUserImpl(
       if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
     }
 
-    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch)
+    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiNonUserResultCollector created (${timeLogs.elapsed()})")
     engine.join(collector)
     log.info(s"NE: KifiNonUserResultCollector joined (${timeLogs.elapsed()})")
