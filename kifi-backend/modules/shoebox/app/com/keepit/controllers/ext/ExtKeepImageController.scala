@@ -15,6 +15,7 @@ class ExtKeepImageController @Inject() (
     keepImageCommander: KeepImageCommander,
     keepRepo: KeepRepo,
     userRepo: UserRepo,
+    libraryRepo: LibraryRepo,
     db: Database,
     imageInfoRepo: ImageInfoRepo) extends ShoeboxServiceController {
 
@@ -50,7 +51,26 @@ class ExtKeepImageController @Inject() (
     }
   }
 
-  def loadPrevImageForKeep(libraryId: Id[Library], take: Int, drop: Int) = Action.async { request =>
+  def loadPrevImageForKeep(startUserId: Long, endUserId: Long, take: Int, drop: Int) = Action.async { request =>
+
+    (startUserId to endUserId).map { userLong =>
+      val userId = Id[User](userLong)
+      val libraryIds = db.readOnlyReplica { implicit session =>
+        libraryRepo.getByUser(userId).map(_._2.id.get)
+      }
+      libraryIds.map { libraryId =>
+        val keepCount = keepRepo.getCountByLibrary(libraryId)
+        (0 to keepCount by 1000).map { batchStart =>
+          val keepIds = keepRepo.getByLibrary(libraryId, 1000, batchStart).map(_.id.get)
+          keepIds.map { keepId =>
+            keepImageCommander.autoSetKeepImage(keepId, localOnly = true, overwriteExistingChoice = false)
+          }
+        }
+      }
+    }
+
+
+
     val keeps = db.readOnlyReplica { implicit session =>
       keepRepo.getByLibrary(libraryId, take, drop)
     }
