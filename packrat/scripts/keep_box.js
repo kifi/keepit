@@ -91,7 +91,9 @@ var keepBox = keepBox || (function () {
     }
   }
 
+  var hideTimeout;
   function hide(e, trigger) {
+    clearTimeout(hideTimeout), hideTimeout = null;
     log('[keepBox:hide]');
     // api.port.off(handlers);
     $(document).data('esc').remove(hide);
@@ -130,9 +132,7 @@ var keepBox = keepBox || (function () {
         }
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        setTimeout(function () {
-          $new.find('input,textarea').focus();
-        });
+        ($new.find('textarea')[0] || $new.find('input')).focus();
       }
     });
   }
@@ -145,7 +145,7 @@ var keepBox = keepBox || (function () {
       var lib = libs[i];
       var keep = keeps.find(libraryIdIs(lib.id));
       if (keep) {
-        lib.removable = keep.removable;
+        lib.keep = keep;
         inLibs.push(lib);
       } else {
         otherLibs.push(lib);
@@ -231,8 +231,8 @@ var keepBox = keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-save', function (e) {
       if (e.which === 1) {
-        $box.data('keepPage')($(this).prevAll('.kifi-keep-box-lib').data('id'));
-        hide(e, 'action');
+        saveKeep($view, $(this), $view.find('.kifi-keep-box-lib').data('id'));
+        // hide(e, 'action');
       }
     });
   }
@@ -243,7 +243,8 @@ var keepBox = keepBox || (function () {
   }
 
   function highlightLibrary(el) {
-    $(el).addClass('kifi-highlighted').siblings('.kifi-highlighted').removeClass('kifi-highlighted');
+    $(el).closest('.kifi-keep-box-libs').find('.kifi-highlighted').removeClass('kifi-highlighted');
+    el.classList.add('kifi-highlighted');
   }
 
   function chooseLibrary(el) {
@@ -252,13 +253,55 @@ var keepBox = keepBox || (function () {
       var $view = $(render('html/keeper/keep_box_keep', {
         library: $(el).closest('.kifi-keep-box-view').data('librariesById')[libraryId],
         static: true,
-        title: document.title,
+        kept: el.classList.contains('kifi-kept'),
+        title: authoredTitle(), // TODO: actual keep title if already kept
         site: document.location.hostname
       }, {
         keep_box_lib: 'keep_box_lib'
       }));
       addKeepBindings($view);
       swipeTo($view);
+    }
+  }
+
+  function saveKeep($view, $save, libraryId) {
+    var $title = $view.find('.kifi-keep-box-keep-title');
+    var $comment = $view.find('.kifi-keep-box-keep-comment');
+    var title = $title.val().trim();
+    if (title) {
+      $title.add($comment).prop('disabled', true);
+      $save.addClass('kifi-doing');
+      $box.data('keepPage')({libraryId: libraryId, title: title}, function (success) {
+        log('[saveKeep]', success ? 'success' : 'error');
+        clearTimeout(saveProgressTimeout), saveProgressTimeout = null;
+        $save.removeClass('kifi-doing');
+        if (success) {
+          $save.addClass('kifi-done');
+          $view.find('.kifi-keep-box-lib-head').addClass('kifi-kept');
+          clearTimeout(hideTimeout);
+          hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1600);
+        } else {
+          $save.prop('href', 'javascript:').one('transitionend', function () {
+            $progress.css('width', 0);
+            $save.removeClass('kifi-fail');
+          }).addClass('kifi-fail');
+        }
+      });
+      $save.removeAttr('href');
+      var $progress = $save.find('.kifi-keep-box-save-progress');
+      updateSaveProgress.call($progress[0], 0);
+    } else {
+      $title.focus().select();
+    }
+  }
+
+  var saveProgressTimeout;
+  function updateSaveProgress(frac) {
+    log('[updateSaveProgress]', frac);
+    this.style.width = Math.min(frac * 100, 100) + '%';
+    var fracLeft = .9 - frac;
+    if (fracLeft > .0001) {
+      saveProgressTimeout = setTimeout(updateSaveProgress.bind(this, frac + .06 * fracLeft), 10);
     }
   }
 

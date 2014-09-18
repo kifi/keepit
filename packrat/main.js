@@ -542,7 +542,7 @@ api.port.on({
     var d = pageData[tab.nUri];
     respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: 0} : {keepers: []});
   },
-  keep: function (data, _, tab) {
+  keep: function (data, respond, tab) {
     log('[keep]', data);
     var d = pageData[tab.nUri];
     if (!d) {
@@ -573,6 +573,7 @@ api.port.on({
           d.keeps.push(keep);
         }
         var how = d.howKept();
+        respond(true);
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(!!how, tab);
           api.tabs.emit(tab, 'kept', {kept: how});
@@ -581,6 +582,7 @@ api.port.on({
       }, function fail(o) {
         log('[keep:fail]', data.url, o);
         delete d.state;
+        respond();
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
         });

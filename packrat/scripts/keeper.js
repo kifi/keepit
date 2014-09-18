@@ -125,7 +125,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         if (this.parentNode.classList.contains('kifi-keep-side')) {
-          keepPage(null, e.originalEvent.guided); // TODO: send library ID
+          keepPage({title: authoredTitle(), guided: e.originalEvent.guided}); // TODO: send library ID
         } else {
           showKeepBox();
         }
@@ -307,10 +307,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
-  function keepPage(libraryId, guided) {
-    log('[keepPage]', libraryId, guided ? 'guided' : '');
+  function keepPage(data, callback) {
+    log('[keepPage]', data);
     justKept = true;
-    api.port.emit('keep', withUrls({title: authoredTitle(), libraryId: libraryId, guided: guided}));
+    api.port.emit('keep', withUrls(data), callback, callback);
   }
 
   function unkeepPage(libraryId) {
