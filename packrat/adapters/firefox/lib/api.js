@@ -195,15 +195,6 @@ var onRequestEnd = errors.wrap(function onRequestEnd(done, fail, resp) {
   }
 });
 
-exports.postRawAsForm = function(url, data) {
-  var options = {
-    url: url,
-    contentType: 'application/x-www-form-urlencoded',
-    content: data
-  }
-  require('sdk/request').Request(options).post();
-};
-
 exports.util = {
   btoa: function(str) {
     return require('sdk/base64').encode(str);

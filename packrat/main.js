@@ -219,7 +219,7 @@ var tracker = {
   batch: [],
   sendBatch: function () {
     if (this.batch.length > 0) {
-      ajax('POST', '/ext/events', this.batch.slice(0));
+      ajax('POST', '/ext/events', this.batch);
       this.batch.length = 0;
     }
   },
