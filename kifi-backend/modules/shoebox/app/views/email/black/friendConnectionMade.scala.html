@@ -1,4 +1,7 @@
-@(toUserId: Id[User], otherUserId: Id[User], category: com.keepit.model.NotificationCategory)
+@(toUserId: Id[User],
+  otherUserId: Id[User],
+  category: com.keepit.model.NotificationCategory,
+  networkNameOpt: Option[String] = None)
 @import com.keepit.common.mail.template.helpers._
 @import com.keepit.model.NotificationCategory.User._
 
@@ -22,11 +25,19 @@
 
         <tr>
           <td align="left" valign="middle" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:23px;">
-            @if(category == CONNECTION_MADE) {
-            You are now friends with @fullName(otherUserId) on Kifi. Enjoy @firstName(otherUserId)’s
-            keeps in your search results and message @firstName(otherUserId) directly on any page!
-            } else {
-            @firstName(otherUserId) accepted your Kifi friend request.
+            @category match {
+              case SOCIAL_FRIEND_JOINED => {
+                Your @networkNameOpt.getOrElse("") friend @firstName(otherUserId) just joined Kifi
+              }
+
+              case FRIEND_ACCEPTED => {
+                @firstName(otherUserId) accepted your Kifi friend request.
+              }
+
+              case _ => {
+                You are now friends with @fullName(otherUserId) on Kifi. Enjoy @firstName(otherUserId)’s
+                keeps in your search results and message @firstName(otherUserId) directly on any page!
+              }
             }
           </td>
         </tr>

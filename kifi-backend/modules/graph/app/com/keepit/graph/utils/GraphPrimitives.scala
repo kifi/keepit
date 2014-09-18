@@ -1,5 +1,6 @@
 package com.keepit.graph.utils
 
+import com.keepit.graph.model.Component.Component
 import com.keepit.graph.model.{ VertexId, GlobalVertexReader }
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
@@ -18,5 +19,28 @@ object GraphPrimitives {
       }
     }
     neighbors.toSet
+  }
+}
+
+trait NeighborQuerier {
+  def getNeighbors(reader: GlobalVertexReader, component: Component, outGoing: Boolean): Set[VertexId] = {
+    val edgeReader = if (outGoing) {
+      reader.outgoingEdgeReader.reset()
+      reader.outgoingEdgeReader
+    } else {
+      reader.incomingEdgeReader.reset()
+      reader.incomingEdgeReader
+    }
+
+    val nbs = mutable.Set[VertexId]()
+
+    while (edgeReader.moveToNextComponent()) {
+      if (edgeReader.component == component) {
+        while (edgeReader.moveToNextEdge()) {
+          nbs += edgeReader.destination
+        }
+      }
+    }
+    nbs.toSet
   }
 }

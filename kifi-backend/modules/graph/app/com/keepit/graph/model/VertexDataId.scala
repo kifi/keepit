@@ -41,4 +41,7 @@ object VertexDataId {
 
   implicit def fromABookId(abookId: Id[ABookInfo]): VertexDataId[AddressBookReader] = VertexDataId(abookId.id)
   implicit def toABookId(addressBookReaderId: VertexDataId[AddressBookReader]): Id[ABookInfo] = Id(addressBookReaderId.id)
+
+  implicit def fromLibraryId(libId: Id[Library]): VertexDataId[LibraryReader] = VertexDataId(libId.id)
+  implicit def toLibraryId(libReaderId: VertexDataId[LibraryReader]): Id[Library] = Id(libReaderId.id)
 }

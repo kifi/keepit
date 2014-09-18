@@ -1,6 +1,7 @@
 package com.keepit.common.controller
 
-import com.google.inject.{ Singleton, Provides }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ User, ExperimentType }
@@ -15,7 +16,8 @@ case class FakeUserActionsModule() extends UserActionsModule {
 }
 
 @Singleton
-class FakeUserActionsHelper() extends UserActionsHelper with Logging {
+class FakeUserActionsHelper @Inject() (
+    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with Logging {
 
   var fixedUser: Option[User] = None
   var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
@@ -29,7 +31,7 @@ class FakeUserActionsHelper() extends UserActionsHelper with Logging {
 
   override def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = fixedUser.flatMap(_.id)
   def getUserOpt(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
-  def isAdmin(userId: Id[User]): Boolean = fixedExperiments.contains(ExperimentType.ADMIN)
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
 
 }

@@ -39,11 +39,11 @@ class KifiSearchNonUserImpl(
     log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
       if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
     }
 
-    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch)
+    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
     log.info(s"NE: KifiNonUserResultCollector created (${timeLogs.elapsed()})")
     engine.join(collector)
     log.info(s"NE: KifiNonUserResultCollector joined (${timeLogs.elapsed()})")
@@ -52,7 +52,7 @@ class KifiSearchNonUserImpl(
   }
 
   def execute(): KifiShardResult = {
-    val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn)
 
     val total = textHits.totalHits
     val hits = createQueue(numHitsToReturn)

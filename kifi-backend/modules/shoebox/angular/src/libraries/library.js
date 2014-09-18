@@ -2,9 +2,8 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', [
-  '$scope', '$rootScope', 'keepDecoratorService','$routeParams', 'libraryService', 'util', '$location',
-  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util, $location) {
+.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util', 
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
     //
     // Internal data.
     //
@@ -63,6 +62,15 @@ angular.module('kifi')
         }
       };
       $rootScope.$emit('showGlobalModal', 'manageLibrary');
+    };
+
+    $scope.canBeShared = function (library) {
+      // Only user created (i.e. not Main or Secret) libraries can be shared.
+      // Of the user created libraries, public libraries can be shared by any Kifi user;
+      // discoverable/secret libraries can be shared only by the library owner.
+      return library.kind === 'user_created' && 
+             (library.visibility === 'published' ||
+              library.ownerId === profileService.me.id);
     };
 
     $scope.getSubtitle = function () {
@@ -135,154 +143,5 @@ angular.module('kifi')
       $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
       $scope.loading = false;
     });
-  }
-])
-
-.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService',
-  function ($document, friendService, keyIndices, libraryService) {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        library: '='
-      },
-      templateUrl: 'libraries/libraryShareSearch.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        //
-        // Internal data.
-        //
-        var resultIndex = -1;
-
-        //
-        // Scope data.
-        //
-        scope.results = [];
-        scope.search = {};
-        scope.showDropdown = false;
-
-
-        //
-        // Internal methods.
-        //
-        function showDropdown() {
-          scope.showDropdown = true;
-          $document.on('click', onClick);
-          resultIndex = -1;
-          clearSelection();
-        }
-
-        function hideDropdown() {
-          scope.showDropdown = false;
-          $document.off('click', onClick);
-        }
-
-        function onClick(e) {
-          // Clicking outside the dropdown menu will close the menu.
-          if (!element.find(e.target)[0]) {
-            scope.$apply(function () {
-              scope.search.name = '';
-              hideDropdown();
-            });
-          }
-        }
-
-        function clearSelection () {
-          scope.results.forEach(function (result) {
-            result.selected = false;
-          });
-        }
-
-        function populateDropDown(opt_query) {
-          libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
-            if (contacts && contacts.length) {
-              scope.results = contacts;
-
-              scope.results.forEach(function (result) {
-                if (result.id) {
-                  result.image = friendService.getPictureUrlForUser(result);
-                }
-              });
-
-              if (scope.results.length > 0) {
-                showDropdown();
-              } else {
-                hideDropdown();
-              }
-            } else {
-              // TODO(yiping): show backfill cards when length is less than 5.
-              scope.results = [];
-            }
-          });
-        }
-
-
-        //
-        // Scope methods.
-        //
-        scope.onInputFocus = function () {
-          // For empty state (when user has not inputted a query), show the contacts
-          // that the user has most recently sent messages to.
-          if (!scope.search.name) {
-            populateDropDown();
-          }
-        };
-
-        scope.change = _.debounce(function () {
-          populateDropDown(scope.search.name);
-        }, 200);
-
-        scope.processKeyEvent = function ($event) {
-          function getNextIndex(index, direction) {
-            var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.results.length - 1) ? index : nextIndex;
-          }
-
-          switch ($event.keyCode) {
-            case keyIndices.KEY_UP:
-              clearSelection();
-              resultIndex = getNextIndex(resultIndex, -1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_DOWN:
-              clearSelection();
-              resultIndex = getNextIndex(resultIndex, 1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_ENTER:
-              clearSelection();
-              scope.shareLibrary(scope.results[resultIndex]);
-
-              // After sharing, reset index.
-              resultIndex = -1;
-              break;
-            case keyIndices.KEY_ESC:
-              hideDropdown();
-              break;
-          }
-        };
-
-        scope.shareLibrary = function (result) {
-          // For now, we are only supporting inviting one person at a time.
-          var invitees = [
-            {
-              type: result.id ? 'user' : 'email',
-              id: result.id ? result.id : result.email,
-              access: 'read_only'  // Right now, we're only supporting read-only access.
-            }
-          ];
-
-          // TODO(yiping): implement error path.
-          libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
-            result.sent = true;
-          });
-        };
-
-        scope.onResultHover = function (result) {
-          clearSelection();
-          result.selected = true;
-          resultIndex = _.indexOf(scope.results, result);
-        };
-      }
-    };
   }
 ]);

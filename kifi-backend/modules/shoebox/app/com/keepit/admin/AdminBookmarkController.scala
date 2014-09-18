@@ -115,13 +115,14 @@ class AdminBookmarksController @Inject() (
 
     val (mainLib, secretLib) = db.readWrite { s => libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(s) }
     def getLibFromPrivacy(isPrivate: Boolean) = {
-      if (isPrivate) Some(secretLib.id.get) else Some(mainLib.id.get)
+      if (isPrivate) secretLib else mainLib
     }
 
     def setIsPrivate(id: Id[Keep], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
       val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      keepRepo.save(bookmark.copy(visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = getLibFromPrivacy(isPrivate)))
+      val lib = getLibFromPrivacy(isPrivate)
+      keepRepo.save(bookmark.copy(visibility = lib.visibility, libraryId = Some(lib.id.get)))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }

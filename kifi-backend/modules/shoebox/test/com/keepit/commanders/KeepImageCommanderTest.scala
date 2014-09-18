@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 
@@ -25,8 +26,18 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     new BufferedImage(width, height, BufferedImage.TYPE_BYTE_BINARY)
   }
 
-  lazy val fakeFile1 = TemporaryFile(new File("test/data/image1.png"))
-  lazy val fakeFile2 = TemporaryFile(new File("test/data/image2.png"))
+  def fakeFile1 = {
+    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+    tf
+  }
+  def fakeFile2 = {
+    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
+    tf.file.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
+    tf
+  }
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val user = userRepo.save(User(firstName = "Shamdrew", lastName = "Bronner"))
@@ -178,12 +189,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         {
           val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
@@ -203,13 +214,13 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
 
         inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 4
         // Dependant on image1.png — if changed, this needs to change too.
-        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "/keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
+        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
 
         val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ImageSize(100, 100))
         keepImage2.get.id !== keepImage3.get.id
@@ -217,7 +228,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
 

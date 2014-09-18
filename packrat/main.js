@@ -749,13 +749,6 @@ api.port.on({
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
-  stop_showing_keeper_intro: function() {
-    ajax('POST', '/ext/pref/showKeeperIntro?show=false');
-    api.tabs.each(function (tab) {
-      api.tabs.emit(tab, 'hide_keeper_intro');
-    });
-    if (prefs) prefs.showKeeperIntro = false;
-  },
   stop_showing_external_messaging_intro: function(action) {
     ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
     api.tabs.each(function (tab) {
@@ -777,10 +770,6 @@ api.port.on({
       subchannel: 'tooltip',
       category: 'extMsgFTUE'
     });
-  },
-  set_show_search_intro: function(show) {
-    ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
-    if (prefs) prefs.showSearchIntro = show;
   },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
@@ -1837,8 +1826,7 @@ function kififyWithPageData(tab, d) {
     kept: d.kept,
     position: d.position,
     hide: hide,
-    tags: d.tags,
-    showKeeperIntro: prefs && prefs.showKeeperIntro
+    tags: d.tags
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)

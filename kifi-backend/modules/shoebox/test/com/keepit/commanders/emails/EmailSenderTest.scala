@@ -14,6 +14,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ NotificationCategory, User, UserRepo, PasswordResetRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
 
@@ -59,14 +60,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   }
 
   "FriendRequestMadeEmailSender" should {
-    def testFriendConnectionMade(toUser: User, category: NotificationCategory)(implicit injector: Injector) = {
+    def testFriendConnectionMade(toUser: User, category: NotificationCategory, network: Option[SocialNetworkType] = None)(implicit injector: Injector) = {
       val outbox = inject[FakeOutbox]
       val sender = inject[FriendConnectionMadeEmailSender]
       val friendUser = db.readWrite { implicit rw =>
         inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
       }
 
-      val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category), Duration(5, "seconds"))
+      val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category, network), Duration(5, "seconds"))
       outbox.size === 1
       outbox(0) === email
 
@@ -105,7 +106,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
           val text = email.textBody.get.value
           text must contain("Billy accepted your Kifi")
-          text must contain("You and Billy Madison are now")
         }
       }
 
@@ -133,12 +133,48 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
           val text = email.textBody.get.value
           text must contain("Billy accepted your Kifi")
-          text must contain("You and Billy Madison are now")
         }
       }
     }
 
-    "connection made email" in {
+    "connection made email for new user from Facebook/LinkedIn" in {
+      Seq(
+        (SocialNetworks.FACEBOOK, "Facebook"),
+        (SocialNetworks.LINKEDIN, "LinkedIn")
+      ).map {
+          case (network, networkName) => withDb(modules: _*) { implicit injector =>
+            val (toUser, friends) = db.readWrite { implicit rw =>
+              (
+                inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
+                inject[ShoeboxTestFactory].createUsers()
+              )
+            }
+
+            val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+            abook.addFriendRecommendationsExpectations(toUser.id.get,
+              Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
+
+            val email = testFriendConnectionMade(toUser, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(network))
+            val html = email.htmlBody.value
+            val text = email.textBody.get.value
+            email.subject === s"Your $networkName friend Billy just joined Kifi"
+            html must contain("utm_campaign=socialFriendJoined")
+            html must contain("You and Billy Madison are now")
+            html must contain(s"Your $networkName friend Billy just joined Kifi")
+
+            // weak PYMK tests (just make sure it's there)
+            html must contain("Aaron")
+            html must contain("Bryan")
+            html must contain("Anna")
+            html must contain("Dean")
+
+            text must contain("You and Billy Madison are now")
+            text must contain(s"Your $networkName friend Billy just joined Kifi")
+          }
+        }
+    }
+
+    "connection made email for old user" in {
 
       "sends with PYMK" in {
         withDb(modules: _*) { implicit injector =>
@@ -167,7 +203,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           html must contain("Anna")
           html must contain("Dean")
 
-          text must contain("You and Billy Madison are now")
           text must contain("now friends with Billy Madison on Kifi. Enjoy Billy's")
           text must contain("message Billy directly")
         }

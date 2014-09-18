@@ -1,19 +1,23 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail._
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.model._
+import com.keepit.model.{ User, UserRepo }
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.Await
 
 class SendFriendConnectionMadeNotificationHelperTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val userRepo = inject[UserRepo]
-    val emailRepo = inject[UserEmailAddressRepo]
-    val connectionRepo = inject[UserConnectionRepo]
 
     db.readWrite { implicit session =>
       val user1 = userRepo.save(User(
@@ -34,20 +38,21 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
   val modules = Seq(
     FakeMailModule(),
     FakeShoeboxStoreModule(),
-    FakeExternalServiceModule()
+    FakeExternalServiceModule(),
+    FakeSocialGraphModule(),
+    FakeScrapeSchedulerModule(),
+    FakeABookServiceClientModule()
   )
 
   "FriendConnectionMadeHelper" should {
 
     "sends email and notification to friend" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val ctx = scala.concurrent.ExecutionContext.global
-
         val outbox = inject[FakeOutbox]
         val (user1, user2) = setup()
 
         val helper = inject[SendFriendConnectionMadeNotificationHelper]
-        helper(user2.id.get, user1.id.get).map { id => id } // map waits for the Future
+        Await.ready(helper(user2.id.get, user1.id.get), Duration(5, "seconds"))
 
         //content check
         val htmlBody: String = outbox(0).htmlBody.toString
@@ -57,9 +62,9 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
         outbox(0).to === Seq(EmailAddress("homer@gmail.com"))
         outbox(0).fromName === Some("Peter Griffin (via Kifi)")
         htmlBody must contain("with Peter Griffin on Kifi")
-        htmlBody must contain("Enjoy Peter’s keeps")
+        htmlBody must contain("Enjoy Peter’s")
         textBody must contain("with Peter Griffin on Kifi")
-        textBody must contain("Enjoy Peter’s keeps")
+        textBody must contain("Enjoy Peter's")
         outbox.size === 1
       }
     }

@@ -5,12 +5,15 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.time.Clock
-import com.keepit.model.{ LibraryAccess, LibraryKind, Library, User }
+import com.keepit.model.{ LibraryAccess, LibraryKind, Library, User, NormalizedURI }
+
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[CuratorLibraryMembershipInfoRepoImpl])
 trait CuratorLibraryMembershipInfoRepo extends DbRepo[CuratorLibraryMembershipInfo] {
   def getByUserAndLibraryId(userId: Id[User], libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo]
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]]
+  def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]]
 }
 
 @Singleton
@@ -41,5 +44,26 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
 
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
     (for (row <- rows if row.userId === userId && row.state === CuratorLibraryMembershipInfoStates.ACTIVE) yield row.libraryId).list.distinct
+  }
+
+  def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]] = {
+    import StaticQuery.interpolation
+    sql"""
+      SELECT libs.library_id
+      FROM curator_keep_info keeps, curator_library_membership_info libs
+      WHERE
+        keeps.library_id=libs.library_id
+        AND
+        keeps.uri_id=$uriId
+        AND
+        libs.user_id=$userId
+        AND
+        keeps.state='active'
+        AND
+        libs.state='active'
+        AND
+        libs.library_access='read_only';
+    """.as[Id[Library]].list.toSet
+
   }
 }

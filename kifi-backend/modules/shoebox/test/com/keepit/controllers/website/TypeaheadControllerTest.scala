@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -30,6 +31,7 @@ import com.keepit.common.core._
 class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
+    FakeHttpClientModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
