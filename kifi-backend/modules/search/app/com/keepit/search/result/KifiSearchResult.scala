@@ -75,7 +75,8 @@ object KifiSearchResult extends Logging {
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
         "cutPoint" -> JsNumber(cutPoint),
-        "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+        "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
+        "context" -> JsString(context)
       )))
     } catch {
       case e: Throwable =>
