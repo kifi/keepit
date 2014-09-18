@@ -59,6 +59,16 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 GET     /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOut(publicId: String)
 POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOutAction(publicId: String)
 
+
+##########################################
+# Tracking
+##########################################
+
+POST   /site/events                          @com.keepit.controllers.tracking.EventProxyController.track()
+POST   /ext/events                          @com.keepit.controllers.tracking.EventProxyController.track()
+POST   /m/1/events                           @com.keepit.controllers.tracking.EventProxyController.track()
+
+
 ##########################################
 # Extension API
 ##########################################
