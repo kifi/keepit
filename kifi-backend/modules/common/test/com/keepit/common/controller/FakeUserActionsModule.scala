@@ -17,7 +17,6 @@ case class FakeUserActionsModule() extends UserActionsModule {
 
 @Singleton
 class FakeUserActionsHelper @Inject() (
-    val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with Logging {
 
   var fixedUser: Option[User] = None

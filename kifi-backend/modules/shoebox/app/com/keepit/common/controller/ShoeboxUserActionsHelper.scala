@@ -18,7 +18,6 @@ class ShoeboxUserActionsHelper @Inject() (
     airbrake: AirbrakeNotifier,
     userRepo: UserRepo,
     userExperimentCommander: LocalUserExperimentCommander,
-    val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with Logging {
 
   def isAdmin(userId: Id[User]): Boolean = {

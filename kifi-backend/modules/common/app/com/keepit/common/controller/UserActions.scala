@@ -25,8 +25,6 @@ case class UserRequest[T](
 
 trait UserActionsHelper {
 
-  def impersonateCookie: ImpersonateCookie
-
   def kifiInstallationCookie: KifiInstallationCookie
 
   def isAdmin(userId: Id[User]): Boolean
@@ -37,10 +35,6 @@ trait UserActionsHelper {
 
   def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = {
     request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) // check with mobile
-  }
-
-  def getImpersonatedUserIdOpt(implicit request: Request[_]): Option[ExternalId[User]] = {
-    impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
   }
 
   def getKifiInstallationIdOpt(implicit request: Request[_]): Option[ExternalId[KifiInstallation]] = {
@@ -62,15 +56,11 @@ trait UserActions { self: Controller =>
       userActionsHelper.getKifiInstallationIdOpt
     )
 
-  private def getOrigin[A](request: Request[A]): Option[String] = {
+  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
-    }
-  }
-
-  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
-    getOrigin(request) map { h =>
+    } map { h =>
       res.withHeaders(
         "Access-Control-Allow-Origin" -> h,
         "Access-Control-Allow-Credentials" -> "true"
