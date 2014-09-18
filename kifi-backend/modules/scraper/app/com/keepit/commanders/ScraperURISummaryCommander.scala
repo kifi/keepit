@@ -78,9 +78,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
+    val watch = Stopwatch(s"[embedly] fetchFromEmbedly for $nUri")
     log.info(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
-    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-
+    val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
       log.info(s"[embedly] for uri $nUri got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
       val summary = for {
@@ -113,7 +113,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
               Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
             case Some(image) =>
               log.info(s"[embedly] got a selected image for ${nUriId.id} : $image")
-              timing(s"[embedly] fetching ${smallImages.size} selecteed image of ${nUriId.id}") {
+              timing(s"[embedly] fetching selecteed image of ${nUriId.id}: $image") {
                 fetchAndInternImage(nUri, image) map { imageInfoOpt =>
                   val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
                   val widthOpt = imageInfoOpt.flatMap(_.width)
@@ -124,10 +124,12 @@ class ScraperURISummaryCommanderImpl @Inject() (
           }
         }
       }
-
       summary getOrElse Future.successful(None)
-
     }
+    fullEmbedlyInfo.onComplete { res =>
+      watch.stop()
+    }
+    fullEmbedlyInfo
   }
 
 }
