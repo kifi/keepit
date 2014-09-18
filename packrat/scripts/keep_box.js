@@ -240,15 +240,6 @@ var keepBox = keepBox || (function () {
   function showLibs($new) {
     highlightLibrary($new.find('.kifi-keep-box-lib')[0]);
     $box.find('.kifi-keep-box-libs').replaceWith($new);
-    // $box.find('.kifi-keep-box-libs')
-    // .filter(':not(:last-child)').remove().end()
-    // .filter(':last-child').on('transitionend', function (e) {
-    //   log('[transitionend]', e.target === this, e.originalEvent.propertyName);
-    //   if (e.target === this && e.originalEvent.propertyName === 'opacity') {
-    //     $(this).remove();
-    //   }
-    // })
-    // .after($new);
   }
 
   function highlightLibrary(el) {
