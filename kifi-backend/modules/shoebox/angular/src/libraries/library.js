@@ -2,17 +2,8 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', [
-  '$scope',
-  '$rootScope',
-  '$location',
-  '$routeParams',
-  'keepDecoratorService',
-  'libraryService',
-  'profileService',
-  'util', 
-  function ($scope, $rootScope, $location, $routeParams,
-            keepDecoratorService, libraryService, profileService, util) {
+.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util', 
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
     //
     // Internal data.
     //

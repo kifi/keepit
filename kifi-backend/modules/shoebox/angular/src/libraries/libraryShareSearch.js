@@ -2,13 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryShareSearch', [
-  '$document',
-  'friendService',
-  'keyIndices',
-  'libraryService',
-  'socialService',
-  'util',
+.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'util',
   function ($document, friendService, keyIndices, libraryService, socialService, util) {
     return {
       restrict: 'A',
