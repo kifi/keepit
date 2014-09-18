@@ -99,7 +99,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   }
   def get(id: Id[M])(implicit session: RSession): M = {
     val startTime = System.currentTimeMillis()
-    val model = getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException("can't find $id in ${_taggedTable.tableName}"))
+    val model = getCompiled(id).firstOption.getOrElse(throw new IllegalArgumentException(s"can't find $id in ${_taggedTable.tableName}"))
     val time = System.currentTimeMillis - startTime
     checkTiming(time, "GET", model)
     model
