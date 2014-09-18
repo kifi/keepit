@@ -31,7 +31,7 @@ class FakeUserActionsHelper @Inject() (
 
   override def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = fixedUser.flatMap(_.id)
   def getUserOpt(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
-  def isAdmin(userId: Id[User]): Boolean = fixedExperiments.contains(ExperimentType.ADMIN)
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
 
 }

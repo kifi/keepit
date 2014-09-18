@@ -1,6 +1,6 @@
 package com.keepit.common.controller
 
-import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
@@ -27,7 +27,7 @@ trait UserActionsHelper {
 
   def kifiInstallationCookie: KifiInstallationCookie
 
-  def isAdmin(userId: Id[User]): Boolean
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean]
 
   def getUserOpt(implicit request: Request[_]): Future[Option[User]]
 

@@ -2,7 +2,7 @@ package com.keepit.common.controller
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -20,7 +20,7 @@ class ShoeboxUserActionsHelper @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with Logging {
 
-  def isAdmin(userId: Id[User]): Boolean = {
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 
