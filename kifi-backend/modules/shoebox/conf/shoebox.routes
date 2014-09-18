@@ -59,19 +59,11 @@ GET     /admin/unsubscribe          @com.keepit.controllers.website.EmailOptOutC
 GET     /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOut(publicId: String)
 POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUserMuteController.optOutAction(publicId: String)
 
-
-##########################################
-# Tracking
-##########################################
-
-POST   /site/events                          @com.keepit.controllers.tracking.EventProxyController.track()
-POST   /ext/events                          @com.keepit.controllers.tracking.EventProxyController.track()
-POST   /m/1/events                           @com.keepit.controllers.tracking.EventProxyController.track()
-
-
 ##########################################
 # Extension API
 ##########################################
+
+POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
 POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
 # Note: /bookmarks/add is now for browser bookmark imports only
@@ -133,6 +125,9 @@ DELETE  /ext/libraries/:id/keeps/:keepId @com.keepit.controllers.ext.ExtLibraryC
 ##########################################
 # Mobile
 ##########################################
+
+POST    /m/1/events                         @com.keepit.controllers.tracking.EventProxyController.track()
+
 GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
 
 GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
@@ -239,6 +234,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 # Web API
 ##########################################
 
+POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
