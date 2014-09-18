@@ -97,22 +97,30 @@ angular.module('kifi')
               }
 
               if (contacts.length < 5) {
-                scope.results.push({
-                  custom: 'email'
-                });
+                scope.results.push({ custom: 'email' });
               }
             } else {
               scope.results = [
-                {custom: 'email'},
-                {custom: 'importGmail'}
+                { custom: 'email' },
+                { custom: 'importGmail', actionable: true}
               ];
 
               if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
                 resultIndex = 0;
                 scope.results[resultIndex].selected = true;
+                scope.results[resultIndex].actionable = true;
               }
             }
           });
+        }
+
+        function shareLibrary(opts) {
+          if (scope.share.message) {
+            opts.message = scope.share.message;
+          }
+
+          // TODO(yiping): implement error path.
+          return libraryService.shareLibrary(scope.library.id, opts);
         }
 
 
@@ -142,6 +150,16 @@ angular.module('kifi')
         scope.onSearchInputChange = _.debounce(function () {
           populateDropDown(scope.search.name);
         }, 200);
+
+        scope.onResultHover = function (result) {
+          clearSelection();
+          result.selected = true;
+          resultIndex = _.indexOf(scope.results, result);
+        };
+
+        scope.onResultUnhover = function (result) {
+          result.selected = false;
+        };
 
         scope.processKeyEvent = function ($event) {
           function getNextIndex(index, direction) {
@@ -177,49 +195,46 @@ angular.module('kifi')
           }
         };
 
-        scope.shareLibrary = function (result) {
-          // Validate custom (new) email.
-          if (result.custom && result.custom === 'email') {
-            if (!util.validateEmail(scope.search.name)) {
-              return;
-            }
-          }
-
-          // For import Gmail contacts.
-          if (result.custom && result.custom === 'importGmail') {
-            socialService.importGmail();
-          }
-
-          
-          var opts = {
-            invites: [
-              // For now, we are only supporting inviting one person at a time.
-              {
-                type: result.id ? 'user' : 'email',
-                id: result.id ? result.id : (result.email ? result.email : scope.search.name),
-                access: 'read_only'  // Right now, we're only supporting read-only access.
-              }
-            ]
-          };
-
-          if (scope.share.message) {
-            opts.message = scope.share.message;
-          }
-
-          // TODO(yiping): implement error path.
-          libraryService.shareLibrary(scope.library.id, opts).then(function () {
+        scope.shareLibraryKifiFriend = function (result) {
+          return shareLibrary({
+            invites: [{
+              type: 'user',
+              id: result.id,
+              access: 'read_only'
+            }]
+          }).then(function () {
             result.sent = true;
           });
         };
 
-        scope.onResultHover = function (result) {
-          clearSelection();
-          result.selected = true;
-          resultIndex = _.indexOf(scope.results, result);
+        scope.shareLibraryExistingEmail = function (result) {
+          return shareLibrary({
+            invites: [{
+              type: 'email',
+              id: result.email,
+              access: 'read_only'
+            }]
+          }).then(function () {
+            result.sent = true;
+          });
         };
 
-        scope.onResultUnhover = function (result) {
-          result.selected = false;
+        scope.shareLibraryNewEmail = function () {
+          if (!util.validateEmail(scope.search.name)) {
+            return;
+          }
+
+          return shareLibrary({
+            invites: [{
+              type: 'email',
+              id: scope.search.name,
+              access: 'read_only'
+            }]
+          });
+        };
+
+        scope.importGmail = function () {
+          socialService.importGmail();
         };
       }
     };
