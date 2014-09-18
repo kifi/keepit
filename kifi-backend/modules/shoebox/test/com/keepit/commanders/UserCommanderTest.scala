@@ -269,17 +269,16 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         mail.subject must beEqualTo("Homer Simpson joined Kifi. Want to connect?")
 
         val htmlBody = mail.htmlBody.value
-        htmlBody must contain("Hey Jane")
-        htmlBody must contain("welcome Homer and add him")
-        htmlBody must contain("Add Homer")
+        htmlBody must contain("Hi Jane")
+        htmlBody must contain("Homer Simpson just joined")
         htmlBody must contain("/invite?friend=" + user1.externalId)
 
         val textBody = mail.textBody.get.value
-        textBody must contain("Hey Jane")
-        textBody must contain("welcome Homer and add him")
+        textBody must contain("Hi Jane")
+        textBody must contain("Homer Simpson just joined")
         textBody must contain("/invite?friend=" + user1.externalId)
 
-        NotificationCategory.fromElectronicMailCategory(mail.category) must beEqualTo(NotificationCategory.User.CONTACT_JOINED)
+        NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }
 
       "do nothing if no users are connected to a user's email" in withDb(modules: _*) { implicit injector =>

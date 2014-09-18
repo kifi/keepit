@@ -2,75 +2,91 @@ package com.keepit.common.social
 
 import java.io.File
 
+import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model._
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable._
 import play.api.libs.json.Json
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import util.Random
 
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
-  val modules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), FakeShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val modules = Seq(
+    FakeHttpClientModule(),
+    FakeShoeboxStoreModule(),
+    FakeShoeboxServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeMailModule(),
+    FakeABookServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    FakeSocialGraphModule()
+  )
 
   "UserConnectionCreator" should {
+    /*
+     * grab json
+     * import friends (create SocialUserInfo records)
+     * using json and one socialuserinfo, create connections
+     *
+     */
+    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
+
+    def setup(db: Database)(implicit injector: Injector) = {
+      val emailAddressRepo: UserEmailAddressRepo = inject[UserEmailAddressRepo]
+      val (myUser, mySocialUser) = db.readWrite { implicit s =>
+        val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+
+        emailAddressRepo.save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
+
+        val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+          fullName = "Andrew Conner",
+          socialId = SocialId("71105121"),
+          networkType = SocialNetworks.FACEBOOK
+        ).withUser(u))
+        (u, su)
+      }
+
+      val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
+
+      inject[SocialUserImportFriends].importFriends(mySocialUser, extractedFriends)
+
+      val (user, socialUserInfo) = db.readWrite { implicit c =>
+        val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith"))
+        val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
+          fullName = "Greg Smith",
+          socialId = SocialId("gsmith"),
+          networkType = SocialNetworks.FACEBOOK
+        ).withUser(user))
+        emailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("greg@gmail.com")))
+        (user, socialUserInfo)
+      }
+
+      (myUser, mySocialUser, user, socialUserInfo, extractedFriends)
+    }
+
     "create connections between friends for social users and kifi users" in {
       withDb(modules: _*) { implicit injector =>
 
-        val outbox = inject[FakeOutbox]
-
-        /*
-         * grab json
-         * import friends (create SocialUserInfo records)
-         * using json and one socialuserinfo, create connections
-         *
-         */
-        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
-
-        val socialUser = inject[Database].readWrite { implicit s =>
-          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
-
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
-
-          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
-            fullName = "Andrew Conner",
-            socialId = SocialId("71105121"),
-            networkType = SocialNetworks.FACEBOOK
-          ).withUser(u))
-          su
-        }
-
-        val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
-
-        inject[SocialUserImportFriends].importFriends(socialUser, extractedFriends)
-
-        val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
-          val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith"))
-          val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
-            fullName = "Greg Smith",
-            socialId = SocialId("gsmith"),
-            networkType = SocialNetworks.FACEBOOK
-          ).withUser(user))
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get, address = EmailAddress("greg@gmail.com")))
-          (user, socialUserInfo)
-        }
+        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = setup(db)
 
         val connections = inject[UserConnectionCreator].createConnections(socialUserInfo, extractedFriends.map(_.socialId))
 
         connections.size === 12
 
-        outbox.size === 1
-        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
-        outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
-
-        inject[Database].readOnlyMaster { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
@@ -79,6 +95,23 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           connectionCount === 1
         }
         inject[UserConnectionCreator].getConnectionsLastUpdated(user.id.get) must beSome
+      }
+    }
+
+    "updateUserConnections sends emails to new friends" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = setup(db)
+
+        val socialConnection = db.readWrite { implicit s =>
+          inject[SocialConnectionRepo].save(SocialConnection(socialUser1 = mySocialUser.id.get, socialUser2 = socialUserInfo.id.get))
+        }
+
+        Await.ready(inject[UserConnectionCreator].updateUserConnections(socialUserInfo.userId.get), Duration(5, "seconds"))
+
+        outbox.size === 1
+        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+        outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
       }
     }
 
@@ -101,8 +134,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u2))
 
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
+          emailAddressRepo.save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
+          emailAddressRepo.save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
 
           su1
         }
@@ -117,7 +150,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             socialId = SocialId("bsmith"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(user))
-          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
+          emailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
           (user, socialUserInfo)
         }
 

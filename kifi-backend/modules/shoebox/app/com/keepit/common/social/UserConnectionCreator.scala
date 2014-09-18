@@ -16,9 +16,12 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.{ SocialNetworkType, SocialId }
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
 import com.keepit.common.performance.timing
+
+import scala.concurrent.Future
 
 class UserConnectionCreator @Inject() (
   db: Database,
@@ -49,7 +52,7 @@ class UserConnectionCreator @Inject() (
     userValueRepo.getValueStringOpt(userId, UserValueName.UPDATED_USER_CONNECTIONS) map parseStandardTime
   }
 
-  def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {
+  def updateUserConnections(userId: Id[User]): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
@@ -59,11 +62,11 @@ class UserConnectionCreator @Inject() (
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
 
-      newConnections.foreach { connId =>
+      val emailsF = newConnections.map { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
-        sendFriendConnectionMadeHelper(userId, connId)
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
-      }
+        sendFriendConnectionMadeHelper(userId, connId) map (_ => ())
+      }.toSeq
 
       if (newConnections.nonEmpty) {
         eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
@@ -72,6 +75,8 @@ class UserConnectionCreator @Inject() (
           "socialConnections" -> ContextDoubleData(socialConnectionRepo.getUserConnectionCount(userId))
         )
       }
+
+      Future.sequence(emailsF)
     }
   }
 
@@ -129,7 +134,7 @@ class UserConnectionCreator @Inject() (
       log.debug(s"socialUserInfoForAllFriendsIds = $socialIds")
       log.debug(s"existingSocialUserInfoIds = ${existingSocialUserInfos.keys}")
       log.debug(s"size of diff = ${diff.length}")
-      diff map { socialId =>
+      diff.map { socialId =>
         try {
           val friendSocialUserInfoId = existingSocialUserInfos(socialId).id
           log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
@@ -149,7 +154,7 @@ class UserConnectionCreator @Inject() (
             airbrake.notify(s"fail to disable old connection for user $socialUserInfo to his friend $socialId")
             None
         }
-      } flatten
+      }.flatten
     }
   }
 

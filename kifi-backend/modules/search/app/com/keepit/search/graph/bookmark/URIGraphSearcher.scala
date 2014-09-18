@@ -103,8 +103,6 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val waitTime = System.currentTimeMillis - startTime
 
-    Future { Statsd.timing("mainSearch.friendIdsFutureWait", waitTime) }
-
     UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
   }
 
@@ -119,8 +117,6 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val unfriended = Await.result(unfriendedFuture, 5 seconds)
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val waitTime = System.currentTimeMillis - startTime
-
-    Future { Statsd.timing("mainSearch.searchFriendsFutureWait", waitTime) }
 
     if (unfriended.isEmpty) UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
     else UserToUserEdgeSet.fromLongSet(myUserId, (friendIds -- unfriended))

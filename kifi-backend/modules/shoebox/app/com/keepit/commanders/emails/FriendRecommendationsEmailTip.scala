@@ -1,13 +1,12 @@
 package com.keepit.commanders.emails
 
-import com.google.inject.Inject
+import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.UserCommander
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TipTemplate }
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.model.User
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -24,11 +23,15 @@ object FriendRecommendationsEmailTip {
 
 sealed case class FriendReco(userId: Id[User], avatarUrl: String)
 
-class FriendRecommendationsEmailTip @Inject() (
-    basicUserRepo: BasicUserRepo,
+@ImplementedBy(classOf[FriendRecommendationsEmailTipImpl])
+trait FriendRecommendationsEmailTip extends TipTemplate {
+  def render(emailToSend: EmailToSend): Future[Option[Html]]
+}
+
+class FriendRecommendationsEmailTipImpl @Inject() (
     abook: ABookServiceClient,
     userCommander: UserCommander,
-    airbrake: AirbrakeNotifier) extends TipTemplate with Logging {
+    private val airbrake: AirbrakeNotifier) extends FriendRecommendationsEmailTip with Logging {
 
   import FriendRecommendationsEmailTip._
 

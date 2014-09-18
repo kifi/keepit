@@ -1,5 +1,6 @@
 package com.keepit.common.controller
 
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
@@ -10,8 +11,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
-case class NonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with MaybeUserRequest[T]
-// class PartialNonUserRequest[T](override val request: Request[T]) extends NonUserRequest(request) // todo(ray)
+case class NonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with MaybeUserRequest[T] // todo(ray): add partial auth support
 case class UserRequest[T](
     request: Request[T],
     userId: Id[User],
@@ -24,33 +24,43 @@ case class UserRequest[T](
 }
 
 trait UserActionsHelper {
-  def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = {
-    request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) // check with mobile
-  }
 
-  def isAdmin(userId: Id[User]): Boolean
+  def kifiInstallationCookie: KifiInstallationCookie
+
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean]
 
   def getUserOpt(implicit request: Request[_]): Future[Option[User]]
 
   def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]]
+
+  def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = {
+    request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) // check with mobile
+  }
+
+  def getKifiInstallationIdOpt(implicit request: Request[_]): Option[ExternalId[KifiInstallation]] = {
+    kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
+  }
+
 }
 
 trait UserActions { self: Controller =>
 
   protected def userActionsHelper: UserActionsHelper
 
-  private def buildUserRequest[A](userId: Id[User])(implicit request: Request[A]) =
-    UserRequest(request, userId, userActionsHelper.getUserOpt.map(_.get), userActionsHelper.getUserExperiments)
+  private def buildUserRequest[A](userId: Id[User])(implicit request: Request[A]): UserRequest[A] =
+    UserRequest(
+      request,
+      userId,
+      userActionsHelper.getUserOpt.map(_.get),
+      userActionsHelper.getUserExperiments,
+      userActionsHelper.getKifiInstallationIdOpt
+    )
 
-  private def getOrigin[A](request: Request[A]): Option[String] = {
+  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
-    }
-  }
-
-  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
-    getOrigin(request) map { h =>
+    } map { h =>
       res.withHeaders(
         "Access-Control-Allow-Origin" -> h,
         "Access-Control-Allow-Credentials" -> "true"
