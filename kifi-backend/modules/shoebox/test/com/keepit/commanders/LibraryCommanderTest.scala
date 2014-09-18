@@ -398,15 +398,15 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
-            authToken = "token", passCode = "blarg"))
+            authToken = "token", passPhrase = "blarg"))
         }
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
 
         // test can view if non-user provides correct authtoken & passphrase
         libraryCommander.canViewLibrary(None, libScience) === false
-        libraryCommander.canViewLibrary(None, libScience, inviteToken = Some("token"),
-          passCode = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
       }
     }
 

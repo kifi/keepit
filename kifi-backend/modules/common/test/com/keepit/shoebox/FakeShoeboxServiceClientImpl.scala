@@ -702,7 +702,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(changed)
   }
 
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], accessToken: Option[String], passPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedCode: Option[HashedPassPhrase]): Future[Boolean] = {
     Future.successful(true)
   }
 }

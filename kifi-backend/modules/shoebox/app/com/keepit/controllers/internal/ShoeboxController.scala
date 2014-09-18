@@ -452,9 +452,9 @@ class ShoeboxController @Inject() (
     val json = request.body
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
-    val accessCode = (json \ "accessCode").asOpt[String]
+    val authToken = (json \ "authToken").asOpt[String]
     val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
-    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, accessCode, passPhrase)))
+    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
 }
