@@ -4,7 +4,7 @@ import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
-import play.api.mvc._
+import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, ActionFilter, Result }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._

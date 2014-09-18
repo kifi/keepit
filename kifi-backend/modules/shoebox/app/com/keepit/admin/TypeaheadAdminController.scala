@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.controller._
+import com.keepit.common.controller.{ UserActionsHelper, UserAPIController, ShoeboxServiceController }
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.typeahead.TypeaheadHit
