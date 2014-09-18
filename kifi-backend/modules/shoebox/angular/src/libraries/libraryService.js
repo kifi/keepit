@@ -173,6 +173,7 @@ angular.module('kifi')
         }
         return $http.post(routeService.shareLibrary(libraryId), opts);
       },
+
       joinLibrary: function (libraryId) {
         var alreadyJoined = _.some(librarySummaries, function (library) {
           return library.id === libraryId;
@@ -183,6 +184,7 @@ angular.module('kifi')
           });
         }
       },
+
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then( function () {
           _.remove(librarySummaries, function (library) {

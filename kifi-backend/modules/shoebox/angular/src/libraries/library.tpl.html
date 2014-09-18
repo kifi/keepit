@@ -2,9 +2,7 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">{{library.name}}</h1>
     <div>{{library.description}} <span ng-if="library.slug" ng-click="manageLibrary()">(edit)</span></div>
-    <!-- TODO: before release, get server to return a field that represents whether a library is a 
-               system library. Testing for the 'main' and 'secret' strings is brittle. -->
-    <div class="kf-library-share" ng-if="library.slug !== 'main' && library.slug !== 'secret'">
+    <div class="kf-library-share" ng-if="canBeShared(library)">
       <div kf-library-share-search library="library"></div>
     </div>
     <div class="kf-subtitle">
