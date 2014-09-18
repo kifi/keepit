@@ -4,8 +4,9 @@
 
 ALTER TABLE library_invite
     DROP passcode;
+
 ALTER TABLE library_invite
-    ADD COLUMN pass_phrase varchar(30) NOT NULL;
+    ADD COLUMN pass_phrase varchar(30) NOT NULL AFTER auth_token;
 
 ALTER TABLE library_membership
     ADD UNIQUE INDEX library_membership (library_id, user_id);
