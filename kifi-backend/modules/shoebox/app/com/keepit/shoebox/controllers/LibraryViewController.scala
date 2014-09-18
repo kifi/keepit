@@ -2,13 +2,13 @@ package com.keepit.shoebox.controllers
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.cache.{Cache, CacheBuilder}
+import com.google.common.cache.{ Cache, CacheBuilder }
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.controller.{MaybeUserRequest, UserActions, UserRequest}
+import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
-import com.keepit.model.{HashedPassPhrase, Library, User}
-import play.api.mvc.{ActionFilter, Controller, Result}
+import com.keepit.model.{ HashedPassPhrase, Library, User }
+import play.api.mvc.{ ActionFilter, Controller, Result }
 
 import scala.concurrent.Future
 import scala.util.Success

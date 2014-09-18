@@ -69,8 +69,6 @@ class ExtKeepImageController @Inject() (
       }
     }
 
-
-
     val keeps = db.readOnlyReplica { implicit session =>
       keepRepo.getByLibrary(libraryId, take, drop)
     }
