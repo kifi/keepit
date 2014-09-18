@@ -208,18 +208,24 @@ class LibraryCommander @Inject() (
   }
 
   def canViewLibrary(userId: Option[Id[User]], lib: Library,
-    universalToken: Option[String] = None,
     inviteAuthToken: Option[String] = None,
     passcode: Option[HashedPassPhrase] = None): Boolean = {
 
     lib.visibility == LibraryVisibility.PUBLISHED || // published library
-      universalToken.nonEmpty && universalToken.get == lib.universalLink || // provided correct universal link
       db.readOnlyMaster { implicit s =>
-        // correct invitation authentication or has membership
-        val invites = libraryInviteRepo.getWithLibraryId(libraryId = lib.id.get)
-        passcode.nonEmpty && inviteAuthToken.nonEmpty &&
-          invites.exists(i => HashedPassPhrase.generateHashedPhrase(i.passCode) == passcode.get && i.authToken == inviteAuthToken.get) ||
-          libraryMembershipRepo.getOpt(userId = userId.get, libraryId = lib.id.get).nonEmpty
+        userId match {
+          case Some(id) =>
+            libraryMembershipRepo.getOpt(userId = id, libraryId = lib.id.get).nonEmpty ||
+              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = lib.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty
+          case None =>
+            if (passcode.nonEmpty && inviteAuthToken.nonEmpty)
+              libraryInviteRepo.getWithLibraryId(libraryId = lib.id.get)
+                .exists(i =>
+                  HashedPassPhrase.generateHashedPhrase(i.passCode) == passcode.get &&
+                    i.authToken == inviteAuthToken.get)
+            else
+              false
+        }
       }
   }
 
