@@ -1,8 +1,8 @@
 .kifi-tile-tooltip {
   position: fixed;
   z-index: 999999999991;
-  right: 12px;
-  bottom: 76px;
+  right: 20px;
+  bottom: 82px;
   min-width: 400px;
   text-align: center;
   border: 2px solid #b8c5d2;
@@ -13,10 +13,10 @@
   color: #444;
   -webkit-font-smoothing: antialiased;
   opacity: 0;
-  -webkit-transform-origin: 93% bottom;
-  transform-origin: 93% bottom;
-  -webkit-transform: scale(.3,.3);
-  transform: scale(.3,.3);
+  -webkit-transform-origin: 90% bottom;
+  transform-origin: 90% bottom;
+  -webkit-transform: scale(.3) translate(10px, 30px);
+  transform: scale(.3) translate(10px, 30px);
   transition: opacity .2s linear, -webkit-transform .2s ease-in;
   transition: opacity .2s linear, transform .2s ease-in;
   background: #fff 12px 12px/24px 14px no-repeat;
