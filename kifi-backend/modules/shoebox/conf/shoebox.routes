@@ -64,9 +64,9 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 # Tracking
 ##########################################
 
-POST   /site/event                          @com.keepit.controllers.tracking.EventProxyController.track()
-POST   /ext/event                           @com.keepit.controllers.tracking.EventProxyController.track()
-POST   /m/1/event                           @com.keepit.controllers.tracking.EventProxyController.track()
+POST   /site/events                          @com.keepit.controllers.tracking.EventProxyController.track()
+POST   /ext/events                          @com.keepit.controllers.tracking.EventProxyController.track()
+POST   /m/1/events                           @com.keepit.controllers.tracking.EventProxyController.track()
 
 
 ##########################################
