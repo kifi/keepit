@@ -1,7 +1,5 @@
 package com.keepit.search
 
-import scala.concurrent.Future
-
 sealed trait LibraryContext {
   def get: Long
 }
