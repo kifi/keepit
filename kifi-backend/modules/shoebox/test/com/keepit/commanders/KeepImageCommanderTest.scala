@@ -189,12 +189,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         {
           val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         // If this complains about not having an `all`, then it's not using FakeKeepImageStore
@@ -214,7 +214,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
 
@@ -228,7 +228,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
         {
           val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
-          val saved = Await.result(savedF, Duration("5 seconds"))
+          val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
 
