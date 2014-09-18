@@ -109,17 +109,28 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function swipeTo($new, left) {
-    var $cart = $box.find('.kifi-keep-box-cart').addClass(left ? 'kifi-back' : 'kifi-forward');
+  function swipeTo($new) {
+    var $cart = $box.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view');
-    $new[left ? 'prependTo' : 'appendTo']($cart).layout();
+    var back = !$new;
+    $new = $new || $old.data('$prev');
+    $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
+    $new[back ? 'prependTo' : 'appendTo']($cart).layout();
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
     .on('transitionend', function end(e) {
       if (e.target === this) {
-        if (!left) $cart.removeClass('kifi-animated kifi-back kifi-forward');
-        $old.remove();
+        if (back) {
+          $old.remove();
+        } else {
+          $cart.removeClass('kifi-animated kifi-back kifi-forward');
+          $old.detach();
+          $new.data('$prev', $old);
+        }
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
+        setTimeout(function () {
+          $new.find('input,textarea').focus();
+        });
       }
     });
   }
@@ -210,9 +221,17 @@ var keepBox = keepBox || (function () {
   }
 
   function addKeepBindings($view) {
-    $view.on('click', '.kifi-keep-box-save', function (e) {
-      $box.data('keepPage')($(this).prevAll('.kifi-keep-box-lib').data('id'));
-      hide(e, 'action');
+    $view
+    .on('click', '.kifi-keep-box-back', function (e) {
+      if (e.which === 1) {
+        swipeTo();
+      }
+    })
+    .on('click', '.kifi-keep-box-save', function (e) {
+      if (e.which === 1) {
+        $box.data('keepPage')($(this).prevAll('.kifi-keep-box-lib').data('id'));
+        hide(e, 'action');
+      }
     });
   }
 
