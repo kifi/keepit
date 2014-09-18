@@ -4,7 +4,7 @@ import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
-import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, Result }
+import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -74,12 +74,14 @@ trait UserActions { self: Controller =>
     } getOrElse res
   }
 
+  private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] =
+    block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
+
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
-        case Some(userId) =>
-          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
+        case Some(userId) => buildUserAction(userId, block)
         case None => Future.successful(Unauthorized)
       }
     }
@@ -89,10 +91,30 @@ trait UserActions { self: Controller =>
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
+        case Some(userId) => buildUserAction(userId, block)
+        case None => block(NonUserRequest(request)).map(maybeAugmentKcid(_))
+      }
+    }
+  }
+
+  object AdminUserAction extends ActionBuilder[UserRequest] {
+    def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
+      implicit val req = request
+      userActionsHelper.getUserIdOpt match {
         case Some(userId) =>
-          block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
-        case None =>
-          block(NonUserRequest(request)).map(maybeAugmentKcid(_))
+          userActionsHelper.isAdmin(userId) flatMap { isAdmin =>
+            buildUserAction(userId, block)
+          }
+        case None => Future.successful(Unauthorized)
+      }
+    }
+  }
+
+  // usage: (UserAction andThen AdminCheck)
+  object AdminCheck extends ActionFilter[UserRequest] {
+    protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
+      userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
+        if (isAdmin) None else Some(Forbidden)
       }
     }
   }
