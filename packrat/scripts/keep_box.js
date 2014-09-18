@@ -3,6 +3,8 @@
 // @require scripts/html/keeper/keep_box_keep.js
 // @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/html/keeper/keep_box_libs.js
+// @require scripts/html/keeper/keep_box_libs_list.js
+// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/listen.js
 
@@ -46,44 +48,28 @@ var keepBox = keepBox || (function () {
 
   function show($parent, data, howKept, keepPage, unkeepPage) {
     log('[keepBox:show]');
-    var librariesById = data.libraries.reduce(indexById, {});
     var partitionedLibs = partitionLibs(data.libraries, data.keeps);
     $box = $(render('html/keeper/keep_box', {
       inLibs: partitionedLibs[0],
       recentLibs: partitionedLibs[1],
-      otherLibs: partitionedLibs[2],
-      link: true
+      otherLibs: partitionedLibs[2]
     }, {
       view: 'keep_box_libs',
-      keep_box_lib: 'keep_box_lib'
+      keep_box_lib: 'keep_box_lib',
+      keep_box_libs_list: 'keep_box_libs_list'
     }))
     .on('click mousedown', '.kifi-keep-box-x', function (e) {
       if (e.which === 1 && $box) {
         hide(e, 'x');
       }
     })
-    .on('click', '.kifi-keep-box-lib[href]', function (e) {
-      if (e.which === 1) {
-        swipeTo($(render('html/keeper/keep_box_keep', {
-          library: librariesById[this.dataset.id],
-          title: document.title,
-          site: document.location.hostname
-        }, {
-          keep_box_lib: 'keep_box_lib'
-        })));
-      }
-    })
-    .on('click', '.kifi-keep-box-lib-remove', function (e) {
-      if (e.which === 1) {
-        unkeepPage($(this).prev().data('id'));
-        hide(e, 'action');
-      }
-    })
-    .on('click', '.kifi-keep-box-save', function (e) {
-      keepPage($(this).prevAll('.kifi-keep-box-lib').data('id'));
-      hide(e, 'action');
-    })
     .appendTo($parent);
+    var $view = $box.find('.kifi-keep-box-view-libs');
+    $view.data({
+      librariesById: data.libraries.reduce(indexById, {}),
+      $all: $view.find('.kifi-keep-box-libs')
+    });
+    addLibrariesBindings($view);
 
     $(document).data('esc').add(hide);
 
@@ -91,7 +77,8 @@ var keepBox = keepBox || (function () {
 
     $box.layout()
     .on('transitionend', onShown)
-    .removeClass('kifi-down');
+    .removeClass('kifi-down')
+    .data({keepPage: keepPage, unkeepPage: unkeepPage});
   }
 
   function onShown(e) {
@@ -152,6 +139,129 @@ var keepBox = keepBox || (function () {
       }
     }
     return [inLibs, recentLibs, otherLibs];
+  }
+
+  function addLibrariesBindings($view) {
+    $view.on('input', '.kifi-keep-box-lib-input', function (e) {
+      var q = this.value.trim();
+      var data = $.data(this);
+      if (data.q !== q) {
+        data.q = q;
+        if (q) {
+          api.port.emit('filter_libraries', q, function (libs) {
+            if (data.q === q) {
+              showLibs($(render('html/keeper/keep_box_libs_list', {filtering: true, libs: libs.map(addNameHtml)}, {
+                keep_box_lib: 'keep_box_lib'
+              })));
+            }
+          });
+        } else {
+          var $all = $view.data('$all');
+          if (!$box[0].contains($all[0])) {
+            showLibs($all);
+          }
+        }
+      }
+    })
+    .on('keydown', '.kifi-keep-box-lib-input', function (e) {
+      switch (e.keyCode) {
+        case 38: // up
+        case 40: // down
+          var up = e.keyCode === 38;
+          var $item = $view.find('.kifi-highlighted');
+          $item = $item.length ?
+            $item[up ? 'prev' : 'next']().find('.kifi-keep-box-lib').addBack('.kifi-keep-box-lib') :
+            $view.find('.kifi-keep-box-lib')[up ? 'last' : 'first']();
+          if ($item.length) {
+            highlightLibrary($item[0]);
+          }
+          return false;
+        case 13: // enter
+        case 108: // numpad enter
+          var $item = $view.find('.kifi-highlighted');
+          if ($item.length) {
+            chooseLibrary($item[0]);
+          }
+          return false;
+      }
+    })
+    .on('mouseover', '.kifi-keep-box-lib', function () {
+      if ($view.data('mouseMoved')) {  // FF immediately triggers mouseover on element inserted under mouse cursor
+        highlightLibrary(this);
+      }
+    })
+    .on('mousemove', '.kifi-keep-box-lib', $.proxy(function (data) {
+      if (!data.mouseMoved) {
+        data.mouseMoved = true;
+        highlightLibrary(this);
+      }
+    }, null, $view.data()))
+    .on('mousedown', '.kifi-keep-box-lib', function (e) {
+      if (e.which === 1) {
+        chooseLibrary(this);
+      }
+    })
+    .on('click', '.kifi-keep-box-lib-remove', function (e) {
+      if (e.which === 1) {
+        $box.data('unkeepPage')($(this).prev().data('id'));
+        hide(e, 'action');
+      }
+    });
+  }
+
+  function addKeepBindings($view) {
+    $view.on('click', '.kifi-keep-box-save', function (e) {
+      $box.data('keepPage')($(this).prevAll('.kifi-keep-box-lib').data('id'));
+      hide(e, 'action');
+    });
+  }
+
+  function showLibs($new) {
+    highlightLibrary($new.find('.kifi-keep-box-lib')[0]);
+    $box.find('.kifi-keep-box-libs').replaceWith($new);
+    // $box.find('.kifi-keep-box-libs')
+    // .filter(':not(:last-child)').remove().end()
+    // .filter(':last-child').on('transitionend', function (e) {
+    //   log('[transitionend]', e.target === this, e.originalEvent.propertyName);
+    //   if (e.target === this && e.originalEvent.propertyName === 'opacity') {
+    //     $(this).remove();
+    //   }
+    // })
+    // .after($new);
+  }
+
+  function highlightLibrary(el) {
+    $(el).addClass('kifi-highlighted').siblings('.kifi-highlighted').removeClass('kifi-highlighted');
+  }
+
+  function chooseLibrary(el) {
+    var libraryId = el.dataset.id;
+    if (libraryId) {
+      var $view = $(render('html/keeper/keep_box_keep', {
+        library: $(el).closest('.kifi-keep-box-view').data('librariesById')[libraryId],
+        static: true,
+        title: document.title,
+        site: document.location.hostname
+      }, {
+        keep_box_lib: 'keep_box_lib'
+      }));
+      addKeepBindings($view);
+      swipeTo($view);
+    }
+  }
+
+  function addNameHtml(lib) {
+    var parts = lib.nameParts;
+    var html = [];
+    for (var i = 0; i < parts.length; i++) {
+      if (i % 2) {
+        html.push('<b>', Mustache.escape(parts[i]), '</b>');
+      } else {
+        html.push(Mustache.escape(parts[i]));
+      }
+    }
+    lib.nameHtml = html.join('');
+    return lib;
   }
 
   function indexById(o, item) {

@@ -18,6 +18,7 @@ var timeouts = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
+var libraries;
 var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
@@ -36,6 +37,7 @@ function clearDataCache() {
     delete timeouts[tabId];
   }
 
+  libraries = null;
   pageData = {};
   threadLists = {};
   threadsById = {};
@@ -628,8 +630,17 @@ api.port.on({
   keeps_and_libraries: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
+      libraries = o.libraries;
       respond({keeps: d ? d.keeps : [], libraries: o.libraries});
     }, respond);
+  },
+  filter_libraries: function (q, respond) {
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    respond(sf.filter(q, libraries, getName).map(function (lib) {
+      lib = clone(lib);
+      lib.nameParts = sf.splitOnMatches(q, lib.name);
+      return lib;
+    }));
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;

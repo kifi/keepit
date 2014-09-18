@@ -110,15 +110,27 @@
 
 @svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%D" d="M6,3.7L6,3.7L5.9,2.5C5.9,1.2,4.7,0,3.4,0S0.8,1.2,0.8,2.5v1.3H0.7C0.3,3.7,0,4,0,4.5v3.6C0,8.6,0.4,9,0.8,9h5.1c0.4,0,0.8-0.4,0.8-0.9V4.5C6.7,4,6.5,3.7,6,3.7z M1.7,2.5c0-0.7,0.7-1.6,1.7-1.6s1.7,0.9,1.7,1.6v1.3H1.7V2.5z"/></svg>';
 
+@lib-input-height: 31px;
 .kifi-keep-box-lib-input {
   display: block;
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  padding: 8px 10px;
-  line-height: 15px;
+  @padding-top-bottom: 8px;
+  padding: @padding-top-bottom 10px;
+  line-height: (@lib-input-height - 2 * @padding-top-bottom);
   font-size: 13px;
 }
+// .kifi-keep-box-libs:not(:last-child) {
+//   position: absolute;
+//   top: @lib-input-height;
+//   left: 0;
+//   right: 0;
+//   bottom: 0;
+//   background: #fff;
+//   opacity: 0;
+//   transition: opacity 1s linear;
+// }
 .kifi-keep-box-lib-head {
   background-color: #fbf5f3;
   padding-left: 10px;
@@ -128,10 +140,10 @@
   color: #999;
 }
 @lib-height: 39px;
-.kifi-keep-box-lib,
-.kifi-keep-box-create-lib {
+.kifi-keep-box-lib {
   display: block;
-  border-bottom: 1px solid #ece8e6;
+  border: solid #ece8e6;
+  border-width: 0 0 1px;
   @height: 26px;
   background: url(/images/keeper/lib_cards.png) 14px ((@lib-height - @height) / 2) / auto @height no-repeat;
   line-height: @lib-height;
@@ -139,19 +151,15 @@
   font-weight: 300;
   padding-left: 52px;
   color: #333 !important;
-  &[href]:hover,
-  &[href]:focus {
+  &.kifi-highlighted {
     background-color: #e8e8e8;
     &:active {
       background-color: #e3e3e3;
     }
   }
-}
-.kifi-keep-box-create-lib {
-  background-image: url(/images/keeper/lib_cards_new.png);
-  font-weight: 500;
-}
-.kifi-keep-box-lib {
+  &:first-child {
+    border-top-width: 1px;
+  }
   &.kifi-secret {
     position: relative;
     &::after {
@@ -167,6 +175,10 @@
       background-image: url(@url);
       background-size: 9px 12px;
     }
+  }
+  &.kifi-create {
+    background-image: url(/images/keeper/lib_cards_new.png);
+    font-weight: 500;
   }
 }
 .kifi-keep-box-lib-remove {
@@ -187,7 +199,6 @@
     }
   }
 }
-
 
 .kifi-keep-box-view-keep>.kifi-keep-box-lib {
   border-bottom-color: #aaa;

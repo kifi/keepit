@@ -1,8 +1,15 @@
+{{^static}}
 {{#removable}}
 <div style="position:relative">
 {{/removable}}
-  <a class="kifi-keep-box-lib kifi-{{visibility}}"{{#link}} href="javascript:"{{/link}} data-id="{{id}}">{{name}}</a>
+{{/static}}
+  <a class="kifi-keep-box-lib kifi-{{visibility}}"{{^static}} href="javascript:"{{/static}} data-id="{{id}}">
+    {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
+    {{^nameHtml}}{{name}}{{/nameHtml}}
+  </a>
+{{^static}}
 {{#removable}}
   <a class="kifi-keep-box-lib-remove" href="javascript:">remove</a>
 </div>
 {{/removable}}
+{{/static}}

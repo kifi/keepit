@@ -1,0 +1,21 @@
+<div class="kifi-keep-box-libs">
+  {{#filtering}}
+    {{#libs}}{{>keep_box_lib}}{{/libs}}
+  {{/filtering}}
+  {{^filtering}}
+    {{#inLibs.length}}
+      <div class="kifi-keep-box-lib-head">Already Kept In</div>
+      {{#inLibs}}{{>keep_box_lib}}{{/inLibs}}
+    {{/inLibs.length}}
+    {{#recentLibs.length}}
+      <div class="kifi-keep-box-lib-head">Recent Libraries</div>
+      {{#recentLibs}}{{>keep_box_lib}}{{/recentLibs}}
+      <div class="kifi-keep-box-lib-head">Other Libraries</div>
+    {{/recentLibs.length}}
+    {{^recentLibs.length}}
+      <div class="kifi-keep-box-lib-head">My Libraries</div>
+    {{/recentLibs.length}}
+    {{#otherLibs}}{{>keep_box_lib}}{{/otherLibs}}
+  {{/filtering}}
+  <a class="kifi-keep-box-lib kifi-create" href="javascript:">Create New Library</a>
+</div>
