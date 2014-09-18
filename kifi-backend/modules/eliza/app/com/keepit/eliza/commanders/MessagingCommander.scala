@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import com.keepit.abook.{ ABookServiceClient }
+import com.keepit.common.net.URI
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -26,6 +27,8 @@ import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
+
+import scala.util.{ Success, Failure }
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -226,7 +229,13 @@ class MessagingCommander @Inject() (
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds) } // todo: Remove Await
+    val uri = urlOpt.map { url: String =>
+      URI.parse(url) match {
+        case Success(uri) => uri
+        case Failure(e) => throw new Exception(s"Scan't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
+      }
+    }
+    val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u, scrapeWanted = true), 10 seconds) } // todo: Remove Await
     statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ALWAYS)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite { implicit session =>
@@ -281,37 +290,37 @@ class MessagingCommander @Inject() (
       }
     }
 
-    sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt, nUriOpt, Some(isNew))
+    sendMessage(MessageSender.User(from), thread, messageText, source, uri, nUriOpt, Some(isNew))
 
   }
 
-  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
     log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
     val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId) }
     sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
-  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
     log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
     val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId) }
     sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnlyMaster { implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
     val thread = db.readOnlyMaster { implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
       case MessageSender.User(id) =>
         if (!thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
@@ -330,7 +339,7 @@ class MessagingCommander @Inject() (
         threadExtId = thread.externalId,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
+        sentOnUrl = urlOpt.map(_.toString).orElse(thread.url),
         sentOnUriId = thread.uriId
       ))
     }
