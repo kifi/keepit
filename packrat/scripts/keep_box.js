@@ -13,13 +13,15 @@ var keepBox = keepBox || (function () {
   var $box;
 
   if (!Array.prototype.find) {
-    Array.prototype.find = function (predicate, thisArg) {
-      for (var i = 0, n = this.length, val; i < n; i++) {
-        if (predicate.call(thisArg, (val = this[i]), i, this)) {
-          return val;
+    Object.defineProperty(Array.prototype, 'find', {
+      value: function (predicate, thisArg) {
+        for (var i = 0, n = this.length, val; i < n; i++) {
+          if (predicate.call(thisArg, (val = this[i]), i, this)) {
+            return val;
+          }
         }
       }
-    };
+    });
   }
 
   return {
