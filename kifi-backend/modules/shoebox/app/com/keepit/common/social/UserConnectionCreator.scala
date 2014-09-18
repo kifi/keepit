@@ -43,7 +43,7 @@ class UserConnectionCreator @Inject() (
     } else {
       disableOldConnections(socialUserInfo, socialIds)
       val socialConnections = createNewConnections(socialUserInfo, socialIds)
-      socialUserInfo.userId.map(updateUserConnections)
+      socialUserInfo.userId.map(userId => updateUserConnections(userId, Some(socialUserInfo.networkType)))
       socialConnections
     }
   }
@@ -52,7 +52,7 @@ class UserConnectionCreator @Inject() (
     userValueRepo.getValueStringOpt(userId, UserValueName.UPDATED_USER_CONNECTIONS) map parseStandardTime
   }
 
-  def updateUserConnections(userId: Id[User]): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
+  def updateUserConnections(userId: Id[User], networkType: Option[SocialNetworkType] = None): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
@@ -65,7 +65,7 @@ class UserConnectionCreator @Inject() (
       val emailsF = newConnections.map { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
-        sendFriendConnectionMadeHelper(userId, connId) map (_ => ())
+        sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
       }.toSeq
 
       if (newConnections.nonEmpty) {
