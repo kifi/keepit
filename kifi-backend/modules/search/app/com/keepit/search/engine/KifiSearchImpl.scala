@@ -58,7 +58,7 @@ class KifiSearchImpl(
     timeLogs.clickBoost()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.DumpBuf.flag) != 0) engine.dumpBuf(debugDumpBufIds)
+      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
       if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
     }
 

@@ -9,6 +9,7 @@ import scala.collection.mutable.ListBuffer
 
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging {
 
+  private[this] var tracedIds: Set[Long] = null
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
   private[this] val matchWeights: Array[Float] = new Array[Float](totalSize)
 
@@ -52,15 +53,13 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   }
 
   def join(collector: ResultCollector[ScoreContext]): Unit = {
+    if (tracedIds != null) dumpBuf(tracedIds)
+
     val size = dataBuffer.size
     if (size > 0) {
       normalizeMatchWeight()
 
-      val joinerManager: JoinerManager = new JoinerManager(32) {
-        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
-      }
-
-      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, joinerManager)
+      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createJoinerManager(collector))
       hashJoin.execute()
     }
   }
@@ -71,7 +70,34 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getCoreSize(): Int = coreSize
   def getMatchWeights(): Array[Float] = matchWeights
 
-  def dumpBuf(ids: Set[Long]): Unit = {
+  def trace(ids: Set[Long]): Unit = { tracedIds = ids }
+
+  private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+    if (tracedIds == null) {
+      new JoinerManager(32) {
+        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
+      }
+    } else {
+      new JoinerManager(32) {
+        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector) {
+          override def set(id: Long) = {
+            if (tracedIds.contains(id)) log.info(s"NE: joiner-set id=$id")
+            super.set(id)
+          }
+          override def join(reader: DataBufferReader) = {
+            if (tracedIds.contains(id)) log.info(s"NE: joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
+            super.join(reader)
+          }
+          override def flush() = {
+            if (tracedIds.contains(id)) log.info(s"NE: joiner-flush id=$id")
+            super.flush()
+          }
+        }
+      }
+    }
+  }
+
+  private def dumpBuf(ids: Set[Long]): Unit = {
     dataBuffer.scan(new DataBufferReader) { reader =>
       // assuming the first datum is ID
       val id = reader.nextLong()
@@ -88,7 +114,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           }
           out.mkString("[", ", ", "]")
         }
-        log.info(s"NE:BUF id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
+        log.info(s"NE: databuf id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
       }
     }
   }
