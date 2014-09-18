@@ -116,6 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def processAndSendMail(email: EmailToSend): Future[Boolean]
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], accessToken: Option[String], hashedPhrase: Option[HashedPassPhrase]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -730,5 +731,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryMembershipView]] }
+  }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], accessCode: Option[String], hashedPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+    val body = Json.obj(
+      "libraryId" -> libraryId,
+      "userId" -> userId,
+      "accessCode" -> accessCode,
+      "passPhrase" -> Json.toJson(hashedPhrase))
+    call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 }

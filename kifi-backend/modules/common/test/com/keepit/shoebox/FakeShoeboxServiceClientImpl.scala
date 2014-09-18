@@ -701,4 +701,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { LibraryMembership.toLibraryMembershipView(_) }
     Future.successful(changed)
   }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], accessToken: Option[String], passPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+    Future.successful(true)
+  }
 }
