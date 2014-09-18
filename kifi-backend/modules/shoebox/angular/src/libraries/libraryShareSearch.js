@@ -86,6 +86,7 @@ angular.module('kifi')
               scope.results.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
+                  result.isFollowing = isFollowingLibrary(result);
                 }
               });
 
@@ -123,6 +124,14 @@ angular.module('kifi')
           return libraryService.shareLibrary(scope.library.id, opts);
         }
 
+        function isFollowingLibrary(user) {
+          // For dev testing.
+          // scope.library.followers.push({ id: 'dc6cb121-2a69-47c7-898b-bc2b9356054c' });
+
+          return _.some(scope.library.followers, function (follower) {
+            return follower.id === user.id;
+          });
+        }
 
         //
         // DOM event listeners.

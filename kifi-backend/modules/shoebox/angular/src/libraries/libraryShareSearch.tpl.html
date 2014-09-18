@@ -16,7 +16,8 @@
           </div>
           <!-- TODO(yiping): probably factor this button/notification thing out into its own directive.
                It's being repeated down below for email contacts. :( -->
-          <button ng-show="!result.sent" ng-click="shareLibraryKifiFriend(result)">Share</button>
+          <button ng-show="!result.sent && !result.isFollowing" ng-click="shareLibraryKifiFriend(result)">Share</button>
+          <div ng-show="result.isFollowing" class="kf-library-share-following">Following</div>
           <div ng-show="result.sent" class="kf-library-share-sent">Sent!</div>
         </div>
 
