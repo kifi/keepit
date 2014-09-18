@@ -14,7 +14,7 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
   override def assignSequenceNumbers(): Unit = {
     try {
-      while (db.readWrite(attempts = 2) { implicit session => repo.assignSequenceNumbers(batchSize) } > 0) {}
+      while (db.readWrite { implicit session => repo.assignSequenceNumbers(batchSize) } > 0) {}
     } catch {
       case e: UnsupportedOperationException =>
         reportUnsupported(e)
