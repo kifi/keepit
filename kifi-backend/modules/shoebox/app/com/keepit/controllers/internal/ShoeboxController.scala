@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -176,7 +177,8 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uri = db.readWrite(attempts = 1) { implicit s => //using cache
+    if (URI.parse(url).isFailure) throw new Exception(s"when calling internNormalizedURI - can't parse url: $url")
+    val uri = db.readWrite { implicit s => //using cache
       normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
