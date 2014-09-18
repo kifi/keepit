@@ -235,63 +235,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "can view library permissions" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val libraryController = inject[LibraryController]
-
-        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu"))))
-          val user2 = userRepo.save(User(firstName = "AyAy", lastName = "Ron", createdAt = t1, username = Some(Username("ayayron"))))
-
-          // user 1 owns lib1 (secret)
-          val lib1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
-          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = lib1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
-          // user 1 also owns lib2 (published)
-          val lib2 = libraryRepo.save(Library(name = "Library2", ownerId = user1.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.PUBLISHED))
-          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = lib2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
-          // user 1 also owns lib3 (discoverable)
-          val lib3 = libraryRepo.save(Library(name = "Library3", ownerId = user1.id.get, slug = LibrarySlug("lib3"), memberCount = 1, visibility = LibraryVisibility.DISCOVERABLE))
-          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = lib3.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(userId = user2.id.get, libraryId = lib3.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          (user1, user2, lib1, lib2, lib3)
-        }
-        val extInput = user1.externalId.id
-        val slugInput1 = lib1.slug.value
-        val slugInput2 = lib2.slug.value
-        val slugInput3 = lib3.slug.value
-        inject[FakeActionAuthenticator].setUser(user2)
-
-        // test permission denied
-        val request1 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput1).url)
-        val result1 = libraryController.getLibraryByPath(extInput, slugInput1)(request1)
-        status(result1) must equalTo(BAD_REQUEST)
-
-        // test can view if user has an invite
-        db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(ownerId = user1.id.get, userId = user2.id, libraryId = lib1.id.get, access = LibraryAccess.READ_INSERT))
-        }
-        val request2 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput1).url)
-        val result2 = libraryController.getLibraryByPath(userStr = extInput, slugStr = slugInput1)(request2)
-        status(result2) must equalTo(OK)
-
-        // test can view if library is published
-        val request3 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput2).url)
-        val result3 = libraryController.getLibraryByPath(extInput, slugInput2)(request3)
-        status(result3) must equalTo(OK)
-
-        // test can view if have membership
-        val request4 = FakeRequest("GET", com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput3).url)
-        val result4 = libraryController.getLibraryByPath(extInput, slugInput3)(request4)
-        status(result4) must equalTo(OK)
-
-        // test if non-user provides correct invitation
-      }
-    }
-
     "get library by path" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]

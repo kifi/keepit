@@ -207,25 +207,24 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], lib: Library,
-    inviteAuthToken: Option[String] = None,
+  def canViewLibrary(userId: Option[Id[User]], library: Library,
+    inviteToken: Option[String] = None,
     passCode: Option[HashedPassPhrase] = None): Boolean = {
 
-    lib.visibility == LibraryVisibility.PUBLISHED || // published library
+    library.visibility == LibraryVisibility.PUBLISHED || // published library
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
-            libraryMembershipRepo.getOpt(userId = id, libraryId = lib.id.get).nonEmpty ||
-              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = lib.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty
+            libraryMembershipRepo.getOpt(userId = id, libraryId = library.id.get).nonEmpty ||
+              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty
+          case None if (passCode.nonEmpty && inviteToken.nonEmpty) =>
+            libraryInviteRepo.getWithLibraryId(libraryId = library.id.get)
+              .exists { i =>
+                HashedPassPhrase.generateHashedPhrase(i.passCode) == passCode.get &&
+                  i.authToken == inviteToken.get
+              }
           case None =>
-            if (passCode.nonEmpty && inviteAuthToken.nonEmpty)
-              libraryInviteRepo.getWithLibraryId(libraryId = lib.id.get)
-                .exists { i =>
-                  HashedPassPhrase.generateHashedPhrase(i.passCode) == passCode.get &&
-                    i.authToken == inviteAuthToken.get
-                }
-            else
-              false
+            false
         }
       }
   }
