@@ -207,6 +207,22 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def canViewLibrary(userId: Option[Id[User]], lib: Library,
+    universalToken: Option[String] = None,
+    inviteAuthToken: Option[String] = None,
+    passcode: Option[HashedPassPhrase] = None): Boolean = {
+
+    lib.visibility == LibraryVisibility.PUBLISHED || // published library
+      universalToken.nonEmpty && universalToken.get == lib.universalLink || // provided correct universal link
+      db.readOnlyMaster { implicit s =>
+        // correct invitation authentication or has membership
+        val invites = libraryInviteRepo.getWithLibraryId(libraryId = lib.id.get)
+        passcode.nonEmpty && inviteAuthToken.nonEmpty &&
+          invites.exists(i => HashedPassPhrase.generateHashedPhrase(i.passCode) == passcode.get && i.authToken == inviteAuthToken.get) ||
+          libraryMembershipRepo.getOpt(userId = userId.get, libraryId = lib.id.get).nonEmpty
+      }
+  }
+
   def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
     val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)
@@ -397,6 +413,7 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case None => Left(LibraryFail("membership_not_found"))
+        case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail("cannot_leave_own_library"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           libraryRepo.updateMemberCount(libraryId)

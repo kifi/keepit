@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
+import com.keepit.common.crypto.{ CryptoSupport, ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
@@ -13,6 +13,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration.Duration
 import scala.util.Random
 
@@ -61,12 +62,35 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
   }
 
-  def generatePasscode() = {
+  def generatePasscode(): String = {
     // each word has length 4-8
     val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
     val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
     val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));
     randomAdverb + " " + randomAdjective + " " + randomNoun
+  }
+}
+
+case class HashedPassPhrase(value: String)
+object HashedPassPhrase {
+  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[HashedPassPhrase] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, HashedPassPhrase]] = {
+      stringBinder.bind(key, params) map {
+        case Right(phrase) => Right(HashedPassPhrase(phrase))
+        case _ => Left("Not a valid Public Id")
+      }
+    }
+    override def unbind(key: String, hash: HashedPassPhrase): String = {
+      stringBinder.unbind(key, hash.value)
+    }
+  }
+
+  implicit def format: Format[HashedPassPhrase] =
+    Format(__.read[String].map(HashedPassPhrase(_)),
+      new Writes[HashedPassPhrase] { def writes(o: HashedPassPhrase) = JsString(o.value) })
+
+  def generateHashedPhrase(value: String): HashedPassPhrase = {
+    HashedPassPhrase(CryptoSupport.generateHexSha256(value))
   }
 }
 
