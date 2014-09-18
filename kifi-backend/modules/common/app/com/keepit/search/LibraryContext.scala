@@ -1,7 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.model.Library
+import scala.concurrent.Future
 
 sealed trait LibraryContext {
   def get: Long
@@ -16,5 +15,8 @@ object LibraryContext {
   }
   case object None extends LibraryContext {
     def get: Long = throw new NoSuchElementException("no library context")
+  }
+  case object Invalid extends LibraryContext {
+    def get: Long = throw new NoSuchElementException("invalid library context")
   }
 }

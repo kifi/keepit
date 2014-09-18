@@ -9,7 +9,7 @@ import scala.util.Try
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -297,6 +297,12 @@ class SearchCommanderImpl @Inject() (
     val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
 
     val library = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
+
+    if (library == LibraryContext.Invalid) {
+      // return an empty result for an invalid library public id
+      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, KifiShardResult.empty, Set(), None))
+    }
+
     val searchFilter = SearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
