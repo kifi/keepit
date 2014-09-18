@@ -20,6 +20,8 @@ import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
 import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
 
+import scala.util.{ Failure, Success }
+
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
 }
@@ -115,15 +117,20 @@ trait SearchControllerUtil {
   def getLibraryContextFuture(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryContext] = {
     library match {
       case Some(libPublicId) =>
-        val libId = Library.decodePublicId(PublicId[Library](libPublicId)).get
-        val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
-        (auth, libraryAccess) match {
-          case (Some(_), Some(Array(libPublicIdInCookie, hashedPassPhrase))) if (libPublicIdInCookie == libPublicId) =>
-            shoeboxClient.canViewLibrary(libId, None, auth, Some(HashedPassPhrase(hashedPassPhrase))).map { authorized =>
-              if (authorized) LibraryContext.Authorized(libId.id) else LibraryContext.NotAuthorized(libId.id)
+        Library.decodePublicId(PublicId[Library](libPublicId)) match {
+          case Success(libId) =>
+            val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
+            (auth, libraryAccess) match {
+              case (Some(_), Some(Array(libPublicIdInCookie, hashedPassPhrase))) if (libPublicIdInCookie == libPublicId) =>
+                shoeboxClient.canViewLibrary(libId, None, auth, Some(HashedPassPhrase(hashedPassPhrase))).map { authorized =>
+                  if (authorized) LibraryContext.Authorized(libId.id) else LibraryContext.NotAuthorized(libId.id)
+                }
+              case _ =>
+                Future.successful(LibraryContext.NotAuthorized(libId.id))
             }
-          case _ =>
-            Future.successful(LibraryContext.NotAuthorized(libId.id))
+          case Failure(e) =>
+            log.error(s"invalid library public id: $libPublicId", e)
+            Future.successful(LibraryContext.Invalid)
         }
       case _ =>
         Future.successful(LibraryContext.None)
