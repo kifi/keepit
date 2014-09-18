@@ -23,7 +23,7 @@ class TypeaheadAdminController @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def index = (UserAction andThen AdminCheck) { request =>
+  def index = AdminUserAction { request =>
     Ok(html.admin.typeahead(request.user))
   }
 

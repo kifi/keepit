@@ -110,13 +110,4 @@ trait UserActions { self: Controller =>
     }
   }
 
-  // usage: (UserAction andThen AdminCheck)
-  object AdminCheck extends ActionFilter[UserRequest] {
-    protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
-      userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
-        if (isAdmin) None else Some(Forbidden)
-      }
-    }
-  }
-
 }
