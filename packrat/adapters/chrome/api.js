@@ -630,12 +630,6 @@ var api = (function createApi() {
       xhr.addEventListener('loadend', onXhrLoadEnd.bind(xhr, done, fail));
       xhr.send(data);
     },
-    postRawAsForm: function(uri, data) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', uri, true);
-      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-      xhr.send(data);
-    },
     util: {
       btoa: window.btoa.bind(window)
     },

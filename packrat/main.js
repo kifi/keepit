@@ -213,15 +213,13 @@ function onGetFail(uri, done, failures, req) {
 
 // ===== Event logging
 
-var mixpanel = {
+var tracker = {
   enabled: true,
   queue: [],
   batch: [],
   sendBatch: function () {
     if (this.batch.length > 0) {
-      var json = JSON.stringify(this.batch);
-      var dataString = 'data=' + api.util.btoa(unescape(encodeURIComponent(json)));
-      api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
+      ajax('POST', '/ext/events', this.batch);
       this.batch.length = 0;
     }
   },
@@ -244,7 +242,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log('#aaa', '[mixpanel.track] %s %o', eventName, properties);
+      log('#aaa', '[tracker.track] %s %o', eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -748,7 +746,7 @@ api.port.on({
   },
   set_max_results: function(n, respond) {
     ajax('POST', '/ext/pref/maxResults?n=' + n, respond);
-    mixpanel.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
+    tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
   stop_showing_external_messaging_intro: function(action) {
@@ -757,7 +755,7 @@ api.port.on({
       api.tabs.emit(tab, 'hide_external_messaging_intro');
     });
     if (prefs) prefs.showExtMsgIntro = false;
-    mixpanel.track('user_was_notified', {
+    tracker.track('user_was_notified', {
       action: 'click',
       subaction: action,
       channel: 'kifi',
@@ -766,7 +764,7 @@ api.port.on({
     });
   },
   track_showing_external_messaging_intro: function() {
-    mixpanel.track('user_was_notified', {
+    tracker.track('user_was_notified', {
       action: 'open',
       channel: 'kifi',
       subchannel: 'tooltip',
@@ -778,7 +776,7 @@ api.port.on({
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
-    mixpanel.track('user_clicked_pane', {
+    tracker.track('user_clicked_pane', {
       type: source,
       action: 'importGmail',
       subsource: 'composeTypeahead'
@@ -987,7 +985,7 @@ api.port.on({
         arr.push(tab);
       }
       tabsByLocator[loc] = arr || [tab];
-      mixpanel.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
+      tracker.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
       if (loc === '/messages:unread') {
         store('unread', true);
       } else if (loc === '/messages:all') {
@@ -1045,7 +1043,7 @@ api.port.on({
         });
       }
     }
-    mixpanel.track('user_changed_setting', {
+    tracker.track('user_changed_setting', {
       category:
         ~['sounds','popups','emails'].indexOf(o.name) ? 'notification' :
         ~['keeper','sensitive'].indexOf(o.name) ? 'keeper' :
@@ -1117,7 +1115,7 @@ api.port.on({
   open_tab: function (data) {
     api.tabs.open(webBaseUri() + data.path);
     if (data.source === 'keeper') {
-      mixpanel.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
+      tracker.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
     }
   },
   close_tab: function (_, __, tab) {
@@ -1271,10 +1269,10 @@ api.port.on({
     unsilence(false);
   },
   track_guide: function (stepParts) {
-    mixpanel.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
+    tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
   },
   track_guide_choice: function (pageIdx) {
-    mixpanel.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
   },
   resume_guide: function (step, _, tab) {
     if (guidePages) {
@@ -1286,7 +1284,7 @@ api.port.on({
     }
   },
   end_guide: function (stepParts) {
-    mixpanel.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
+    tracker.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
       guidePages = null;
     }
@@ -2400,7 +2398,7 @@ function authenticate(callback, retryMs) {
       elizaBaseUri().replace(/^http/, 'ws') + '/eliza/ext/ws?version=' + api.version + (eip ? '&eip=' + eip : ''),
       socketHandlers, onSocketConnect, onSocketDisconnect);
     logEvent.catchUp();
-    mixpanel.catchUp();
+    tracker.catchUp();
 
     urlPatterns = compilePatterns(data.patterns);
     store('installation_id', data.installationId);
