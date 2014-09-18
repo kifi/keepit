@@ -3,7 +3,8 @@ package com.keepit.commanders
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
-import scala.concurrent._
+import scala.concurrent.Future
+import java.util.concurrent.TimeoutException
 import com.keepit.model._
 import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -186,10 +187,10 @@ class URISummaryCommander @Inject() (
       scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
     } catch {
       case timeout: TimeoutException =>
-        db.readWrite { implicit session =>
-          val failImageInfo = imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
-          airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
+        val failImageInfo = db.readWrite { implicit session =>
+          imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
         }
+        airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
         Future.successful(Some(URISummary(title = nUri.title)))
     }
   }
