@@ -4,7 +4,7 @@ import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders.emails.EmailOptOutCommander
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.logging.{ AccessLog, Logging }
@@ -207,24 +208,29 @@ class LibraryCommander @Inject() (
     }
   }
 
+  private def checkAuthTokenAndPassPhrase(libraryId: Id[Library], authToken: Option[String], passPhrase: Option[HashedPassPhrase])(implicit s: RSession) = {
+    authToken.nonEmpty && passPhrase.nonEmpty && {
+      val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
+      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get, excludeSet)
+        .exists { i =>
+          HashedPassPhrase.generateHashedPhrase(i.passPhrase) == passPhrase.get
+        }
+    }
+  }
+
   def canViewLibrary(userId: Option[Id[User]], library: Library,
-    inviteToken: Option[String] = None,
-    passCode: Option[HashedPassPhrase] = None): Boolean = {
+    authToken: Option[String] = None,
+    passPhrase: Option[HashedPassPhrase] = None): Boolean = {
 
     library.visibility == LibraryVisibility.PUBLISHED || // published library
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
             libraryMembershipRepo.getOpt(userId = id, libraryId = library.id.get).nonEmpty ||
-              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty
-          case None if (passCode.nonEmpty && inviteToken.nonEmpty) =>
-            libraryInviteRepo.getWithLibraryId(libraryId = library.id.get)
-              .exists { i =>
-                HashedPassPhrase.generateHashedPhrase(i.passCode) == passCode.get &&
-                  i.authToken == inviteToken.get
-              }
+              libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
+              checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
           case None =>
-            false
+            checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
         }
       }
   }
@@ -399,7 +405,7 @@ class LibraryCommander @Inject() (
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
           case Some(mem) =>
-            libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+            libraryMembershipRepo.save(mem.copy(access = maxAccess, state = LibraryMembershipStates.ACTIVE, createdAt = DateTime.now()))
         }
         libraryRepo.updateMemberCount(libraryId)
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
