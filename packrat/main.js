@@ -773,10 +773,6 @@ api.port.on({
       category: 'extMsgFTUE'
     });
   },
-  set_show_search_intro: function(show) {
-    ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
-    if (prefs) prefs.showSearchIntro = show;
-  },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
