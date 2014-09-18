@@ -232,7 +232,7 @@ class MessagingCommander @Inject() (
     val uri = urlOpt.map { url: String =>
       URI.parse(url) match {
         case Success(uri) => uri
-        case Failure(e) => throw new Exception(s"Scan't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
+        case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
       }
     }
     val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u, scrapeWanted = true), 10 seconds) } // todo: Remove Await
