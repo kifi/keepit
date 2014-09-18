@@ -8,12 +8,15 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
-import com.keepit.social.{ SocialId, SocialNetworks }
+import com.keepit.social.{ SocialNetworkType, SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxTestInjector
+import org.joda.time.DateTime
+import org.specs2.matcher.MatchResult
 import org.specs2.mutable._
 import play.api.libs.json.Json
 
@@ -44,7 +47,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
      */
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
-    def setup(db: Database)(implicit injector: Injector) = {
+    def setup(db: Database, network: SocialNetworkType)(implicit injector: Injector) = {
       val emailAddressRepo: UserEmailAddressRepo = inject[UserEmailAddressRepo]
       val (myUser, mySocialUser) = db.readWrite { implicit s =>
         val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -54,7 +57,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
           fullName = "Andrew Conner",
           socialId = SocialId("71105121"),
-          networkType = SocialNetworks.FACEBOOK
+          networkType = network
         ).withUser(u))
         (u, su)
       }
@@ -80,7 +83,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     "create connections between friends for social users and kifi users" in {
       withDb(modules: _*) { implicit injector =>
 
-        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = setup(db)
+        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = setup(db, SocialNetworks.FACEBOOK)
 
         val connections = inject[UserConnectionCreator].createConnections(socialUserInfo, extractedFriends.map(_.socialId))
 
@@ -98,22 +101,50 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "updateUserConnections sends emails to new friends" in {
+    def runTest(network: SocialNetworkType, userCreatedAt: DateTime)(matchr: FakeOutbox => MatchResult[Any]) = {
       withDb(modules: _*) { implicit injector =>
         val outbox = inject[FakeOutbox]
-        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = setup(db)
+        val (myUser, mySocialUser, user, socialUserInfo, extractedFriends) = db.readWrite { implicit rw =>
+          val tuple = setup(db, network)
+          val user = inject[UserRepo].save(tuple._3.copy(createdAt = userCreatedAt))
+          tuple.copy(_3 = user)
+          tuple
+        }
 
         val socialConnection = db.readWrite { implicit s =>
           inject[SocialConnectionRepo].save(SocialConnection(socialUser1 = mySocialUser.id.get, socialUser2 = socialUserInfo.id.get))
         }
 
-        Await.ready(inject[UserConnectionCreator].updateUserConnections(socialUserInfo.userId.get), Duration(5, "seconds"))
+        Await.ready(inject[UserConnectionCreator].updateUserConnections(socialUserInfo.userId.get, Some(network)), Duration(5, "seconds"))
 
         outbox.size === 1
-        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
         outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
+        matchr(outbox)
       }
     }
+
+    val now = currentDateTime
+    val longTimeAgo = now.minusHours(25)
+
+    "updateUserConnections sends emails to new user (Facebook)" in
+      runTest(SocialNetworks.FACEBOOK, now) { outbox =>
+        outbox(0).subject === "Your Facebook friend Greg just joined Kifi"
+      }
+
+    "updateUserConnections sends emails to old user (Facebook)" in
+      runTest(SocialNetworks.FACEBOOK, longTimeAgo) { outbox =>
+        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+      }
+
+    "updateUserConnections sends emails to new user (LinkedIn)" in
+      runTest(SocialNetworks.LINKEDIN, now) { outbox =>
+        outbox(0).subject === "Your LinkedIn friend Greg just joined Kifi"
+      }
+
+    "updateUserConnections sends emails to old user (LinkedIn)" in
+      runTest(SocialNetworks.LINKEDIN, longTimeAgo) { outbox =>
+        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+      }
 
     "disable non existing connections for social users but not kifi users" in {
       withDb(modules: _*) { implicit injector =>
