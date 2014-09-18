@@ -5,11 +5,7 @@
   bottom: 56px;
   right: 2px;
   width: @box-width;
-  border: solid rgba(0,0,0,.3);
-  border-width: 0 1px 1px;
   border-radius: 4px 4px 12px 12px !important;
-  background: #fff;
-  overflow: hidden;
   text-align: left;
   -webkit-transform-origin: 85% bottom;
   transform-origin: 85% bottom;
@@ -24,8 +20,9 @@
   transition-timing-function: ease-in;
 }
 .kifi-keep-box-top {
-  margin: 0 -1px;
-  border-radius: 4px 4px 0 0 !important;
+  border-radius: inherit !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
   padding-left: 16px;
   line-height: 37px;
   font-size: 13px;
@@ -73,6 +70,12 @@
 
 .kifi-keep-box-viewport {
   height: 310px;
+  border: solid rgba(0,0,0,.3);
+  border-width: 0 1px 1px;
+  border-radius: inherit !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  background: #fff;
   position: relative;
   overflow: hidden;
 }
@@ -101,7 +104,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  width: @box-width;
+  width: (@box-width - 2px);
   .kifi-back>&:last-child,
   .kifi-forward>&:nth-child(2) {
     left: @box-width;
@@ -302,7 +305,7 @@
 .kifi-keep-box-comment {
   display: block;
   width: 100%;
-  height: 42px;
+  height: 41px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   padding: 6px 10px;
