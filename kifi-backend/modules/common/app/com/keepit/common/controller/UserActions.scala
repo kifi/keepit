@@ -4,7 +4,7 @@ import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
-import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, Result }
+import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, ActionFilter, Result }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -97,17 +97,14 @@ trait UserActions { self: Controller =>
     }
   }
 
-  object AdminUserAction extends ActionBuilder[UserRequest] {
-    def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
-      implicit val req = request
-      userActionsHelper.getUserIdOpt match {
-        case Some(userId) =>
-          userActionsHelper.isAdmin(userId) flatMap { isAdmin =>
-            buildUserAction(userId, block)
-          }
-        case None => Future.successful(Unauthorized)
+  private object AdminCheck extends ActionFilter[UserRequest] {
+    protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
+      userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
+        if (isAdmin) None else Some(Forbidden)
       }
     }
   }
+
+  val AdminUserAction = (UserAction andThen AdminCheck)
 
 }
