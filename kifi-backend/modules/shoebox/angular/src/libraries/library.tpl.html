@@ -2,9 +2,7 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">{{library.name}}</h1>
     <div>{{library.description}} <span ng-if="library.slug" ng-click="manageLibrary()">(edit)</span></div>
-    <div class="kf-library-share" ng-if="canBeShared(library)">
-      <div kf-library-share-search library="library"></div>
-    </div>
+    <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
     <div class="kf-subtitle">
       <div class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>

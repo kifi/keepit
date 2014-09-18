@@ -1,28 +1,209 @@
-.kf-library-share
-  .social-invite-element
-    &.kf-library-share-selected
-      background-color: #eee
+.kf-library-share-search
+  position: relative
 
-.kf-library-share-btn
+  // Note: the following styles are for dev only.
+  // When there is a real library header, we won't need this
+  // background anymore.
+  background-color: #fff
+  padding: 15px
+
+  // TODO(yiping): figure out what we need this level of specificity.
+  // Without it, the .library-share-contact-image images only show up
+  // when their parent .library-share-contact items become selected. Odd!
+  .library-share-contact
+    &.library-share-selected
+      background-color: #f8f8f8
+
+  [contenteditable=true]:empty:before{
+    color: rgb(169, 169, 169)
+  }
+
+.library-share-btn
   display: block
+  padding: 8px 15px 8px 40px
+  border: 1px solid #bbb
+  border-radius: 5px
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  font-family: Helvetica, Arial, sans-serif
+  font-size: 13px
+  color: #666
 
-.kf-library-share-menu
+.library-share-menu
   display: none
-  width: 345px
+  position: absolute
+  left: 0
+  box-sizing: border-box
+  margin-top: 5px
+  width: 320px
 
-  input  // TODO(yiping): need class name instead
-    width: 321px
+  // Using drop-shadow instead of box-shadow because the latter does not
+  // respect the border-radius on an inner element when box shadow is
+  // applied to an outer element. We also need to explicitly
+  // add the vendor prefixes because the stylus preprocessor is not generating
+  // them correctly for the filter property.
+  -webkit-filter: drop-shadow(0px 0px 7px #afafaf)
+  filter: drop-shadow(0px 0px 7px #afafaf)
 
-  &.social-invite-search
-    .social-invite-dropdown
-      .social-invite-element.social-invite-element
-        width: 325px
+  z-index: 2
 
-.kf-library-share-actionable
+  .library-share-input
+    box-sizing: border-box
+    border-top: 1px solid rgb(210, 210, 210)
+    border-left: 1px solid #b5b5b5
+    border-right: 1px solid #b5b5b5
+    padding: 13px 10px
+    width: 320px
+    background-color: #f8f8f8
+    font-size: 12px
+
+    &.library-share-message-input
+      border-top: none
+      min-height 50px
+
+    // Listing the following separately because the stylus preprocessor
+    // does not generate placeholder prefixes and because stacking them
+    // does not work.
+    &::-webkit-input-placeholder
+      font-style: normal
+      color: rgb(169, 169, 169)
+
+    &::-moz-placeholder
+      font-style: normal
+      color: rgb(169, 169, 169)
+
+    &:-ms-input-placeholder
+      font-style: normal
+      color: rgb(169, 169, 169)
+
+.library-share-menu-header
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
+  padding: 12px 18px
+  background-color: #333
+  font-size: 12px
+  color: #fff
+
+  &::before
+    position: absolute
+    top: -13px
+    left: 51px
+    border-left: 15px solid transparent
+    border-right: 15px solid transparent
+    border-bottom: 15px solid #333
+    width: 0
+    height: 0
+    content: ''
+
+.library-share-contact
+  box-sizing: border-box
+  border-left: 1px solid #b5b5b5
+  border-right: 1px solid #b5b5b5
+  border-top: 1px solid #eaeaea
+  padding: 5px 12px
+  width: 320px
+  background: #fff
+
+.library-share-actionable
   &:hover
     cursor: pointer
 
-.kf-library-share-sent
-.kf-library-share-following  // TODO(yiping): break out into its own style and color
-  padding-top: 18px
+.library-share-sent
+.library-share-following  // TODO(yiping): break out following into its own style and color
+  display: inline-block
+  position: absolute
+  top: 12px
+  right: 20px
   color: green
+
+.library-share-contact-container
+  position: relative
+
+.library-share-contact-image
+  width: 40px
+  border-radius: 100%
+  display: inline-block
+  margin-right: 15px
+  vertical-align: text-bottom
+
+.library-share-contact-email-icon
+  display: inline-block
+  margin-right: 15px
+  border: 1px solid red
+  border-radius: 100%
+  width: 40px
+  height: 40px
+  background-color: red
+  vertical-align: text-bottom
+
+// TODO(yiping): factor out common styles into mixins.
+.library-share-contact-new-email-icon
+  display: inline-block
+  margin-right: 15px
+  border: 1px solid blue
+  border-radius: 100%
+  width: 40px
+  height: 40px
+  background-color: blue
+  vertical-align: text-bottom
+
+.library-share-contact-gmail-icon
+  display: inline-block
+  margin-right: 15px
+  border: 1px solid green
+  border-radius: 100%
+  width: 40px
+  height: 40px
+  background-color: green
+  vertical-align: text-bottom
+
+.library-share-contact-summary
+  display: inline-block
+  width: 164px
+
+.library-share-contact-name
+  position: relative
+  top: -2px
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.library-share-contact-network
+  overflow: hidden
+  font-size: 12px
+  color: rgb(169, 169, 169)
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.library-share-contact-import-gmail
+  position: relative
+  top: -10px
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.library-share-contact-button
+  display: inline-block
+  position: absolute
+  top: 8px
+  padding: 6px 10px 6px 30px
+  border: 1px solid #bbb
+  border-radius: 5px
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  font-family: Helvetica, Arial, sans-serif
+  font-size: 12px
+  color: #666
+
+.library-share-menu-footer
+  box-sizing: border-box
+  border: 1px solid #b5b5b5
+  border-top: 1px solid #eaeaea
+  border-bottom-left-radius: 5px
+  border-bottom-right-radius: 5px
+  width: 320px
+  height: 10px
+  background-color: #fff
+
