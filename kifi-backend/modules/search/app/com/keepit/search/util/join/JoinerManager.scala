@@ -14,12 +14,11 @@ abstract class Joiner {
 
 abstract class JoinerManager(initialCapacity: Int) {
 
-  private[this] val overflowSize = 2
   private[this] var pool: Array[Joiner] = new Array[Joiner](16) // pool Joiners for reuse
   private[this] var activeCount: Int = 0
   private[this] val table = new mutable.HashMap[Long, Joiner]()
 
-  private def getJoiner(): Joiner = {
+  private def getOrCreateJoiner(): Joiner = {
     if (activeCount >= pool.length) {
       val arr = new Array[Joiner](pool.length * 2)
       System.arraycopy(pool, 0, arr, 0, pool.length)
@@ -38,7 +37,7 @@ abstract class JoinerManager(initialCapacity: Int) {
 
   def get(id: Long): Joiner = {
     table.getOrElse(id, {
-      val joiner = getJoiner().set(id)
+      val joiner = getOrCreateJoiner().set(id)
       table.put(id, joiner)
       joiner
     })
@@ -48,9 +47,8 @@ abstract class JoinerManager(initialCapacity: Int) {
     var i = 0
     while (i < activeCount) {
       val joiner = pool(i)
-      if (joiner != null) {
-        joiner.flush()
-      }
+      if (joiner == null) throw new IllegalStateException("null joiner")
+      joiner.flush()
       i += 1
     }
     table.clear()

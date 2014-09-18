@@ -57,7 +57,7 @@ class ScoreContext(
       if (scoreMax(idx) < scr) scoreMax(idx) = scr
     }
 
-    if (id2 >= 0 && localSum > secondaryIdScore) {
+    if (id2 >= 0L && localSum > secondaryIdScore) {
       secondaryId = id2
       secondaryIdScore = localSum
     }

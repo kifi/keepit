@@ -4,11 +4,11 @@ import com.keepit.common.logging.Logging
 
 object DebugOption {
 
-  object DumpBuf {
+  object Trace {
     val flag = 0x00000001
     def unapply(str: String): Option[Set[Long]] = {
       val parts = str.split(":", 0).toSeq
-      if (parts.length > 1 && parts.head == "dumpbuf") Some(parts.tail.map(_.toLong).toSet) else None
+      if (parts.length > 1 && parts.head == "trace") Some(parts.tail.map(_.toLong).toSet) else None
     }
   }
 
@@ -33,7 +33,7 @@ object DebugOption {
 
 trait DebugOption { self: Logging =>
   protected var debugFlags: Int = 0
-  protected var debugDumpBufIds: Set[Long] = null
+  protected var debugTracedIds: Set[Long] = null
   protected var debugLibraryIds: Set[Long] = null
 
   // debug flags
@@ -41,9 +41,9 @@ trait DebugOption { self: Logging =>
     import DebugOption._
     debugFlags = debugMode.split(",").map(_.toLowerCase.trim).foldLeft(0) { (flags, str) =>
       str match {
-        case DumpBuf(ids) =>
-          debugDumpBufIds = ids
-          flags | DumpBuf.flag
+        case Trace(ids) =>
+          debugTracedIds = ids
+          flags | Trace.flag
         case Library(ids) =>
           debugLibraryIds = ids
           flags | Library.flag
@@ -61,7 +61,7 @@ trait DebugOption { self: Logging =>
 
   def debug(debugOption: DebugOption): Unit = {
     debugFlags = debugOption.debugFlags
-    debugDumpBufIds = debugOption.debugDumpBufIds
+    debugTracedIds = debugOption.debugTracedIds
     debugLibraryIds = debugOption.debugLibraryIds
   }
 

@@ -87,7 +87,7 @@ object Global {
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     //updateOptions := updateOptions.value.withConsolidatedResolution(true),
-    offline := true,
+    offline := false, // set to true to do work offline
     scalaVersion := "2.10.4",
     version := Version.appVersion,
     libraryDependencies ++= commonDependencies,

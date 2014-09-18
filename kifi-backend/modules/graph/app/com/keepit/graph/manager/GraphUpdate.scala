@@ -74,7 +74,7 @@ case object SocialConnectionGraphUpdate extends GraphUpdateKind[SocialConnection
   def apply(connection: IndexableSocialConnection): SocialConnectionGraphUpdate = SocialConnectionGraphUpdate(connection.firstSocialUserId, connection.secondSocialUserId, connection.network, connection.state, connection.seq)
 }
 
-case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], state: State[Keep], source: KeepSource, createdAt: DateTime, keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
+case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedURI], libId: Id[Library], state: State[Keep], source: KeepSource, createdAt: DateTime, keepSeq: SequenceNumber[Keep]) extends GraphUpdate {
   type U = KeepGraphUpdate
   def kind = KeepGraphUpdate
   def seq = kind.seq(keepSeq.value)
@@ -82,7 +82,7 @@ case class KeepGraphUpdate(id: Id[Keep], userId: Id[User], uriId: Id[NormalizedU
 
 case object KeepGraphUpdate extends GraphUpdateKind[KeepGraphUpdate] {
   val code = "keep_graph_update"
-  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.state, keep.source, keep.createdAt, keep.seq)
+  def apply(keep: Keep): KeepGraphUpdate = KeepGraphUpdate(keep.id.get, keep.userId, keep.uriId, keep.libraryId.get, keep.state, keep.source, keep.createdAt, keep.seq)
 }
 
 case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeatures: UriSparseLDAFeatures) extends GraphUpdate {
@@ -130,4 +130,26 @@ case object EmailContactGraphUpdate extends GraphUpdateKind[EmailContactGraphUpd
   def apply(contact: IngestableContact): EmailContactGraphUpdate = {
     EmailContactGraphUpdate(contact.userId, contact.abookId, contact.emailAccountId, contact.hidden, contact.deleted, contact.seq)
   }
+}
+
+case class LibraryMembershipGraphUpdate(userId: Id[User], libId: Id[Library], state: State[LibraryMembership], libMemSeq: SequenceNumber[LibraryMembership]) extends GraphUpdate {
+  type U = LibraryMembershipGraphUpdate
+  def kind = LibraryMembershipGraphUpdate
+  def seq = kind.seq(libMemSeq.value)
+}
+
+case object LibraryMembershipGraphUpdate extends GraphUpdateKind[LibraryMembershipGraphUpdate] {
+  val code = "library_membership_graph_update"
+  def apply(libView: LibraryMembershipView): LibraryMembershipGraphUpdate = LibraryMembershipGraphUpdate(libView.userId, libView.libraryId, libView.state, libView.seq)
+}
+
+case class LibraryGraphUpdate(libId: Id[Library], state: State[Library], libSeq: SequenceNumber[Library]) extends GraphUpdate {
+  type U = LibraryGraphUpdate
+  def kind = LibraryGraphUpdate
+  def seq = kind.seq(libSeq.value)
+}
+
+case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
+  val code = "library_graph_update"
+  def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
 }
