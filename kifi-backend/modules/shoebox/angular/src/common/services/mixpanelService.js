@@ -14,16 +14,18 @@
       $analyticsProvider.registerEventTrack(trackEvent);
     }
   ])
-  .run(['$window', '$log', 'profileService', 'analyticsState',
-    function (_$window_, _$log_, _profileService_, _analyticsState_) {
+  .run(['$window', '$log', 'profileService', 'analyticsState', '$http', 'env',
+    function (_$window_, _$log_, _profileService_, _analyticsState_, _$http_, _env_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
       analyticsState = _analyticsState_;
+      $http = _$http_;
+      env = _env_;
     }
   ]);
 
-  var $window, $log, profileService, analyticsState;  // injected before any code below runs
+  var $window, $log, profileService, analyticsState, $http, env;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
 
@@ -37,6 +39,13 @@
     helpRankClicks: /^\/helprank\/clicks?$/,
     helpRankReKeeps: /^\/helprank\/rekeeps?$/
   };
+
+  function trackEventThroughProxy(event, properties)  {
+    return $http.post(env.origin + '/ev', [{
+      'event': event,
+      'properties': properties
+    }]);
+  }
 
   function trackPage(path) {
     var mixpanel = $window.mixpanel;
@@ -59,7 +68,11 @@
         experiments: getExperiments()
       });
       $log.log('mixpanelService.eventTrack(' + action + ')', props);
-      mixpanel.track(action, props);
+      if (profileService.me) {
+        trackEventThroughProxy(action, props);
+      } else {
+        mixpanel.track(action, props);
+      }
     }
   }
 
@@ -100,7 +113,7 @@
           experiments: getExperiments()
         });
 
-        mixpanel.track('user_viewed_page', attributes);
+        trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
         if (!oldId) {
           mixpanel.identify(oldId);
