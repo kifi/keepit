@@ -19,7 +19,7 @@ class RemoteUserActionsHelper @Inject() (
     userExperimentCommander: RemoteUserExperimentCommander,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
 
-  def getUserOpt(implicit request: Request[_]): Future[Option[User]] = ???
+  def getUserOpt(implicit request: Request[_]): Future[Option[User]] = getUserIdOpt.map(shoebox.getUser(_)) getOrElse Future.successful(None)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments.map(_.contains(ExperimentType.ADMIN))
 
