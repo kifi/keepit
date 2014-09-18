@@ -3,7 +3,9 @@
 # --- !Ups
 
 ALTER TABLE library_invite
-    CHANGE passcode pass_phrase varchar(30) NOT NULL;
+    DROP passcode;
+ALTER TABLE library_invite
+    ADD COLUMN pass_phrase varchar(30) NOT NULL;
 
 ALTER TABLE library_membership
     ADD UNIQUE INDEX library_membership (library_id, user_id);
