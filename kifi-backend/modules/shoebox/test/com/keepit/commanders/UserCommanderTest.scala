@@ -79,22 +79,23 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
+        val userAddress = EmailAddress("username@42go.com")
+
         outbox.size === 0
-        userCommander.sendWelcomeEmail(user1)
+        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
         outbox.size === 1
-        outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "username@42go.com").length === 1
-        //double seding protection
-        userCommander.sendWelcomeEmail(user1)
+        outbox.all.count(email => email.to.length == 1 && email.to.head == userAddress) === 1
+
+        //double sending protection
+        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
         outbox.size === 1
 
-        //content check
-        outbox(0).htmlBody.toString.containsSlice("Hey " + user1.firstName + ",") === true
-        outbox(0).to.length === 1
-        outbox(0).to(0).address === "username@42go.com"
+        outbox(0).to === Seq(userAddress)
         outbox(0).subject === "Let's get started with Kifi"
 
-        outbox(0).htmlBody.toString.containsSlice("www.kifi.com/unsubscribe/") === true
-
+        val html = outbox(0).htmlBody.value
+        html must contain("Hey " + user1.firstName + ",")
+        html must contain("www.kifi.com/unsubscribe/")
       }
     }
 

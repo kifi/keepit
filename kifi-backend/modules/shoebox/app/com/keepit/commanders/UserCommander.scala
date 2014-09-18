@@ -383,56 +383,14 @@ class UserCommander @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  // todo(josh) replace with WelcomeEmailSender
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
-    val olderUser: Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24 * 3600 * 1000)) //users older than 24h get the long form welcome email
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
-
-      if (withVerification) {
-        val url = fortytwoConfig.applicationBaseUrl
-        db.readWrite { implicit session =>
-          val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get).get.withVerificationCode(clock.now))
-          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-          userValueRepo.setValue(newUser.id.get, UserValueName.PENDING_PRIMARY_EMAIL, emailAddr.address)
-
-          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr.address))}"
-
-          val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
-            (NotificationCategory.User.EMAIL_CONFIRMATION,
-              "Kifi.com | Please confirm your email address",
-              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
-          } else {
-            (NotificationCategory.User.WELCOME,
-              "Let's get started with Kifi",
-              if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
-          }
-          val mail = ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(targetEmailOpt.get),
-            category = category,
-            subject = subj,
-            htmlBody = body,
-            textBody = Some(views.html.email.welcomeText(newUser.firstName, verifyUrl, unsubLink).body)
-          )
-          postOffice.sendMail(mail)
-        }
-      } else {
-        db.readWrite { implicit session =>
-          val emailAddr = emailRepo.getByUser(newUser.id.get)
-          val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
-          val mail = ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(emailAddr),
-            category = NotificationCategory.User.WELCOME,
-            subject = "Let's get started with Kifi",
-            htmlBody = if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, "http://www.kifi.com", unsubLink).body,
-            textBody = Some(views.html.email.welcomeText(newUser.firstName, "http://www.kifi.com", unsubLink).body)
-          )
-          postOffice.sendMail(mail)
-        }
+      val emailF = emailSender.welcome(newUser.id.get, targetEmailOpt)
+      emailF.map { email =>
+        db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
+        ()
       }
-    }
+    } else Future.successful(())
   }
 
   def doChangePassword(userId: Id[User], oldPassword: String, newPassword: String): Try[Identity] = Try {
