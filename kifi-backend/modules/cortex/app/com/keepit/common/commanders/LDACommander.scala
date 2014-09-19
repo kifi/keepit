@@ -10,6 +10,7 @@ import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
+import play.api.libs.json._
 import scala.math.exp
 
 @Singleton
@@ -298,6 +299,39 @@ class LDACommander @Inject() (
       userStatUpdatePlugin.updateUser(user)
       n += 1
       if (n % 100 == 0) log.info(s"recomputed ${n} user LDA Stats")
+    }
+  }
+
+  // just for examine data
+  def dumpFeature(dataType: String, id: Long): JsValue = {
+    val version = wordRep.version
+    dataType match {
+      case "user" => db.readOnlyReplica { implicit s =>
+        val uid = Id[User](id)
+        val model = userTopicRepo.getByUser(uid, version)
+        val statOpt = getUserLDAStats(version)
+        val v1 = model.flatMap { _.userTopicMean.map(_.mean) }
+        val v2 = model.flatMap { _.userRecentTopicMean.map(_.mean) }
+        val v3 = model.flatMap(_.userTopicMean.map { _.mean }.map { v => scale(v, statOpt) })
+        val v4 = model.flatMap(_.userRecentTopicMean.map { _.mean }.map { v => scale(v, statOpt) })
+        Json.obj("userGlobal" -> v1, "userRecent" -> v2, "userGlobalScaled" -> v3, "userRecentScaled" -> v4)
+      }
+
+      case "uri" => db.readOnlyReplica { implicit s =>
+        val uriId = Id[NormalizedURI](id)
+        val model = uriTopicRepo.getActiveByURI(uriId, version)
+        val v = model.flatMap(_.feature.map { _.value })
+        Json.obj("uriFeat" -> v)
+      }
+
+      case "library" => db.readOnlyReplica { implicit s =>
+        val libId = Id[Library](id)
+        val model = libTopicRepo.getActiveByLibraryId(libId, version)
+        val v = model.flatMap(_.topic.map(_.value))
+        Json.obj("libFeat" -> v)
+      }
+
+      case _ => JsString("unknown data type")
     }
   }
 
