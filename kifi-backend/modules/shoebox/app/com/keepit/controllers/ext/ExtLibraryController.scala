@@ -8,7 +8,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
+import com.keepit.model.{ Keep, KeepRepo, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
 
 import play.api.libs.json._
 import play.api.mvc.Result
@@ -80,6 +80,19 @@ class ExtLibraryController @Inject() (
       keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
         case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
         case Right(info) => NoContent
+      }
+    }
+  }
+
+  // Maintainers: Let's keep this endpoint simple, quick and reliable. Complex updates deserve their own endpoints.
+  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticatedParseJson { request =>
+    decode(libraryPubId) { libraryId =>
+      val body = request.body.as[JsObject]
+      val title = (body \ "title").asOpt[String]
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
+        case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+        case Right(keep) => NoContent
       }
     }
   }
