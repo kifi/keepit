@@ -1,14 +1,16 @@
 package com.keepit.curator
 
+import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.email.FeedDigestEmailSender
-import com.keepit.curator.model.{ SeedAttribution, TopicAttribution, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, FeedDigestEmailSender }
+import com.keepit.curator.model.{ UriScores, UriRecommendation, SeedAttribution, TopicAttribution, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.{ FakeFeedDigestEmailQueue, FakeFeedDigestEmailQueueModule, SendFeedDigestToUserMessage }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
@@ -71,82 +73,84 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       }
     }
 
+    def setupToSend(db: Database)(implicit injector: Injector) = {
+      val shoebox = shoeboxClientInstance()
+      val sender = inject[FeedDigestEmailSender]
+      val user1 = makeUser(42, shoebox)
+      val user2 = makeUser(43, shoebox)
+      val uriRecoRepo = inject[UriRecommendationRepo]
+
+      shoebox.socialUserInfosByUserId(user1.id.get) = List()
+      shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
+
+      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache",
+        pictureName = Some("mustache"))
+      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
+        pictureName = Some("mrt"))
+      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
+        pictureName = Some("mrt"))
+      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
+        pictureName = Some("mrt"))
+      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
+        pictureName = Some("mrt"))
+      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley",
+        pictureName = Some("0"))
+
+      val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+      val friends = Seq(friend1, friend2, friend3, friend4, friend5, friend6)
+      val friendIds = friends.map(_.id.get)
+      abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
+      abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
+
+      shoebox.saveUsers(friends: _*)
+      shoebox.saveUserImageUrl(44, "//url.com/u44.jpg")
+      shoebox.saveUserImageUrl(48, "//url.com/u48.jpg")
+      shoebox.saveUserImageUrl(49, "//url.com/0.jpg")
+
+      val savedRecoModels = db.readWrite { implicit rw =>
+        Seq(
+          {
+            val tuple = makeCompleteUriRecommendation(1, 42, 8f, "https://www.kifi.com", 10000)
+            tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
+              user = Some(UserAttribution(friends = Seq(friend1, friend2).map(_.id.get), others = 1)),
+              topic = Some(TopicAttribution("Reading"))
+            )))
+          }, {
+            val tuple = makeCompleteUriRecommendation(2, 42, 9f, "https://www.google.com", 2500)
+            tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
+              user = Some(UserAttribution(friends = Seq(friend1.id.get), others = 2)),
+              topic = Some(TopicAttribution("Searching"))
+            )))
+          },
+          makeCompleteUriRecommendation(3, 43, 11f, "http://www.42go.com"),
+          makeCompleteUriRecommendation(4, 43, 8.5f, "http://www.yahoo.com"),
+          // this isn't in the recommendation list because image width is too small
+          makeCompleteUriRecommendation(5, 43, 9f, "http://www.lycos.com", 250, Some(200)), {
+            // this isn't in recommendation list b/c it has already been sent
+            val tuple = makeCompleteUriRecommendation(6, 42, 9f, "http://www.excite.com")
+            tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
+          },
+          // shouldn't be in reco list b/c it's below threshold (8)
+          makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com"),
+          // shouldn't be in reco list b/c image is too tall
+          makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(1001)), {
+            // shouldn't be in reco list b/c trashed
+            val tup = makeCompleteUriRecommendation(9, 42, 10f, "http://www.myspace.com")
+            tup.copy(_2 = tup._2.copy(trashed = true))
+          }, {
+            // shouldn't be in reco list b/c kept
+            val tup = makeCompleteUriRecommendation(10, 42, 10f, "http://www.apple.com")
+            tup.copy(_2 = tup._2.copy(kept = true))
+          }
+        ).map(tuple => saveUriModels(tuple, shoebox))
+      }
+
+      (shoebox, sender, savedRecoModels, user1, user2, friends)
+    }
+
     "sends not-already-pushed keeps to users" in {
       withDb(modules: _*) { implicit injector =>
-        val shoebox = shoeboxClientInstance()
-        val sender = inject[FeedDigestEmailSender]
-        val user1 = makeUser(42, shoebox)
-        val user2 = makeUser(43, shoebox)
-        val uriRecoRepo = inject[UriRecommendationRepo]
-
-        shoebox.socialUserInfosByUserId(user1.id.get) = List()
-        shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
-
-        val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache",
-          pictureName = Some("mustache"))
-        val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
-          pictureName = Some("mrt"))
-        val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
-          pictureName = Some("mrt"))
-        val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
-          pictureName = Some("mrt"))
-        val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
-          pictureName = Some("mrt"))
-        val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley",
-          pictureName = Some("0"))
-
-        val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-        val friends = Seq(friend1, friend2, friend3, friend4, friend5, friend6)
-        val friendIds = friends.map(_.id.get)
-        abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
-        abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
-
-        shoebox.saveUsers(friends: _*)
-        shoebox.saveUserImageUrl(44, "//url.com/u44.jpg")
-        shoebox.saveUserImageUrl(48, "//url.com/u48.jpg")
-        shoebox.saveUserImageUrl(49, "//url.com/0.jpg")
-
-        val savedRecoModels = db.readWrite { implicit rw =>
-          Seq(
-            {
-              val tuple = makeCompleteUriRecommendation(1, 42, 8f, "https://www.kifi.com", 10000)
-              tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
-                user = Some(UserAttribution(friends = Seq(friend1, friend2).map(_.id.get), others = 1)),
-                topic = Some(TopicAttribution("Reading"))
-              )))
-            },
-            {
-              val tuple = makeCompleteUriRecommendation(2, 42, 9f, "https://www.google.com", 2500)
-              tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
-                user = Some(UserAttribution(friends = Seq(friend1.id.get), others = 2)),
-                topic = Some(TopicAttribution("Searching"))
-              )))
-            },
-            makeCompleteUriRecommendation(3, 43, 11f, "http://www.42go.com"),
-            makeCompleteUriRecommendation(4, 43, 8.5f, "http://www.yahoo.com"),
-            // this isn't in the recommendation list because image width is too small
-            makeCompleteUriRecommendation(5, 43, 9f, "http://www.lycos.com", 250, Some(200)),
-            // this isn't in recommendation list b/c it has already been sent
-            {
-              val tuple = makeCompleteUriRecommendation(6, 42, 9f, "http://www.excite.com")
-              tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
-            },
-            // shouldn't be in reco list b/c it's below threshold (8)
-            makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com"),
-            // shouldn't be in reco list b/c image is too tall
-            makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(1001)),
-            // shouldn't be in reco list b/c trashed
-            {
-              val tup = makeCompleteUriRecommendation(9, 42, 10f, "http://www.myspace.com")
-              tup.copy(_2 = tup._2.copy(trashed = true))
-            },
-            // shouldn't be in reco list b/c kept
-            {
-              val tup = makeCompleteUriRecommendation(10, 42, 10f, "http://www.apple.com")
-              tup.copy(_2 = tup._2.copy(kept = true))
-            }
-          ).map(tuple => saveUriModels(tuple, shoebox))
-        }
+        val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
 
         val sumU42F = sender.sendToUser(user1.id.get)
         val sumU43F = sender.sendToUser(user2.id.get)
@@ -222,7 +226,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>
-            val freshReco = uriRecoRepo.get(reco.id.get)
+            val freshReco = inject[UriRecommendationRepo].get(reco.id.get)
             if (sentRecoIds.contains(uri.id.get.id)) {
               freshReco.lastPushedAt must beSome
               freshReco.delivered === 1
@@ -235,6 +239,28 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       }
     }
 
+    "sends digest email with highest recent interest" in {
+      withDb(modules: _*) { implicit injector =>
+        val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
+
+        val u2id = user2.id.get.id.toInt
+        val uriModels = db.readWrite { implicit rw =>
+          Seq(
+            makeCompleteUriRecommendation(40, u2id, 8.1f, "http://espn.com", allScores = defaultAllScores.copy(recentInterestScore = 8f)),
+            makeCompleteUriRecommendation(41, u2id, 8.2f, "http://digg.com", allScores = defaultAllScores.copy(recentInterestScore = 7f)),
+            makeCompleteUriRecommendation(42, u2id, 8.3f, "http://hotornot.com", allScores = defaultAllScores.copy(recentInterestScore = 6f))
+          ).map(saveUriModels(_, shoebox))
+        }
+        val sumU43F = sender.sendToUser(user2.id.get, RecentInterestRankStrategy)
+        val sumU43 = Await.result(sumU43F, Duration(5, "seconds"))
+
+        sumU43.feed.size === 3
+        sumU43.mailSent === true
+        sumU43.feed(0).reco === uriModels(0)._2
+        sumU43.feed(1).reco === uriModels(1)._2
+        sumU43.feed(2).reco === uriModels(2)._2
+      }
+    }
   }
 
 }

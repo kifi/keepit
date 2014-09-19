@@ -238,6 +238,13 @@ class LibraryCommander @Inject() (
       }
   }
 
+  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String], passCode: Option[HashedPassPhrase]): Boolean = {
+    val library = db.readOnlyReplica { implicit session =>
+      libraryRepo.get(libraryId)
+    }
+    canViewLibrary(userId, library, accessToken, passCode)
+  }
+
   def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
     val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libraryId)

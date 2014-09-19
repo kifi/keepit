@@ -66,6 +66,18 @@ class ExtLibraryController @Inject() (
     }
   }
 
+  def getKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    Library.decodePublicId(libraryPubId) match {
+      case Failure(ex) =>
+        NotFound(Json.obj("error" -> "invalid_library_id"))
+      case Success(libraryId) =>
+        keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+          case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+          case Right(keep) => Ok(Json.obj("title" -> keep.title))
+        }
+    }
+  }
+
   def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
     Library.decodePublicId(libraryPubId) match {
       case Failure(ex) =>

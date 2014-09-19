@@ -10,7 +10,8 @@ class MobileDevicesController @Inject() (urbanAirship: UrbanAirship, actionAuthe
 
   def registerDevice(deviceType: String) = JsonAction.authenticatedParseJson { implicit request =>
     (request.body \ "token").asOpt[String] map { token =>
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
+      val isDev: Boolean = (request.body \ "dev").asOpt[Boolean].exists(x => x)
+      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType), isDev)
       Ok(Json.obj(
         "token" -> device.token
       ))
