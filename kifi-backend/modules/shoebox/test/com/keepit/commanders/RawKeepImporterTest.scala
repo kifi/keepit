@@ -2,12 +2,14 @@ package com.keepit.commanders
 
 import java.io.File
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
@@ -46,7 +48,9 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     AbuseControlModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule()
   )
 
   "RawKeepImporter" should {

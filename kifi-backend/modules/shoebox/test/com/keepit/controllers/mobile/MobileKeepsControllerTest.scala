@@ -1,6 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
@@ -8,6 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -40,6 +42,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )
 
