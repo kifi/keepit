@@ -60,38 +60,37 @@
 
     if (chart == "articleIndex") {
       options.title = "Article Index"
-      options.target = baseTargetsForLogScale.concat("substr(stats.gauges.search.index.article_*.size,4,5)")
+      options.target = ["substr(stats.gauges.search.index.article_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "keepIndex") {
       options.title = "Keep Index"
-      options.target = baseTargetsForLogScale.concat("substr(stats.gauges.search.index.keep_*.size,4,5)")
+      options.target = ["substr(stats.gauges.search.index.keep_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "libraryIndex") {
       options.title = "Collection Index"
-      options.target = baseTargetsForLogScale.concat("substr(stats.gauges.search.index.library_*.size,4,5)")
+      options.target = ["substr(stats.gauges.search.index.library_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "bookmarkIndex") {
       options.title = "Bookmark Index"
-      options.target = baseTargetsForLogScale.concat(["substr(stats.gauges.search.index.bookmarkStore_*.size,4,5)", "substr(stats.gauges.search.index.urigraph_*.size,4,5)"])
+      options.target = ["substr(stats.gauges.search.index.bookmarkStore_*.size,4,5)", "substr(stats.gauges.search.index.urigraph_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "collectionIndex") {
       options.title = "Collection Index"
-      options.target = baseTargetsForLogScale.concat(["substr(stats.gauges.search.index.collectionName_*.size,4,5)", "substr(stats.gauges.search.index.collection_*.size,4,5)"])
+      options.target = ["substr(stats.gauges.search.index.collectionName_*.size,4,5)", "substr(stats.gauges.search.index.collection_*.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "otherIndex") {
       options.title = "Other Indices"
-      options.target = baseTargetsForLogScale.concat(
-        ["substr(stats.gauges.search.index.user.size,4,5)", "substr(stats.gauges.search.index.message.size,4,5)",
+      options.target = ["substr(stats.gauges.search.index.user.size,4,5)", "substr(stats.gauges.search.index.message.size,4,5)",
         "substr(stats.gauges.search.index.userGraph.size,4,5)", "substr(stats.gauges.search.index.searchFriend.size,4,5)"]
       )
       options.logBase = 2
