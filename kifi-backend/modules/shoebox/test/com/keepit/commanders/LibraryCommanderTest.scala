@@ -18,8 +18,6 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import scala.concurrent._
-import ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
@@ -807,7 +805,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         //Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
         libraryCommander.inviteBulkUsers(allInvites)
         eliza.inbox.size === 4
-        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION) === 4
+        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
+        eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }
     }
