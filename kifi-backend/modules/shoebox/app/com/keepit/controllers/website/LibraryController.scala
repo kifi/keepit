@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders._
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
@@ -11,8 +11,10 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.controllers.LibraryViewActions
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.BodyParsers
 
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
@@ -25,13 +27,15 @@ class LibraryController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
-  libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
+  val libraryCommander: LibraryCommander,
+  val userActionsHelper: UserActionsHelper,
+  val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends WebsiteController(actionAuthenticator) with UserActions with LibraryViewActions with ShoeboxServiceController {
 
   def addLibrary() = JsonAction.authenticatedParseJsonAsync { request =>
     val addRequest = request.body.as[LibraryAddRequest]
@@ -381,6 +385,35 @@ class LibraryController @Inject() (
           BadRequest(Json.obj("error" -> "Could not parse object from request body"))
         }
     }
+  }
+
+  def authToLibrary(id: PublicId[Library], authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    val passPhrase = (request.body \ "passPhrase").asOpt[String].map(HashedPassPhrase.generateHashedPhrase)
+    val libraryIdTry = Library.decodePublicId(id)
+
+    libraryIdTry match {
+      case Success(libraryId) =>
+        val canView = request match {
+          case userRequest: UserRequest[_] =>
+            libraryCommander.canViewLibrary(Some(userRequest.userId), libraryId, authToken, passPhrase)
+          case other =>
+            libraryCommander.canViewLibrary(None, libraryId, authToken, passPhrase)
+        }
+        if (canView) {
+          (authToken, passPhrase) match {
+            case (Some(a), Some(p)) =>
+              val cookie = ("library_access", s"${id.id}/${p.value}")
+              NoContent.addingToSession(cookie)
+            case _ =>
+              NoContent
+          }
+        } else {
+          Forbidden
+        }
+      case _ =>
+        Forbidden
+    }
+
   }
 
 }
