@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.cache.CacheModule
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.store.StoreModule
 import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.heimdal.HeimdalServiceClientModule
@@ -21,6 +22,7 @@ case class SearchServiceTypeModule() extends ServiceTypeModule {
 abstract class SearchModule(
 
     // Common Functional Modules
+    val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val storeModule: StoreModule,
 

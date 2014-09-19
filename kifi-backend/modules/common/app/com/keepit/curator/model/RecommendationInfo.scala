@@ -75,7 +75,8 @@ object RecoItemInfo {
 case class FullRecoInfo(
   kind: RecoKind,
   metaData: Option[RecoMetaData],
-  itemInfo: RecoItemInfo)
+  itemInfo: RecoItemInfo,
+  explain: Option[String] = None)
 
 object FullRecoInfo {
   implicit val writes = Json.writes[FullRecoInfo]

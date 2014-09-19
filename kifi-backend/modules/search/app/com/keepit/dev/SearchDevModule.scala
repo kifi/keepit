@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.search._
@@ -16,6 +17,7 @@ import com.keepit.common.util.PlayAppConfigurationModule
 case class SearchDevModule() extends SearchModule(
 
   // Common Functional Modules
+  userActionsModule = ProdRemoteUserActionsHelperModule(),
   cacheModule = SearchCacheModule(HashMapMemoryCacheModule()),
   storeModule = SearchDevStoreModule(),
 
