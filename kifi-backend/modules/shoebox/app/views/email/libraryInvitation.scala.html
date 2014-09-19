@@ -31,15 +31,15 @@
                         @fullName(inviterId) would like to share @libraryName with you <br><br>
 
                         @inviteMsg match {
-                            case Some(msg) => {@firstName(inviterId) sent you a message: @msg}
-                            case None => {}
+                            case Some(msg) if msg != "" => {@firstName(inviterId) sent you a message: @msg <br><br>}
+                            case _ => {}
                         }
 
                         <font color="#A3C879">Come check it out here!</font><br>
                         <a href="@libraryLink"><u>@libraryName</u></a><br>
                         @libraryDescription match {
-                            case Some(descr) => {Library Description: @descr}
-                            case None => {}
+                            case Some(descr) if descr != "" => {Library Description: @descr}
+                            case _ => {}
                         }
                         <br><br>
 
