@@ -5,22 +5,39 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.{ ExperimentType, KifiInstallation, User }
+import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User }
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import securesocial.core.Identity
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
-case class NonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with MaybeUserRequest[T] // todo(ray): add partial auth support
-case class UserRequest[T](
+trait NonUserRequest[T] extends MaybeUserRequest[T] // todo(ray): add partial auth support
+trait UserRequest[T] extends MaybeUserRequest[T] {
+  def request: Request[T]
+  def userId: Id[User]
+  def adminUserId: Option[Id[User]]
+  def user: User
+  def experiments: Set[ExperimentType]
+}
+
+// for backward compatibility; might be removed later
+trait SecureSocialIdentityAccess[T] { self: UserRequest[T] =>
+  def identityOptF: () => Future[Option[Identity]]
+  lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
+}
+
+case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T]
+case class SimpleUserRequest[T](
     request: Request[T],
     userId: Id[User],
     adminUserId: Option[Id[User]],
     userF: () => Future[User],
     experimentsF: () => Future[Set[ExperimentType]],
-    kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with MaybeUserRequest[T] {
+    identityOptF: () => Future[Option[Identity]],
+    kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
   lazy val user = Await.result(userF.apply, 5 seconds)
   lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
 }
@@ -39,6 +56,7 @@ trait UserActionsRequirements {
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]]
 
+  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]]
 }
 
 trait UserActionsHelper extends UserActionsRequirements {
@@ -62,12 +80,13 @@ trait UserActions extends Logging { self: Controller =>
   protected def userActionsHelper: UserActionsHelper
 
   private def buildUserRequest[A](userId: Id[User], adminUserId: Option[Id[User]] = None)(implicit request: Request[A]): UserRequest[A] =
-    UserRequest(
+    SimpleUserRequest(
       request,
       userId,
       adminUserId,
       () => userActionsHelper.getUserOpt(userId).map(_.get),
       () => userActionsHelper.getUserExperiments(userId),
+      () => userActionsHelper.getSocialUserInfos(userId).map(_.headOption.flatMap(_.credentials)),
       () => userActionsHelper.getKifiInstallationIdOpt
     )
 
@@ -94,7 +113,6 @@ trait UserActions extends Logging { self: Controller =>
       if (!isAdmin) throw new IllegalStateException(s"non admin user $adminUserId tries to impersonate to $impersonateExtId")
       userActionsHelper.getUserByExtIdOpt(impersonateExtId) map { impUserOpt =>
         val impUserId = impUserOpt.get.id.get // fail hard
-        // todo(ray): identity
         log.info(s"[impersonate] admin user $adminUserId is impersonating user $impUserId with request ${request.path}")
         buildUserRequest(impUserId, Some(adminUserId)) -> impUserId
       }
@@ -131,7 +149,7 @@ trait UserActions extends Logging { self: Controller =>
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
-        case None => block(NonUserRequest(request)).map(maybeAugmentKcid(_))
+        case None => block(SimpleNonUserRequest(request)).map(maybeAugmentKcid(_))
       }
     }
   }

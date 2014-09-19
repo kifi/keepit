@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ User, ExperimentType }
+import com.keepit.model.{ SocialUserInfo, User, ExperimentType }
 import play.api.mvc.Request
 
 import scala.concurrent.Future
@@ -35,5 +35,5 @@ class FakeUserActionsHelper @Inject() (
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
-
+  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 }
