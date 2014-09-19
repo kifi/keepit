@@ -2,16 +2,13 @@
 
 angular.module('kifi')
 
+// This directive is based on code from:
+// https://docs.angularjs.org/api/ng/type/ngModel.NgModelController
 .directive('contenteditable', ['$sce', function($sce) {
   return {
     restrict: 'A', // only activate on element attribute
     require: '?ngModel', // get a hold of NgModelController
     link: function(scope, element, attrs, ngModel) {
-      // TODO(yiping): implement maxlength on contenteditable.
-      // Note that there is a library for maxlength (and lots more);
-      // investigate whether using it would be a good idea.
-      // See: http://jakiestfu.github.io/Medium.js/docs/
-
       if (!ngModel) {
         return; // do nothing if no ng-model
       }
@@ -19,11 +16,11 @@ angular.module('kifi')
       // Write data to the model
       function read() {
         var html = element.html();
-        // When we clear the content editable the browser leaves a <br> behind
-        // If strip-br attribute is provided then we strip this out
-        if ( attrs.stripBr && html === '<br>' ) {
+
+        if (!element[0].textContent.trim()) {
           html = '';
         }
+
         ngModel.$setViewValue(html);
         ngModel.$render();
       }
