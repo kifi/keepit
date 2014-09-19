@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util', 
+.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
     //
     // Internal data.
@@ -10,7 +10,7 @@ angular.module('kifi')
     var username = $routeParams.username;
     var librarySlug = $routeParams.librarySlug;
     var selectedCount = 0;
-    
+
 
     //
     // Scope data.
@@ -68,9 +68,21 @@ angular.module('kifi')
       // Only user created (i.e. not Main or Secret) libraries can be shared.
       // Of the user created libraries, public libraries can be shared by any Kifi user;
       // discoverable/secret libraries can be shared only by the library owner.
-      return library.kind === 'user_created' && 
+      return library.kind === 'user_created' &&
              (library.visibility === 'published' ||
               library.ownerId === profileService.me.id);
+    };
+
+    // This needs to be determined server side in the library response. For now, doing it client side.
+    $scope.canBeFollowed = function (library) {
+      var alreadyFollowing = _.find(library.followers, function (elem) {
+        return elem.id === profileService.me.id;
+      });
+      return !alreadyFollowing && library.ownerId !== profileService.me.id;
+    };
+
+    $scope.followLibrary = function (libraryId) {
+      libraryService.joinLibrary(libraryId);
     };
 
     $scope.getSubtitle = function () {
