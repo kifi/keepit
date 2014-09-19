@@ -1,11 +1,14 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
-import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.mail.{ ElectronicMailRepo, FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -14,6 +17,10 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
@@ -21,7 +28,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),
-    FakeCryptoModule()
+    FakeCryptoModule(),
+    FakeSocialGraphModule(),
+    FakeABookServiceClientModule(),
+    FakeElizaServiceClientModule()
   )
 
   def setupUsers()(implicit injector: Injector) = {
@@ -783,27 +793,28 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "send library invitation notification" in {
+    "send library invitation notification & emails" in {
       withDb(modules: _*) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries()
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
         val outbox = inject[FakeOutbox]
+        val emailRepo = inject[ElectronicMailRepo]
+        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
         outbox.size === 0
+        eliza.inbox.size === 0
 
-        libraryCommander.inviteNotification(userIron.id.get, userHulk.id.get, libScience.id.get)
-        outbox.size === 1
-
-        //content check
-        outbox(0).htmlBody.toString.containsSlice("Hey Bruce,") === true
-        outbox(0).to.length === 1
-        outbox(0).to(0).address === "incrediblehulk@gmail.com"
-        outbox(0).subject === "Kifi.com | You've been invited to a library!"
-
-        val emailBody = outbox(0).htmlBody.toString
-        emailBody.containsSlice(s"""<a href="www.kifi.com/${userIron.username.get}/${libScience.slug}?auth=${libScience.universalLink}"><u>Science &amp; Stuff</u></a>""") === true
-        emailBody.containsSlice("Tony Stark would like to share Science &amp; Stuff with you") === true
-        emailBody.containsSlice("www.kifi.com/unsubscribe/") === true
+        val allInvites = db.readOnlyMaster { implicit s =>
+          //emailRepo.count === 0
+          libraryInviteRepo.all
+        }
+        //Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
+        libraryCommander.inviteBulkUsers(allInvites)
+        eliza.inbox.size === 4
+        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION) === 4
+        db.readOnlyMaster { implicit s => emailRepo.count === 4 }
+        outbox.size === 4
       }
     }
+
   }
 }

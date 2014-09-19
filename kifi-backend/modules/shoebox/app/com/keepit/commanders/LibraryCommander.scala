@@ -1,17 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Provider, Inject }
-import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.commanders.emails.{ LibraryInviteEmailSender, EmailOptOutCommander }
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -37,12 +39,13 @@ class LibraryCommander @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     keepsCommanderProvider: Provider[KeepsCommander],
     collectionRepo: CollectionRepo,
-    postOffice: LocalPostOffice,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
     airbrake: AirbrakeNotifier,
     searchClient: SearchServiceClient,
+    elizaClient: ElizaServiceClient,
     keptAnalytics: KeepingAnalytics,
+    libraryInviteSender: Provider[LibraryInviteEmailSender],
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -298,10 +301,45 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def inviteBulkUsers(invites: Seq[LibraryInvite]) {
-    db.readWrite { implicit s =>
-      invites.map { invite => libraryInviteRepo.save(invite) }
+  def inviteBulkUsers(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
+    val emailFutures = db.readWrite { implicit s =>
+      // save invites
+      invites.map { invite =>
+        libraryInviteRepo.save(invite)
+      }
+
+      invites.groupBy(invite => (invite.ownerId, invite.libraryId))
+        .map { key =>
+          val (inviterId, libId) = key._1
+          val inviter = basicUserRepo.load(inviterId)
+          val lib = libraryRepo.get(libId)
+          val libOwner = basicUserRepo.load(lib.ownerId)
+          val libLink = s"""www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}?auth=${lib.universalLink}"""
+
+          // send notifications to kifi users only
+          val inviteeIdSet = key._2.map(_.userId).flatten.toSet
+          elizaClient.sendGlobalNotification(
+            userIds = inviteeIdSet,
+            title = s"${inviter.firstName} invited you to follow ${lib.name}!",
+            body = s"Browse keeps in ${lib.name} and find some interesting gems kept by ${libOwner.username.getOrElse(libOwner.firstName)}.",
+            linkText = "Let's take a look!",
+            linkUrl = libLink,
+            imageUrl = inviter.pictureName,
+            sticky = false,
+            category = NotificationCategory.User.LIBRARY_INVITATION
+          )
+
+          // send emails to both users & non-users
+          key._2.map { invite =>
+            val recipient = invite.userId match {
+              case Some(id) => Left(id)
+              case _ => Right(invite.emailAddress.get)
+            }
+            libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId, invite.message)
+          }
+        }.toSeq.flatten
     }
+    Future.sequence(emailFutures)
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
@@ -366,14 +404,16 @@ class LibraryCommander @Inject() (
   }
 
   def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
-    db.readWrite { implicit s =>
-      val targetLib = libraryRepo.get(libraryId)
-      if (targetLib.ownerId != inviterId)
-        Left(LibraryFail("permission_denied"))
-      else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail("cant_invite_to_system_generated_library"))
-      else {
-        val successInvites = for (i <- inviteList) yield {
+    val targetLib = db.readOnlyMaster { implicit s =>
+      libraryRepo.get(libraryId)
+    }
+    if (targetLib.ownerId != inviterId)
+      Left(LibraryFail("permission_denied"))
+    else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
+      Left(LibraryFail("cant_invite_to_system_generated_library"))
+    else {
+      val successInvites = db.readOnlyMaster { implicit s =>
+        for (i <- inviteList) yield {
           val (recipient, access, msgOpt) = i
           val (inv, extId) = recipient match {
             case Left(id) =>
@@ -383,10 +423,10 @@ class LibraryCommander @Inject() (
           }
           (inv, (extId, access))
         }
-        val (inv1, res) = successInvites.unzip
-        inviteBulkUsers(inv1)
-        Right(res)
       }
+      val (inv1, res) = successInvites.unzip
+      inviteBulkUsers(inv1)
+      Right(res)
     }
   }
 
@@ -512,33 +552,6 @@ class LibraryCommander @Inject() (
 
         val badKeeps = applyToKeeps(userId, library, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
         badKeeps
-    }
-  }
-
-  def inviteNotification(inviterId: Id[User], inviteeId: Id[User], libraryId: Id[Library]): Unit = {
-    val (inviter, invitee, library, owner) = db.readOnlyMaster { implicit s =>
-      val inviter = userRepo.get(inviterId)
-      val invitee = userRepo.get(inviteeId)
-      val library = libraryRepo.get(libraryId)
-      val owner = userRepo.get(library.ownerId)
-      (inviter, invitee, library, owner)
-    }
-    invitee.primaryEmail match {
-      case None => {}
-      case Some(email) =>
-        val libraryLink = s"""www.kifi.com/${owner.username.getOrElse(owner.externalId)}/${library.slug}?auth=${library.universalLink}"""
-
-        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName.getOrElse("0"), Some("https"))
-        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(email))}"
-        db.readWrite { implicit session =>
-          postOffice.sendMail(ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(email),
-            subject = "Kifi.com | You've been invited to a library!",
-            htmlBody = views.html.email.libraryInvitation(invitee.firstName, inviter, imageUrl, library.name, library.description, libraryLink, unsubLink).body,
-            category = NotificationCategory.User.LIBRARY_INVITATION
-          ))
-        }
     }
   }
 

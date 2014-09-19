@@ -1,11 +1,13 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 
 import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.{ FakeSliderHistoryTrackerModule, Keep, KeepSource }
 import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryVisibility }
@@ -34,6 +36,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeHttpClientModule()
   )
 
