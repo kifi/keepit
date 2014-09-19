@@ -578,11 +578,7 @@ class KeepsCommander @Inject() (
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
       case Some(mem) if mem.hasWriteAccess =>
-        val normTitle = title.map(_.trim) match {
-          case Some("") => None
-          case Some(t) => Some(t)
-          case None => None
-        }
+        val normTitle = title.map(_.trim).filter(_.nonEmpty)
         db.readWrite { implicit s =>
           keepRepo.getByExtIdandLibraryId(keepId, libId) match {
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
