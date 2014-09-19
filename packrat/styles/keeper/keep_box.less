@@ -348,12 +348,16 @@
   &::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: center / auto 12px no-repeat;
+    top: 50%;
+    left: 50%;
+    @half-width: 9px;
+    @half-height: 6px;
+    width: (2 * @half-width);
+    height: (2 * @half-height);
+    margin: -@half-height 0 0 -@half-width;
     background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 8"><path fill="white" d="M3.646,7.858l-3.5-3.417c-0.195-0.188-0.195-0.494,0-0.684l0.707-0.684c0.195-0.188,0.512-0.188,0.707,0L4,5.467l5.439-5.325c0.195-0.188,0.512-0.188,0.707,0l0.707,0.684c0.195,0.188,0.195,0.495,0,0.683l-6.5,6.351C4.158,8.047,3.842,8.047,3.646,7.858z"/></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
     opacity: 0;
     -webkit-transform: translate(-60px);
     transform: translate(-60px);

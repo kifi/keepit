@@ -232,7 +232,6 @@ var keepBox = keepBox || (function () {
     .on('click', '.kifi-keep-box-save', function (e) {
       if (e.which === 1) {
         saveKeep($view, $(this), $view.find('.kifi-keep-box-lib').data('id'));
-        // hide(e, 'action');
       }
     });
   }
