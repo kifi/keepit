@@ -53,33 +53,34 @@ class ExtKeepImageController @Inject() (
 
   def loadPrevImageForKeep(startUserId: Long, endUserId: Long, take: Int, drop: Int) = Action.async { request =>
 
-    (startUserId to endUserId).map { userLong =>
-      val userId = Id[User](userLong)
-      val libraryIds = db.readOnlyReplica { implicit session =>
-        libraryRepo.getByUser(userId).map(_._2.id.get)
-      }
-      libraryIds.map { libraryId =>
-        val keepCount = keepRepo.getCountByLibrary(libraryId)
-        (0 to keepCount by 1000).map { batchStart =>
-          val keepIds = keepRepo.getByLibrary(libraryId, 1000, batchStart).map(_.id.get)
-          keepIds.map { keepId =>
-            keepImageCommander.autoSetKeepImage(keepId, localOnly = true, overwriteExistingChoice = false)
-          }
+    val users = (startUserId to endUserId).map(Id[User])
+
+    val process = FutureHelpers.foldLeft(users)(0) {
+      case (userCount, userId) =>
+        val libraryIds = db.readOnlyReplica { implicit session =>
+          libraryRepo.getByUser(userId).map(_._2.id.get)
         }
-      }
+        FutureHelpers.foldLeft(libraryIds)(0) {
+          case (libraryCount, libraryId) =>
+            val totalKeepInLibraryCount = db.readOnlyReplica(keepRepo.getCountByLibrary(libraryId)(_))
+            val batchPositions = 0 to totalKeepInLibraryCount by 1000
+            FutureHelpers.foldLeft(batchPositions)(0) {
+              case (batchKeepCount, batchPosition) =>
+                val keepIds = db.readOnlyReplica(keepRepo.getByLibrary(libraryId, 1000, batchPosition)(_)).map(_.id.get)
+                FutureHelpers.foldLeft(keepIds)(0) {
+                  case (keepCount, keepId) =>
+                    keepImageCommander.autoSetKeepImage(keepId, localOnly = true, overwriteExistingChoice = false).map { s =>
+                      keepCount + 1
+                    }
+                }.map { result =>
+                  log.info(s"[kiip] Finished u:$userId, l:$libraryId, b:$batchPosition / ${batchPositions.length}, k: $result")
+                  result
+                }
+            }
+        }
     }
 
-    val keeps = db.readOnlyReplica { implicit session =>
-      keepRepo.getByLibrary(libraryId, take, drop)
-    }
-
-    val process = FutureHelpers.foldLeft(keeps)("") {
-      case (resp, keep) =>
-        keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = true, overwriteExistingChoice = false).map { s =>
-          resp + "\n" + s.toString
-        }
-    }
-    process.map(c => Ok(c))
+    process.map(c => Ok(c.toString))
   }
 
 }

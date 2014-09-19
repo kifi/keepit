@@ -229,7 +229,7 @@ class LibraryCommander @Inject() (
       }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String], passCode: Option[HashedPassPhrase]) = {
+  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String], passCode: Option[HashedPassPhrase]): Boolean = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }

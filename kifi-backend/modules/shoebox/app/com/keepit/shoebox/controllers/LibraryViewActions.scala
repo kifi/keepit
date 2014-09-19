@@ -13,13 +13,17 @@ import play.api.mvc.{ ActionFilter, Controller, Result }
 import scala.concurrent.Future
 import scala.util.Success
 
-abstract class LibraryViewController(libraryCommander: LibraryCommander) extends UserActions with Controller {
+trait LibraryViewActions { self: UserActions with Controller =>
 
-  def LibraryViewAction(id: PublicId[Library]): ActionFilter[MaybeUserRequest] = new ActionFilter[MaybeUserRequest] {
+  val publicIdConfig: com.keepit.common.crypto.PublicIdConfiguration
+  implicit private val implicitPublicId = publicIdConfig
+  val libraryCommander: LibraryCommander
+
+  def LibraryViewAction(id: PublicId[Library]) = new ActionFilter[MaybeUserRequest] {
     def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(libraryViewFilter(id, input))
   }
 
-  def LibraryViewAction: ActionFilter[MaybeUserRequest] = new ActionFilter[MaybeUserRequest] {
+  def LibraryViewAction = new ActionFilter[MaybeUserRequest] {
     def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = {
       input.getQueryString("libraryId") match {
         case Some(libId) => Future.successful(libraryViewFilter(PublicId[Library](libId), input))
@@ -32,7 +36,7 @@ abstract class LibraryViewController(libraryCommander: LibraryCommander) extends
 
   private def libraryViewFilter[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]): Option[Result] = {
     val userIdOpt: Option[Id[User]] = input match {
-      case userRequest: UserRequest => Some(userRequest.userId)
+      case userRequest: UserRequest[A] => Some(userRequest.userId)
       case _ => None
     }
 
@@ -73,15 +77,7 @@ abstract class LibraryViewController(libraryCommander: LibraryCommander) extends
   }
 
   private def lookupAccess(libraryId: Id[Library], userId: Option[Id[User]], accessToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Boolean = {
-    val cachedResult = Option(LibraryAccessCache.cache.getIfPresent((libraryId, userId, accessToken, hashedPassPhrase)))
-    cachedResult match {
-      case Some(true) => true
-      case Some(false) | None => libraryCommander.canViewLibrary(userId, libraryId, accessToken, hashedPassPhrase)
-    }
+    libraryCommander.canViewLibrary(userId, libraryId, accessToken, hashedPassPhrase)
   }
 }
 
-private object LibraryAccessCache {
-  val cache: Cache[(Id[Library], Option[Id[User]], Option[String], Option[HashedPassPhrase]), Boolean] =
-    CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(512).maximumSize(512).expireAfterWrite(10, TimeUnit.SECONDS).build()
-}
