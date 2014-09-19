@@ -11,7 +11,7 @@ angular.module('kifi')
       // Note that there is a library for maxlength (and lots more);
       // investigate whether using it would be a good idea.
       // See: http://jakiestfu.github.io/Medium.js/docs/
-      
+
       if (!ngModel) {
         return; // do nothing if no ng-model
       }
