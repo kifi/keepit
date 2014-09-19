@@ -275,6 +275,7 @@ POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], auth:Option[String] ?= None, passCode:Option[HashedPassPhrase] ?= None)
+POST    /site/libraries/:id/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])

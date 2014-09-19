@@ -402,7 +402,7 @@ class LibraryController @Inject() (
         if (canView) {
           (authToken, passPhrase) match {
             case (Some(a), Some(p)) =>
-              val cookie = ("library_access", s"$id/${p.value}")
+              val cookie = ("library_access", s"${id.id}/${p.value}")
               NoContent.addingToSession(cookie)
             case _ =>
               NoContent
