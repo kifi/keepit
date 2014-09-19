@@ -1,5 +1,5 @@
-<div class="kifi-keep-box-view kifi-keep-box-view-keep">
-  <div class="kifi-keep-box-lib-head{{#kept}} kifi-kept{{/kept}}">
+<div class="kifi-keep-box-view kifi-keep-box-view-keep{{#kept}} kifi-kept{{/kept}}{{^kept}} kifi-dirty{{/kept}}">
+  <div class="kifi-keep-box-keep-head">
     <a class="kifi-keep-box-back" href="javascript:">&nbsp;</a>
   </div>
   {{#library}}{{>keep_box_lib}}{{/library}}
@@ -10,8 +10,7 @@
     <a class="kifi-keep-box-image-next" href="javascript:"></a>
   </div>
   <textarea class="kifi-keep-box-comment" placeholder="Comment or add a tag (optional)"></textarea>
-  <a class="kifi-keep-box-save" href="javascript:">
-    <span class="kifi-keep-box-save-progress kifi-{{library.visibility}}"></span>
-    <span class="kifi-keep-box-save-text">Save</span>
+  <a class="kifi-keep-box-btn" href="javascript:">
+    <span class="kifi-keep-box-progress kifi-{{library.visibility}}"></span>
   </a>
 </div>

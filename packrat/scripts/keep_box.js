@@ -193,7 +193,7 @@ var keepBox = keepBox || (function () {
         case 108: // numpad enter
           var $item = $view.find('.kifi-highlighted');
           if ($item.length) {
-            chooseLibrary($item[0]);
+            chooseLibrary($view, $item[0]);
           }
           return false;
       }
@@ -211,7 +211,7 @@ var keepBox = keepBox || (function () {
     }, null, $view.data()))
     .on('mousedown', '.kifi-keep-box-lib', function (e) {
       if (e.which === 1) {
-        chooseLibrary(this);
+        chooseLibrary($view, this);
       }
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
@@ -229,9 +229,16 @@ var keepBox = keepBox || (function () {
         swipeTo();
       }
     })
-    .on('click', '.kifi-keep-box-save', function (e) {
+    .on('input', '.kifi-keep-box-keep-title', function () {
+      updateDirty($view, this, this.value.trim() !== $view.data('title'));
+    })
+    .on('click', '.kifi-keep-box-btn', function (e) {
       if (e.which === 1) {
-        saveKeep($view, $(this), $view.find('.kifi-keep-box-lib').data('id'));
+        if ($view.data('dirty').length) {
+          saveKeep($view);
+        } else {
+          hide(null, 'action');
+        }
       }
     });
   }
@@ -246,51 +253,92 @@ var keepBox = keepBox || (function () {
     el.classList.add('kifi-highlighted');
   }
 
-  function chooseLibrary(el) {
+  function chooseLibrary($view, el) {
     var libraryId = el.dataset.id;
     if (libraryId) {
-      var $view = $(render('html/keeper/keep_box_keep', {
-        library: $(el).closest('.kifi-keep-box-view').data('librariesById')[libraryId],
-        static: true,
-        kept: el.classList.contains('kifi-kept'),
-        title: authoredTitle(), // TODO: actual keep title if already kept
-        site: document.location.hostname
-      }, {
-        keep_box_lib: 'keep_box_lib'
-      }));
-      addKeepBindings($view);
-      swipeTo($view);
+      var library = $view.data('librariesById')[libraryId];
+      var kept = el.classList.contains('kifi-kept');
+      if (kept) {
+        api.port.emit('get_keep', libraryId, showKeep.bind(null, library));
+      } else {
+        showKeep(library);
+      }
+    } else {
+      // TODO: create library
     }
   }
 
-  function saveKeep($view, $save, libraryId) {
+  function showKeep(library, keep) {
+    var title = keep ? keep.title : authoredTitle();
+    var $view = $(render('html/keeper/keep_box_keep', {
+      library: library,
+      static: true,
+      kept: !!keep,
+      title: title,
+      site: document.location.hostname
+    }, {
+      keep_box_lib: 'keep_box_lib'
+    }));
+    $view.data({
+      title: keep ? title : null,
+      dirty: keep ? [] : $view.find('.kifi-keep-box-keep-title').get()
+    });
+    addKeepBindings($view);
+    swipeTo($view);
+  }
+
+  function updateDirty($view, el, dirty) {
+    var dirtyEls = $view.data('dirty');
+    var i = dirtyEls.indexOf(el);
+    if (dirty && i < 0) {
+      dirtyEls.push(el);
+      if (dirtyEls.length === 1) {
+        $view.addClass('kifi-dirty');
+      }
+    } else if (!dirty && i >= 0) {
+      dirtyEls.splice(i, 1);
+      if (dirtyEls.length === 0) {
+        $view.removeClass('kifi-dirty');
+      }
+    }
+  }
+
+  function saveKeep($view) {
+    var libraryId = $view.find('.kifi-keep-box-lib').data('id');
     var $title = $view.find('.kifi-keep-box-keep-title');
     var $comment = $view.find('.kifi-keep-box-keep-comment');
+    var $btn = $view.find('.kifi-keep-box-btn');
     var title = $title.val().trim();
     if (title) {
       $title.add($comment).prop('disabled', true);
-      $save.addClass('kifi-doing');
-      $box.data('keepPage')({libraryId: libraryId, title: title}, function (success) {
-        log('[saveKeep]', success ? 'success' : 'error');
-        clearTimeout(saveProgressTimeout), saveProgressTimeout = null;
-        $save.removeClass('kifi-doing');
-        if (success) {
-          $save.addClass('kifi-done');
-          $view.find('.kifi-keep-box-lib-head').addClass('kifi-kept');
-          clearTimeout(hideTimeout);
-          hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1600);
-        } else {
-          $save.prop('href', 'javascript:').one('transitionend', function () {
-            $progress.css('width', 0);
-            $save.removeClass('kifi-fail');
-          }).addClass('kifi-fail');
-        }
-      });
-      $save.removeAttr('href');
-      var $progress = $save.find('.kifi-keep-box-save-progress');
+      $btn.addClass('kifi-doing');
+      if ($view.hasClass('kifi-kept')) {
+        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, done.bind(null, true));
+      } else {
+        $box.data('keepPage')({libraryId: libraryId, title: title}, done.bind(null, false));
+      }
+      $btn.removeAttr('href');
+      var $progress = $btn.find('.kifi-keep-box-progress');
       updateSaveProgress.call($progress[0], 0);
     } else {
-      $title.focus().select();
+      $title.focus().select(); // TODO: restore saved title or suggest our best-guess title
+    }
+
+    function done(edit, success) {
+      log('[handleSaveKeepResult]', edit ? 'edit' : 'keep', success ? 'success' : 'error');
+      clearTimeout(saveProgressTimeout), saveProgressTimeout = null;
+      $btn.removeClass('kifi-doing');
+      if (success) {
+        $btn.addClass('kifi-done');
+        $view.addClass('kifi-kept');
+        clearTimeout(hideTimeout);
+        hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1000);
+      } else {
+        $btn.prop('href', 'javascript:').one('transitionend', function () {
+          $progress.css('width', 0);
+          $btn.removeClass('kifi-fail');
+        }).addClass('kifi-fail');
+      }
     }
   }
 

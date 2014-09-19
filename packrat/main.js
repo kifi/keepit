@@ -633,7 +633,15 @@ api.port.on({
     var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
       libraries = o.libraries;
-      respond({keeps: d ? d.keeps : [], libraries: o.libraries});
+      var keeps = d ? d.keeps : [];
+      respond({keeps: keeps, libraries: o.libraries});
+      // preload keep details
+      keeps.forEach(function (keep) {
+        ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
+          keep.details = details;
+          // TODO: trigger get_keep response if any are waiting
+        });
+      });
     }, respond);
   },
   filter_libraries: function (q, respond) {
@@ -643,6 +651,30 @@ api.port.on({
       lib.nameParts = sf.splitOnMatches(q, lib.name);
       return lib;
     }));
+  },
+  get_keep: function (libraryId, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var details = d.keeps.find(libraryIdIs(libraryId)).details;
+      // TODO: wait if details are not yet loaded
+      respond(details);
+    }
+  },
+  save_keep: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, data.updates, function () {
+        if (keep.details) {
+          ['title'].forEach(function (prop) {
+            if (prop in data.updates) {
+              keep.details[prop] = data.updates[prop];
+            }
+          });
+        }
+        respond(true);
+      }, respond.bind(null, false));
+    }
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;

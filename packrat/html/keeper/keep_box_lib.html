@@ -3,7 +3,7 @@
 <div style="position:relative">
 {{/keep.removable}}
 {{/static}}
-  <a class="kifi-keep-box-lib kifi-{{visibility}}{{#keep}} kifi-kept{{/keep}}"{{^static}} href="javascript:"{{/static}} data-id="{{id}}">
+  <a class="kifi-keep-box-lib kifi-{{visibility}}{{^static}}{{#keep}} kifi-kept{{/keep}}{{/static}}"{{^static}} href="javascript:"{{/static}} data-id="{{id}}">
     {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
     {{^nameHtml}}{{name}}{{/nameHtml}}
   </a>
