@@ -464,6 +464,7 @@ GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticl
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfoController.all
+GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
 
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
