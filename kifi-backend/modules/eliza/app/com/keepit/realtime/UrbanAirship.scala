@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 
-case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
+case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
 case class Device(
     id: Option[Id[Device]] = None,
@@ -29,7 +29,8 @@ case class Device(
     deviceType: DeviceType,
     state: State[Device] = DeviceStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime) extends ModelWithState[Device] {
+    updatedAt: DateTime = currentDateTime,
+    isDev: Boolean = false) extends ModelWithState[Device] {
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
@@ -54,7 +55,8 @@ class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     def userId = column[Id[User]]("user_id", O.NotNull)
     def token = column[String]("token", O.NotNull)
     def deviceType = column[DeviceType]("device_type", O.NotNull)
-    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt) <> ((Device.apply _).tupled, Device.unapply _)
+    def isDev = column[Boolean]("is_dev", O.NotNull)
+    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev) <> ((Device.apply _).tupled, Device.unapply _)
   }
   def table(tag: Tag) = new DeviceTable(tag)
 
@@ -100,7 +102,7 @@ object UrbanAirship {
 
 @ImplementedBy(classOf[UrbanAirshipImpl])
 trait UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device
   def notifyUser(userId: Id[User], notification: PushNotification): Unit
   def sendNotification(firstMessage: Boolean, device: Device, notification: PushNotification): Unit
   def updateDeviceState(device: Device): Future[Device]
@@ -118,16 +120,21 @@ class UrbanAirshipImpl @Inject() (
     client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
   }
 
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = synchronized {
+  lazy val authenticatedClientDev: HttpClient = {
+    val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.devKey}:${config.devSecret}".getBytes)
+    client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
+  }
+
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device = synchronized {
     log.info(s"Registering device: $token (user $userId)")
     val device = db.readWrite { implicit s =>
       deviceRepo.get(token, deviceType).map { d =>
         if (d.userId != userId) deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
       }
       deviceRepo.get(userId, token, deviceType) match {
-        case Some(d) if d.state == DeviceStates.ACTIVE => d
-        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE))
-        case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType))
+        case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
+        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
+        case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
       }
     }
     future {
@@ -151,13 +158,14 @@ class UrbanAirshipImpl @Inject() (
 
   def updateDeviceState(device: Device): Future[Device] = {
     log.info(s"Checking state of device: ${device.token}")
+    val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
       val uaUrl = device.deviceType match {
         case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${device.token}"
         case DeviceType.Android => s"${config.baseUrl}/api/apids/${device.token}"
         case dt => throw new Exception(s"Unknown device type: $dt")
       }
-      authenticatedClient.getFuture(DirectUrl(uaUrl), url => {
+      client.getFuture(DirectUrl(uaUrl), url => {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
         val active = (r.json \ "active").as[Boolean]
@@ -177,6 +185,7 @@ class UrbanAirshipImpl @Inject() (
   }
 
   private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+    val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
         "device_tokens" -> Seq(device.token),
@@ -194,18 +203,18 @@ class UrbanAirshipImpl @Inject() (
         "id" -> notification.id.id
       )
     }
-    authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
+    client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
           case e: TimeoutException =>
             log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
             if (retry) {
-              authenticatedClient.defaultFailureHandler(req)
+              client.defaultFailureHandler(req)
               throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", e)
             }
             postIOS(firstMessage, device, notification, retry = true)
           case t: Throwable =>
-            authenticatedClient.defaultFailureHandler(req)
+            client.defaultFailureHandler(req)
             throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
         }
       }
@@ -213,6 +222,7 @@ class UrbanAirshipImpl @Inject() (
   }
 
   private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+    val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
         "apids" -> Seq(device.token),
@@ -236,18 +246,18 @@ class UrbanAirshipImpl @Inject() (
         )
       )
     }
-    authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
+    client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
           case e: TimeoutException =>
             log.error(s"timeout error posting to urbanairship on device $device notification $notification, doing one more retry", e)
             if (retry) {
-              authenticatedClient.defaultFailureHandler(req)
+              client.defaultFailureHandler(req)
               throw new Exception(s"[second try] error posting to urbanairship on device $device notification $notification, not attempting more retries", e)
             }
             postAndroid(firstMessage, device, notification, retry = true)
           case t: Throwable =>
-            authenticatedClient.defaultFailureHandler(req)
+            client.defaultFailureHandler(req)
             throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
         }
       }
