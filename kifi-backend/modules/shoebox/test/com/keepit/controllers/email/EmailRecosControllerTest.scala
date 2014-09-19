@@ -2,10 +2,12 @@ package com.keepit.controllers.email
 
 import java.util.NoSuchElementException
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ FakeActionAuthenticator, ActionAuthenticator }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
@@ -21,6 +23,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule(),
     FakeCuratorServiceClientModule(),
     FakeShoeboxStoreModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeAirbrakeModule()
   )
 

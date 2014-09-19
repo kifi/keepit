@@ -10,10 +10,10 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.google.common.cache.{ CacheBuilder, CacheLoader }
 import com.google.common.util.concurrent.ListenableFuture
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import java.util.concurrent.{ TimeUnit, TimeoutException }
+import java.util.concurrent.TimeUnit
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

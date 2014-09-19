@@ -6,24 +6,25 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.model._
 import com.keepit.common.db.slick._
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.google.inject.Inject
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.healthcheck.SystemAdminMailSender
 
 class AdminAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
   systemAdminMailSender: SystemAdminMailSender,
   impersonateCookie: ImpersonateCookie)
-    extends AdminController(actionAuthenticator) {
+    extends UserActions with ShoeboxServiceController {
 
-  def unimpersonate = AdminJsonAction.authenticated { request =>
+  def unimpersonate = AdminUserAction { request =>
     Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(impersonateCookie.discard)
   }
 
-  def impersonate(id: Id[User]) = AdminJsonAction.authenticated { request =>
+  def impersonate(id: Id[User]) = AdminUserAction { request =>
     val user = db.readOnlyMaster { implicit s =>
       userRepo.get(id)
     }

@@ -147,4 +147,8 @@ class LDAController @Inject() (
     Ok(Json.toJson(score))
   }
 
+  def dumpFeature(dataType: String, id: Long) = Action { request =>
+    Ok(lda.dumpFeature(dataType, id))
+  }
+
 }

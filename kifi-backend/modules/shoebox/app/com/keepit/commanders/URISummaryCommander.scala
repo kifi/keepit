@@ -1,9 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.common.performance._
+
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
-import scala.concurrent._
+import scala.concurrent.Future
+import java.util.concurrent.TimeoutException
 import com.keepit.model._
 import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -79,14 +82,24 @@ class URISummaryCommander @Inject() (
    * and only the image is found, the image should still be returned
    */
   def getURISummaryForRequest(request: URISummaryRequest): Future[URISummary] = {
-    getNormalizedURIForRequest(request) map { nUri =>
-      getURISummaryForRequest(request, nUri)
-    } getOrElse Future.successful(URISummary())
+    val nUri = timing(s"calculating normalized uri for request with url ${request.url}") {
+      getNormalizedURIForRequest(request)
+    }
+    nUri match {
+      case Some(uri) =>
+        getURISummaryForRequest(request, uri)
+      case None =>
+        log.warn(s"could not find normalized uri for ${request.url}")
+        Future.successful(URISummary())
+    }
   }
 
   def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
-    val summary = getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
+    val summary = timing(s"getStoredSummaryForRequest ${nUri.id} -> ${nUri.url}") {
+      getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
+    }
     if (!isCompleteSummary(summary, request)) {
+      log.info(s"could not find complete summary for ${nUri.id} -> ${nUri.url}")
       if (!request.silent) {
         val fetchedSummary = fetchSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
         if (request.waiting) fetchedSummary else Future.successful(summary)
@@ -144,8 +157,17 @@ class URISummaryCommander @Inject() (
    * Retrieves URI summary data from external services (Embedly, PagePeeker)
    */
   private def fetchSummaryForRequest(nUri: NormalizedURI, imageType: ImageType, minSize: ImageSize, withDescription: Boolean): Future[URISummary] = {
-    val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) fetchFromEmbedly(nUri, minSize)
-    else Future.successful(None)
+    log.info(s"fetchSummaryForRequest for ${nUri.id} -> ${nUri.url}")
+    val embedlyResultFut = if (imageType == ImageType.IMAGE || imageType == ImageType.ANY || withDescription) {
+      val stopper = Stopwatch("fetching from scraper embedly info for ${nUri.id} -> ${nUri.url}")
+      val future = fetchFromEmbedly(nUri, minSize)
+      future.onComplete { res =>
+        stopper.stop()
+      }
+      future
+    } else {
+      Future.successful(None)
+    }
     embedlyResultFut flatMap { embedlyResultOpt =>
       val shouldFetchFromPagePeeker =
         (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
@@ -186,10 +208,10 @@ class URISummaryCommander @Inject() (
       scraper.getURISummaryFromEmbedly(nUri, minSize, descriptionOnly)
     } catch {
       case timeout: TimeoutException =>
-        db.readWrite { implicit session =>
-          val failImageInfo = imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
-          airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
+        val failImageInfo = db.readWrite { implicit session =>
+          imageInfoRepo.save(ImageInfo(uriId = nUri.id.get, url = Some(nUri.url), provider = Some(ImageProvider.EMBEDLY), format = Some(ImageFormat.UNKNOWN)))
         }
+        airbrake.notify(s"Could not fetch from embedly because of timeout, persisting a tombstone for the image in $failImageInfo", timeout)
         Future.successful(Some(URISummary(title = nUri.title)))
     }
   }

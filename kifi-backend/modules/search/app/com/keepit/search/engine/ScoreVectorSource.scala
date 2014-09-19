@@ -380,8 +380,6 @@ class UriFromKeepsScoreVectorSource(
     // load URIs from an authorized library as MEMBER
     authorizedLibraryKeepCount += authorizedLibraryIds.foldLeft(0) { (count, libId) => count + (if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
 
-    trustedLibraryKeepCount += trustedLibraryIds.foldLeft(0) { (count, libId) => count + (if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.OTHERS) else 0) }
-
     discoverableKeepCount += myFriendIds.foldLeft(0) { (count, friendId) =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
       var cnt = 0

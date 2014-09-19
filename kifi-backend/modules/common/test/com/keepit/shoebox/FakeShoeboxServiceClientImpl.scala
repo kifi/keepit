@@ -2,6 +2,7 @@ package com.keepit.shoebox
 
 import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.net.URI
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
@@ -390,11 +391,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
-  def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {
+  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
     val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
       NormalizedURI(
         id = Some(Id[NormalizedURI](url.hashCode)),
-        url = url,
+        url = url.toString(),
         urlHash = UrlHash(url.hashCode.toString),
         screenshotUpdatedAt = None
       )
@@ -700,5 +701,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
     val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { LibraryMembership.toLibraryMembershipView(_) }
     Future.successful(changed)
+  }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedCode: Option[HashedPassPhrase]): Future[Boolean] = {
+    Future.successful(true)
   }
 }

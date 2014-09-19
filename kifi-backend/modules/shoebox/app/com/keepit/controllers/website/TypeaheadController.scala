@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActionsHelper, UserAPIController }
+import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.commanders.{ EmailContactResult, UserContactResult, TypeaheadCommander }
@@ -15,7 +15,7 @@ class TypeaheadController @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
     commander: TypeaheadCommander,
-    userActionsHelper: UserActionsHelper) extends UserAPIController(userActionsHelper) with ShoeboxServiceController with Logging {
+    val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController with Logging {
 
   def searchWithInviteStatus(query: Option[String], limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean) = UserAction.async { request =>
     commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>

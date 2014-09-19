@@ -178,10 +178,15 @@ class MobileBookmarksController @Inject() (
       val rawBookmarks = rawBookmarkFactory.toRawBookmarks(request.body)
       val libraryId = {
         db.readWrite { implicit session =>
-          val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(request.userId)
-          rawBookmarks.headOption.flatMap(_.isPrivate).map { priv =>
-            if (priv) secret.id.get else main.id.get
-          }.getOrElse(main.id.get)
+          val libIdOpt = for {
+            url <- rawBookmarks.headOption.map(_.url)
+            uri <- normalizedURIInterner.getByUri(url)
+            keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
+            libraryId <- keep.libraryId
+          } yield libraryId
+          libIdOpt.getOrElse {
+            libraryCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
+          }
         }
       }
       keepsCommander.tagUrl(tag, rawBookmarks, request.userId, libraryId, KeepSource.mobile, request.kifiInstallationId)

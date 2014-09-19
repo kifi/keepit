@@ -1,14 +1,16 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 
 import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.{ FakeSliderHistoryTrackerModule, Keep, KeepSource }
-import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibrarySlug, LibraryVisibility }
+import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryVisibility }
 import com.keepit.model.{ NormalizedURI, URLFactory, User, Username }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -34,11 +36,12 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeHttpClientModule()
   )
 
   "ExtLibraryController" should {
-
     "get libraries" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
@@ -150,6 +153,49 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
+    "get keep in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          (user1, user2, lib, mem1, mem2)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+        val libPubId = Library.publicId(lib.id.get)
+
+        status(addKeep(user1, libPubId, Json.obj("url" -> "http://www.foo.com", "title" -> "Foo"))) === OK
+        val keep = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib.id.get, 1, 0).head }
+
+        // user can get own keep in own library
+        val result1 = getKeep(user1, libPubId, keep.externalId)
+        status(result1) === OK
+        contentType(result1) must beSome("application/json")
+        contentAsString(result1) === """{"title":"Foo"}"""
+
+        // invalid keep ID
+        val result2 = getKeep(user1, libPubId, ExternalId())
+        status(result2) === NOT_FOUND
+        contentType(result2) must beSome("application/json")
+        contentAsString(result2) === """{"error":"keep_not_found"}"""
+
+        // other user with library access can get keep
+        val result3 = getKeep(user2, libPubId, keep.externalId)
+        status(result3) === OK
+        contentType(result3) must beSome("application/json")
+        contentAsString(result3) === """{"title":"Foo"}"""
+
+        // other user with library access revoked cannot get keep
+        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.withState(LibraryMembershipStates.INACTIVE)) }
+        val result4 = getKeep(user2, libPubId, keep.externalId)
+        status(result4) === FORBIDDEN
+        contentType(result4) must beSome("application/json")
+        contentAsString(result4) === """{"error":"library_access_denied"}"""
+      }
+    }
+
     "remove keep from library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -205,6 +251,45 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 10, 0).map(_.title.get) === Seq("Throw") }
       }
     }
+
+    "update keep in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          (user1, user2, lib, mem1, mem2)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+        val libPubId = Library.publicId(lib.id.get)
+
+        status(addKeep(user1, libPubId, Json.obj("url" -> "http://www.foo.com", "title" -> "Foo"))) === OK
+        val (keepId, keepExtId) = db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getByLibrary(lib.id.get, 1, 0).head
+          keep.title === Some("Foo")
+          (keep.id.get, keep.externalId)
+        }
+
+        // user can update own keep in own library
+        status(updateKeep(user1, libPubId, keepExtId, Json.obj("title" -> "Bar"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+
+        // invalid keep ID
+        status(updateKeep(user1, libPubId, ExternalId(), Json.obj("title" -> "Cat"))) === NOT_FOUND
+        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+
+        // other user with read-only library access cannout update keep
+        status(updateKeep(user2, libPubId, keepExtId, Json.obj("title" -> "pwned"))) === FORBIDDEN
+        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+
+        // other user with write access can update keep
+        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
+        status(updateKeep(user2, libPubId, keepExtId, Json.obj("title" -> "Dat"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Dat" }
+      }
+    }
   }
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
@@ -219,9 +304,21 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     inject[ExtLibraryController].addKeep(libraryId)(FakeRequest(route.method, route.url).withBody(body))
   }
 
+  private def getKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
+    val route = com.keepit.controllers.ext.routes.ExtLibraryController.getKeep(libraryId, keepId)
+    inject[FakeActionAuthenticator].setUser(user)
+    inject[ExtLibraryController].getKeep(libraryId, keepId)(FakeRequest(route.method, route.url))
+  }
+
   private def removeKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
     val route = com.keepit.controllers.ext.routes.ExtLibraryController.removeKeep(libraryId, keepId)
     inject[FakeActionAuthenticator].setUser(user)
     inject[ExtLibraryController].removeKeep(libraryId, keepId)(FakeRequest(route.method, route.url))
+  }
+
+  private def updateKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
+    val route = com.keepit.controllers.ext.routes.ExtLibraryController.updateKeep(libraryId, keepId)
+    inject[FakeActionAuthenticator].setUser(user)
+    inject[ExtLibraryController].updateKeep(libraryId, keepId)(FakeRequest(route.method, route.url).withBody(body))
   }
 }

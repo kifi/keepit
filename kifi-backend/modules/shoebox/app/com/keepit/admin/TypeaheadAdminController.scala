@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.typeahead.TypeaheadHit
@@ -15,19 +15,19 @@ import com.keepit.commanders.TypeaheadCommander
 
 class TypeaheadAdminController @Inject() (
     db: Database,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     abookServiceClient: ABookServiceClient,
     typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
-    socialUserTypeahead: SocialUserTypeahead) extends AdminController(actionAuthenticator) {
+    socialUserTypeahead: SocialUserTypeahead) extends UserActions with ShoeboxServiceController {
 
   implicit val fj = ExecutionContext.fj
 
-  def index = AdminHtmlAction.authenticated { request =>
+  def index = AdminUserAction { request =>
     Ok(html.admin.typeahead(request.user))
   }
 
-  def refreshPrefixFilter(filterType: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def refreshPrefixFilter(filterType: String) = AdminUserAction.async { request =>
     val futureRefresh = filterType.trim match {
       case "contact" => abookServiceClient.refreshPrefixFilter(request.userId)
       case "social" => socialUserTypeahead.refresh(request.userId) // may breakdown further into FB, LNKD ...
@@ -40,7 +40,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def refreshPrefixFiltersByIds(filterType: String) = AdminHtmlAction.authenticatedParseJsonAsync { request =>
+  def refreshPrefixFiltersByIds(filterType: String) = AdminUserAction.async(parse.tolerantJson) { request =>
     val userIds = (request.body).as[Seq[Id[User]]]
     val futureRefresh = filterType.trim match {
       case "contact" => abookServiceClient.refreshPrefixFiltersByIds(userIds)
@@ -54,7 +54,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def refreshAll(filterType: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def refreshAll(filterType: String) = AdminUserAction.async { request =>
     val futureRefresh = filterType.trim match {
       case "contact" => abookServiceClient.refreshAllFilters()
       case "social" => socialUserTypeahead.refreshAll() // may breakdown further into FB, LNKD ...
@@ -67,7 +67,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def refreshAllPrefixFilters() = AdminHtmlAction.authenticatedAsync { request =>
+  def refreshAllPrefixFilters() = AdminUserAction.async { request =>
     val abookF = abookServiceClient.refreshAllFilters() // remote
     val kifiF = kifiUserTypeahead.refreshAll()
     val socialF = socialUserTypeahead.refreshAll()
@@ -80,28 +80,28 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def userSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def userSearch(userId: Id[User], query: String) = AdminUserAction.async { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[User]
     kifiUserTypeahead.topN(userId, query, None) map { res =>
       Ok(res.map { hit => s"KifiUser: id=${hit.info.id} name=${hit.info.fullName} <br/>" }.mkString(""))
     }
   }
 
-  def socialSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def socialSearch(userId: Id[User], query: String) = AdminUserAction.async { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
     socialUserTypeahead.topN(userId, query, None) map { res =>
       Ok(res.map { hit => s"SocialUser: id=${hit.info.id} name=${hit.info.fullName} network=${hit.info.networkType} <br/>" }.mkString(""))
     }
   }
 
-  def contactSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def contactSearch(userId: Id[User], query: String) = AdminUserAction.async { request =>
     abookServiceClient.prefixQuery(userId, query, None) map { hits =>
       log.info(s"[contactSearch($userId,$query)-LOCAL] res=(${hits.length});${hits.take(10).mkString(",")}")
       Ok(Json.toJson(hits))
     }
   }
 
-  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserAction.async { request =>
     typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, dedupEmail) map { res => // hack
       Ok(
         "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td><td>email</td><td>inviteLastSentAt</td></tr>" +

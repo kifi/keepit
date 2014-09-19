@@ -1,7 +1,7 @@
 package com.keepit.graph
 
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
-import com.keepit.graph.manager.{ KeepGraphUpdate, UserConnectionGraphUpdate, UserGraphUpdate }
+import com.keepit.graph.manager._
 import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore }
 import com.keepit.model._
 
@@ -21,9 +21,9 @@ trait GraphTestHelper {
   val urlid4: Id[URL] = Id[URL](4)
   val urlid5: Id[URL] = Id[URL](5)
 
-  val userid1: Id[User] = Id[User](11)
-  val userid2: Id[User] = Id[User](12)
-  val userid3: Id[User] = Id[User](13)
+  val userid1: Id[User] = Id[User](1)
+  val userid2: Id[User] = Id[User](2)
+  val userid3: Id[User] = Id[User](3)
 
   val keepid1: Id[Keep] = Id[Keep](1)
   val keepid2: Id[Keep] = Id[Keep](2)
@@ -31,8 +31,7 @@ trait GraphTestHelper {
   val keepid4: Id[Keep] = Id[Keep](4)
   val keepid5: Id[Keep] = Id[Keep](5)
 
-  val createUserUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1)))
-  val createFirstDegreeUser = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = u43, seq = SequenceNumber(2)))
+  val userUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1)))
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
     source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
@@ -44,8 +43,19 @@ trait GraphTestHelper {
     source = KeepSource("site"), seq = SequenceNumber(6), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
   val keepGraphUpdate5 = KeepGraphUpdate(Keep(id = Some(keepid5), uriId = uriid5, urlId = urlid5, url = "url5", userId = u42,
     source = KeepSource("site"), seq = SequenceNumber(7), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+  val keepUpdates = List(keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5)
 
+  val userConnectionGraphUpdate0 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = u43, seq = SequenceNumber(2)))
   val userConnectionGraphUpdate1 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = userid1, seq = SequenceNumber(8)))
   val userConnectionGraphUpdate2 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = userid2, seq = SequenceNumber(9)))
   val userConnectionGraphUpdate3 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = userid3, seq = SequenceNumber(10)))
+  val userConnUpdates = List(userConnectionGraphUpdate0, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+
+  val libMemUpdate1 = LibraryMembershipGraphUpdate(Id[User](1), Id[Library](1), LibraryMembershipStates.ACTIVE, SequenceNumber(1))
+  val libMemUpdate2 = LibraryMembershipGraphUpdate(Id[User](1), Id[Library](2), LibraryMembershipStates.ACTIVE, SequenceNumber(2))
+  val libMemUpdate3 = LibraryMembershipGraphUpdate(Id[User](1), Id[Library](3), LibraryMembershipStates.INACTIVE, SequenceNumber(3))
+  val libMemUpdate4 = LibraryMembershipGraphUpdate(Id[User](2), Id[Library](1), LibraryMembershipStates.ACTIVE, SequenceNumber(4))
+  val libMemUpdates = List(libMemUpdate1, libMemUpdate2, libMemUpdate3, libMemUpdate4)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates
 }

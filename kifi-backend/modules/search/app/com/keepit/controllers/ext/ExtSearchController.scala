@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
-    shoeboxClient: ShoeboxServiceClient,
+    val shoeboxClient: ShoeboxServiceClient,
     searchCommander: SearchCommander,
     amazonInstanceInfo: AmazonInstanceInfo,
     implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with SearchControllerUtil with Logging {
@@ -63,8 +63,8 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val libCtx = getLibraryContext(library, None, request)
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, libCtx, maxHits, lastUUIDStr, context, None, debugOpt)
+    val libCtxFuture = getLibraryContextFuture(library, None, request)
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, libCtxFuture, maxHits, lastUUIDStr, context, None, debugOpt)
 
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
@@ -74,7 +74,7 @@ class ExtSearchController @Inject() (
     // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
 
     if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(shoeboxClient, plainResultFuture) :: decorationFutures
+      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
     }
 
     val decorationEnumerator = reactiveEnumerator(decorationFutures)

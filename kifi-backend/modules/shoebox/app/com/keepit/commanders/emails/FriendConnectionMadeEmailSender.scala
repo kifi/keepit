@@ -43,7 +43,7 @@ class FriendConnectionMadeEmailSender @Inject() (
       htmlTemplate = views.html.email.black.friendConnectionMade(toUserId, friendUserId, category, networkNameOpt),
       textTemplate = Some(views.html.email.black.friendConnectionMadeText(toUserId, friendUserId, category, networkNameOpt)),
       campaign = campaign,
-      tips = Seq(EmailTips.FriendRecommendations)
+      tips = Seq()
     )
     emailTemplateSender.send(emailToSend)
   }

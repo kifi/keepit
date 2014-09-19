@@ -4,12 +4,14 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, RawBookmarkRepresentation, LibraryCommander, LibraryData }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
+import com.keepit.model.{ Keep, KeepRepo, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
+
 import play.api.libs.json._
+import play.api.mvc.Result
 
 import scala.util.{ Success, Failure }
 
@@ -37,45 +39,68 @@ class ExtLibraryController @Inject() (
   }
 
   def addKeep(libraryPubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
-    Library.decodePublicId(libraryPubId) match {
-      case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_id"))
-      case Success(libraryId) =>
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getOpt(request.userId, libraryId)
-        } match {
-          case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
-            val info = request.body.as[JsObject]
-            val source = KeepSource.keeper
-            val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-            if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
-              hcb += ("guided", true)
-            }
-            implicit val context = hcb.build
-            val rawBookmark = info.as[RawBookmarkRepresentation]
-            val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
-            Ok(Json.toJson(KeepData(
-              keepInfo.id.get,
-              mine = true, // TODO: stop assuming keep is mine and removable
-              removable = true,
-              secret = keepInfo.isPrivate,
-              libraryId = Library.publicId(libraryId))))
-          case _ =>
-            Forbidden(Json.obj("error" -> "invalid_access"))
-        }
+    decode(libraryPubId) { libraryId =>
+      db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getOpt(request.userId, libraryId)
+      } match {
+        case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
+          val info = request.body.as[JsObject]
+          val source = KeepSource.keeper
+          val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
+          if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
+            hcb += ("guided", true)
+          }
+          implicit val context = hcb.build
+          val rawBookmark = info.as[RawBookmarkRepresentation]
+          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+          Ok(Json.toJson(KeepData(
+            keepInfo.id.get,
+            mine = true, // TODO: stop assuming keep is mine and removable
+            removable = true,
+            secret = keepInfo.isPrivate,
+            libraryId = Library.publicId(libraryId))))
+        case _ =>
+          Forbidden(Json.obj("error" -> "invalid_access"))
+      }
+    }
+  }
+
+  def getKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+    decode(libraryPubId) { libraryId =>
+      keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+        case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+        case Right(keep) => Ok(Json.obj("title" -> keep.title))
+      }
     }
   }
 
   def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
-    Library.decodePublicId(libraryPubId) match {
-      case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_library_id"))
-      case Success(libraryId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-        keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
-          case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
-          case Right(info) => NoContent
-        }
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
+        case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
+        case Right(info) => NoContent
+      }
+    }
+  }
+
+  // Maintainers: Let's keep this endpoint simple, quick and reliable. Complex updates deserve their own endpoints.
+  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticatedParseJson { request =>
+    decode(libraryPubId) { libraryId =>
+      val body = request.body.as[JsObject]
+      val title = (body \ "title").asOpt[String]
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
+        case Left((status, code)) => Status(status)(Json.obj("error" -> code))
+        case Right(keep) => NoContent
+      }
+    }
+  }
+
+  private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
+    Library.decodePublicId(publicId) match {
+      case Failure(_) => BadRequest(Json.obj("error" -> "invalid_library_id"))
+      case Success(id) => action(id)
     }
   }
 }

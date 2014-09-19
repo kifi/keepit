@@ -14,6 +14,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)]
+  def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
 }
 
 @Singleton
@@ -36,9 +37,9 @@ class LibraryInviteRepoImpl @Inject() (
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
-    def passCode = column[String]("passcode", O.NotNull)
+    def passPhrase = column[String]("pass_phrase", O.NotNull)
     def message = column[String]("message", O.Nullable)
-    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passCode, message.?) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passPhrase, message.?) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
@@ -59,6 +60,10 @@ class LibraryInviteRepoImpl @Inject() (
   }
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
+  }
+
+  def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
+    (for (b <- rows if b.libraryId === libraryId && b.authToken === authToken && !b.state.inSet(excludeSet)) yield b).sortBy(_.createdAt).list
   }
 
   override def deleteCache(libInv: LibraryInvite)(implicit session: RSession): Unit = {
