@@ -400,15 +400,19 @@ class LibraryController @Inject() (
             libraryCommander.canViewLibrary(None, libraryId, authToken, passPhrase)
         }
         if (canView) {
-          val cookie = ("library_access", s"$id/${passPhrase}")
-          NoContent.addingToSession(("library_access", ""))
+          (authToken, passPhrase) match {
+            case (Some(a), Some(p)) =>
+              val cookie = ("library_access", s"$id/${p.value}")
+              NoContent.addingToSession(cookie)
+            case _ =>
+              NoContent
+          }
         } else {
           Forbidden
         }
       case _ =>
         Forbidden
     }
-
 
   }
 
