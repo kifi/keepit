@@ -94,7 +94,7 @@
     if (chart == "mainSearch") {
       options.title = "Main Search Performance"
       if ($("#yscale").val() == "percent") {
-        options.target = "asPercent(stats.timers.search.mainSearch.*.mean_99,stats.timers.search.mainSearch.total.mean_99)")
+        options.target = "asPercent(stats.timers.search.mainSearch.*.mean_99,stats.timers.search.mainSearch.total.mean_99)"
         options.logBase = null;
       } else {
         //make offsets so log will always work
@@ -106,7 +106,7 @@
     if (chart == "extSearch") {
       options.title = "Ext Search Performance"
       if ($("#yscale").val() == "ratio") {
-        options.target = "asPercent(stats.timers.search.extSearch.*.mean_99,stats.timers.search.extSearch.total.mean_99)")
+        options.target = "asPercent(stats.timers.search.extSearch.*.mean_99,stats.timers.search.extSearch.total.mean_99)"
         options.logBase = null;
       } else {
         //make offsets so log will always work
