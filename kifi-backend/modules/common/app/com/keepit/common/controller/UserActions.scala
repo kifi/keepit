@@ -3,6 +3,7 @@ package com.keepit.common.controller
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
+import com.keepit.common.core._
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
 import play.api.mvc._
@@ -137,8 +138,10 @@ trait UserActions extends Logging { self: Controller =>
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
-      userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
-        if (isAdmin) None else Some(Forbidden)
+      if (request.adminUserId.isDefined) Future.successful(None)
+      else userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
+        if (isAdmin) None
+        else Some(Forbidden) tap { res => log.warn(s"[AdminCheck] User ${request.userId} is denied access to ${request.path}") }
       }
     }
   }
