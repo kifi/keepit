@@ -19,7 +19,7 @@ class LibraryInviteEmailSender @Inject() (
     libraryRepo: LibraryRepo,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def inviteUserToLibrary(toUserRecipient: Either[Id[User], EmailAddress], fromUserId: Id[User], libraryId: Id[Library]): Future[ElectronicMail] = {
+  def inviteUserToLibrary(toUserRecipient: Either[Id[User], EmailAddress], fromUserId: Id[User], libraryId: Id[Library], inviteMsg: Option[String] = None): Future[ElectronicMail] = {
     val (requestingUser, library, libraryOwner) = db.readOnlyReplica { implicit session =>
       val user = basicUserRepo.load(fromUserId)
       val library = libraryRepo.get(libraryId)
@@ -33,7 +33,7 @@ class LibraryInviteEmailSender @Inject() (
       subject = s"${requestingUser.firstName} ${requestingUser.lastName} invited you to follow ${library.name}.",
       to = toUserRecipient,
       category = NotificationCategory.User.LIBRARY_INVITATION,
-      htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, library.name, library.description, libLink),
+      htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, inviteMsg, library.name, library.description, libLink),
       campaign = Some("libraryInvite")
     )
     emailTemplateSender.send(emailToSend)

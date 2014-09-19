@@ -335,7 +335,7 @@ class LibraryCommander @Inject() (
               case Some(id) => Left(id)
               case _ => Right(invite.emailAddress.get)
             }
-            libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId)
+            libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId, invite.message)
           }
         }.toSeq.flatten
     }
