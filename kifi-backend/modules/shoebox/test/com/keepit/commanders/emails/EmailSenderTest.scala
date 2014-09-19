@@ -354,7 +354,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain("Hey Aaron,")
         html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="www.kifi.com/tom/football"><u>Football</u></a>""")
+        html must contain(s"""<a href="https://www.kifi.com/tom/football"><u>Football</u></a>""")
       }
     }
 
@@ -376,7 +376,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain("Hello!")
         html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="www.kifi.com/tom/football"><u>Football</u></a>""")
+        html must contain(s"""<a href="https://www.kifi.com/tom/football"><u>Football</u></a>""")
       }
     }
   }

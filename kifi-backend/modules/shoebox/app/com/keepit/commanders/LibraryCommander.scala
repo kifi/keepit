@@ -312,9 +312,10 @@ class LibraryCommander @Inject() (
         .map { key =>
           val (inviterId, libId) = key._1
           val inviter = basicUserRepo.load(inviterId)
+          val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val lib = libraryRepo.get(libId)
           val libOwner = basicUserRepo.load(lib.ownerId)
-          val libLink = s"""${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
+          val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
 
           // send notifications to kifi users only
           val inviteeIdSet = key._2.map(_.userId).flatten.toSet
@@ -324,7 +325,7 @@ class LibraryCommander @Inject() (
             body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
             linkText = "Let's take a look!",
             linkUrl = libLink,
-            imageUrl = "",
+            imageUrl = inviterImage,
             sticky = false,
             category = NotificationCategory.User.LIBRARY_INVITATION
           )

@@ -26,7 +26,7 @@ class LibraryInviteEmailSender @Inject() (
       val libOwner = basicUserRepo.load(library.ownerId)
       (library, libOwner)
     }
-    val libLink = s"""www.kifi.com${Library.formatLibraryPath(libraryOwner.username, libraryOwner.externalId, library.slug)}"""
+    val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libraryOwner.username, libraryOwner.externalId, library.slug)}"""
     val emailToSend = EmailToSend(
       fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,

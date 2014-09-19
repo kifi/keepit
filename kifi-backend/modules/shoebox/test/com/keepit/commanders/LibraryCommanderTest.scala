@@ -797,14 +797,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
-        val outbox = inject[FakeOutbox]
         val emailRepo = inject[ElectronicMailRepo]
         val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
-        outbox.size === 0
         eliza.inbox.size === 0
 
         val allInvites = db.readOnlyMaster { implicit s =>
-          //emailRepo.count === 0
           libraryInviteRepo.all
         }
         //Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
@@ -812,7 +809,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         eliza.inbox.size === 4
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION) === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
-        outbox.size === 4
       }
     }
 
