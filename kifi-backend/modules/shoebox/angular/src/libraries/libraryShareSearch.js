@@ -16,7 +16,6 @@ angular.module('kifi')
         // Internal data.
         //
         var resultIndex = -1;
-        var shareButton = element.find('.library-share-btn');
         var shareMenu = element.find('.library-share-menu');
         var searchInput = element.find('.library-share-search-input');
         var show = false;
@@ -28,6 +27,7 @@ angular.module('kifi')
         scope.results = [];
         scope.search = {};
         scope.share = {};
+        scope.showSpinner = false;
         scope.email = 'Send to any email';
         scope.emailHelp = 'Type the email address';
 
@@ -43,6 +43,7 @@ angular.module('kifi')
           show = true;
           shareMenu.show();
           searchInput.focus();
+          populateDropDown();
         }
 
         function hideMenu() {
@@ -66,6 +67,23 @@ angular.module('kifi')
           });
         }
 
+        function emphasizeMatchedPrefix (text, prefix) {
+          if (util.startsWithCaseInsensitive(text, prefix)) {
+            return '<b>' + text.substr(0, prefix.length) + '</b>' + text.substr(prefix.length);
+          }
+          return text;
+        }
+
+        function emphasizeMatchedNames (name, prefix) {
+          var names = name.split(/\s+/);  // TODO(yiping): is it worth it to use a regex here?
+
+          names.forEach(function (name, index, names) {
+            names[index] = emphasizeMatchedPrefix(name, prefix);
+          });
+
+          return names.join(' ');
+        }
+
         function populateDropDown(opt_query) {
           // Update the email address and email help text being displayed.
           if (opt_query) {
@@ -77,39 +95,65 @@ angular.module('kifi')
             }
           }
 
+          scope.showSpinner = true;
           libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
-            if (contacts && contacts.length) {
-              scope.results = _.clone(contacts);
+            var newResults;
 
-              scope.results.forEach(function (result) {
+            if (contacts && contacts.length) {
+              newResults = _.clone(contacts);
+
+              newResults.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
                   result.isFollowing = isFollowingLibrary(result);
+                }
+
+                if (opt_query) {
+                  if (result.name) {
+                    result.name = emphasizeMatchedNames(result.name, opt_query);
+                  }
+                  if (result.email) {
+                    result.email = emphasizeMatchedPrefix(result.email, opt_query);
+                  }
                 }
               });
 
               if (opt_query) {
                 resultIndex = 0;
-                scope.results[resultIndex].selected = true;
+                newResults[resultIndex].selected = true;
               } else {
                 resultIndex = -1;
               }
 
               if (contacts.length < 5) {
-                scope.results.push({ custom: 'email' });
+                newResults.push({ custom: 'email' });
               }
+
             } else {
-              scope.results = [
+              newResults = [
                 { custom: 'email' },
                 { custom: 'importGmail', actionable: true}
               ];
 
               if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
                 resultIndex = 0;
-                scope.results[resultIndex].selected = true;
-                scope.results[resultIndex].actionable = true;
+                newResults[resultIndex].selected = true;
+                newResults[resultIndex].actionable = true;
               }
             }
+
+            scope.showSpinner = false;
+
+            // Animate height change on list of contacts.
+            var contactList = element.find('.library-share-contact-list');
+            var prevContactsHeight = contactList.height();
+            var newContactsHeight = 53 * newResults.length + 'px';
+            contactList.height(prevContactsHeight).animate({ height: newContactsHeight }, {
+              duration: 70,
+              start: function () {
+                scope.results = newResults;
+              }
+            });
           });
         }
 
@@ -131,26 +175,15 @@ angular.module('kifi')
           });
         }
 
-        //
-        // DOM event listeners.
-        //
-        shareButton.on('click', function () {
-          if (show) {
-            hideMenu();
-          } else {
-            showMenu();
-          }
-        });
-
 
         //
         // Scope methods.
         //
-        scope.onSearchInputFocus = function () {
-          // For empty state (when user has not inputted a query), show the contacts
-          // that the user has most recently sent messages to.
-          if (!scope.search.name) {
-            populateDropDown();
+        scope.toggleMenu = function () {
+          if (show) {
+            hideMenu();
+          } else {
+            showMenu();
           }
         };
 

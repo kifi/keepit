@@ -1,3 +1,30 @@
+// TODO(yiping): move colors and mixins to common.styl after figuring
+// out how to make the styl compiler read common.styl before reading
+// the other files.
+
+//
+// Colors.
+//
+$kifi-black = #333
+$secondary-text-gray = #a9a9a9
+$border-light-gray = #eaeaea
+
+
+//
+// Mixins.
+//
+placeholder(color)
+  &::-webkit-input-placeholder
+    font-style: normal
+    color: color
+  &::-moz-placeholder
+    font-style: normal
+    color: color
+  &:-ms-input-placeholder
+    font-style: normal
+    color: color
+
+
 .kf-library-share-search
   position: relative
 
@@ -7,18 +34,11 @@
   background-color: #fff
   padding: 15px
 
-  // TODO(yiping): figure out what we need this level of specificity.
-  // Without it, the .library-share-contact-image images only show up
-  // when their parent .library-share-contact items become selected. Odd!
-  .library-share-contact
-    &.library-share-selected
-      background-color: #f8f8f8
-
   [contenteditable]:empty::before{
-    color: #a9a9a9
+    color: $secondary-text-gray
   }
 
-.library-share-btn
+.library-share-button
   display: block
   padding: 8px 15px 8px 40px
   border: 1px solid #bbb
@@ -35,51 +55,42 @@
   box-sizing: border-box
   margin-top: 5px
   width: 320px
-
-  // Using drop-shadow instead of box-shadow because the latter does not
-  // respect the border-radius on an inner element when box shadow is
-  // applied to an outer element. We also need to explicitly
-  // add the vendor prefixes because the stylus preprocessor is not generating
-  // them correctly for the filter property.
-  -webkit-filter: drop-shadow(0px 0px 7px #afafaf)
-  filter: drop-shadow(0px 0px 7px #afafaf)
-
   z-index: 2
+
+.library-share-menu-content
+  overflow: hidden
+  border: 1px solid #b5b5b5
+  border-top: none
+  border-bottom-left-radius: 5px
+  border-bottom-right-radius: 5px
+  box-shadow: 0px 4px 8px 0px #afafaf
+
+  & > div
+    border-bottom: 1px solid #d2d2d2
 
   .library-share-input
     box-sizing: border-box
-    border-top: 1px solid #d2d2d2
-    border-left: 1px solid #b5b5b5
-    border-right: 1px solid #b5b5b5
     padding: 13px 10px
-    width: 320px
     background-color: #f8f8f8
     font-size: 12px
+    placeholder $secondary-text-gray
 
     &.library-share-message-input
-      border-top: none
-      min-height 50px
+      width: 320px
+      min-height: 50px
 
-    // Listing the following separately because the stylus preprocessor
-    // does not generate placeholder prefixes and because stacking them
-    // does not work.
-    &::-webkit-input-placeholder
-      font-style: normal
-      color: #a9a9a9
+    &.library-share-search-input
+      width: 270px
 
-    &::-moz-placeholder
-      font-style: normal
-      color: #a9a9a9
-
-    &:-ms-input-placeholder
-      font-style: normal
-      color: #a9a9a9
+  .library-share-search-spinner
+    float: right
+    padding: 3px 15px 0 0
 
 .library-share-menu-header
+  padding: 12px 18px
   border-top-left-radius: 5px
   border-top-right-radius: 5px
-  padding: 12px 18px
-  background-color: #333
+  background-color: $kifi-black
   font-size: 12px
   color: #fff
 
@@ -89,19 +100,29 @@
     left: 51px
     border-left: 15px solid transparent
     border-right: 15px solid transparent
-    border-bottom: 15px solid #333
+    border-bottom: 15px solid $kifi-black
     width: 0
     height: 0
     content: ''
 
+.library-share-contact-list
+  overflow-y: scroll
+  overflow-x: hidden
+  max-height: 268px
+
 .library-share-contact
   box-sizing: border-box
-  border-left: 1px solid #b5b5b5
-  border-right: 1px solid #b5b5b5
-  border-top: 1px solid #eaeaea
-  padding: 5px 12px
+  border-top: 1px solid $border-light-gray
+  padding: 8px 12px
   width: 320px
+  height: 53px
   background: #fff
+
+  &:first-child
+    border-top: none
+
+  &.library-share-selected
+      background-color: #f8f8f8
 
 .library-share-actionable
   &:hover
@@ -124,60 +145,49 @@
   position: relative
 
 .library-share-contact-image
-  width: 40px
-  border-radius: 100%
   display: inline-block
   margin-right: 15px
+  border-radius: 100%
+  width: 36px
+  height: 36px
   vertical-align: text-bottom
 
 .library-share-contact-email-icon
-  display: inline-block
-  margin-right: 15px
-  border: 1px solid red
-  border-radius: 100%
-  width: 40px
-  height: 40px
-  background-color: red
-  vertical-align: text-bottom
+  @extend .library-share-contact-image
+  background-image: url(/img/mail.2x.png)
+  background-position: center 9px
+  background-repeat: no-repeat
+  background-size: 62% 48%
+  background-color: #e36766
 
-// TODO(yiping): factor out common styles into mixins.
 .library-share-contact-new-email-icon
-  display: inline-block
-  margin-right: 15px
-  border: 1px solid blue
-  border-radius: 100%
-  width: 40px
-  height: 40px
-  background-color: blue
-  vertical-align: text-bottom
+  @extend .library-share-contact-email-icon
+  background-color: #32495e
 
 .library-share-contact-gmail-icon
-  display: inline-block
-  margin-right: 15px
-  border: 1px solid green
-  border-radius: 100%
-  width: 40px
-  height: 40px
-  background-color: green
-  vertical-align: text-bottom
+  @extend .library-share-contact-email-icon
+  border: 1px solid $border-light-gray
+  background-image: url(/img/gmail_logo.svg)
+  background-color: #fff
 
 .library-share-contact-summary
   display: inline-block
   width: 164px
 
 .library-share-contact-name
-  position: relative
-  top: -2px
   overflow: hidden
   font-size: 14px
   color: #000
   text-overflow: ellipsis
   white-space: nowrap
 
+  .library-share-new-email &
+    font-weight: bold
+
 .library-share-contact-network
   overflow: hidden
   font-size: 12px
-  color: #a9a9a9
+  color: $secondary-text-gray
   text-overflow: ellipsis
   white-space: nowrap
 
@@ -191,24 +201,9 @@
   white-space: nowrap
 
 .library-share-contact-button
+  @extend .library-share-button
   display: inline-block
   position: absolute
-  top: 8px
+  top: 5px
   padding: 6px 10px 6px 30px
-  border: 1px solid #bbb
-  border-radius: 5px
-  background: linear-gradient(to top, #f3f3f3, #fff)
-  font-family: Helvetica, Arial, sans-serif
   font-size: 12px
-  color: #666
-
-.library-share-menu-footer
-  box-sizing: border-box
-  border: 1px solid #b5b5b5
-  border-top: 1px solid #eaeaea
-  border-bottom-left-radius: 5px
-  border-bottom-right-radius: 5px
-  width: 320px
-  height: 10px
-  background-color: #fff
-
