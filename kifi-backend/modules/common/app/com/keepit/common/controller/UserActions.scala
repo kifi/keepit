@@ -120,7 +120,7 @@ trait UserActions extends Logging { self: Controller =>
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
-        case None => Future.successful(Unauthorized)
+        case None => Future.successful(Forbidden)
       }
     }
   }
