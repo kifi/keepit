@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.{ EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -349,6 +350,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.subject === "Tom Brady invited you to follow Football!"
         val html = email.htmlBody.value
         html must contain("Hey Aaron,")
         html must contain("Tom Brady would like to share Football with you")
@@ -370,6 +372,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.subject === "Tom Brady invited you to follow Football!"
         val html = email.htmlBody.value
         html must contain("Hello!")
         html must contain("Tom Brady would like to share Football with you")

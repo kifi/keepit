@@ -9,6 +9,7 @@ import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
+import com.keepit.common.mail.template.helpers.fullName
 
 import scala.concurrent.Future
 
@@ -29,7 +30,7 @@ class LibraryInviteEmailSender @Inject() (
     val emailToSend = EmailToSend(
       fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"{@fullName(fromUserId)} invited you to follow ${library.name}!",
+      subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
       to = toUserRecipient,
       category = NotificationCategory.User.LIBRARY_INVITATION,
       htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, inviteMsg, library.name, library.description, libLink),
