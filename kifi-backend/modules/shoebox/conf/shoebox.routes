@@ -122,6 +122,7 @@ GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryContro
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
 GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep])
 DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
 
 ##########################################
 # Mobile
