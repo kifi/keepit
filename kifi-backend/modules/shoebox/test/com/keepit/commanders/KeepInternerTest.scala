@@ -1,6 +1,8 @@
 package com.keepit.commanders
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.healthcheck._
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -14,7 +16,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
 
-  def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
+  def modules: Seq[ScalaModule] = Seq(
+    FakeKeepImportsModule(),
+    FakeScrapeSchedulerModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule()
+  )
 
   val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
   val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)

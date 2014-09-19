@@ -1,7 +1,9 @@
 package com.keepit.integrity
 
 import com.google.inject.Module
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.slick.Database
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -12,6 +14,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
   val modules: Seq[Module] = Seq(
     FakeScrapeSchedulerModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeKeepImportsModule()
   )
 

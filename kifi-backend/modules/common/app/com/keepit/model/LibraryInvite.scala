@@ -28,7 +28,7 @@ case class LibraryInvite(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
     authToken: String = RandomStringUtils.randomAlphanumeric(32),
-    passCode: String = LibraryInvite.generatePasscode(),
+    passPhrase: String = LibraryInvite.generatePassPhrase(),
     message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
@@ -54,7 +54,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String] and
-    (__ \ 'passCode).format[String] and
+    (__ \ 'passPhrase).format[String] and
     (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 
@@ -62,7 +62,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
   }
 
-  def generatePasscode(): String = {
+  def generatePassPhrase(): String = {
     // each word has length 4-8
     val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
     val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));

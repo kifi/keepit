@@ -11,7 +11,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NotificationCategory, User, UserRepo, PasswordResetRepo }
+import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
@@ -328,6 +328,52 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Yay, you are on the kifi ANDROID wait list!")
+      }
+    }
+  }
+
+  "LibraryInviteEmailSender" should {
+    "sends invite to user (userId)" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+        val (user1, user2, lib1) = db.readWrite { implicit rw =>
+          val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
+          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1, universalLink = "asdf"))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Some(Username("aaron")), primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
+          (user1, user2, lib1)
+        }
+        val email = Await.result(inviteSender.inviteUserToLibrary(Left(user2.id.get), user1.id.get, lib1.id.get), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        val html = email.htmlBody.value
+        html must contain("Hey Aaron,")
+        html must contain("Tom Brady would like to share Football with you")
+        html must contain(s"""<a href="www.kifi.com/tom/football?auth=asdf"><u>Football</u></a>""")
+      }
+    }
+
+    "send invite to non-user (email)" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+        val (user1, lib1) = db.readWrite { implicit rw =>
+          val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
+          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1, universalLink = "asdf"))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          (user1, lib1)
+        }
+        val email = Await.result(inviteSender.inviteUserToLibrary(Right(EmailAddress("aaronrodgers@gmail.com")), user1.id.get, lib1.id.get), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        val html = email.htmlBody.value
+        html must contain("Hello!")
+        html must contain("Tom Brady would like to share Football with you")
+        html must contain(s"""<a href="www.kifi.com/tom/football?auth=asdf"><u>Football</u></a>""")
       }
     }
   }
