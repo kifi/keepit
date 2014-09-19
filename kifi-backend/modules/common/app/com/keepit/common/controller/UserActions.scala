@@ -1,10 +1,11 @@
 package com.keepit.common.controller
 
-import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie }
+import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
-import play.api.mvc.{ Request, WrappedRequest, Controller, ActionBuilder, ActionFilter, Result }
+import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -15,23 +16,31 @@ case class NonUserRequest[T](request: Request[T]) extends WrappedRequest(request
 case class UserRequest[T](
     request: Request[T],
     userId: Id[User],
-    userF: Future[User],
-    experimentsF: Future[Set[ExperimentType]],
-    kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
-    adminUserId: Option[Id[User]] = None) extends WrappedRequest(request) with MaybeUserRequest[T] {
-  lazy val user = Await.result(userF, 5 seconds)
-  lazy val experiments = Await.result(experimentsF, 5 seconds)
+    adminUserId: Option[Id[User]],
+    userF: () => Future[User],
+    experimentsF: () => Future[Set[ExperimentType]],
+    kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with MaybeUserRequest[T] {
+  lazy val user = Await.result(userF.apply, 5 seconds)
+  lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
 }
 
-trait UserActionsHelper {
+trait UserActionsRequirements {
 
   def kifiInstallationCookie: KifiInstallationCookie
 
+  def impersonateCookie: ImpersonateCookie
+
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean]
 
-  def getUserOpt(implicit request: Request[_]): Future[Option[User]]
+  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]]
 
-  def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]]
+  def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]]
+
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]]
+
+}
+
+trait UserActionsHelper extends UserActionsRequirements {
 
   def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = {
     request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) // check with mobile
@@ -41,19 +50,24 @@ trait UserActionsHelper {
     kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
   }
 
+  def getImpersonatedUserIdOpt(implicit request: Request[_]): Option[ExternalId[User]] = {
+    impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+  }
+
 }
 
-trait UserActions { self: Controller =>
+trait UserActions extends Logging { self: Controller =>
 
   protected def userActionsHelper: UserActionsHelper
 
-  private def buildUserRequest[A](userId: Id[User])(implicit request: Request[A]): UserRequest[A] =
+  private def buildUserRequest[A](userId: Id[User], adminUserId: Option[Id[User]] = None)(implicit request: Request[A]): UserRequest[A] =
     UserRequest(
       request,
       userId,
-      userActionsHelper.getUserOpt.map(_.get),
-      userActionsHelper.getUserExperiments,
-      userActionsHelper.getKifiInstallationIdOpt
+      adminUserId,
+      () => userActionsHelper.getUserOpt(userId).map(_.get),
+      () => userActionsHelper.getUserExperiments(userId),
+      () => userActionsHelper.getKifiInstallationIdOpt
     )
 
   private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
@@ -74,8 +88,32 @@ trait UserActions { self: Controller =>
     } getOrElse res
   }
 
-  private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] =
-    block(buildUserRequest(userId)).map(maybeAugmentCORS(_))
+  private def impersonate[A](adminUserId: Id[User], impersonateExtId: ExternalId[User])(implicit request: Request[A]): Future[(UserRequest[A], Id[User])] = {
+    userActionsHelper.isAdmin(adminUserId) flatMap { isAdmin =>
+      if (!isAdmin) throw new IllegalStateException(s"non admin user $adminUserId tries to impersonate to $impersonateExtId")
+      userActionsHelper.getUserByExtIdOpt(impersonateExtId) map { impUserOpt =>
+        val impUserId = impUserOpt.get.id.get // fail hard
+        // todo(ray): identity
+        log.info(s"[impersonate] admin user $adminUserId is impersonating user $impUserId with request ${request.path}")
+        buildUserRequest(impUserId, Some(adminUserId)) -> impUserId
+      }
+    }
+  }
+
+  private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] = {
+    val resF = userActionsHelper.getImpersonatedUserIdOpt match {
+      case Some(impExtId) =>
+        impersonate(userId, impExtId).flatMap {
+          case (req, impUserId) =>
+            block(req).map { res =>
+              res.withSession(request.session + ActionAuthenticator.FORTYTWO_USER_ID -> impUserId.toString)
+            }
+        }
+      case None =>
+        block(buildUserRequest(userId))
+    }
+    resF.map(maybeAugmentCORS(_))
+  }
 
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
