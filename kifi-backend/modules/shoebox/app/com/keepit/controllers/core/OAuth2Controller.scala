@@ -1,7 +1,7 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import java.net.URLEncoder
 import play.api.mvc._
@@ -21,7 +21,6 @@ import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.Failure
 import scala.util.Success
-import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.ws.WSResponse
 
 case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
@@ -122,10 +121,11 @@ class OAuth2Controller @Inject() (
     airbrake: AirbrakeNotifier,
     actionAuthenticator: ActionAuthenticator,
     abookServiceClient: ABookServiceClient,
-    oauth2CommonConfig: OAuth2CommonConfig) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    val userActionsHelper: UserActionsHelper,
+    oauth2CommonConfig: OAuth2CommonConfig) extends WebsiteController(actionAuthenticator) with UserActions with ShoeboxServiceController with Logging {
 
   import OAuth2Providers._
-  def start(provider: String, stateTokenOpt: Option[String], approvalPromptOpt: Option[String]) = JsonAction.authenticated { implicit request =>
+  def start(provider: String, stateTokenOpt: Option[String], approvalPromptOpt: Option[String]) = UserAction { implicit request =>
     implicit val prefix = LogPrefix(s"oauth2.start(${request.userId},$provider,$stateTokenOpt,$approvalPromptOpt)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE) // may enforce stricter check
@@ -153,7 +153,7 @@ class OAuth2Controller @Inject() (
   }
 
   // redirect/GET
-  def callback(provider: String) = JsonAction.authenticatedAsync { implicit request =>
+  def callback(provider: String) = UserAction.async { implicit request =>
     implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
     val redirectHome = Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withSession(request.session - STATE_TOKEN_KEY)
@@ -266,7 +266,7 @@ class OAuth2Controller @Inject() (
     Ok(json)
   }
 
-  def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+  def refreshContacts(abookExtId: ExternalId[ABookInfo], provider: Option[String]) = UserAction.async { implicit request =>
     abookServiceClient.getABookInfoByExternalId(abookExtId) flatMap { abookInfoOpt =>
       abookInfoOpt flatMap (_.id) map { abookId =>
         refreshContactsHelper(abookId, provider)
@@ -274,11 +274,11 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def refreshContacts(abookId: Id[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+  def refreshContacts(abookId: Id[ABookInfo], provider: Option[String]) = UserAction.async { implicit request =>
     refreshContactsHelper(abookId, provider)
   }
 
-  private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
+  private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: UserRequest[_]): Future[Result] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
     val redirectInvite = Redirect("/friends/invite/email").withSession(request.session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")
