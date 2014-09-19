@@ -60,7 +60,8 @@
 
   var yscales = {
     "Linear Scale": "linear",
-    "log": "log"
+    "Log Scale": "log",
+    "Ratio": "ratio"
   };
 
   $.each(yscales, function (name, scale) {
@@ -69,7 +70,8 @@
 
   var yscales2 = {
     "Linear Scale": "linear",
-    "log": "log"
+    "Log Scale": "log",
+    "Percent": "percent"
   };
 
   $.each(yscales2, function (name, scale) {
@@ -91,16 +93,26 @@
 
     if (chart == "mainSearch") {
       options.title = "Main Search Performance"
-      //make offsets so log will always work
-      options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.mainSearch.*.mean_99,0.1)")
-      options.logBase = $("#yscale").val() == "log" ? 2 : null;
+      if ($("#yscale").val() == "percent") {
+        options.target = "asPercent(stats.timers.search.mainSearch.*.mean_99,stats.timers.search.mainSearch.total.mean_99)")
+        options.logBase = null;
+      } else {
+        //make offsets so log will always work
+        options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.mainSearch.*.mean_99,0.1)")
+        options.logBase = $("#yscale").val() == "log" ? 2 : null;
+      }
     }
 
     if (chart == "extSearch") {
       options.title = "Ext Search Performance"
-      //make offsets so log will always work
-      options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.extSearch.*.mean_99,0.1)")
-      options.logBase = $("#yscale2").val() == "log" ? 2 : null;
+      if ($("#yscale").val() == "ratio") {
+        options.target = "asPercent(stats.timers.search.extSearch.*.mean_99,stats.timers.search.extSearch.total.mean_99)")
+        options.logBase = null;
+      } else {
+        //make offsets so log will always work
+        options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.extSearch.*.mean_99,0.1)")
+        options.logBase = $("#yscale2").val() == "log" ? 2 : null;
+      }
     }
 
     if (chart == "articleIndex") {
