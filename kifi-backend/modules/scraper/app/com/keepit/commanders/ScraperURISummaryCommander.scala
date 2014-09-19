@@ -78,10 +78,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    val watch = Stopwatch(s"[embedly] fetchFromEmbedly for $nUri")
-    log.info(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
+    val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
     val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-      log.info(s"[embedly] for uri $nUri got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
+      watch.logTimeWith(s"[embedly] for uri $nUri got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
       val summary = for {
         nUriId <- nUri.id
@@ -109,18 +108,20 @@ class ScraperURISummaryCommanderImpl @Inject() (
 
           selectedImageOpt match {
             case None =>
-              log.info(s"[embedly] no selected image for ${nUriId.id}")
+              watch.logTimeWith(s"[embedly] no selected image for ${nUriId.id}")
               Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
             case Some(image) =>
-              log.info(s"[embedly] got a selected image for ${nUriId.id} : $image")
-              timing(s"[embedly] fetching selecteed image of ${nUriId.id}: $image") {
-                fetchAndInternImage(nUri, image) map { imageInfoOpt =>
-                  val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
-                  val widthOpt = imageInfoOpt.flatMap(_.width)
-                  val heightOpt = imageInfoOpt.flatMap(_.height)
-                  Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
-                }
+              watch.logTimeWith(s"[embedly] got a selected image for ${nUriId.id} : $image")
+              val future = fetchAndInternImage(nUri, image) map { imageInfoOpt =>
+                val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
+                val widthOpt = imageInfoOpt.flatMap(_.width)
+                val heightOpt = imageInfoOpt.flatMap(_.height)
+                Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
               }
+              future.onComplete { res =>
+                watch.logTimeWith(s"[embedly] [success = ${res.isSuccess}}] fetched a selected image for ${nUriId.id} : $image")
+              }
+              future
           }
         }
       }

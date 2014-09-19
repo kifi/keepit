@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.controller.{ UserActionsHelper, UserAPIController, ShoeboxServiceController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.typeahead.TypeaheadHit
@@ -15,11 +15,11 @@ import com.keepit.commanders.TypeaheadCommander
 
 class TypeaheadAdminController @Inject() (
     db: Database,
-    userActionsHelper: UserActionsHelper,
+    val userActionsHelper: UserActionsHelper,
     abookServiceClient: ABookServiceClient,
     typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
-    socialUserTypeahead: SocialUserTypeahead) extends UserAPIController(userActionsHelper) with ShoeboxServiceController {
+    socialUserTypeahead: SocialUserTypeahead) extends UserActions with ShoeboxServiceController {
 
   implicit val fj = ExecutionContext.fj
 

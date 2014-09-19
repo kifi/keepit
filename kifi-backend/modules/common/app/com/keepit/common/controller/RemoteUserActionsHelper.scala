@@ -2,8 +2,8 @@ package com.keepit.common.controller
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
-import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
-import com.keepit.common.db.Id
+import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ User, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -17,16 +17,15 @@ class RemoteUserActionsHelper @Inject() (
     airbrake: AirbrakeNotifier,
     shoebox: ShoeboxServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander,
+    val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
 
-  def getUserOpt(implicit request: Request[_]): Future[Option[User]] = getUserIdOpt.map(shoebox.getUser(_)) getOrElse Future.successful(None)
+  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments(userId).map(_.contains(ExperimentType.ADMIN))
 
-  def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments.map(_.contains(ExperimentType.ADMIN))
+  def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = shoebox.getUser(userId)
 
-  def getUserExperiments(implicit request: Request[_]): Future[Set[ExperimentType]] = {
-    getUserIdOpt map { userId =>
-      userExperimentCommander.getExperimentsByUser(userId)
-    } getOrElse Future.successful(Set.empty)
-  }
+  def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = shoebox.getUserOpt(extId)
+
+  def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
 }

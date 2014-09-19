@@ -16,12 +16,12 @@ angular.module('kifi')
         // Internal data.
         //
         var resultIndex = -1;
-        var shareButton = element.find('.kf-library-share-btn');
-        var shareMenu = element.find('.kf-library-share-menu');
-        var searchInput = element.find('.kf-library-share-search-input');
+        var shareButton = element.find('.library-share-btn');
+        var shareMenu = element.find('.library-share-menu');
+        var searchInput = element.find('.library-share-search-input');
         var show = false;
 
-        
+
         //
         // Scope data.
         //
@@ -71,6 +71,10 @@ angular.module('kifi')
           if (opt_query) {
             scope.email = opt_query;
             scope.emailHelp = 'Keep typing the email address';
+
+            if (util.validateEmail(opt_query)) {
+              scope.emailHelp = 'An email address';
+            }
           }
 
           libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
