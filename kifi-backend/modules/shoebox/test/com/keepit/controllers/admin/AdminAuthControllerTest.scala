@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -27,7 +28,9 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 
 class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
-  val modules = Seq(FakeShoeboxServiceModule(),
+  val modules = Seq(
+    FakeUserActionsModule(),
+    FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
