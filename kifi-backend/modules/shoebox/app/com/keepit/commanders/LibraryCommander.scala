@@ -319,7 +319,8 @@ class LibraryCommander @Inject() (
         .map { key =>
           val (inviterId, libId) = key._1
           val inviter = basicUserRepo.load(inviterId)
-          val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
+          val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
+          val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
           val lib = libraryRepo.get(libId)
           val libOwner = basicUserRepo.load(lib.ownerId)
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
