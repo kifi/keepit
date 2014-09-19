@@ -9,6 +9,7 @@ import com.keepit.model.{ SocialUserInfo, User, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.mvc.Request
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import securesocial.core.Identity
 
 import scala.concurrent.Future
 
@@ -19,6 +20,8 @@ class RemoteUserActionsHelper @Inject() (
     userExperimentCommander: RemoteUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
+
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = SimpleNonUserRequest(request)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments(userId).map(_.contains(ExperimentType.ADMIN))
 

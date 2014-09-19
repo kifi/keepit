@@ -9,12 +9,12 @@ import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.Identity
+import securesocial.core.{ UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
-trait NonUserRequest[T] extends MaybeUserRequest[T] // todo(ray): add partial auth support
+trait NonUserRequest[T] extends MaybeUserRequest[T]
 trait UserRequest[T] extends MaybeUserRequest[T] {
   def request: Request[T]
   def userId: Id[User]
@@ -23,26 +23,28 @@ trait UserRequest[T] extends MaybeUserRequest[T] {
   def experiments: Set[ExperimentType]
 }
 
-// for backward compatibility; might be removed later
-trait SecureSocialIdentityAccess[T] { self: UserRequest[T] =>
-  def identityOptF: () => Future[Option[Identity]]
+trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
+  def identityOptF: () => Future[Option[Identity]] = () => Future.successful(None)
   lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
 }
 
-case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T]
+case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T]
+
 case class SimpleUserRequest[T](
     request: Request[T],
     userId: Id[User],
     adminUserId: Option[Id[User]],
     userF: () => Future[User],
     experimentsF: () => Future[Set[ExperimentType]],
-    identityOptF: () => Future[Option[Identity]],
+    override val identityOptF: () => Future[Option[Identity]],
     kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
   lazy val user = Await.result(userF.apply, 5 seconds)
   lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
 }
 
 trait UserActionsRequirements {
+
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A]
 
   def kifiInstallationCookie: KifiInstallationCookie
 
@@ -149,7 +151,7 @@ trait UserActions extends Logging { self: Controller =>
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
-        case None => block(SimpleNonUserRequest(request)).map(maybeAugmentKcid(_))
+        case None => block(userActionsHelper.buildNonUserRequest).map(maybeAugmentKcid(_))
       }
     }
   }
