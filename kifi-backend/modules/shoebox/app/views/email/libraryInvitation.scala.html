@@ -1,20 +1,19 @@
-@(myFirstName: String,
-  inviter: User,
-  imageUrl: String,
+@(inviteeId: Option[Id[User]],
+  inviterId: Id[User],
+  inviteMsg: Option[String],
   libraryName: String,
   libraryDescription: Option[String],
-  libraryLink: String,
-  unsubLink: String)
+  libraryLink: String)
+@import com.keepit.common.mail.template.helpers._
 
-
-@helper.kifiTemplate(title = "Kifi - @{inviter.firstName} invited you to join @libraryName", unsubLink=unsubLink) {
+<!-- title = "Kifi - @firstName(inviterId) invited you to join @libraryName" -->
 <table class="row">
     <tr>
         <td class="wrapper">
             <table class="two columns">
                 <tr>
                     <td>
-                        <img height="80" width="80" src=@imageUrl>
+                        <img height="80" width="80" src="@avatarUrl(inviterId)">
                     </td>
                     <td class="expander"></td>
                 </tr>
@@ -25,14 +24,23 @@
             <table class="ten columns">
                 <tr>
                     <td>
-                        Hey @myFirstName, <br><br>
-                        @{inviter.firstName} @{inviter.lastName} would like to share @libraryName with you <br><br>
+                        @inviteeId match {
+                            case Some(id) => {Hey @firstName(id),}
+                            case None => {"Hello!"}
+                        } <br><br>
+                        @fullName(inviterId) would like to share @libraryName with you <br><br>
 
-                        <!-- message to invitee here? -->
-                        <!-- libraryDescription here? -->
+                        @inviteMsg match {
+                            case Some(msg) => {@firstName(inviterId) sent you a message: @msg}
+                            case None => {}
+                        }
 
                         <font color="#A3C879">Come check it out here!</font><br>
-                        <a href="@libraryLink"><u>@libraryName</u></a>
+                        <a href="@libraryLink"><u>@libraryName</u></a><br>
+                        @libraryDescription match {
+                            case Some(descr) => {Library Description: @descr}
+                            case None => {}
+                        }
                         <br><br>
 
                         Cheers! <br>
@@ -44,6 +52,3 @@
         </td>
     </tr>
 </table>
-
-
-}

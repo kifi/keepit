@@ -1,6 +1,8 @@
 package com.keepit.controllers.ext
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -42,6 +44,8 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeScraperServiceClientModule(),
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )
 
