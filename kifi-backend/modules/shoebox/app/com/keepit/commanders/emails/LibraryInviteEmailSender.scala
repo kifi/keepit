@@ -9,6 +9,7 @@ import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
+import com.keepit.common.mail.template.helpers.fullName
 
 import scala.concurrent.Future
 
@@ -20,17 +21,16 @@ class LibraryInviteEmailSender @Inject() (
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def inviteUserToLibrary(toUserRecipient: Either[Id[User], EmailAddress], fromUserId: Id[User], libraryId: Id[Library], inviteMsg: Option[String] = None): Future[ElectronicMail] = {
-    val (requestingUser, library, libraryOwner) = db.readOnlyReplica { implicit session =>
-      val user = basicUserRepo.load(fromUserId)
+    val (library, libraryOwner) = db.readOnlyReplica { implicit session =>
       val library = libraryRepo.get(libraryId)
       val libOwner = basicUserRepo.load(library.ownerId)
-      (user, library, libOwner)
+      (library, libOwner)
     }
-    val libLink = s"""www.kifi.com${Library.formatLibraryPath(libraryOwner.username, libraryOwner.externalId, library.slug)}?auth=${library.universalLink}"""
+    val libLink = s"""www.kifi.com${Library.formatLibraryPath(libraryOwner.username, libraryOwner.externalId, library.slug)}"""
     val emailToSend = EmailToSend(
       fromName = Some(Left(fromUserId)),
       from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"${requestingUser.firstName} ${requestingUser.lastName} invited you to follow ${library.name}.",
+      subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
       to = toUserRecipient,
       category = NotificationCategory.User.LIBRARY_INVITATION,
       htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, inviteMsg, library.name, library.description, libLink),

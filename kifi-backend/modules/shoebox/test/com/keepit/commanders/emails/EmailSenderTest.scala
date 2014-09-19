@@ -4,6 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.{ EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -294,7 +295,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val inviteSender = inject[LibraryInviteEmailSender]
         val (user1, user2, lib1) = db.readWrite { implicit rw =>
           val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
-          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1, universalLink = "asdf"))
+          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Some(Username("aaron")), primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
@@ -304,10 +305,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.subject === "Tom Brady invited you to follow Football!"
         val html = email.htmlBody.value
         html must contain("Hey Aaron,")
         html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="www.kifi.com/tom/football?auth=asdf"><u>Football</u></a>""")
+        html must contain(s"""<a href="www.kifi.com/tom/football"><u>Football</u></a>""")
       }
     }
 
@@ -317,7 +319,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val inviteSender = inject[LibraryInviteEmailSender]
         val (user1, lib1) = db.readWrite { implicit rw =>
           val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
-          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1, universalLink = "asdf"))
+          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user1, lib1)
         }
@@ -325,10 +327,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.subject === "Tom Brady invited you to follow Football!"
         val html = email.htmlBody.value
         html must contain("Hello!")
         html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="www.kifi.com/tom/football?auth=asdf"><u>Football</u></a>""")
+        html must contain(s"""<a href="www.kifi.com/tom/football"><u>Football</u></a>""")
       }
     }
   }

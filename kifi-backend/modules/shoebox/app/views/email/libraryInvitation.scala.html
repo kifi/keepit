@@ -30,14 +30,13 @@
                         } <br><br>
                         @fullName(inviterId) would like to share @libraryName with you <br><br>
 
-                        <!-- message to invitee here? -->
-                        @libraryDescription match {
-                            case Some(descr) => {@inviteMsg}
+                        @inviteMsg match {
+                            case Some(msg) => {@firstName(inviterId) sent you a message: @msg}
                             case None => {}
                         }
 
                         <font color="#A3C879">Come check it out here!</font><br>
-                        <a href="@libraryLink"><u>@libraryName</u></a>
+                        <a href="@libraryLink"><u>@libraryName</u></a><br>
                         @libraryDescription match {
                             case Some(descr) => {Library Description: @descr}
                             case None => {}

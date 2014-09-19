@@ -314,17 +314,17 @@ class LibraryCommander @Inject() (
           val inviter = basicUserRepo.load(inviterId)
           val lib = libraryRepo.get(libId)
           val libOwner = basicUserRepo.load(lib.ownerId)
-          val libLink = s"""www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}?auth=${lib.universalLink}"""
+          val libLink = s"""${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
 
           // send notifications to kifi users only
           val inviteeIdSet = key._2.map(_.userId).flatten.toSet
           elizaClient.sendGlobalNotification(
             userIds = inviteeIdSet,
-            title = s"${inviter.firstName} invited you to follow ${lib.name}!",
-            body = s"Browse keeps in ${lib.name} and find some interesting gems kept by ${libOwner.username.getOrElse(libOwner.firstName)}.",
+            title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
+            body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
             linkText = "Let's take a look!",
             linkUrl = libLink,
-            imageUrl = inviter.pictureName,
+            imageUrl = "",
             sticky = false,
             category = NotificationCategory.User.LIBRARY_INVITATION
           )
