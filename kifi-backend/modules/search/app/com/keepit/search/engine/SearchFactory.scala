@@ -114,9 +114,15 @@ class SearchFactory @Inject() (
   def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
   def getLibraryIdsFuture(userId: Id[User], library: LibraryContext): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
+    val librarySearcher = libraryIndexer.getSearcher
+
+    def isPublishedLibrary(libId: Long): Boolean = {
+      val visibility = librarySearcher.getLongDocValue(LibraryFields.visibilityField, libId)
+      (visibility.isDefined && visibility.get == LibraryFields.Visibility.PUBLISHED)
+    }
 
     val trustedPublishedLibIds = library match {
-      case LibraryContext.NotAuthorized(libId) => LongArraySet.from(Array(libId)) // if this library is not public, it is ignored by the engine
+      case LibraryContext.NotAuthorized(libId) if isPublishedLibrary(libId) => LongArraySet.from(Array(libId))
       case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
     }
 
@@ -127,10 +133,8 @@ class SearchFactory @Inject() (
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
-        val searcher = libraryIndexer.getSearcher
-
-        val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
-        val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+        val myOwnLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+        val memberLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
       }
