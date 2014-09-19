@@ -478,6 +478,7 @@ class LibraryFromKeepsScoreVectorSource(
 
     val recencyScorer = getRecencyScorer(readerContext)
 
+    val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores = pq.createScoreArray // tagged floats
