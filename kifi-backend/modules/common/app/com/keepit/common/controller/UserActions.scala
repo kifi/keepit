@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
 import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User }
+import play.api.http.ContentTypes
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -136,6 +137,12 @@ trait UserActions extends Logging { self: Controller =>
     resF.map(maybeAugmentCORS(_))
   }
 
+  private def pageAction[P[_]] = new ActionFunction[P, P] {
+    def invokeBlock[A](request: P[A], block: (P[A]) => Future[Result]): Future[Result] = {
+      block(request).map(_.withHeaders(CONTENT_TYPE -> HTML))
+    }
+  }
+
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
@@ -145,6 +152,7 @@ trait UserActions extends Logging { self: Controller =>
       }
     }
   }
+  val UserPage = (UserAction andThen pageAction)
 
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
@@ -155,6 +163,7 @@ trait UserActions extends Logging { self: Controller =>
       }
     }
   }
+  val MaybeUserPage = (MaybeUserAction andThen pageAction)
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
@@ -167,5 +176,6 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   val AdminUserAction = (UserAction andThen AdminCheck)
+  val AdminUserPage = (AdminUserAction andThen pageAction)
 
 }

@@ -1,7 +1,7 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController, UserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import java.net.URLEncoder
 import play.api.mvc._
@@ -119,10 +119,9 @@ import OAuth2._
 class OAuth2Controller @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
-    actionAuthenticator: ActionAuthenticator,
     abookServiceClient: ABookServiceClient,
     val userActionsHelper: UserActionsHelper,
-    oauth2CommonConfig: OAuth2CommonConfig) extends WebsiteController(actionAuthenticator) with UserActions with ShoeboxServiceController with Logging {
+    oauth2CommonConfig: OAuth2CommonConfig) extends UserActions with ShoeboxServiceController with Logging {
 
   import OAuth2Providers._
   def start(provider: String, stateTokenOpt: Option[String], approvalPromptOpt: Option[String]) = UserAction { implicit request =>
@@ -336,7 +335,7 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def importContacts(provider: Option[String], approvalPromptOpt: Option[String], redirectUrl: Option[String] = None) = HtmlAction.authenticated { implicit request =>
+  def importContacts(provider: Option[String], approvalPromptOpt: Option[String], redirectUrl: Option[String] = None) = UserPage { implicit request =>
     val stateToken = Json.toJson(StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)).toString()
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
     log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")

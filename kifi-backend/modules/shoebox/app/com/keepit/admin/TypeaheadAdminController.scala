@@ -23,7 +23,7 @@ class TypeaheadAdminController @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def index = AdminUserAction { request =>
+  def index = AdminUserPage { request =>
     Ok(html.admin.typeahead(request.user))
   }
 
@@ -101,7 +101,7 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserAction.async { request =>
+  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserPage.async { request =>
     typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, dedupEmail) map { res => // hack
       Ok(
         "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td><td>email</td><td>inviteLastSentAt</td></tr>" +
