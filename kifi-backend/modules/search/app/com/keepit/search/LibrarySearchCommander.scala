@@ -21,12 +21,11 @@ trait LibrarySearchCommander {
 
 class LibrarySearchCommanderImpl @Inject() (
     activeShards: ActiveShards,
-    distributedSearchClient: DistributedSearchServiceClient,
-    val searchClient: SearchServiceClient) extends LibrarySearchCommander with Sharding with Logging {
+    val searchClient: DistributedSearchServiceClient) extends LibrarySearchCommander with Sharding with Logging {
 
   def librarySearch(request: LibrarySearchRequest): Future[LibrarySearchResult] = {
     val (localShards, remotePlan) = distributionPlan(request.userId, activeShards)
-    val futureRemoteLibraryShardResults = distributedSearchClient.distLibrarySearch(remotePlan, request)
+    val futureRemoteLibraryShardResults = searchClient.distLibrarySearch(remotePlan, request)
     val futureLocalLibraryShardResult = distLibrarySearch(localShards, request)
     Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult).map(results => mergeResults(results.flatten))
   }
