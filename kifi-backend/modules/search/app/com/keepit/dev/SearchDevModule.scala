@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.search._
@@ -18,6 +19,7 @@ case class SearchDevModule() extends SearchModule with CommonDevModule {
   // Common Functional Modules
   val cacheModule = SearchCacheModule(HashMapMemoryCacheModule())
   val storeModule = SearchDevStoreModule()
+  val userActionsModule = ProdRemoteUserActionsHelperModule()
 
   // Search Functional Modules
   val indexModule = DevIndexModule()

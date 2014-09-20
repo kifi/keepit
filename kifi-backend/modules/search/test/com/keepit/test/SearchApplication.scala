@@ -2,6 +2,7 @@ package com.keepit.test
 
 import akka.actor.ActorSystem
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.search.spellcheck.FakeSpellCorrectorModule
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
@@ -52,6 +53,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   val module = Modules.combine(
     FakeActorSystemModule(),
     FakeHttpClientModule(),
+    FakeUserActionsModule(),
     FakeHeimdalServiceClientModule(),
     SearchServiceTypeModule(),
     FakeAirbrakeModule(),

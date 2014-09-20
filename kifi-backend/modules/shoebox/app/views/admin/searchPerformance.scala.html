@@ -16,24 +16,6 @@
   <select class="input-medium params" id="yscale2"></select>
 </div>
 
-<div align="center">
-  <p><img id="articleIndex" class="img-polaroid"></p>
-</div>
-
-<div align="center">
-  <p><img id="bookmarkIndex" class="img-polaroid"></p>
-</div>
-
-<div align="center">
-  <p><img id="collectionIndex" class="img-polaroid"></p>
-</div>
-
-
-<div align="center">
-  <p><img id="otherIndex" class="img-polaroid"></p>
-</div>
-
-
 <script>
 
   var timeranges = {
@@ -60,7 +42,8 @@
 
   var yscales = {
     "Linear Scale": "linear",
-    "log": "log"
+    "Log Scale": "log",
+    "Percent": "percent"
   };
 
   $.each(yscales, function (name, scale) {
@@ -69,7 +52,8 @@
 
   var yscales2 = {
     "Linear Scale": "linear",
-    "log": "log"
+    "Log Scale": "log",
+    "Percent": "percent"
   };
 
   $.each(yscales2, function (name, scale) {
@@ -91,43 +75,26 @@
 
     if (chart == "mainSearch") {
       options.title = "Main Search Performance"
-      //make offsets so log will always work
-      options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.mainSearch.*.mean_99,0.1)")
-      options.logBase = $("#yscale").val() == "log" ? 2 : null;
+      if ($("#yscale").val() == "percent") {
+        options.target = ["substr(asPercent(stats.timers.search.mainSearch.*.mean_99,stats.timers.search.mainSearch.total.mean_99),4,5)"]
+        options.logBase = null;
+      } else {
+        //make offsets so log will always work
+        options.target = ($("#yscale").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.mainSearch.*.mean_99,0.1),4,5)")
+        options.logBase = $("#yscale").val() == "log" ? 2 : null;
+      }
     }
 
     if (chart == "extSearch") {
       options.title = "Ext Search Performance"
-      //make offsets so log will always work
-      options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("offset(stats.timers.search.extSearch.*.mean_99,0.1)")
-      options.logBase = $("#yscale2").val() == "log" ? 2 : null;
-    }
-
-    if (chart == "articleIndex") {
-      options.title = "Article Index"
-      options.target = baseTargetsForLogScale.concat("stats.gauges.search.index.article_*.size")
-      options.logBase = 2
-    }
-
-    if (chart == "bookmarkIndex") {
-      options.title = "Bookmark Index"
-      options.target = baseTargetsForLogScale.concat(["stats.gauges.search.index.bookmarkStore_*.size", "stats.gauges.search.index.urigraph_*.size"])
-      options.logBase = 2
-    }
-
-    if (chart == "collectionIndex") {
-      options.title = "Collection Index"
-      options.target = baseTargetsForLogScale.concat(["stats.gauges.search.index.collectionName_*.size", "stats.gauges.search.index.collection_*.size"])
-      options.logBase = 2
-    }
-
-    if (chart == "otherIndex") {
-      options.title = "Other Indices"
-      options.target = baseTargetsForLogScale.concat(
-        ["stats.gauges.search.index.user.size", "stats.gauges.search.index.message.size",
-        "stats.gauges.search.index.userGraph.size", "stats.gauges.search.index.searchFriend.size"]
-      )
-      options.logBase = 2
+      if ($("#yscale2").val() == "percent") {
+        options.target = ["substr(asPercent(stats.timers.search.extSearch.*.mean_99,stats.timers.search.extSearch.total.mean_99),4,5)"]
+        options.logBase = null;
+      } else {
+        //make offsets so log will always work
+        options.target = ($("#yscale2").val() == "log" ? baseTargetsForLogScale : baseTargets).concat("substr(offset(stats.timers.search.extSearch.*.mean_99,0.1),4,5)")
+        options.logBase = $("#yscale2").val() == "log" ? 2 : null;
+      }
     }
 
     $("#" + chart).graphite(options);
@@ -136,10 +103,6 @@
   function renderAll() {
     renderChart("mainSearch")
     renderChart("extSearch")
-    renderChart("articleIndex")
-    renderChart("bookmarkIndex")
-    renderChart("collectionIndex")
-    renderChart("otherIndex")
   }
 
   $(".params").change(renderAll);

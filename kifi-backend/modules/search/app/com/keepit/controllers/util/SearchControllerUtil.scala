@@ -1,9 +1,11 @@
 package com.keepit.controllers.util
 
 import com.keepit.common.concurrent.ExecutionContext._
+import com.keepit.common.controller.{ UserRequest, MaybeUserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.model.{ HashedPassPhrase, Library, User, NormalizedURI }
+import com.keepit.controllers.util.SearchControllerUtil._
+import com.keepit.model._
 import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
@@ -114,6 +116,15 @@ trait SearchControllerUtil {
     }.toMap
   }
 
+  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
+    request match {
+      case userRequest: UserRequest[_] => (userRequest.userId, userRequest.experiments)
+      case _ => (nonUser, Set.empty[ExperimentType])
+    }
+  }
+
+  def getAcceptLangs(requestHeader: RequestHeader): Seq[String] = requestHeader.acceptLanguages.map(_.code)
+
   def getLibraryContextFuture(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryContext] = {
     library match {
       case Some(libPublicId) =>
@@ -129,7 +140,7 @@ trait SearchControllerUtil {
                 Future.successful(LibraryContext.NotAuthorized(libId.id))
             }
           case Failure(e) =>
-            log.error(s"invalid library public id: $libPublicId", e)
+            log.warn(s"invalid library public id: $libPublicId", e)
             Future.successful(LibraryContext.Invalid)
         }
       case _ =>

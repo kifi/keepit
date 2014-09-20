@@ -7,6 +7,7 @@ package object performance {
 
   case class Stopwatch(tag: String) extends Logging {
     var startTime = System.nanoTime()
+    var lastLap: Long = startTime
     var elapsedTime: Long = 0
 
     def stop(): Long = {
@@ -14,15 +15,24 @@ package object performance {
       elapsedTime
     }
 
-    def resultString(res: String) = s"[$tag] result: $res; elapsed milliseconds: ${elapsedTime / 1000000d}"
     override def toString = s"[$tag] elapsed milliseconds: ${elapsedTime / 1000000d}"
 
+    private def recordLap() = {
+      val now = System.nanoTime
+      val sinceStart = now - startTime
+      val lapTime = now - lastLap
+      lastLap = now
+      (sinceStart, lapTime)
+    }
+
     def logTime()(implicit logger: Logger = log) {
-      logger.info(toString)
+      val (sinceStart, lapTime) = recordLap()
+      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms")
     }
 
     def logTimeWith(res: String)(implicit logger: Logger = log) {
-      logger.info(resultString(res))
+      val (sinceStart, lapTime) = recordLap()
+      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms; $tag - $res")
     }
   }
 

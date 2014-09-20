@@ -20,7 +20,9 @@ case class EmbedlyImage(
     width: Option[Int] = None,
     height: Option[Int] = None,
     size: Option[Int] = None) extends ImageGenericInfo {
-  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int]): ImageInfo = ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height, size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority)
+  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int]): ImageInfo =
+    ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height,
+      size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority)
   implicit def toImageInfo(nuriId: Id[NormalizedURI]): ImageInfo = toImageInfoWithPriority(nuriId, None)
 }
 
