@@ -299,7 +299,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         implicit val config = inject[PublicIdConfiguration]
 
         // add new library
-        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret", "slug" -> "lib1"))) === OK
+        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret"))) === OK
         db.readOnlyMaster { implicit s =>
           val lib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("lib1"))
           lib.get.name === "Lib 1"
@@ -307,16 +307,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         }
 
         // duplicate name
-        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret", "slug" -> "lib2"))) === BAD_REQUEST
+        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret"))) === BAD_REQUEST
 
         // duplicate slug
-        status(addLibrary(user1, Json.obj("name" -> "Lib 2", "visibility" -> "secret", "slug" -> "lib1"))) === BAD_REQUEST
+        status(addLibrary(user1, Json.obj("name" -> "Lib 2", "visibility" -> "secret"))) === BAD_REQUEST
 
         // invalid name
-        status(addLibrary(user1, Json.obj("name" -> "Lib/\" 3", "visibility" -> "secret", "slug" -> "lib3"))) === BAD_REQUEST
+        status(addLibrary(user1, Json.obj("name" -> "Lib/\" 3", "visibility" -> "secret"))) === BAD_REQUEST
 
         // invalid slug
-        status(addLibrary(user1, Json.obj("name" -> "Lib 3", "visibility" -> "secret", "slug" -> "lib  3"))) === BAD_REQUEST
+        status(addLibrary(user1, Json.obj("name" -> "Lib 3", "visibility" -> "secret"))) === BAD_REQUEST
 
         db.readOnlyMaster { implicit s =>
           libraryRepo.count === 1
