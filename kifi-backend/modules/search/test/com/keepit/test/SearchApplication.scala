@@ -20,7 +20,7 @@ import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.search.{ SearchServiceTypeModule, SearchConfigModule, FakeSearchConfigModule, FakeSearchServiceClientModule }
+import com.keepit.search.{ FakeDistributedSearchServiceClientModule, SearchConfigModule, FakeSearchServiceClientModule, SearchServiceTypeModule, FakeSearchConfigModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -67,6 +67,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
+    FakeDistributedSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),

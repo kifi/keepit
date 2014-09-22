@@ -221,11 +221,6 @@ class LDACommander @Inject() (
     idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 != userId).unzip
   }
 
-  def dumpScaledUserInterest(userId: Id[User]): Option[Array[Float]] = {
-    val vecOpt = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
-    vecOpt.map { vec => val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
-  }
-
   def userSimilairty(userId1: Id[User], userId2: Id[User]): Option[Float] = {
     val vecOpt1 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId1, wordRep.version) }
     val vecOpt2 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId2, wordRep.version) }

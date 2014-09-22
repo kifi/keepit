@@ -11,7 +11,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
+import com.keepit.search.graph.keep.{ KeepLangs, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -203,6 +203,28 @@ class SearchFactory @Inject() (
           )
         }
       case None => Seq.empty[KifiSearchNonUserImpl]
+    }
+  }
+
+  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
+    getLibraryIdsFuture(userId, libraryContext).flatMap {
+      case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
+        Future.traverse(shards) { shard =>
+          SafeFuture {
+            val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+            val keepLangs = new KeepLangs(keepSearcher)
+            keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
+            keepLangs.processLibraries(trustedPublishedLibIds)
+            keepLangs.processLibraries(authorizedLibIds)
+            keepLangs.getFrequentLangs()
+          }
+        }.map { results =>
+          results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
+            case (m, (langName, count)) =>
+              val lang = Lang(langName)
+              m + (lang -> (count + m.getOrElse(lang, 0)))
+          }
+        }
     }
   }
 

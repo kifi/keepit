@@ -420,6 +420,7 @@ class LibraryScoreVectorSource(
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
+    // execute the query
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
@@ -428,7 +429,7 @@ class LibraryScoreVectorSource(
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
-    val taggedScores = pq.createScoreArray // tagged floats
+    val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
@@ -477,6 +478,7 @@ class LibraryFromKeepsScoreVectorSource(
 
     val recencyScorer = getRecencyScorer(readerContext)
 
+    val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores = pq.createScoreArray // tagged floats
@@ -493,17 +495,18 @@ class LibraryFromKeepsScoreVectorSource(
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
+          val keepId = idMapper.getId(docId)
 
           // write to the buffer
-          output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+          output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // libId (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(libId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
 
           docId = pq.top.doc // next doc
         } else {
-          docId = pq.skipCurrentDoc() // skip this doc
+          docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
         }
       } else {
-        docId = pq.skipCurrentDoc() // skip this doc
+        docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
       }
     }
   }

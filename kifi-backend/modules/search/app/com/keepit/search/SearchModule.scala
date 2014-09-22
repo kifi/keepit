@@ -19,20 +19,22 @@ case class SearchServiceTypeModule() extends ServiceTypeModule {
   val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil
 }
 
-abstract class SearchModule(
+trait SearchModule extends ConfigurationModule with CommonServiceModule {
 
-    // Common Functional Modules
-    val userActionsModule: UserActionsModule,
-    val cacheModule: CacheModule,
-    val storeModule: StoreModule,
+  // Common Functional Modules
+  val cacheModule: CacheModule
+  val storeModule: StoreModule
+  val userActionsModule: UserActionsModule
 
-    // Search Functional Modules
-    val indexModule: IndexModule,
-    val trackingModule: TrackingModule,
-    val spellModule: SpellCorrectorModule) extends ConfigurationModule with CommonServiceModule {
+  // Search Functional Modules
+  val indexModule: IndexModule
+  val trackingModule: TrackingModule
+  val spellModule: SpellCorrectorModule
+
   // Service clients
   val serviceTypeModule = SearchServiceTypeModule()
   val searchServiceClientModule: SearchServiceClientModule
+  val distributedSearchServiceClientModule: DistributedSearchServiceClientModule
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
