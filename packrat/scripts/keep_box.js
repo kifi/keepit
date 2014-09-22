@@ -232,10 +232,15 @@ var keepBox = keepBox || (function () {
     .on('input', '.kifi-keep-box-keep-title', function () {
       updateDirty($view, this, this.value.trim() !== $view.data('title'));
     })
-    .on('click', '.kifi-keep-box-btn', function (e) {
+    .on('click', '.kifi-keep-box-delete[href]', function (e) {
+      if (e.which === 1) {
+        deleteKeep($view, $(this));
+      }
+    })
+    .on('click', '.kifi-keep-box-btn[href]', function (e) {
       if (e.which === 1) {
         if ($view.data('dirty').length) {
-          saveKeep($view);
+          saveKeep($view, $(this));
         } else {
           hide(null, 'action');
         }
@@ -303,52 +308,61 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function saveKeep($view) {
+  function saveKeep($view, $btn) {
     var libraryId = $view.find('.kifi-keep-box-lib').data('id');
     var $title = $view.find('.kifi-keep-box-keep-title');
     var $comment = $view.find('.kifi-keep-box-keep-comment');
-    var $btn = $view.find('.kifi-keep-box-btn');
+    var $progress = $btn.find('.kifi-keep-box-progress');
     var title = $title.val().trim();
     if (title) {
       $title.add($comment).prop('disabled', true);
-      $btn.addClass('kifi-doing');
+      $btn.removeAttr('href').addClass('kifi-doing');
       if ($view.hasClass('kifi-kept')) {
-        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, done.bind(null, true));
+        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, endProgress.bind($progress[0], 'save'));
       } else {
-        $box.data('keepPage')({libraryId: libraryId, title: title}, done.bind(null, false));
+        $box.data('keepPage')({libraryId: libraryId, title: title}, endProgress.bind($progress[0], 'keep'));
       }
-      $btn.removeAttr('href');
-      var $progress = $btn.find('.kifi-keep-box-progress');
-      updateSaveProgress.call($progress[0], 0);
+      updateProgress.call($progress[0], 0);
     } else {
       $title.focus().select(); // TODO: restore saved title or suggest our best-guess title
     }
-
-    function done(edit, success) {
-      log('[handleSaveKeepResult]', edit ? 'edit' : 'keep', success ? 'success' : 'error');
-      clearTimeout(saveProgressTimeout), saveProgressTimeout = null;
-      $btn.removeClass('kifi-doing');
-      if (success) {
-        $btn.addClass('kifi-done');
-        $view.addClass('kifi-kept');
-        clearTimeout(hideTimeout);
-        hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1000);
-      } else {
-        $btn.prop('href', 'javascript:').one('transitionend', function () {
-          $progress.css('width', 0);
-          $btn.removeClass('kifi-fail');
-        }).addClass('kifi-fail');
-      }
-    }
   }
 
-  var saveProgressTimeout;
-  function updateSaveProgress(frac) {
-    log('[updateSaveProgress]', frac);
+  function deleteKeep($view, $btn) {
+    var libraryId = $view.find('.kifi-keep-box-lib').data('id');
+    var $progress = $btn.find('.kifi-keep-box-progress');
+    $btn.removeAttr('href').addClass('kifi-doing');
+    $box.data('unkeepPage')(libraryId, endProgress.bind($progress[0], 'unkeep'));
+    updateProgress.call($progress[0], 0);
+  }
+
+  var progressTimeout;
+  function updateProgress(frac) {
+    log('[updateProgress]', frac);
     this.style.width = Math.min(frac * 100, 100) + '%';
     var fracLeft = .9 - frac;
     if (fracLeft > .0001) {
-      saveProgressTimeout = setTimeout(updateSaveProgress.bind(this, frac + .06 * fracLeft), 10);
+      progressTimeout = setTimeout(updateProgress.bind(this, frac + .06 * fracLeft), 10);
+    }
+  }
+
+  function endProgress(desc, success) {
+    log('[endProgress]', desc, success ? 'success' : 'error');
+    clearTimeout(progressTimeout), progressTimeout = null;
+    var $progress = $(this);
+    var $btn = $progress.parent().removeClass('kifi-doing');
+    if (success) {
+      $btn.addClass('kifi-done');
+      if (desc === 'keep') {
+        $btn.closest('.kifi-keep-box-view').addClass('kifi-kept');
+      }
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1000);
+    } else {
+      $btn.prop('href', 'javascript:').one('transitionend', function () {
+        $progress.css('width', 0);
+        $btn.removeClass('kifi-fail');
+      }).addClass('kifi-fail');
     }
   }
 

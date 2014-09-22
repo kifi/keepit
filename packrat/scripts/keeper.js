@@ -313,10 +313,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
     api.port.emit('keep', withUrls(data), callback, callback);
   }
 
-  function unkeepPage(libraryId) {
+  function unkeepPage(libraryId, callback) {
     log('[unkeepPage]', libraryId, document.URL);
     justKept = false;
-    api.port.emit('unkeep', libraryId);
+    api.port.emit('unkeep', libraryId, callback, callback);
   }
 
   function hoverfuFriends($tip, keepers) {

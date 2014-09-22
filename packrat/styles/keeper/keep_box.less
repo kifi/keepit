@@ -323,8 +323,11 @@
   padding: 6px 10px;
   background: #fffaf8;
 }
+.kifi-keep-box-delete,
 .kifi-keep-box-btn {
-  display: block;
+  position: absolute;
+  bottom: 0;
+  left: 0;
   line-height: 35px;
   font-size: 11px;
   color: #fff !important;
@@ -333,40 +336,9 @@
   text-align: center;
   text-transform: uppercase;
   letter-spacing: .5px;
-  position: relative;
-  // padding: 8px 24px;
-  // font-size: 14px;
-  // line-height: 18px;
-  // -webkit-font-smoothing: antialiased;
-  @bg-color: #999;
-  background-color: @bg-color;
-  transition: background-color .1s;
-  &:hover,
-  &:focus {
-    transition: none;
-    background-color: tint(@bg-color, 8%);
-    &:active {
-      background-color: shade(@bg-color, 4%);
-    }
-  }
   &::before {
-    content: 'Close';
     display: inline-block;
     position: relative;
-  }
-  .kifi-dirty>& {
-    @bg-color: #9bceff;
-    background-color: @bg-color;
-    &:hover,
-    &:focus {
-      background-color: tint(@bg-color, 8%);
-      &:active {
-        background-color: shade(@bg-color, 4%);
-      }
-    }
-    &::before {
-      content: 'Save';
-    }
   }
   &.kifi-doing::before,
   &.kifi-done::before {
@@ -401,6 +373,65 @@
     transition: opacity .16s linear, transform .16s ease-in-out;
   }
 }
+@del-btn-width: 70px;
+.kifi-keep-box-delete {
+  width: @del-btn-width;
+  @bg-color: #c99;
+  background-color: @bg-color;
+  &:hover,
+  &:focus {
+    background-color: tint(@bg-color, 8%);
+    &:active {
+      background-color: shade(@bg-color, 4%);
+    }
+  }
+  &::before {
+    content: 'Delete';
+  }
+  &.kifi-doing::before,
+  &.kifi-done::before {
+    -webkit-transform: translate(30px);
+    transform: translate(30px);
+  }
+  &::after {
+    -webkit-transform: translate(-30px);
+    transform: translate(-30px);
+  }
+}
+.kifi-keep-box-btn {
+  right: 0;
+  .kifi-keep-box-delete+& {
+    left: @del-btn-width;
+  }
+  @bg-color: #999;
+  background-color: @bg-color;
+  transition: background-color .1s;
+  &:hover,
+  &:focus {
+    transition: none;
+    background-color: tint(@bg-color, 8%);
+    &:active {
+      background-color: shade(@bg-color, 4%);
+    }
+  }
+  &::before {
+    content: 'Close';
+  }
+  .kifi-dirty>& {
+    @bg-color: #9bceff;
+    background-color: @bg-color;
+    &:hover,
+    &:focus {
+      background-color: tint(@bg-color, 8%);
+      &:active {
+        background-color: shade(@bg-color, 4%);
+      }
+    }
+    &::before {
+      content: 'Save';
+    }
+  }
+}
 .kifi-keep-box-progress {
   position: absolute;
   left: 0;
@@ -408,7 +439,8 @@
   bottom: 0;
   width: 0;
   background: #4daf7c;
-  &.kifi-secret {
+  &.kifi-secret,
+  .kifi-keep-box-delete>& {
     background: #e65b45;
   }
   .kifi-done>& {

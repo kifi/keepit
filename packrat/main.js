@@ -593,7 +593,7 @@ api.port.on({
       }
     }
   },
-  unkeep: function (libraryId, _, tab) {
+  unkeep: function (libraryId, respond, tab) {
     var d = pageData[tab.nUri];
     if (!d) {
       log('[unkeep] fail', libraryId || '');
@@ -612,6 +612,7 @@ api.port.on({
           log('[unkeep:done]');
           delete d.state;
           d.keeps = d.keeps.filter(idIsNot(keep.id));
+          respond(true);
           var how = d.howKept();
           forEachTabAt(tab.url, tab.nUri, function (tab) {
             setIcon(!!how, tab);
@@ -621,6 +622,7 @@ api.port.on({
         }, function fail() {
           log('[unkeep:fail]', d.keepId);
           delete d.state;
+          respond();
           api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
         });
         if (d.keeps.length === 1) {
