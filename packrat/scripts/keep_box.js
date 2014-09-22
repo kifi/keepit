@@ -4,6 +4,7 @@
 // @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/html/keeper/keep_box_libs.js
 // @require scripts/html/keeper/keep_box_libs_list.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/listen.js
@@ -86,8 +87,12 @@ var keepBox = keepBox || (function () {
   function onShown(e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onShown]');
-      $(this).off('transitionend', onShown)
-        .find('input').focus();
+      $box.off('transitionend', onShown)
+      var $libs = $box.find('.kifi-keep-box-libs');
+      $libs.antiscroll({x: false});
+      var scroller = $libs.data('antiscroll');
+      $(window).off('resize.keepBox').on('resize.keepBox', scroller.refresh.bind(scroller));
+      $box.find('input').focus();
     }
   }
 
@@ -220,8 +225,10 @@ var keepBox = keepBox || (function () {
         $box.data('unkeepPage')($(this).prev().data('id'));
         hide(e, 'action');
       }
-    })
-    .find('.kifi-keep-box-libs').on('mousewheel', function (e) {
+    });
+
+    $view.find('.kifi-scroll-inner')
+    .on('mousewheel', function (e) {
       var dY = e.originalEvent.deltaY;
       var sT = this.scrollTop;
       if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||

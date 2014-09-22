@@ -125,9 +125,13 @@
   font-size: 13px;
 }
 .kifi-keep-box-libs {
-  max-height: (@view-height - @lib-input-height);
-  overflow: hidden !important;
-  overflow-y: auto !important;
+  position: relative;
+  overflow: hidden;
+  &>.kifi-scroll-inner {
+    max-height: (@view-height - @lib-input-height);
+    overflow: hidden !important;
+    overflow-y: auto !important;
+  }
 }
 
 .kifi-keep-box-lib-head,
