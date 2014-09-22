@@ -141,7 +141,7 @@ trait UserActions extends Logging { self: Controller =>
 
   private def PageAction[P[_]] = new ActionFunction[P, P] {
     def invokeBlock[A](request: P[A], block: (P[A]) => Future[Result]): Future[Result] = {
-      block(request).map(_.withHeaders(CONTENT_TYPE -> HTML)) // todo(ray): handle error with redirects
+      block(request) // todo(ray): handle error with redirects
     }
   }
 
