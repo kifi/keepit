@@ -92,47 +92,43 @@ class LibraryCommander @Inject() (
     badMessage match {
       case Some(x) => Left(LibraryFail(x))
       case _ => {
-        val myLibs = db.readOnlyReplica { implicit s =>
-          for (t <- libraryRepo.getByUser(ownerId) if t._1 == LibraryAccess.OWNER) yield {
-            t._2
-          }
-        }
         val validSlug = LibrarySlug(libAddReq.slug)
-        if (myLibs.exists(lib => lib.name == libAddReq.name || lib.slug == validSlug)) {
-          Left(LibraryFail("library_name_or_slug_exists"))
-        } else {
-          val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
-            val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
-              val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-              inviteeIdOpt.get
+        db.readOnlyReplica { implicit s => libraryRepo.getByNameOrSlug(ownerId, libAddReq.name, validSlug) } match {
+          case Some(lib) =>
+            Left(LibraryFail("library_name_or_slug_exists"))
+          case None =>
+            val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
+              val collabs = libAddReq.collaborators.getOrElse(Seq()).map { x =>
+                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
+                inviteeIdOpt.get
+              }
+              val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
+                val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
+                inviteeIdOpt.get
+              }
+              (collabs, follows)
             }
-            val follows = libAddReq.followers.getOrElse(Seq()).map { x =>
-              val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
-              inviteeIdOpt.get
+            val library = db.readWrite { implicit s =>
+              libraryRepo.getOpt(ownerId, validSlug) match {
+                case None =>
+                  val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
+                    visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                  lib
+                case Some(lib) =>
+                  val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
+                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                    case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+                  }
+                  newLib
+              }
             }
-            (collabs, follows)
-          }
-          val library = db.readWrite { implicit s =>
-            libraryRepo.getOpt(ownerId, validSlug) match {
-              case None =>
-                val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                  visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
-                libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
-                lib
-              case Some(lib) =>
-                val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
-                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
-                  case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
-                  case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
-                }
-                newLib
-            }
-          }
-          val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
-          val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
+            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
+            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
-          inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
-          Right(library)
+            inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
+            Right(library)
         }
       }
     }

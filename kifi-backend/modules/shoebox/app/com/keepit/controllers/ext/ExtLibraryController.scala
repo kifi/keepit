@@ -38,6 +38,23 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
+  def addLibrary = JsonAction.authenticatedParseJson { request =>
+    val body = request.body.as[JsObject]
+    val name = (body \ "name").as[String]
+    val visibility = (body \ "visibility").as[LibraryVisibility]
+    val slug = LibrarySlug.generateFromName(name)
+    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    libraryCommander.addLibrary(addRequest, request.userId) match {
+      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        Ok(Json.toJson(LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          visibility = lib.visibility,
+          path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
+  }
+
   def addKeep(libraryPubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
     decode(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
@@ -94,24 +111,6 @@ class ExtLibraryController @Inject() (
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) => NoContent
       }
-    }
-  }
-
-  def addLibrary = JsonAction.authenticatedParseJson { request =>
-    val body = request.body.as[JsObject]
-    val name = (body \ "name").as[String]
-    val visibility = (body \ "visibility").as[LibraryVisibility]
-    val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-      case Right(lib) =>
-        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(request.userId) }
-        Ok(Json.toJson(LibraryData(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          visibility = lib.visibility,
-          path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))))
     }
   }
 
