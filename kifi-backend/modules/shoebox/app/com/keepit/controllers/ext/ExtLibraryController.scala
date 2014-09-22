@@ -97,6 +97,24 @@ class ExtLibraryController @Inject() (
     }
   }
 
+  def addLibrary = JsonAction.authenticatedParseJson { request =>
+    val body = request.body.as[JsObject]
+    val name = (body \ "name").as[String]
+    val visibility = (body \ "visibility").as[LibraryVisibility]
+    val slug = (body \ "slug").as[String]
+    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    libraryCommander.addLibrary(addRequest, request.userId) match {
+      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(request.userId) }
+        Ok(Json.toJson(LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          visibility = lib.visibility,
+          path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))))
+    }
+  }
+
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
     Library.decodePublicId(publicId) match {
       case Failure(_) => BadRequest(Json.obj("error" -> "invalid_library_id"))

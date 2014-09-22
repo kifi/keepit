@@ -290,6 +290,39 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Dat" }
       }
     }
+
+    "create library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user1 = db.readWrite { implicit s =>
+          userRepo.save(User(firstName = "U", lastName = "1"))
+        }
+        implicit val config = inject[PublicIdConfiguration]
+
+        // add new library
+        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret", "slug" -> "lib1"))) === OK
+        db.readOnlyMaster { implicit s =>
+          val lib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("lib1"))
+          lib.get.name === "Lib 1"
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib.get.id.get, user1.id.get).get.access === LibraryAccess.OWNER
+        }
+
+        // duplicate name
+        status(addLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret", "slug" -> "lib2"))) === BAD_REQUEST
+
+        // duplicate slug
+        status(addLibrary(user1, Json.obj("name" -> "Lib 2", "visibility" -> "secret", "slug" -> "lib1"))) === BAD_REQUEST
+
+        // invalid name
+        status(addLibrary(user1, Json.obj("name" -> "Lib/\" 3", "visibility" -> "secret", "slug" -> "lib3"))) === BAD_REQUEST
+
+        // invalid slug
+        status(addLibrary(user1, Json.obj("name" -> "Lib 3", "visibility" -> "secret", "slug" -> "lib  3"))) === BAD_REQUEST
+
+        db.readOnlyMaster { implicit s =>
+          libraryRepo.count === 1
+        }
+      }
+    }
   }
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
@@ -320,5 +353,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     val route = com.keepit.controllers.ext.routes.ExtLibraryController.updateKeep(libraryId, keepId)
     inject[FakeActionAuthenticator].setUser(user)
     inject[ExtLibraryController].updateKeep(libraryId, keepId)(FakeRequest(route.method, route.url).withBody(body))
+  }
+
+  private def addLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+    val route = com.keepit.controllers.ext.routes.ExtLibraryController.addLibrary()
+    inject[FakeActionAuthenticator].setUser(user)
+    inject[ExtLibraryController].addLibrary()(FakeRequest(route.method, route.url).withBody(body))
   }
 }

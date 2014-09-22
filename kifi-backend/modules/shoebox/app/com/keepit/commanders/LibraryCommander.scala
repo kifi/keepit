@@ -97,8 +97,8 @@ class LibraryCommander @Inject() (
             t._2
           }
         }
-        val exists = myLibs.exists(lib => lib.name == libAddReq.name || lib.slug == libAddReq.slug)
-        if (exists) {
+        val validSlug = LibrarySlug(libAddReq.slug)
+        if (myLibs.exists(lib => lib.name == libAddReq.name || lib.slug == validSlug)) {
           Left(LibraryFail("library_name_or_slug_exists"))
         } else {
           val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
@@ -112,14 +112,11 @@ class LibraryCommander @Inject() (
             }
             (collabs, follows)
           }
-          val validVisibility = libAddReq.visibility
-          val validSlug = LibrarySlug(libAddReq.slug)
-
           val library = db.readWrite { implicit s =>
             libraryRepo.getOpt(ownerId, validSlug) match {
               case None =>
                 val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                  visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                  visibility = libAddReq.visibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
                 libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
                 lib
               case Some(lib) =>
