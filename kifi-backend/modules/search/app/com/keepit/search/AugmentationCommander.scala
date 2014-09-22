@@ -35,7 +35,7 @@ class AugmentationCommanderImpl @Inject() (
     activeShards: ActiveShards,
     shardedKeepIndexer: ShardedKeepIndexer,
     searchFactory: SearchFactory,
-    val searchClient: SearchServiceClient) extends AugmentationCommander with Sharding with Logging {
+    val searchClient: DistributedSearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
   def augmentation(itemAugmentationRequest: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     val uris = (itemAugmentationRequest.context.corpus.keySet ++ itemAugmentationRequest.items).map(_.uri)

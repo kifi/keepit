@@ -97,7 +97,7 @@ class SearchCommanderImpl @Inject() (
     mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
     airbrake: AirbrakeNotifier,
-    override val searchClient: SearchServiceClient,
+    override val searchClient: DistributedSearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
 
