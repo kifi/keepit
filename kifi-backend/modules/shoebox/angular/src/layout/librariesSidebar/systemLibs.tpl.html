@@ -1,0 +1,47 @@
+<ul class="kf-nav-group" ng-if="librariesEnabled">
+  <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/recommendations') }">
+    <a class="kf-nav-link" href="/recommendations" ng-if="inRecoExperiment()">
+      <span class="sprite sprite-clover-small"></span>
+      <span class="kf-nav-name">Recommendations</span>
+    </a>
+  </li>
+  <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('mainLib.url') }">
+	<a class="kf-nav-link" ng-href="{{mainLib.url}}">
+	  <span class="sprite sprite-cards-small"></span>
+	  <span class="kf-nav-name">{{mainLib.name}}</span>
+	  <span class="kf-nav-count" ng-class="{ empty: !mainLib.numKeeps }">{{mainLib.numKeeps}}</span>
+	</a>
+  </li>
+  <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('secretLib.url') }">
+	<a class="kf-nav-link" ng-href="{{secretLib.url}}">
+	  <span class="sprite sprite-cards-small"></span>
+	  <span class="kf-nav-name">{{secretLib.name}}</span>
+	  <span class="kf-nav-count" ng-class="{ empty: !secretLib.numKeeps }">{{secretLib.numKeeps}}</span>
+	</a>
+  </li>
+  <li class="kf-nav-item kf-nav-keeps">
+    <span class="kf-nav-link">
+      <span class="sprite sprite-cards-small"></span>
+      <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
+    </a>
+  </li>
+</ul>
+
+<!--
+
+<span class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive(mainLib.url) }">
+	<a class="kf-nav-link" ng-href="{{mainLib.url}}">
+	  <span class="sprite sprite-cards-small"></span>
+	  <span class="kf-nav-name">{{mainLib.name}}</span>
+	  <span class="kf-nav-count" ng-class="{ empty: !mainLib.numKeeps }">{{mainLib.numKeeps}}</span>
+	</a>
+</span>
+<br>
+<span class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive(secretLib.url) }">
+	<a class="kf-nav-link" ng-href="{{secretLib.url}}">
+	  <span class="sprite sprite-cards-small"></span>
+	  <span class="kf-nav-name">{{secretLib.name}}</span>
+	  <span class="kf-nav-count" ng-class="{ empty: !secretLib.numKeeps }">{{secretLib.numKeeps}}</span>
+	</a>
+</span>
+-->
