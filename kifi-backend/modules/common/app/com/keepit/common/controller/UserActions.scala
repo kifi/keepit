@@ -25,11 +25,12 @@ trait UserRequest[T] extends MaybeUserRequest[T] {
 }
 
 trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
-  def identityOptF: () => Future[Option[Identity]] = () => Future.successful(None)
-  lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
+  def identityOpt: Option[Identity]
 }
 
-case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T]
+case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T] {
+  def identityOpt: Option[Identity] = None
+}
 
 case class SimpleUserRequest[T](
     request: Request[T],
@@ -37,10 +38,11 @@ case class SimpleUserRequest[T](
     adminUserId: Option[Id[User]],
     userF: () => Future[User],
     experimentsF: () => Future[Set[ExperimentType]],
-    override val identityOptF: () => Future[Option[Identity]],
+    identityOptF: () => Future[Option[Identity]],
     kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
   lazy val user = Await.result(userF.apply, 5 seconds)
   lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
+  lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
 }
 
 trait UserActionsRequirements {
@@ -137,9 +139,9 @@ trait UserActions extends Logging { self: Controller =>
     resF.map(maybeAugmentCORS(_))
   }
 
-  private def pageAction[P[_]] = new ActionFunction[P, P] {
+  private def PageAction[P[_]] = new ActionFunction[P, P] {
     def invokeBlock[A](request: P[A], block: (P[A]) => Future[Result]): Future[Result] = {
-      block(request).map(_.withHeaders(CONTENT_TYPE -> HTML))
+      block(request).map(_.withHeaders(CONTENT_TYPE -> HTML)) // todo(ray): handle error with redirects
     }
   }
 
@@ -152,7 +154,7 @@ trait UserActions extends Logging { self: Controller =>
       }
     }
   }
-  val UserPage = (UserAction andThen pageAction)
+  val UserPage = (UserAction andThen PageAction)
 
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
@@ -163,7 +165,7 @@ trait UserActions extends Logging { self: Controller =>
       }
     }
   }
-  val MaybeUserPage = (MaybeUserAction andThen pageAction)
+  val MaybeUserPage = (MaybeUserAction andThen PageAction)
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
@@ -176,6 +178,6 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   val AdminUserAction = (UserAction andThen AdminCheck)
-  val AdminUserPage = (AdminUserAction andThen pageAction)
+  val AdminUserPage = (AdminUserAction andThen PageAction)
 
 }

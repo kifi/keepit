@@ -25,7 +25,7 @@ trait ShoeboxSecureSocialHelper {
 }
 
 case class ShoeboxNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T] with ShoeboxSecureSocialHelper {
-  override def identityOptF = () => Future.successful(getSecureSocialUserFromRequest(request))
+  val identityOpt = getSecureSocialUserFromRequest(request)
 }
 
 @Singleton
