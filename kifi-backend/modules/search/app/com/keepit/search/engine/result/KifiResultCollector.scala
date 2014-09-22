@@ -9,7 +9,7 @@ import org.apache.lucene.util.PriorityQueue
 object KifiResultCollector {
   val MIN_MATCHING = 0.5f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var keepId: Long)
+  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var secondaryId: Long)
 
   class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
 
@@ -26,15 +26,15 @@ object KifiResultCollector {
 
     private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-    def insert(id: Long, score: Float, visibility: Int, keepId: Long) {
+    def insert(id: Long, score: Float, visibility: Int, secondaryId: Long) {
       if (overflow == null) {
-        overflow = new Hit(id, score, score, visibility, keepId)
+        overflow = new Hit(id, score, score, visibility, secondaryId)
       } else {
         overflow.id = id
         overflow.score = score
         overflow.normalizedScore = score
         overflow.visibility = visibility
-        overflow.keepId = keepId
+        overflow.secondaryId = secondaryId
         overflow
       }
       overflow = insertWithOverflow(overflow)

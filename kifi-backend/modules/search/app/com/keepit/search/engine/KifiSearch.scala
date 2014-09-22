@@ -33,8 +33,8 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
     if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
-      val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
+      val r = getKeepRecord(h.secondaryId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.secondaryId}"))
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
       // has a primary id (uri id) only
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
