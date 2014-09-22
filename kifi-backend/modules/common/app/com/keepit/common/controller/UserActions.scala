@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
 import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User }
+import play.api.Play
 import play.api.http.ContentTypes
 import play.api.mvc._
 
@@ -169,7 +170,8 @@ trait UserActions extends Logging { self: Controller =>
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
-      if (request.adminUserId.isDefined) Future.successful(None)
+      if (request.adminUserId.exists(id => Await.result(userActionsHelper.isAdmin(id)(request), 5 seconds))
+        || (Play.maybeApplication.exists(Play.isDev(_) && request.userId.id == 1L))) Future.successful(None)
       else userActionsHelper.isAdmin(request.userId)(request) map { isAdmin =>
         if (isAdmin) None
         else Some(Forbidden) tap { res => log.warn(s"[AdminCheck] User ${request.userId} is denied access to ${request.path}") }
