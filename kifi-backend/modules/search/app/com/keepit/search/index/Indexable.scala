@@ -40,12 +40,6 @@ object Indexable {
     ft
   }
 
-  val semanticVectorFieldType: FieldType = {
-    val ft = new FieldType(TextField.TYPE_NOT_STORED)
-    ft.setOmitNorms(true)
-    ft
-  }
-
   val MAX_BINARY_FIELD_LENGTH = 32766 // DON'T CHANGE THESE CONSTS UNLESS YOU KNOW WHAT YOU ARE DOING
   val MAX_BINARY_FIELD_LENGTH_MINUS1 = 32765
   val END_OF_BINARY_FIELD = 0.toByte
