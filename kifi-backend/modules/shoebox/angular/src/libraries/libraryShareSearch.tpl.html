@@ -38,6 +38,7 @@
               <div class="library-share-contact-name">{{email}}</div>
               <div class="library-share-contact-network">{{emailHelp}}</div>
             </div>
+            <div ng-show="result.sent" class="library-share-sent">Sent!</div>
           </div>
           <!-- Import from Gmail -->
           <div ng-if="result.custom === 'importGmail'" ng-click="importGmail()" class="library-share-contact-container library-share-import-gmail">

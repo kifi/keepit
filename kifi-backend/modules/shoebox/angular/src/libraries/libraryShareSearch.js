@@ -39,6 +39,7 @@ angular.module('kifi')
           resultIndex = -1;
           clearSelection();
           scope.search.name = '';
+          scope.share.message = '';
           $document.on('click', onClick);
           show = true;
           shareMenu.show();
@@ -222,8 +223,19 @@ angular.module('kifi')
               break;
             case keyIndices.KEY_ENTER:
               clearSelection();
+
               if (resultIndex !== -1) {
-                scope.shareLibrary(scope.results[resultIndex]);
+                var result = scope.results[resultIndex];
+
+                if (result.id) {
+                  scope.shareLibraryKifiFriend(result);
+                } else if (result.email) {
+                  scope.shareLibraryExistingEmail(result);
+                } else if (result.custom === 'email') {
+                  scope.shareLibraryNewEmail(result);
+                } else if (result.custom === 'importGmail') {
+                  scope.importGmail();
+                }
               }
 
               // After sharing, reset index.
@@ -259,7 +271,7 @@ angular.module('kifi')
           });
         };
 
-        scope.shareLibraryNewEmail = function () {
+        scope.shareLibraryNewEmail = function (result) {
           if (!util.validateEmail(scope.search.name)) {
             return;
           }
@@ -270,6 +282,8 @@ angular.module('kifi')
               id: scope.search.name,
               access: 'read_only'
             }]
+          }).then(function () {
+            result.sent = true;
           });
         };
 
