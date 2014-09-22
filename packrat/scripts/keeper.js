@@ -120,7 +120,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
       delete data.mousedownEvent;
     }).on('mousewheel', function (e) {
-      e.preventDefault(); // crbug.com/151734
+      if (!e.originalEvent.didScroll) {
+        e.preventDefault(); // crbug.com/151734
+      }
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {

@@ -155,7 +155,8 @@ var keepBox = keepBox || (function () {
   }
 
   function addLibrariesBindings($view) {
-    $view.on('input', '.kifi-keep-box-lib-input', function (e) {
+    $view
+    .on('input', '.kifi-keep-box-lib-input', function (e) {
       var q = this.value.trim();
       var data = $.data(this);
       if (data.q !== q) {
@@ -218,6 +219,14 @@ var keepBox = keepBox || (function () {
       if (e.which === 1) {
         $box.data('unkeepPage')($(this).prev().data('id'));
         hide(e, 'action');
+      }
+    })
+    .find('.kifi-keep-box-libs').on('mousewheel', function (e) {
+      var dY = e.originalEvent.deltaY;
+      var sT = this.scrollTop;
+      if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||
+          dY < 0 && sT > 0) {
+        e.originalEvent.didScroll = true; // crbug.com/151734
       }
     });
   }
