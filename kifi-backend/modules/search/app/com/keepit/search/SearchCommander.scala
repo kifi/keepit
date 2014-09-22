@@ -79,6 +79,8 @@ trait SearchCommander {
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
 
+  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Map[Lang, Int]
+
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
@@ -132,7 +134,7 @@ class SearchCommanderImpl @Inject() (
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
     // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs, None)
 
     timing.presearch
 
@@ -293,10 +295,10 @@ class SearchCommanderImpl @Inject() (
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
-    // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
-
     val library = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
+
+    // TODO: use user profile info as a bias
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs, Some(library))
 
     if (library == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
@@ -437,7 +439,8 @@ class SearchCommanderImpl @Inject() (
     dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
     userId: Id[User],
     query: String,
-    acceptLangCodes: Seq[String]): (Lang, Option[Lang]) = {
+    acceptLangCodes: Seq[String],
+    libraryContext: Option[LibraryContext]): (Lang, Option[Lang]) = {
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
       val eachLangProb = (majorLangProb / numberOfLangs)
@@ -448,11 +451,20 @@ class SearchCommanderImpl @Inject() (
 
     val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
 
-    if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId)
-    }
-    if (localShards.nonEmpty) {
-      resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
+    if (libraryContext.isDefined) {
+      if (dispatchPlan.nonEmpty) {
+        resultFutures ++= searchClient.distLangFreqs2(dispatchPlan, userId, libraryContext.get)
+      }
+      if (localShards.nonEmpty) {
+        resultFutures += searchFactory.distLangFreqsFuture(localShards, userId, libraryContext.get)
+      }
+    } else {
+      if (dispatchPlan.nonEmpty) {
+        resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId)
+      }
+      if (localShards.nonEmpty) {
+        resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
+      }
     }
 
     val acceptLangs = parseAcceptLangs(acceptLangCodes)
@@ -509,6 +521,10 @@ class SearchCommanderImpl @Inject() (
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
+  }
+
+  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Map[Lang, Int] = {
+    monitoredAwait.result(searchFactory.distLangFreqsFuture(shards, userId, libraryContext), 10 seconds, "slow getting lang profile")
   }
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
