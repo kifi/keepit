@@ -206,28 +206,6 @@ class SearchFactory @Inject() (
     }
   }
 
-  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
-    getLibraryIdsFuture(userId, libraryContext).flatMap {
-      case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
-        Future.traverse(shards) { shard =>
-          SafeFuture {
-            val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-            val keepLangs = new KeepLangs(keepSearcher)
-            keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
-            keepLangs.processLibraries(trustedPublishedLibIds)
-            keepLangs.processLibraries(authorizedLibIds)
-            keepLangs.getFrequentLangs()
-          }
-        }.map { results =>
-          results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
-            case (m, (langName, count)) =>
-              val lang = Lang(langName)
-              m + (lang -> (count + m.getOrElse(lang, 0)))
-          }
-        }
-    }
-  }
-
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
 
   def getLibrarySearches(

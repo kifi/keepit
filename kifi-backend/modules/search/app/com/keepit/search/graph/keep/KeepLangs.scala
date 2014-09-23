@@ -1,8 +1,6 @@
 package com.keepit.search.graph.keep
 
-import com.keepit.common.db.Id
 import com.keepit.common.strings._
-import com.keepit.model.Library
 import com.keepit.search.Searcher
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
