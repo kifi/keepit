@@ -38,8 +38,6 @@ class GraphCommander @Inject() (
     val urisList = getUriScoreList(startingVertexId, journal, avoidFirstDegreeConnection)
     val usersList = getUsersScoreList(startingVertexId, journal, avoidFirstDegreeConnection)
     uriScoreCache.set(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnection), urisList)
-    userScoreCache.set(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnection), usersList)
-    log.error(s"Cache Set on UserScoreCache Set ($userId, $avoidFirstDegreeConnection)")
     (urisList, usersList)
   }
 
@@ -57,19 +55,9 @@ class GraphCommander @Inject() (
   }
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
-    val result = userScoreCache.get(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections))
-    result match {
-      case None => {
-        log.error(s"Cache Miss on UserScoreCache miss on ($userId, $avoidFirstDegreeConnections)")
-        val wanderLust = Wanderlust.discovery(userId)
-        wanderingCommander.wander(wanderLust).map { journal =>
-          updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
-        }
-      }
-      case Some(data) => {
-        log.error(s"Cache Hit on UserScoreCache ($userId, $avoidFirstDegreeConnections)")
-        Future.successful(data)
-      }
+    val wanderLust = Wanderlust.discovery(userId)
+    wanderingCommander.wander(wanderLust).map { journal =>
+      updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
     }
   }
 
