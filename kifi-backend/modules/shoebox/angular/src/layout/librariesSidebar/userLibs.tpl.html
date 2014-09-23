@@ -1,19 +1,23 @@
 <div ng-if="librariesEnabled">
-<br>
-<!-- SEARCH BAR
+<div class="kf-nav-lib-item">
+  <a class="kf-nav-link" ng-href="">
+	<span class="kf-nav-lib-card-sprite"></span>
+	<span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
+  </a>
+</div>
 <div class="kf-lib-input-box" ng-class="{'focused': isFilterFocused}">
     <a class="kf-lib-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
     <input class="kf-lib-filter-input" placeholder="Find a library..." maxlength="32">
-</div>-->
-<ul class="kf-nav-group">
-	<li ng-repeat="library in userLibraries" class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive(library.url) }">
-    <a class="kf-nav-link" ng-href="{{library.url}}">
-      	<div class="sprite sprite-cards-small"></div>
-      	<div class = "kf-nav-lib-info">
+</div>
+<ul>
+	<li ng-repeat="library in userLibraries" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
+      <a class="kf-nav-link" ng-href="{{library.url}}">
+      	<div class="kf-nav-lib-card-sprite"></div>
+      	<div class="kf-nav-lib-info">
 	      <div class="kf-nav-lib-name">{{library.name}}</div>
-	      <div class="kf-nav-lib-count" ng-class="{ empty: !library.numKeeps }">{{library.numKeeps}} keeps and 10 followers</div>
+	      <div class="kf-nav-lib-count" ng-class="{ empty: !library.numKeeps }">{{library.numKeeps}} keeps 10 followers</div>
   		</div>
-    </a>
-  </li>
+      </a>
+  	</li>
 </ul>
 </div>

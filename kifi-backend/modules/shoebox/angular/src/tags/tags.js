@@ -18,7 +18,7 @@ angular.module('kifi')
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'libraryService',
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'libraryService', 
   function ($timeout, $window, $rootScope, $location, util, dom, tagService, libraryService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
@@ -43,12 +43,13 @@ angular.module('kifi')
         };
         scope.filter = {};
         scope.librariesEnabled = false;
+
         scope.$watch(function () {
           return libraryService.isAllowed();
         }, function (n) {
           scope.librariesEnabled = n || false;
         });
-
+        
         var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
