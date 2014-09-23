@@ -8,9 +8,15 @@ package object cortex {
 
   val S3_CORTEX_BUCKET = "amazon.s3.cortex.bucket"
 
+  // version of feature representers/updaters
   object ModelVersions {
     val denseLDAVersion = ModelVersion[DenseLDA](2)
     val word2vecVersion = ModelVersion[Word2Vec](2)
+  }
+
+  // version available for consumer/admin, i.e. services outside cortex
+  object PublishingVersions {
+    val denseLDAVersion = ModelVersion[DenseLDA](2)
   }
 
   object ModelStorePrefix {
@@ -49,11 +55,6 @@ package object cortex {
       val stopwordsFoler = "misc/stopwords/"
       val stopwordsJsonFile = "stopwords"
     }
-  }
-
-  object PublishedModels {
-    val denseLDAVersion = ModelVersion[DenseLDA](2) // doesn't have to sync with cortex lda version
-    val defaultSparsity = 2
   }
 
 }

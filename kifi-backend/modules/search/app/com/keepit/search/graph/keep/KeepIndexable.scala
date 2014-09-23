@@ -1,10 +1,13 @@
 package com.keepit.search.graph.keep
 
-import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
+import com.keepit.common.strings._
 import com.keepit.model.{ Hashtag, LibraryVisibility, NormalizedURI, Keep }
+import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.search.LangDetector
 import com.keepit.search.sharding.Shard
 import com.keepit.search.graph.library.LibraryFields
+import com.keepit.search.util.MultiStringReader
+import org.apache.lucene.index.Term
 
 object KeepFields {
   val libraryField = "lib"
@@ -38,16 +41,22 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     import KeepFields._
     val doc = super.buildDocument
 
-    doc.add(buildKeywordField(libraryField, keep.libraryId.get.toString))
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
     if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
     if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
 
-    keep.title.foreach { title =>
-      val titleLang = LangDetector.detect(title)
-      doc.add(buildTextField(titleField, title, DefaultAnalyzer.getAnalyzer(titleLang)))
-      doc.add(buildTextField(titleStemmedField, title, DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)))
+    keep.title match {
+      case Some(title) =>
+        val titleLang = LangDetector.detect(title)
+        val titleAndUrl = Array(title, "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
+        doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), DefaultAnalyzer.getAnalyzer(titleLang)))
+        doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)))
+        doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
+      case None =>
+        doc.add(buildTextField(titleField, keep.url, DefaultAnalyzer.getAnalyzer(DefaultAnalyzer.defaultLang)))
+        doc.add(buildTextField(titleStemmedField, keep.url, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)))
+        doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), DefaultAnalyzer.defaultLang.lang.getBytes(UTF8)))
     }
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)

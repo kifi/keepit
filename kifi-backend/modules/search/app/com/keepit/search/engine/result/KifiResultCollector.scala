@@ -9,7 +9,7 @@ import org.apache.lucene.util.PriorityQueue
 object KifiResultCollector {
   val MIN_MATCHING = 0.5f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var keepId: Long)
+  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var secondaryId: Long)
 
   class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
 
@@ -26,15 +26,15 @@ object KifiResultCollector {
 
     private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-    def insert(id: Long, score: Float, visibility: Int, keepId: Long) {
+    def insert(id: Long, score: Float, visibility: Int, secondaryId: Long) {
       if (overflow == null) {
-        overflow = new Hit(id, score, score, visibility, keepId)
+        overflow = new Hit(id, score, score, visibility, secondaryId)
       } else {
         overflow.id = id
         overflow.score = score
         overflow.normalizedScore = score
         overflow.visibility = visibility
-        overflow.keepId = keepId
+        overflow.secondaryId = secondaryId
         overflow
       }
       overflow = insertWithOverflow(overflow)
@@ -153,4 +153,42 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
   }
 
   def getResults(): HitQueue = hits
+}
+
+class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+
+  import KifiResultCollector._
+
+  require(matchingThreshold <= 1.0f)
+  private[this] val myHits = createQueue(maxHitsPerCategory)
+  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val othersHits = createQueue(maxHitsPerCategory)
+
+  override def collect(ctx: ScoreContext): Unit = {
+    val id = ctx.id
+
+    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
+
+    if (matching > 0.0f) {
+      var score = 0.0f
+
+      if (matching >= matchingThreshold) {
+        score = ctx.score() * matching
+      }
+
+      if (score > 0.0f) {
+        val visibility = ctx.visibility
+        if ((visibility & Visibility.OWNER) != 0) {
+          myHits.insert(id, score, visibility, ctx.secondaryId)
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+          friendsHits.insert(id, score, visibility, ctx.secondaryId)
+        } else {
+          othersHits.insert(id, score, visibility, ctx.secondaryId)
+        }
+      }
+    }
+  }
+
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
 }

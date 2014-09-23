@@ -1,21 +1,24 @@
 package com.keepit.common.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.cortex.dbmodel.{ URILDATopicStates, URILDATopic }
+import com.keepit.cortex.dbmodel.{ URILDATopicStates }
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
-import com.keepit.cortex.core.FeatureRepresentation
-import com.keepit.cortex._
+import com.keepit.cortex.PublishingVersions
 
 @Singleton
 class FeatureRetrievalCommander @Inject() (
     ldaRetriever: LDADbFeatureRetriever,
     ldaCommander: LDACommander) {
 
-  def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = PublishedModels.defaultSparsity): Seq[UriSparseLDAFeatures] = {
-    val dim = ldaCommander.getLDADimension(version)
+  private val defaultSparsity = 2
+  private val allowedVersion = PublishingVersions.denseLDAVersion
+
+  def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = defaultSparsity): Seq[UriSparseLDAFeatures] = {
+    assume(version == allowedVersion, s"allowed lda version = ${allowedVersion}, queried for version = ${version}")
+    val dim = ldaCommander.numOfTopics
     val feats = ldaRetriever.getLDAFeaturesChanged(lowSeq, fetchSize, version)
     feats.map { feat =>
       if (feat.state == URILDATopicStates.ACTIVE) UriSparseLDAFeatures(feat.uriId, feat.uriSeq, generateSparseRepresentation(feat.sparseFeature.get, sparsity))

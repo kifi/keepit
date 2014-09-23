@@ -44,7 +44,9 @@ object SearchConfig {
       "proximityGapPenalty" -> "0.05",
       "proximityThreshold" -> "0.0",
       "proximityPowerFactor" -> "1.0",
-      "messageHalfLifeHours" -> "24"
+      "messageHalfLifeHours" -> "24",
+      "minMyLibraries" -> "0",
+      "myLibraryBoost" -> "1.5"
     )
   private[this] val descriptions =
     Map[String, String](

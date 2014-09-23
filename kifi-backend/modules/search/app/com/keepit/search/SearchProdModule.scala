@@ -12,19 +12,21 @@ import com.keepit.search.index.ProdIndexModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.util.PlayAppConfigurationModule
 
-case class SearchProdModule() extends SearchModule(
+case class SearchProdModule() extends SearchModule with CommonProdModule {
+
   // Common Functional Modules
-  userActionsModule = ProdRemoteUserActionsHelperModule(),
-  cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  storeModule = SearchProdStoreModule(),
+  val cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+  val storeModule = SearchProdStoreModule()
+  val userActionsModule = ProdRemoteUserActionsHelperModule()
 
   // Search Functional Modules
-  indexModule = ProdIndexModule(),
-  trackingModule = ProdTrackingModule(),
-  spellModule = SpellCorrectorModule()
-) with CommonProdModule {
+  val indexModule = ProdIndexModule()
+  val trackingModule = ProdTrackingModule()
+  val spellModule = SpellCorrectorModule()
+
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
+  val distributedSearchServiceClientModule = ProdDistributedSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()

@@ -1,23 +1,19 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders._
-import com.keepit.common.controller._
+import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model._
-import play.api.libs.concurrent
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
+import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo, LibrarySlug, LibraryVisibility, _ }
 import play.api.libs.json._
 import play.api.mvc.Result
 
-import scala.concurrent.{ Promise, Future }
-import scala.util.{ Try, Success, Failure }
+import scala.util.{ Failure, Success, Try }
 
 class ExtLibraryController @Inject() (
   db: Database,
@@ -44,6 +40,23 @@ class ExtLibraryController @Inject() (
         path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
     }
     Ok(Json.obj("libraries" -> datas))
+  }
+
+  def createLibrary = UserAction(parse.tolerantJson) { request =>
+    val body = request.body.as[JsObject]
+    val name = (body \ "name").as[String]
+    val visibility = (body \ "visibility").as[LibraryVisibility]
+    val slug = LibrarySlug.generateFromName(name)
+    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    libraryCommander.addLibrary(addRequest, request.userId) match {
+      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        Ok(Json.toJson(LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          visibility = lib.visibility,
+          path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
   }
 
   def addKeep(libraryPubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
