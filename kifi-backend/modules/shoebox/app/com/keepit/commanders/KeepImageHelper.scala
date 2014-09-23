@@ -135,7 +135,7 @@ sealed trait ImageProcessSuccess extends ImageProcessDone
 sealed trait KeepImageStoreInProgress extends ImageProcessState
 sealed abstract class KeepImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
 sealed abstract class KeepImageStoreFailureWithException(ex: Throwable, reason: String) extends KeepImageStoreFailure(reason)
-object ImageProcessState extends Results {
+object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends KeepImageStoreInProgress
   case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends KeepImageStoreInProgress
@@ -154,15 +154,6 @@ object ImageProcessState extends Results {
   // Success
   case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
   case class ExistingStoredImagesFound(images: Seq[KeepImage]) extends ImageProcessState with ImageProcessSuccess
-
-  def stateToResponse(state: ImageProcessDone) = {
-    state match {
-      case fail: KeepImageStoreFailure =>
-        InternalServerError(Json.obj("error" -> fail.reason))
-      case success: ImageProcessSuccess =>
-        Ok(JsString("success"))
-    }
-  }
 }
 
 sealed abstract class KeepImageSize(val name: String, val idealSize: ImageSize)

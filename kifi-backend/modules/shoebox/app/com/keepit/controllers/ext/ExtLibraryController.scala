@@ -9,7 +9,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo, LibrarySlug, LibraryVisibility, _ }
+import com.keepit.model._
 import play.api.libs.json._
 import play.api.mvc.Result
 
@@ -78,16 +78,22 @@ class ExtLibraryController @Inject() (
           val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
 
           // Determine image choice.
-          val imageStatus = (info \ "imageUrl").asOpt[String] match {
-            case Some(imageUrl) if imageUrl.startsWith("http") =>
+          val imageStatus = (info \ "image") match {
+            case JsNull => // user purposely wants no image
+              Json.obj()
+            case JsString(imageUrl) if imageUrl.startsWith("http") =>
               val (keep, keepImageRequest) = db.readWrite { implicit session =>
                 val keep = keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
                 val keepImageRequest = keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
                 (keep, keepImageRequest)
               }
               keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Json.obj("imageStatusPath" -> keepImageRequest.token) // url
-            case None =>
+              Json.obj("imageStatusPath" -> com.keepit.controllers.ext.routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
+            case _ =>
+              val keep = db.readOnlyMaster { implicit session =>
+                keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
+              }
+              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
               Json.obj()
           }
 
