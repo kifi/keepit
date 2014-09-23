@@ -8,8 +8,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
@@ -33,6 +32,7 @@ class LibraryCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
+    libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
@@ -334,8 +334,12 @@ class LibraryCommander @Inject() (
           // send emails to both users & non-users
           key._2.map { invite =>
             val recipient = invite.userId match {
-              case Some(id) => Left(id)
-              case _ => Right(invite.emailAddress.get)
+              case Some(id) =>
+                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, key._2.length)
+                Left(id)
+              case _ =>
+                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, key._2.length)
+                Right(invite.emailAddress.get)
             }
             libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId, invite.message)
           }
