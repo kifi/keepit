@@ -7,6 +7,7 @@ import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxSer
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.typeahead.TypeaheadHit
+import play.twirl.api.Html
 import views.html
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.concurrent.ExecutionContext
@@ -23,7 +24,7 @@ class TypeaheadAdminController @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def index = AdminUserAction { request =>
+  def index = AdminUserPage { request =>
     Ok(html.admin.typeahead(request.user))
   }
 
@@ -101,12 +102,12 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserAction.async { request =>
+  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserPage.async { request =>
     typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, dedupEmail) map { res => // hack
       Ok(
-        "<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td><td>email</td><td>inviteLastSentAt</td></tr>" +
+        Html("<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td><td>email</td><td>inviteLastSentAt</td></tr>" +
           res.map(c => s"<tr><td>${c.label}</td><td>${c.networkType}</td><td>${c.score}</td><td>${c.status}</td><td>${c.value}</td><td>${c.image.getOrElse("")}</td><td>${c.email}</td><td>${c.inviteLastSentAt}</td></tr>").mkString("") +
-          "</table>"
+          "</table>")
       )
     }
   }
