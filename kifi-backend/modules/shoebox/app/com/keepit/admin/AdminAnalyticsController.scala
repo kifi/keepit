@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.heimdal._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -69,9 +69,9 @@ object MetricAuxInfo {
 case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
 
 class AdminAnalyticsController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   heimdal: HeimdalServiceClient)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
   val installMetrics = Map[String, MetricAuxInfo](
     "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Invites Sent"), Map("Invites Sent" -> 462)),
@@ -171,14 +171,14 @@ class AdminAnalyticsController @Inject() (
     promise.future
   }
 
-  def index() = AdminHtmlAction.authenticatedAsync { request =>
+  def index() = AdminUserPage.async { request =>
     heimdal.updateMetrics()
     userMetricData.map { dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     }
   }
 
-  def getEventDescriptors() = AdminHtmlAction.authenticatedAsync { request =>
+  def getEventDescriptors() = AdminUserPage.async { request =>
     Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
       heimdal.getEventDescriptors(companion).map { descriptors =>
         companion.typeCode -> descriptors
@@ -186,7 +186,7 @@ class AdminAnalyticsController @Inject() (
     }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
   }
 
-  def updateEventDescriptors() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def updateEventDescriptors() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     val descriptorsWithCode = body.keys.collect {
       case key if key.endsWith(":description") =>
@@ -204,7 +204,7 @@ class AdminAnalyticsController @Inject() (
     ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
   }
 
-  def getEvents(repo: String, events: Option[String], limit: Int, window: Int) = AdminHtmlAction.authenticatedAsync { request =>
+  def getEvents(repo: String, events: Option[String], limit: Int, window: Int) = AdminUserPage.async { request =>
     val eventNames = events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
     heimdal.getRawEvents(window, limit, eventNames: _*)(HeimdalEventCompanion.byTypeCode(repo)).map(Ok(_))
   }

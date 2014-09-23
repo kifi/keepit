@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -29,7 +29,7 @@ object BlindTestReturn {
 }
 
 class AdminSearchController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,
     articleSearchResultStore: ArticleSearchResultStore,
@@ -37,11 +37,11 @@ class AdminSearchController @Inject() (
     searchConfigRepo: SearchConfigExperimentRepo,
     searchClient: SearchServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) with Logging {
+    heimdal: HeimdalServiceClient) extends AdminUserActions with Logging {
 
   val rand = new Random()
 
-  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminUserPage.async { request =>
     searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
   }
 
@@ -57,7 +57,7 @@ class AdminSearchController @Inject() (
       SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
   }
 
-  def blindTestVoted() = AdminHtmlAction.authenticated { request =>
+  def blindTestVoted() = AdminUserPage { request =>
     log.info("search blind test: results voted")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id1 = body.get("configId1").get.toLong
@@ -75,7 +75,7 @@ class AdminSearchController @Inject() (
     Ok
   }
 
-  def blindTest() = AdminHtmlAction.authenticated { request =>
+  def blindTest() = AdminUserPage { request =>
     log.info("search blind test: fetching results")
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
@@ -107,17 +107,17 @@ class AdminSearchController @Inject() (
     Ok(Json.toJson(rv))
   }
 
-  def blindTestPage() = AdminHtmlAction.authenticated { request =>
+  def blindTestPage() = AdminUserPage { request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchBlindTest(configs))
   }
 
-  def searchComparisonPage() = AdminHtmlAction.authenticated { request =>
+  def searchComparisonPage() = AdminUserPage { request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchComparison(configs))
   }
 
-  def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
+  def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>
 
     articleSearchResultStore.get(id) match {
       case Some(result) =>
