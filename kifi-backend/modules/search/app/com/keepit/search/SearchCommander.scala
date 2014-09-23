@@ -164,7 +164,7 @@ class SearchCommanderImpl @Inject() (
 
     val mergedResult = {
 
-      val resultMerger = new ResultMerger(enableTailCutting, config)
+      val resultMerger = new ResultMerger(enableTailCutting, config, true)
 
       val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
       resultMerger.merge(results, maxHits)
@@ -250,7 +250,6 @@ class SearchCommanderImpl @Inject() (
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
@@ -263,7 +262,7 @@ class SearchCommanderImpl @Inject() (
     }
     val results = monitoredAwait.result(future, 10 seconds, "slow search")
 
-    val resultMerger = new ResultMerger(enableTailCutting, config)
+    val resultMerger = new ResultMerger(false, config, false)
     resultMerger.merge(results, maxHits)
   }
 
