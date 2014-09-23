@@ -57,6 +57,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
             if (libOpt.isDefined) libIds += libOpt.get
             if (usrOpt.isDefined) sharingUserIds += usrOpt.get
         }
+        val count = sharingUserIds.size
         sharingUserIds -= userId
 
         sharingUserIds.foreach { friendId => friendStats.add(friendId.id, hit.score) }
@@ -65,7 +66,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
 
         DetailedSearchHit(
           uriId.id,
-          0,
+          count,
           basicSearchHit,
           isMyBookmark,
           isFriendsBookmark,
