@@ -2,6 +2,7 @@ package com.keepit.test
 
 import akka.actor.ActorSystem
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.search.spellcheck.FakeSpellCorrectorModule
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
@@ -19,7 +20,7 @@ import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.search.{ SearchServiceTypeModule, SearchConfigModule, FakeSearchConfigModule, FakeSearchServiceClientModule }
+import com.keepit.search.{ FakeDistributedSearchServiceClientModule, SearchConfigModule, FakeSearchServiceClientModule, SearchServiceTypeModule, FakeSearchConfigModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -52,6 +53,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   val module = Modules.combine(
     FakeActorSystemModule(),
     FakeHttpClientModule(),
+    FakeUserActionsModule(),
     FakeHeimdalServiceClientModule(),
     SearchServiceTypeModule(),
     FakeAirbrakeModule(),
@@ -65,6 +67,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
+    FakeDistributedSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),

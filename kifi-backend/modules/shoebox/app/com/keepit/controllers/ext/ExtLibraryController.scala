@@ -1,14 +1,14 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepData, KeepsCommander, RawBookmarkRepresentation, LibraryCommander, LibraryData }
+import com.keepit.commanders.{ KeepData, KeepsCommander, RawBookmarkRepresentation, LibraryCommander, LibraryData, LibraryAddRequest }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ Keep, KeepRepo, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
+import com.keepit.model.{ Keep, KeepSource, Library, LibraryAccess, LibraryMembershipRepo, LibraryVisibility, LibrarySlug }
 
 import play.api.libs.json._
 import play.api.mvc.Result
@@ -36,6 +36,23 @@ class ExtLibraryController @Inject() (
         path = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
     }
     Ok(Json.obj("libraries" -> datas))
+  }
+
+  def addLibrary = JsonAction.authenticatedParseJson { request =>
+    val body = request.body.as[JsObject]
+    val name = (body \ "name").as[String]
+    val visibility = (body \ "visibility").as[LibraryVisibility]
+    val slug = LibrarySlug.generateFromName(name)
+    val addRequest = LibraryAddRequest(name, visibility, description = None, slug, collaborators = None, followers = None)
+    libraryCommander.addLibrary(addRequest, request.userId) match {
+      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+      case Right(lib) =>
+        Ok(Json.toJson(LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          visibility = lib.visibility,
+          path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
   }
 
   def addKeep(libraryPubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>

@@ -171,7 +171,8 @@ class RecommendationsCommander @Inject() (
           FullRecoInfo(
             kind = RecoKind.Keep,
             metaData = Some(RecoMetaData(attributionInfo)),
-            itemInfo = itemInfo
+            itemInfo = itemInfo,
+            explain = reco.explain
           )
         }
       })

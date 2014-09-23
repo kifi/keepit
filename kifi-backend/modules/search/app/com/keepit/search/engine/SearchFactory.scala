@@ -11,7 +11,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
+import com.keepit.search.graph.keep.{ KeepLangs, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -206,5 +206,81 @@ class SearchFactory @Inject() (
     }
   }
 
+  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
+    getLibraryIdsFuture(userId, libraryContext).flatMap {
+      case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
+        Future.traverse(shards) { shard =>
+          SafeFuture {
+            val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+            val keepLangs = new KeepLangs(keepSearcher)
+            keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
+            keepLangs.processLibraries(trustedPublishedLibIds)
+            keepLangs.processLibraries(authorizedLibIds)
+            keepLangs.getFrequentLangs()
+          }
+        }.map { results =>
+          results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
+            case (m, (langName, count)) =>
+              val lang = Lang(langName)
+              m + (lang -> (count + m.getOrElse(lang, 0)))
+          }
+        }
+    }
+  }
+
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
+
+  def getLibrarySearches(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig): Seq[LibrarySearch] = {
+
+    val currentTime = System.currentTimeMillis()
+
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
+    val friendIdsFuture = getFriendIdsFuture(userId)
+
+    val parser = new KQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      config,
+      phraseDetector,
+      phraseDetectionReqConsolidator,
+      monitoredAwait
+    )
+
+    parser.parse(queryString) match {
+      case Some(engBuilder) =>
+        val parseDoneAt = System.currentTimeMillis()
+        val librarySearcher = libraryIndexer.getSearcher
+        shards.toSeq.map { shard =>
+          val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+
+          val timeLogs = new SearchTimeLogs(currentTime)
+          timeLogs.queryParsing(parseDoneAt)
+
+          new LibrarySearch(
+            userId,
+            numHitsToReturn,
+            filter,
+            config,
+            engBuilder,
+            librarySearcher,
+            keepSearcher,
+            friendIdsFuture,
+            libraryIdsFuture,
+            monitoredAwait,
+            timeLogs
+          )
+        }
+      case None => Seq.empty
+    }
+  }
 }
