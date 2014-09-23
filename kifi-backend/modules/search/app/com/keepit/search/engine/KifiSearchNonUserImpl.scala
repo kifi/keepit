@@ -55,7 +55,7 @@ class KifiSearchNonUserImpl(
     val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn)
 
     val total = textHits.totalHits
-    val hits = createQueue(numHitsToReturn)
+    val hits = KifiSearch.createQueue(numHitsToReturn)
 
     if (textHits.size > 0) {
       textHits.toRankedIterator.foreach {
