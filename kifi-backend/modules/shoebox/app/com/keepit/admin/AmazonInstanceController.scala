@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 import views.html

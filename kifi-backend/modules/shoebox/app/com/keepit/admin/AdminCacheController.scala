@@ -2,7 +2,6 @@ package com.keepit.controllers.admin
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.controller.AdminController
 import views.html
 import com.keepit.common.service.{ FortyTwoServices, ServiceType, ServiceClient }
 import com.keepit.common.net.HttpClient

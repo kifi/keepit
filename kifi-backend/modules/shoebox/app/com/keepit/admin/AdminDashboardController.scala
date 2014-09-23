@@ -6,7 +6,7 @@ import org.joda.time.Days
 import org.joda.time.LocalDate
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.time._

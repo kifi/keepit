@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.search.SearchServiceClient
 
 class AdminUserIndexController @Inject() (

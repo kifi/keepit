@@ -1,5 +1,6 @@
 package com.keepit.graph
 
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
@@ -20,6 +21,7 @@ case class GraphServiceTypeModule() extends ServiceTypeModule {
 trait GraphModule extends ConfigurationModule with CommonServiceModule {
 
   // Common Functional Modules
+  val userActionsModule: UserActionsModule
   val cacheModule: GraphCacheModule
   val storeModule: GraphStoreModule
 

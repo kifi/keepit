@@ -6,7 +6,7 @@ import com.keepit.model._
 import com.keepit.common.time._
 import scala.concurrent.duration._
 import views.html
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.integrity._
 import com.keepit.normalizer._

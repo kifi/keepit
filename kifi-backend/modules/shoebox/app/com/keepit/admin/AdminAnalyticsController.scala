@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.heimdal._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

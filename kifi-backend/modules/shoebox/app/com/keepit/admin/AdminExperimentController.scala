@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{
   UserExperimentRepo,

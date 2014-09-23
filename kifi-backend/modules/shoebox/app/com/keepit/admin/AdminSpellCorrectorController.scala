@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._

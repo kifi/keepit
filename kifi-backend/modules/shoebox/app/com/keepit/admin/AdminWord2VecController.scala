@@ -5,7 +5,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model.{ NormalizedURI, User }
