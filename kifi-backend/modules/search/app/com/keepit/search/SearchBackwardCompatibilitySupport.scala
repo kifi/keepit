@@ -59,6 +59,8 @@ class SearchBackwardCompatibilitySupport @Inject() (
         }
         sharingUserIds -= userId
 
+        sharingUserIds.foreach { friendId => friendStats.add(friendId.id, hit.score) }
+
         val isPrivate = libIds.forall(isSecret(_, librarySearcher))
 
         DetailedSearchHit(
