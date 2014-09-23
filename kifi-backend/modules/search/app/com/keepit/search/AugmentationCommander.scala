@@ -56,7 +56,7 @@ class AugmentationCommanderImpl @Inject() (
     val futureRemoteAugmentationResponses = searchClient.distAugmentation(remotePlan, request)
     val futureLocalAugmentationResponse = distAugmentation(localShards, request)
     Future.sequence(futureRemoteAugmentationResponses :+ futureLocalAugmentationResponse).map { augmentationResponses =>
-      augmentationResponses.reduceLeft { (mergedResponse, nextResponse) =>
+      augmentationResponses.foldLeft(ItemAugmentationResponse.empty) { (mergedResponse, nextResponse) =>
         ItemAugmentationResponse(mergedResponse.infos ++ nextResponse.infos, mergedResponse.scores merge nextResponse.scores)
       }
     }
@@ -96,7 +96,7 @@ class AugmentationCommanderImpl @Inject() (
           itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, userIdFilter, libraryIdFilter)(item) }.toMap
         }
     }.toSeq
-    Future.sequence(futureAugmentationInfosByShard).map(_.reduce(_ ++ _))
+    Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, AugmentationInfo])(_ ++ _))
   }
 
   private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): AugmentationInfo = {
