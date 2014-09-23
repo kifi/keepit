@@ -313,7 +313,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
-    val users = db.readOnlyReplica { implicit s =>
+    val users = db.readOnlyMaster { implicit s =>
       var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)
     }
@@ -411,7 +411,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
-    val userInfos = db.readOnlyReplica { implicit session =>
+    val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
           DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
