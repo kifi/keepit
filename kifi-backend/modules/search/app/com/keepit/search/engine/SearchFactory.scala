@@ -229,4 +229,58 @@ class SearchFactory @Inject() (
   }
 
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
+
+  def getLibrarySearches(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig): Seq[LibrarySearch] = {
+
+    val currentTime = System.currentTimeMillis()
+
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
+    val friendIdsFuture = getFriendIdsFuture(userId)
+
+    val parser = new KQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      config,
+      phraseDetector,
+      phraseDetectionReqConsolidator,
+      monitoredAwait
+    )
+
+    parser.parse(queryString) match {
+      case Some(engBuilder) =>
+        val parseDoneAt = System.currentTimeMillis()
+        val librarySearcher = libraryIndexer.getSearcher
+        shards.toSeq.map { shard =>
+          val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+
+          val timeLogs = new SearchTimeLogs(currentTime)
+          timeLogs.queryParsing(parseDoneAt)
+
+          new LibrarySearch(
+            userId,
+            numHitsToReturn,
+            filter,
+            config,
+            engBuilder,
+            librarySearcher,
+            keepSearcher,
+            friendIdsFuture,
+            libraryIdsFuture,
+            monitoredAwait,
+            timeLogs
+          )
+        }
+      case None => Seq.empty
+    }
+  }
 }
