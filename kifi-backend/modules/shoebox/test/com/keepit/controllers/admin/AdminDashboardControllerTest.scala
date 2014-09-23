@@ -3,8 +3,8 @@ package com.keepit.controllers.admin
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.common.controller.{ FakeUserActionsModule, AuthenticatedRequest }
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
+import com.keepit.common.controller.{ UserActionsHelper, FakeUserActionsHelper, SimpleUserRequest, FakeUserActionsModule }
+import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
@@ -26,6 +26,8 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+
+import scala.concurrent.Future
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -70,9 +72,11 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
           u1
         }
 
+        val userActionsHelper = inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper]
+        userActionsHelper.setUser(u1, Set(ADMIN))
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
-        val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
+        val authRequest = SimpleUserRequest(fakeRequest, u1.id.get, None, () => Future.successful(u1), () => Future.successful(Set(ADMIN)), () => Future.successful(None), () => None)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

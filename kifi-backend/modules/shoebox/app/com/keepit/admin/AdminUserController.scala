@@ -9,7 +9,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.{ AuthCommander, UserCommander }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -70,7 +70,7 @@ object UserViewTypes {
 import UserViewTypes._
 
 class AdminUserController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -103,9 +103,9 @@ class AdminUserController @Inject() (
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
     curator: CuratorServiceClient,
-    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
+    authCommander: AuthCommander) extends AdminUserActions {
 
-  def merge = AdminHtmlAction.authenticated { implicit request =>
+  def merge = AdminUserPage { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
     // logging in and wants to associate the newly-created user's social users with an existing user
     val form = request.request.body.asFormUrlEncoded.get
@@ -139,7 +139,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(toUserId))
   }
 
-  def moreUserInfoView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def moreUserInfoView(userId: Id[User], showPrivates: Boolean = false) = AdminUserPage.async { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
     val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
@@ -157,7 +157,7 @@ class AdminUserController @Inject() (
     } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, contacts))
   }
 
-  def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
+  def updateCollectionsForBookmark(id: Id[Keep]) = AdminUserPage { implicit request =>
     request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
       val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty).map(Hashtag.apply)
       val collections = db.readWrite { implicit s =>
@@ -186,15 +186,15 @@ class AdminUserController @Inject() (
     } getOrElse BadRequest
   }
 
-  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def userView(userId: Id[User], showPrivates: Boolean = false) = AdminUserPage.async { implicit request =>
     doUserViewById(userId, showPrivates)
   }
 
-  def userKeepsView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+  def userKeepsView(userId: Id[User], showPrivates: Boolean = false) = AdminUserPage { implicit request =>
     doUserKeepsView(userId, showPrivates)
   }
 
-  def userViewByEitherId(userIdStr: String, showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def userViewByEitherId(userIdStr: String, showPrivates: Boolean = false) = AdminUserPage.async { implicit request =>
     Try(userIdStr.toLong).toOption map { id =>
       doUserViewById(Id[User](id), showPrivates)
     } orElse {
@@ -208,7 +208,7 @@ class AdminUserController @Inject() (
     } getOrElse Promise.successful(NotFound).future
   }
 
-  private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
+  private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
     db.readOnlyReplica { implicit session =>
       Try(userRepo.get(userId))
     } map { user =>
@@ -216,7 +216,7 @@ class AdminUserController @Inject() (
     } getOrElse Promise.successful(NotFound).future
   }
 
-  private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[Result] = {
+  private def doUserView(user: User, showPrivateContacts: Boolean)(implicit request: UserRequest[AnyContent]): Future[Result] = {
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
@@ -248,7 +248,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Result = {
+  private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: UserRequest[AnyContent]): Result = {
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
@@ -348,23 +348,23 @@ class AdminUserController @Inject() (
     UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers)
   }
 
-  def usersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def usersView(page: Int = 0) = AdminUserPage { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, AllUsersViewType), None))
   }
 
-  def registeredUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def registeredUsersView(page: Int = 0) = AdminUserPage { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, RegisteredUsersViewType), None))
   }
 
-  def fakeUsersView(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def fakeUsersView(page: Int = 0) = AdminUserPage { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, FakeUsersViewType), None))
   }
 
-  def byExperimentUsersView(page: Int, exp: String) = AdminHtmlAction.authenticated { implicit request =>
+  def byExperimentUsersView(page: Int, exp: String) = AdminUserPage { implicit request =>
     Ok(html.admin.users(userStatisticsPage(page, ByExperimentUsersViewType(ExperimentType(exp))), None))
   }
 
-  def searchUsers() = AdminHtmlAction.authenticated { implicit request =>
+  def searchUsers() = AdminUserPage { implicit request =>
     val form = request.request.body.asFormUrlEncoded.map { req => req.map(r => (r._1 -> r._2.head)) }
     val searchTerm = form.flatMap { _.get("searchTerm") }
     searchTerm match {
@@ -382,7 +382,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def updateUser(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def updateUser(userId: Id[User]) = AdminUserPage { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
@@ -416,7 +416,7 @@ class AdminUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
-  def setInvitesCount(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def setInvitesCount(userId: Id[User]) = AdminUserPage { implicit request =>
     val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
     db.readWrite { implicit session =>
       userValueRepo.setValue(userId, UserValues.availableInvites.name, count)
@@ -424,7 +424,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(userId))
   }
 
-  def connectUsers(user1: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def connectUsers(user1: Id[User]) = AdminUserPage { implicit request =>
     val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
     db.readWrite { implicit session =>
       val socialUser1 = socialUserInfoRepo.getByUser(user1).find(_.networkType == SocialNetworks.FORTYTWO)
@@ -449,7 +449,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction.authenticated { request =>
+  def addExperiment(userId: Id[User], experiment: String) = AdminUserAction(parse.tolerantJson) { request =>
     val expType = ExperimentType.get(experiment)
     db.readWrite { implicit session =>
       (userExperimentRepo.get(userId, expType, excludeState = None) match {
@@ -466,7 +466,7 @@ class AdminUserController @Inject() (
     Ok(Json.obj(experiment -> true))
   }
 
-  def changeUsersName(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+  def changeUsersName(userId: Id[User]) = AdminUserPage { request =>
     db.readWrite { implicit session =>
       val user = userRepo.getNoCache(userId)
       val first = request.body.asFormUrlEncoded.map(_.apply("first").headOption.map(_.trim)).flatten.getOrElse(user.firstName)
@@ -476,7 +476,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminHtmlAction.authenticated { request =>
+  def setUserPicture(userId: Id[User], pictureId: Id[UserPicture]) = AdminUserPage { request =>
     db.readWrite { implicit session =>
       val user = userRepo.get(userId)
       userPictureRepo.getByUser(userId).find(_.id.get == pictureId) map { pic =>
@@ -493,25 +493,24 @@ class AdminUserController @Inject() (
     }
   }
 
-  def userValue(userId: Id[User]) = AdminJsonAction.authenticated { implicit request =>
-    val req = request.body.asJson.map { json =>
-      ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
-        case (Some(name), Some(value), None) =>
-          Some(db.readWrite { implicit session => // set it
-            userValueRepo.setValue(userId, name, value)
-          })
-        case (Some(name), _, Some(c)) => // clear it
-          Some(db.readWrite { implicit session =>
-            userValueRepo.clearValue(userId, name).toString
-          })
-        case (Some(name), _, _) => // get it
-          db.readOnlyMaster { implicit session =>
-            userValueRepo.getValueStringOpt(userId, name)
-          }
-        case _ =>
-          None.asInstanceOf[Option[String]]
-      }
-    }.flatten
+  def userValue(userId: Id[User]) = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val json = request.body
+    val req = ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+      case (Some(name), Some(value), None) =>
+        Some(db.readWrite { implicit session => // set it
+          userValueRepo.setValue(userId, name, value)
+        })
+      case (Some(name), _, Some(c)) => // clear it
+        Some(db.readWrite { implicit session =>
+          userValueRepo.clearValue(userId, name).toString
+        })
+      case (Some(name), _, _) => // get it
+        db.readOnlyMaster { implicit session =>
+          userValueRepo.getValueStringOpt(userId, name)
+        }
+      case _ =>
+        None.asInstanceOf[Option[String]]
+    }
 
     req.map { result =>
       Ok(Json.obj("success" -> result))
@@ -520,7 +519,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def changeState(userId: Id[User], state: String) = AdminJsonAction.authenticated { request =>
+  def changeState(userId: Id[User], state: String) = AdminUserAction(parse.tolerantJson) { request =>
     val userState = state match {
       case UserStates.ACTIVE.value => UserStates.ACTIVE
       case UserStates.INACTIVE.value => UserStates.INACTIVE
@@ -532,7 +531,7 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction.authenticated { request =>
+  def removeExperiment(userId: Id[User], experiment: String) = AdminUserAction(parse.tolerantJson) { request =>
     db.readWrite { implicit session =>
       val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
       ue foreach { ue =>
@@ -546,7 +545,7 @@ class AdminUserController @Inject() (
     Ok(Json.obj(experiment -> false))
   }
 
-  def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def refreshAllSocialInfo(userId: Id[User]) = AdminUserPage { implicit request =>
     val socialUserInfos = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
@@ -557,16 +556,16 @@ class AdminUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
-  def updateUserPicture(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+  def updateUserPicture(userId: Id[User]) = AdminUserPage { request =>
     imageStore.forceUpdateSocialPictures(userId)
     Ok
   }
 
-  def notification() = AdminHtmlAction.authenticated { implicit request =>
+  def notification() = AdminUserPage { implicit request =>
     Ok(html.admin.notification(request.user.id.get.id))
   }
 
-  def sendNotificationToAllUsers() = AdminHtmlAction.authenticated { implicit request =>
+  def sendNotificationToAllUsers() = AdminUserPage { implicit request =>
     implicit val playRequest = request.request
     val notifyForm = Form(tuple(
       "title" -> text,
@@ -599,14 +598,14 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.notification())
   }
 
-  def bumpUserSeq() = AdminHtmlAction.authenticated { implicit request =>
+  def bumpUserSeq() = AdminUserPage { implicit request =>
     db.readWrite { implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach { u => userRepo.save(u) }
     }
     Ok("OK. Bumping up user sequence numbers")
   }
 
-  def resetMixpanelProfile(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def resetMixpanelProfile(userId: Id[User]) = AdminUserPage.async { implicit request =>
     SafeFuture {
       val user = db.readOnlyReplica { implicit session => userRepo.get(userId) }
       doResetMixpanelProfile(user)
@@ -614,7 +613,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def deleteAllMixpanelProfiles() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def deleteAllMixpanelProfiles() = AdminUserPage.async { implicit request =>
     SafeFuture {
       val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
       allUsers.foreach(user => heimdal.deleteUser(user.id.get))
@@ -622,7 +621,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def resetAllMixpanelProfiles() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def resetAllMixpanelProfiles() = AdminUserPage.async { implicit request =>
     SafeFuture {
       val allUsers = db.readOnlyReplica { implicit s => userRepo.all }
       allUsers.foreach(doResetMixpanelProfile)
@@ -664,7 +663,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def bumpUpSeqNumForConnections() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def bumpUpSeqNumForConnections() = AdminUserPage.async { implicit request =>
     SafeFuture {
       val conns = db.readOnlyReplica { implicit s =>
         userConnectionRepo.all()
@@ -695,7 +694,7 @@ class AdminUserController @Inject() (
     socialUserTypeahead.topN(userId, query, None).map { hits => hits.map(_.info) }
   }
 
-  def prefixSocialSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixSocialSearch(userId: Id[User], query: String) = AdminUserPage.async { request =>
     prefixSocialSearchDirect(userId, query) map { res =>
       Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
     }
@@ -708,7 +707,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def prefixContactSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixContactSearch(userId: Id[User], query: String) = AdminUserPage.async { request =>
     prefixContactSearchDirect(userId, query) map { res =>
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
@@ -717,7 +716,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def prefixSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixSearch(userId: Id[User], query: String) = AdminUserPage.async { request =>
     for {
       contactRes <- prefixContactSearchDirect(userId, query)
       socialRes <- prefixSocialSearchDirect(userId, query)
@@ -729,7 +728,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request =>
+  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminUserPage.async { request =>
     SafeFuture {
       val toBeCreated = db.readWrite { implicit session =>
         userConnectionRepo.all().collect {
@@ -758,7 +757,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
+  def deactivate(userId: Id[User]) = AdminUserPage.async { request =>
     SafeFuture {
       // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
       val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
@@ -812,7 +811,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminJsonAction.authenticated { request =>
+  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction(parse.tolerantJson) { request =>
     log.info(s"About to deactivate UserEmailAddress $id")
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
@@ -823,7 +822,7 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminHtmlAction.authenticated { request =>
+  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminUserPage { request =>
     val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
 
     Ok(res.toString)
@@ -857,7 +856,7 @@ class AdminUserController @Inject() (
 
   }
 
-  def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticated { request =>
+  def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminUserPage { request =>
     val ids = (startingUserId.id to endingUserId.id).map(Id[User])
 
     val result = ids.map { userId =>
@@ -867,12 +866,12 @@ class AdminUserController @Inject() (
     Ok(s"readOnly: $readOnly<br>\ncount: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
   }
 
-  def removeUsername(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+  def removeUsername(userId: Id[User]) = AdminUserPage { request =>
     userCommander.removeUsername(userId)
     Ok
   }
 
-  def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+  def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminUserPage { implicit request =>
     if (showSecrets) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing secret libraries of $ownerId")
     }
@@ -884,12 +883,12 @@ class AdminUserController @Inject() (
     Ok(html.admin.userLibraries(owner, accessToLibs))
   }
 
-  def sendEmail(toUserId: Id[User], code: String) = AdminHtmlAction.authenticated { implicit request =>
+  def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
     curator.triggerEmailToUser(code, toUserId)
     NoContent
   }
 
-  def refreshRecos(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def refreshRecos(userId: Id[User]) = AdminUserPage { implicit request =>
     SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
   }
