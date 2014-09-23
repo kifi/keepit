@@ -12,13 +12,12 @@ import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.healthcheck.SystemAdminMailSender
 
 class AdminAuthController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
   val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
   systemAdminMailSender: SystemAdminMailSender,
   impersonateCookie: ImpersonateCookie)
-    extends UserActions with ShoeboxServiceController {
+    extends AdminUserActions {
 
   def unimpersonate = AdminUserAction { request =>
     Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(impersonateCookie.discard)
