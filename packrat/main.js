@@ -549,8 +549,9 @@ api.port.on({
       d.state = 'keeping';
       var libraryId = data.libraryId || libraryIds[data.secret ? 1 : 0];
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
-        title: data.title,
         url: data.url,
+        title: data.title,
+        imageUrl: data.imageUrl,
         canonical: data.canonical,
         og: data.og,
         guided: data.guided
@@ -674,7 +675,7 @@ api.port.on({
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
       ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, data.updates, function () {
         if (keep.details) {
-          ['title'].forEach(function (prop) {
+          ['title','imageUrl'].forEach(function (prop) {
             if (prop in data.updates) {
               keep.details[prop] = data.updates[prop];
             }

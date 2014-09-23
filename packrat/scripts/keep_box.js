@@ -9,6 +9,7 @@
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/listen.js
+// @require scripts/title_from_url.js
 
 var keepBox = keepBox || (function () {
   'use strict';
@@ -259,6 +260,14 @@ var keepBox = keepBox || (function () {
     .on('input', '.kifi-keep-box-keep-title', function () {
       updateDirty($view, this, this.value.trim() !== $view.data('title'));
     })
+    .on('click', '.kifi-keep-box-image-prev,.kifi-keep-box-image-next', function (e) {
+      if (e.which === 1) {
+        var iOld = $view.data('imageIdx');
+        var iNew = swipeImage($view, this.classList.contains('kifi-keep-box-image-prev'));
+        var $imgPicker = $view.find('.kifi-keep-box-keep-image-picker');
+        updateDirty($view, $imgPicker[0], iOld !== iNew);
+      }
+    })
     .on('click', '.kifi-keep-box-delete[href]', function (e) {
       if (e.which === 1) {
         deleteKeep($view, $(this));
@@ -329,22 +338,82 @@ var keepBox = keepBox || (function () {
   }
 
   function showKeep(library, keep, replace) {
-    var title = keep ? keep.title : authoredTitle();
+    var title, imageUrls = findImages(), imageIdx;
+    if (keep) {
+      title = keep.title;
+      if (keep.imageUrl) {
+        imageIdx = imageUrls.indexOf(keep.imageUrl);
+        if (imageIdx < 0) {
+          imageUrls.unslice(keep.imageUrl);
+        }
+        imageIdx = 0;
+      } else {
+        imageIdx = imageUrls.length;
+      }
+    } else {
+      title = authoredTitle() || formatTitleFromUrl(document.URL);
+      imageIdx = 0;
+    }
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
       static: true,
       kept: !!keep,
       title: title,
-      site: document.location.hostname
+      site: document.location.hostname,
+      imageUrl: imageUrls[imageIdx],
+      hasImages: imageUrls.length > 0
     }, {
       keep_box_lib: 'keep_box_lib'
     }));
     $view.data({
+      dirty: keep ? [] : $view.find('.kifi-keep-box-keep-title').get(),
       title: keep ? title : null,
-      dirty: keep ? [] : $view.find('.kifi-keep-box-keep-title').get()
+      imageIdx: keep ? imageIdx : null,
+      imageUrls: imageUrls
     });
     addKeepBindings($view);
     swipeTo($view, replace);
+  }
+
+  function findImages() {
+    return Array.prototype.slice.call(document.getElementsByTagName('img')).filter(isSuitableImage).map(getSrc);
+  }
+
+  function isSuitableImage(img) {
+    return img.naturalHeight >= 120 && img.naturalWidth >= 200 && img.offsetWidth > 0 && img.offsetHeight > 0;
+  }
+
+  function swipeImage($view, back) {
+    var data = $view.data();
+    var n = data.imageUrls.length;
+    var i = data.imageIdx;
+    var $cart = $view.find('.kifi-keep-box-keep-image-cart');
+    if ($cart.hasClass('kifi-animated')) {
+      log('[swipeImage] already animated');
+      return i;
+    }
+    i = data.imageIdx = (data.imageIdx + (back ? n : 1)) % (n + 1);
+    var $old = $cart.find('.kifi-keep-box-keep-image');
+    var $new = $old.clone();
+    if (i < n) {
+      $new.removeClass('kifi-none').css('background-image', 'url("' + encodeURI(data.imageUrls[i]) + '")');
+    } else {
+      $new.addClass('kifi-none').css('background-image', '');
+    }
+    $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
+    $new[back ? 'prependTo' : 'appendTo']($cart).layout();
+    $cart.addClass('kifi-animated').layout()
+    .on('transitionend', function end(e) {
+      if (e.target === this) {
+        if (!back) {
+          $cart.removeClass('kifi-animated kifi-back kifi-forward');
+        }
+        $old.remove();
+        $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
+          .off('transitionend', end);
+      }
+    }).addClass('kifi-roll');
+    return i;
   }
 
   function updateDirty($view, el, dirty) {
@@ -366,21 +435,36 @@ var keepBox = keepBox || (function () {
   function saveKeep($view, $btn) {
     var libraryId = $view.find('.kifi-keep-box-lib').data('id');
     var $title = $view.find('.kifi-keep-box-keep-title');
-    var $comment = $view.find('.kifi-keep-box-keep-comment');
-    var $progress = $btn.find('.kifi-keep-box-progress');
     var title = $title.val().trim();
     if (title) {
+      var data = $view.data();
+      var imageUrl = data.imageUrls[data.imageIdx];
+      if (imageUrl && imageUrl.lastIndexOf('data:', 0) === 0) {
+        imageUrl = 'data:';
+      }
+      var $comment = $view.find('.kifi-keep-box-keep-comment');
+      var $progress = $btn.find('.kifi-keep-box-progress');
       $title.add($comment).prop('disabled', true);
       $btn.removeAttr('href').addClass('kifi-doing');
       if ($view.hasClass('kifi-kept')) {
-        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, function (success) {
+        api.port.emit('save_keep', {
+          libraryId: libraryId,
+          updates: {
+            title: title,
+            imageUrl: imageUrl
+          }
+        }, function (success) {
           endProgress($progress, 'save', success);
           if (success) {
             hideAfter(1000);
           }
         });
       } else {
-        $box.data('keepPage')({libraryId: libraryId, title: title}, function (success) {
+        $box.data('keepPage')({
+          libraryId: libraryId,
+          title: title,
+          imageUrl: imageUrl
+        }, function (success) {
           endProgress($progress, 'keep', success);
           if (success) {
             $btn.closest('.kifi-keep-box-view').addClass('kifi-kept');
@@ -390,7 +474,7 @@ var keepBox = keepBox || (function () {
       }
       updateProgress.call($progress[0], 0);
     } else {
-      $title.focus().select(); // TODO: restore saved title or suggest our best-guess title
+      $title.val($title.attr('value')).focus().select();
     }
   }
 
@@ -478,5 +562,9 @@ var keepBox = keepBox || (function () {
 
   function libraryIdIs(id) {
     return function (o) {return o.libraryId === id};
+  }
+
+  function getSrc(img) {
+    return img.src;
   }
 }());

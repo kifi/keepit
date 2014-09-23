@@ -5,9 +5,14 @@
   {{#library}}{{>keep_box_lib}}{{/library}}
   <input class="kifi-keep-box-keep-title" name="keep_title" value="{{title}}"/>
   <div class="kifi-keep-box-page-site">{{site}}</div>
-  <div class="kifi-keep-box-image-picker">
-    <a class="kifi-keep-box-image-prev" href="javascript:"></a>
-    <a class="kifi-keep-box-image-next" href="javascript:"></a>
+  <div class="kifi-keep-box-keep-image-picker">
+    <div class="kifi-keep-box-keep-image-cart">
+      <div class="kifi-keep-box-keep-image{{^imageUrl}} kifi-none{{/imageUrl}}"{{#imageUrl}} style="background-image:url({{imageUrl}})"{{/imageUrl}}></div>
+    </div>
+    {{#hasImages}}
+      <a class="kifi-keep-box-image-prev" href="javascript:"></a>
+      <a class="kifi-keep-box-image-next" href="javascript:"></a>
+    {{/hasImages}}
   </div>
   <textarea class="kifi-keep-box-comment" placeholder="Comment or add a tag (optional)"></textarea>
   {{#kept}}
