@@ -4,6 +4,7 @@
 // @require scripts/html/keeper/keep_box_lib.js
 // @require scripts/html/keeper/keep_box_libs.js
 // @require scripts/html/keeper/keep_box_libs_list.js
+// @require scripts/html/keeper/keep_box_new_lib.js
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
@@ -110,6 +111,11 @@ var keepBox = keepBox || (function () {
     keepBox.onHide.dispatch();
   }
 
+  function hideAfter(ms) {
+    clearTimeout(hideTimeout);
+    hideTimeout = setTimeout(hide.bind(null, null, 'action'), ms);
+  }
+
   function onHidden(trigger, e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onHidden]');
@@ -118,7 +124,7 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function swipeTo($new) {
+  function swipeTo($new, replace) {
     var $cart = $box.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view');
     var back = !$new;
@@ -132,12 +138,17 @@ var keepBox = keepBox || (function () {
           $old.remove();
         } else {
           $cart.removeClass('kifi-animated kifi-back kifi-forward');
-          $old.detach();
-          $new.data('$prev', $old);
+          if (replace) {
+            $new.data('$prev', $old.data('$prev'));
+            $old.remove();
+          } else {
+            $new.data('$prev', $old);
+            $old.detach();
+          }
         }
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        ($new.find('textarea')[0] || $new.find('input')).focus();
+        ($new.find('textarea')[0] || $new.find('input')[0]).focus();
       }
     });
   }
@@ -264,6 +275,28 @@ var keepBox = keepBox || (function () {
     });
   }
 
+  function addCreateLibraryBindings($view) {
+    $view
+    .on('click', '.kifi-keep-box-back', function (e) {
+      if (e.which === 1) {
+        swipeTo();
+      }
+    })
+    .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
+      this.parentNode.classList.toggle('kifi-checked', this.checked);
+    })
+    .on('keydown', '.kifi-keep-box-new-lib-name', function (e) {
+      if (e.keyCode === 13) {
+        createLibrary($view, $view.find('.kifi-keep-box-create'));
+      }
+    })
+    .on('click', '.kifi-keep-box-create[href]', function (e) {
+      if (e.which === 1) {
+        createLibrary($view, $(this));
+      }
+    });
+  }
+
   function showLibs($new) {
     highlightLibrary($new.find('.kifi-keep-box-lib')[0]);
     $box.find('.kifi-keep-box-libs').replaceWith($new);
@@ -285,11 +318,17 @@ var keepBox = keepBox || (function () {
         showKeep(library);
       }
     } else {
-      // TODO: create library
+      showCreateLibrary();
     }
   }
 
-  function showKeep(library, keep) {
+  function showCreateLibrary() {
+    var $view = $(render('html/keeper/keep_box_new_lib'));
+    addCreateLibraryBindings($view);
+    swipeTo($view);
+  }
+
+  function showKeep(library, keep, replace) {
     var title = keep ? keep.title : authoredTitle();
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
@@ -305,7 +344,7 @@ var keepBox = keepBox || (function () {
       dirty: keep ? [] : $view.find('.kifi-keep-box-keep-title').get()
     });
     addKeepBindings($view);
-    swipeTo($view);
+    swipeTo($view, replace);
   }
 
   function updateDirty($view, el, dirty) {
@@ -334,9 +373,20 @@ var keepBox = keepBox || (function () {
       $title.add($comment).prop('disabled', true);
       $btn.removeAttr('href').addClass('kifi-doing');
       if ($view.hasClass('kifi-kept')) {
-        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, endProgress.bind($progress[0], 'save'));
+        api.port.emit('save_keep', {libraryId: libraryId, updates: {title: title}}, function (success) {
+          endProgress($progress, 'save', success);
+          if (success) {
+            hideAfter(1000);
+          }
+        });
       } else {
-        $box.data('keepPage')({libraryId: libraryId, title: title}, endProgress.bind($progress[0], 'keep'));
+        $box.data('keepPage')({libraryId: libraryId, title: title}, function (success) {
+          endProgress($progress, 'keep', success);
+          if (success) {
+            $btn.closest('.kifi-keep-box-view').addClass('kifi-kept');
+            hideAfter(1000);
+          }
+        });
       }
       updateProgress.call($progress[0], 0);
     } else {
@@ -348,8 +398,39 @@ var keepBox = keepBox || (function () {
     var libraryId = $view.find('.kifi-keep-box-lib').data('id');
     var $progress = $btn.find('.kifi-keep-box-progress');
     $btn.removeAttr('href').addClass('kifi-doing');
-    $box.data('unkeepPage')(libraryId, endProgress.bind($progress[0], 'unkeep'));
+    $box.data('unkeepPage')(libraryId, function (success) {
+      endProgress($progress, 'unkeep', success);
+      if (success) {
+        hideAfter(1000);
+      }
+    });
     updateProgress.call($progress[0], 0);
+  }
+
+  function createLibrary($view, $btn) {
+    var $name = $view.find('.kifi-keep-box-new-lib-name');
+    var $secret = $view.find('.kifi-keep-box-new-lib-secret');
+    var $progress = $btn.find('.kifi-keep-box-progress');
+    var name = $name.val().trim();
+    if (name) {
+      $name.prop('disabled', true);
+      $btn.removeAttr('href').addClass('kifi-doing');
+      api.port.emit('create_library', {
+        name: name,
+        visibility: $secret.prop('checked') ? 'secret' : 'discoverable'
+      }, function (library) {
+        endProgress($progress, 'create', !!library);
+        if (library) {
+          var $old = $view.data('$prev');
+          $old.data('librariesById')[library.id] = library;
+          $old.find('.kifi-keep-box-lib.kifi-create').before(render('html/keeper/keep_box_lib', library));
+          setTimeout(showKeep.bind(null, library, null, true), 200);
+        }
+      });
+      updateProgress.call($progress[0], 0);
+    } else {
+      $name.focus().select();
+    }
   }
 
   var progressTimeout;
@@ -362,18 +443,12 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function endProgress(desc, success) {
+  function endProgress($progress, desc, success) {
     log('[endProgress]', desc, success ? 'success' : 'error');
     clearTimeout(progressTimeout), progressTimeout = null;
-    var $progress = $(this);
     var $btn = $progress.parent().removeClass('kifi-doing');
     if (success) {
       $btn.addClass('kifi-done');
-      if (desc === 'keep') {
-        $btn.closest('.kifi-keep-box-view').addClass('kifi-kept');
-      }
-      clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(hide.bind(null, null, 'action'), 1000);
     } else {
       $btn.prop('href', 'javascript:').one('transitionend', function () {
         $progress.css('width', 0);

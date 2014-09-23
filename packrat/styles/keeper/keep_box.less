@@ -135,6 +135,7 @@
 }
 
 .kifi-keep-box-lib-head,
+.kifi-keep-box-new-lib-head,
 .kifi-keep-box-keep-head {
   background-color: #fbf5f3;
   line-height: 26px;
@@ -142,24 +143,30 @@
   text-transform: uppercase;
   color: #999;
 }
-.kifi-keep-box-lib-head {
+.kifi-keep-box-lib-head,
+.kifi-keep-box-new-lib-head {
   padding-left: 10px;
 }
+
 @lib-height: 39px;
+@lib-bg-height: 26px;
+@lib-bg-width: 52px;
+@lib-font-size: 13px;
+@lib-font-weight: 300;
+@lib-color: #333;
 .kifi-keep-box-lib {
   display: block;
   border: solid #ece8e6;
   border-width: 0 0 1px;
+  background: url(/images/keeper/lib_cards.png) 14px ((@lib-height - @lib-bg-height) / 2) / auto @lib-bg-height no-repeat;
+  line-height: @lib-height;
+  font-size: @lib-font-size;
+  font-weight: @lib-font-weight;
+  padding-left: @lib-bg-width;
+  color: @lib-color !important;
   .kifi-keep-box-view-keep>& {
     border-bottom-color: #ccc;
   }
-  @height: 26px;
-  background: url(/images/keeper/lib_cards.png) 14px ((@lib-height - @height) / 2) / auto @height no-repeat;
-  line-height: @lib-height;
-  font-size: 13px;
-  font-weight: 300;
-  padding-left: 52px;
-  color: #333 !important;
   &.kifi-highlighted {
     background-color: #e8e8e8;
     &:active {
@@ -207,6 +214,95 @@
       background-color: shade(@bg-color, 4%);
     }
   }
+}
+
+.kifi-keep-box-new-lib-h1 {
+  margin: 10px 16px 10px 6px;
+  font-size: 14px;
+}
+.kifi-keep-box-new-lib-head {
+  border: solid #bbb;
+  border-width: 1px 0;
+  &.kifi-secret::after {
+    content: '';
+    display: inline-block;
+    width: 9px;
+    height: 12px;
+    margin-left: 6px;
+    vertical-align: -1px;
+    @url: %(@svgLockDataUrl, rgba(0,0,0,.2));
+    background-image: url(@url);
+    background-size: 9px 12px;
+  }
+}
+.kifi-keep-box-new-lib-name {
+  display: block;
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  background: url(/images/keeper/lib_cards_new.png) 14px ((@lib-height - @lib-bg-height) / 2) no-repeat !important;
+  background-size: auto @lib-bg-height !important;
+  @line-height: (@lib-font-size + 4px);
+  line-height: @line-height;
+  font-size: @lib-font-size;
+  font-weight: @lib-font-weight;
+  padding: ((@lib-height - @line-height) / 2) @lib-bg-width;
+  padding-right: 0;
+  color: @lib-color !important;
+  margin-bottom: 4px;
+}
+.kifi-keep-box-new-lib-visibility {
+  margin: 16px 30px 0;
+  line-height: 17px;
+  color: #aaa;
+}
+.kifi-keep-box-new-lib-secret {
+  @height: 26px;
+  display: block;
+  height: @height;
+  width: 60px;
+  background: #e3e3e3;
+  box-shadow: inset -2px 3px 1px rgba(0,0,0,.2);
+  border-radius: 4px;
+  margin-bottom: 10px;
+  position: relative;
+  cursor: pointer;
+  &::before {
+    content: 'Yes    No ';
+    display: inline-block;
+    line-height: @height;
+    text-align: center;
+    width: 100%;
+    font-size: 11px;
+    font-weight: 500;
+    color: #555;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    width: 28px;
+    height: 22px;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.5);
+    background-color: #fff;
+    background-image: linear-gradient(#f8f8f8,#fdfdfd 30%,#fdfdfd 50%,#f4f4f4);
+    transition: -webkit-transform .2s;
+    transition: transform .2s;
+  }
+  .kifi-checked>&::after {
+    -webkit-transform: translate(28px);
+    transform: translate(28px);
+  }
+  &:hover::after,
+  &:focus::after {
+    background-image: linear-gradient(#fffbe2,#fefcf1 30%,#fefcf1 50%,#f9f4d2);
+  }
+}
+.kifi-checked>.kifi-keep-box-new-lib-desc-1,
+:not(.kifi-checked)>.kifi-keep-box-new-lib-desc-2 {
+  display: none;
 }
 
 .kifi-keep-box-keep-head::after {
@@ -334,7 +430,8 @@
   background: #fffaf8;
 }
 .kifi-keep-box-delete,
-.kifi-keep-box-btn {
+.kifi-keep-box-btn,
+.kifi-keep-box-create {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -440,6 +537,25 @@
     &::before {
       content: 'Save';
     }
+  }
+}
+.kifi-keep-box-create {
+  right: 0;
+  @bg-color: #9bceff;
+  background-color: @bg-color;
+  &:hover,
+  &:focus {
+    background-color: tint(@bg-color, 8%);
+    &:active {
+      background-color: shade(@bg-color, 4%);
+    }
+  }
+  &::before {
+    content: 'Create Library     ';
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 12 10"><filter id="shadow"><feGaussianBlur in="SourceAlpha" stdDeviation="1" result="a"/><feColorMatrix in="a" result="b" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .3 0"/><feBlend in="SourceGraphic" in2="b" mode="normal"/></filter><g filter="url(#shadow)"><path fill="white" d="M9.859,3.66L6.498,0.147c-0.188-0.196-0.491-0.196-0.679,0L5.141,0.856c-0.188,0.196-0.188,0.514,0,0.71l2.343,2.449L5.171,6.433c-0.188,0.196-0.188,0.515,0,0.71l0.679,0.71c0.188,0.196,0.491,0.196,0.679,0l3.331-3.481C10.047,4.174,10.047,3.857,9.859,3.66z"/><path fill="white" d="M1.498,0.147c-0.188-0.196-0.491-0.196-0.679,0L0.141,0.856c-0.188,0.196-0.188,0.514,0,0.71l2.343,2.449L0.171,6.433c-0.188,0.196-0.188,0.515,0,0.71l0.679,0.71c0.188,0.196,0.491,0.196,0.679,0l3.331-3.481c0.188-0.197,0.188-0.514,0-0.711L1.498,0.147z"/></g></svg>');
+    background-repeat: no-repeat;
+    background-size: 12px 10px;
+    background-position: right center;
   }
 }
 .kifi-keep-box-progress {

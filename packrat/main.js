@@ -652,6 +652,14 @@ api.port.on({
       return lib;
     }));
   },
+  create_library: function (data, respond) {
+    ajax('POST', '/ext/libraries', data, function (library) {
+      if (libraries) {
+        libraries.push(library);
+      }
+      respond(library);
+    }, respond.bind(null, null));
+  },
   get_keep: function (libraryId, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
