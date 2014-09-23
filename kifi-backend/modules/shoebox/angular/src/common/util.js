@@ -9,14 +9,15 @@ angular.module('util', [])
       startsWith: function (str, prefix) {
         return str === prefix || str.lastIndexOf(prefix, 0) === 0;
       },
+      startsWithCaseInsensitive: function (str, prefix) {
+        return this.startsWith(str.toLowerCase(), prefix.toLowerCase());
+      },
       endsWith: function (str, suffix) {
         return str === suffix || str.indexOf(suffix, str.length - suffix.length) !== -1;
       },
       trimInput: function (input) {
         return input ? input.trim().replace(/\s+/g, ' ') : '';
       },
-      // TODO(yiping): conform this to the test being used by the extension.
-      // This one is valid for abc@example and does not need the '.' while that for the extension does.
       validateEmail: function (input) {
         var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
         return emailAddrRe.test(input);

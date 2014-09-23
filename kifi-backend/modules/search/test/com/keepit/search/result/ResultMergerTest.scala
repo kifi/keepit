@@ -125,7 +125,7 @@ class ResultMergerTest extends Specification {
 
   "result merger" should {
     "work" in {
-      val resultMerger = new ResultMerger(enableTailCutting = false, config = SearchConfig.defaultConfig)
+      val resultMerger = new ResultMerger(enableTailCutting = false, config = SearchConfig.defaultConfig, true)
       val merged = resultMerger.merge(shardResults, maxHits = 2)
 
       merged.hits === expectedMerge.hits

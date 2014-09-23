@@ -50,7 +50,8 @@ case class PublicSeedItem(
     rekeepScore: Float,
     discoveryScore: Float,
     curationScore: Option[Float],
-    multiplier: Option[Float]) {
+    multiplier: Option[Float],
+    libraryInducedScore: Option[Float]) {
 
   override def toString = f"""
     s:$socialScore%1.2f-
@@ -62,7 +63,8 @@ case class PublicSeedItem(
     rk:$rekeepScore%1.2f-
     d:$discoveryScore%1.2f-
     c:${curationScore.getOrElse(0.0f)}%1.2f-
-    m:${multiplier.getOrElse(1.0f)}%1.2f
+    m:${multiplier.getOrElse(1.0f)}%1.2f-
+    lb: ${libraryInducedScore.getOrElse(0.0f)}%1.2f
   """.replace("\n", "").trim
 }
 
