@@ -9,7 +9,8 @@ angular.module('kifi')
       this.recoData = {
         type: type,
         kind: rawReco.kind,
-        reasons: rawReco.metaData || []
+        reasons: rawReco.metaData || [],
+        explain: rawReco.explain
       };
 
       this.recoData.reasons.forEach(function (reason) {

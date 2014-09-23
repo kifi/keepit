@@ -21,7 +21,7 @@ angular.module('kifi')
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
-     
+
       recoStateService.empty();
       recoActionService.getMore(opt_recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
@@ -42,7 +42,7 @@ angular.module('kifi')
 
     $scope.trash = function (reco) {
       recoActionService.trash(reco.recoKeep);
-      
+
       var trashedRecoIndex = _.findIndex($scope.recos, reco);
       var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
 
@@ -89,6 +89,14 @@ angular.module('kifi')
 
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
+    };
+
+    $scope.toggleExplain = function () {
+      $scope.recos.forEach(function (reco) {
+        var temp = reco.recoKeep.summary.description;
+        reco.recoKeep.summary.description = reco.recoData.explain;
+        reco.recoData.explain = temp;
+      });
     };
 
     // Load a new set of recommendations only on page refresh.
