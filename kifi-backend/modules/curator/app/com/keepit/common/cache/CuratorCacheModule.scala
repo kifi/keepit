@@ -76,7 +76,7 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides

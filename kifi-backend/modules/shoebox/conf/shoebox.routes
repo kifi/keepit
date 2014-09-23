@@ -63,6 +63,8 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 # Extension API
 ##########################################
 
+POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
+
 POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
 # Note: /bookmarks/add is now for browser bookmark imports only
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
@@ -117,12 +119,18 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+POST    /ext/libraries/add          @com.keepit.controllers.ext.ExtLibraryController.addLibrary()
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
-DELETE  /ext/libraries/:id/keeps/:keepId @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
+GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep])
+DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
 
 ##########################################
 # Mobile
 ##########################################
+
+POST    /m/1/events                         @com.keepit.controllers.tracking.EventProxyController.track()
+
 GET     /m/1/whatismyip                     @com.keepit.controllers.mobile.MobileAuthController.whatIsMyIp()
 
 GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.MobileUserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
@@ -229,6 +237,7 @@ POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureCo
 # Web API
 ##########################################
 
+POST    /site/events                @com.keepit.controllers.tracking.EventProxyController.track()
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /site/keeps/add             @com.keepit.controllers.website.KeepsController.keepMultiple(separateExisting: Boolean ?= false)
@@ -268,6 +277,7 @@ POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], auth:Option[String] ?= None, passCode:Option[HashedPassPhrase] ?= None)
+POST    /site/libraries/:id/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(id: PublicId[Library], authToken: Option[String] ?= None)
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
@@ -455,6 +465,7 @@ GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticl
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfoController.all
+GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
 
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
@@ -568,7 +579,7 @@ POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibr
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
-POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(libraryId: Id[Library], take: Int, drop: Int)
+POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long, take: Int, drop: Int)
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index

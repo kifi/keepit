@@ -20,6 +20,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 
+import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -161,6 +162,19 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+
+  def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
+    db.readOnlyMaster { implicit session =>
+      if (libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).isDefined) {
+        keepRepo.getByExtIdandLibraryId(keepExtId, libraryId) match {
+          case Some(k) => Right(k)
+          case None => Left(NOT_FOUND, "keep_not_found")
+        }
+      } else {
+        Left(FORBIDDEN, "library_access_denied")
+      }
+    }
+  }
 
   private def getHelpRankRelatedKeeps(userId: Id[User], selector: HelpRankSelector, beforeOpt: Option[ExternalId[Keep]], afterOpt: Option[ExternalId[Keep]], count: Int): Future[Seq[(Keep, Option[Int], Option[Int])]] = {
     @inline def filter(counts: Seq[(Id[NormalizedURI], Int)])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
@@ -466,7 +480,7 @@ class KeepsCommander @Inject() (
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
     unkeepManyFromLibrary(Seq(keepId), libId, userId) match {
       case Left(why) => Left(why)
-      case Right((Seq(), _)) => Left("invalid_keep_id")
+      case Right((Seq(), _)) => Left("keep_not_found")
       case Right((Seq(info), _)) => Right(info)
     }
   }
@@ -557,7 +571,30 @@ class KeepsCommander @Inject() (
     } else {
       keepRepo.save(keep.withTitle(updatedTitle))
     }
+  }
 
+  def updateKeepInLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep] = {
+    db.readOnlyMaster { implicit session =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
+    } match {
+      case Some(mem) if mem.hasWriteAccess =>
+        val normTitle = title.map(_.trim).filter(_.nonEmpty)
+        db.readWrite { implicit s =>
+          keepRepo.getByExtIdandLibraryId(keepId, libId) match {
+            case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
+              val keep2 = keepRepo.save(keep.withTitle(normTitle))
+              searchClient.updateURIGraph()
+              keptAnalytics.updatedKeep(keep, keep2, context)
+              Right(keep2)
+            case Some(keep) =>
+              Right(keep)
+            case None =>
+              Left((NOT_FOUND, "keep_not_found"))
+          }
+        }
+      case _ =>
+        Left((FORBIDDEN, "permission_denied"))
+    }
   }
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
@@ -688,7 +725,6 @@ class KeepsCommander @Inject() (
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
   def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
-
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }

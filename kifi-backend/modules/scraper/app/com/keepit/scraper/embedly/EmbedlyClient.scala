@@ -2,6 +2,8 @@ package com.keepit.scraper.embedly
 
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
+import com.keepit.common.performance._
+
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import com.google.inject.{ Inject, Singleton }
@@ -53,12 +55,16 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyCl
   }
 
   override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = {
+    val watch = Stopwatch(s"embedly infor for $url")
     val apiUrl = embedlyUrl(url)
     fetchExtendedInfoConsolidater(apiUrl) { urlString =>
       fetchWithRetry(apiUrl, 120000) map { resp =>
-        parseEmbedlyInfo(resp)
+        val info = parseEmbedlyInfo(resp)
+        watch.stop()
+        info
       } recover {
         case t: Throwable =>
+          watch.stop()
           log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
           airbrake.notify("Failed getting embedly info", t)
           None

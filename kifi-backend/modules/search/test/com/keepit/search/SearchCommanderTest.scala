@@ -39,7 +39,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
           inject[AirbrakeNotifier],
-          inject[SearchServiceClient],
+          inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],
           inject[MonitoredAwait])
 

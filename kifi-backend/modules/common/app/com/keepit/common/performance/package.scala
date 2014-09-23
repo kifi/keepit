@@ -7,6 +7,7 @@ package object performance {
 
   case class Stopwatch(tag: String) extends Logging {
     var startTime = System.nanoTime()
+    var lastLap: Long = startTime
     var elapsedTime: Long = 0
 
     def stop(): Long = {
@@ -14,14 +15,24 @@ package object performance {
       elapsedTime
     }
 
-    def resultString(res: String) = s"[$tag] result: $res; elapsed milliseconds: ${elapsedTime / 1000000d}"
     override def toString = s"[$tag] elapsed milliseconds: ${elapsedTime / 1000000d}"
 
-    def logTime(resOpt: Option[String] = None)(implicit logger: Logger = log) {
-      resOpt match {
-        case Some(res) => logger.info(resultString(res))
-        case None => logger.info(toString)
-      }
+    private def recordLap() = {
+      val now = System.nanoTime
+      val sinceStart = now - startTime
+      val lapTime = now - lastLap
+      lastLap = now
+      (sinceStart, lapTime)
+    }
+
+    def logTime()(implicit logger: Logger = log) {
+      val (sinceStart, lapTime) = recordLap()
+      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms")
+    }
+
+    def logTimeWith(res: String)(implicit logger: Logger = log) {
+      val (sinceStart, lapTime) = recordLap()
+      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms; $tag - $res")
     }
   }
 
@@ -29,7 +40,7 @@ package object performance {
     val sw = new Stopwatch(tag)
     val res = f
     sw.stop()
-    sw.logTime(None)
+    sw.logTime()
     res
   }
 
@@ -41,7 +52,7 @@ package object performance {
     if (elapsedMili > threshold) {
       conditionalBlock match {
         case Some(block) => block(elapsedMili)
-        case None => sw.logTime(None)
+        case None => sw.logTime()
       }
     }
     res
@@ -52,7 +63,7 @@ package object performance {
     val res = f
     val resString = r(res)
     sw.stop()
-    sw.logTime(Some(resString))
+    sw.logTimeWith(resString)
     res
   }
 }

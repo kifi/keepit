@@ -154,7 +154,7 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def getUsers(userIds: Seq[Id[User]]) = {
-    db.readOnlyReplicaAsync { implicit s => userRepo.getUsers(userIds) }
+    db.readOnlyMasterAsync { implicit s => userRepo.getUsers(userIds) }
   }
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {

@@ -19,6 +19,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryAccess, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
@@ -95,6 +96,12 @@ class LibraryRepoImpl @Inject() (
     Compiled { (for (b <- rows if b.slug === slug && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
     getBySlugAndUserCompiled(userId, slug, excludeState).firstOption
+  }
+
+  private def getByNameOrSlugCompiled(userId: Column[Id[User]], name: Column[String], slug: Column[LibrarySlug], excludeState: Option[State[Library]]) =
+    Compiled { (for (b <- rows if (b.name === name || b.slug === slug) && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
+  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    getByNameOrSlugCompiled(userId, name, slug, excludeState).firstOption
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {

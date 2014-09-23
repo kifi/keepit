@@ -50,6 +50,33 @@ object DigestEmail {
   val RECO_THRESHOLD = 8
 }
 
+trait RecoRankStrategy {
+  def recommendationsToQuery: Int
+  val minRecommendationsToDeliver: Int = 2
+  val maxRecommendationsToDeliver: Int = 3
+  def ordering: Ordering[UriRecommendation]
+}
+
+object GeneralFeedDigestStrategy extends RecoRankStrategy {
+  val recommendationsToQuery = 100
+
+  object ordering extends Ordering[UriRecommendation] {
+    def compare(a: UriRecommendation, b: UriRecommendation) = ((b.masterScore - a.masterScore) * 1000).toInt
+  }
+}
+
+object RecentInterestRankStrategy extends RecoRankStrategy {
+  val recommendationsToQuery = 1000
+
+  object ordering extends Ordering[UriRecommendation] {
+    def compare(a: UriRecommendation, b: UriRecommendation) = {
+      val res = ((b.allScores.recentInterestScore - a.allScores.recentInterestScore) * 1000).toInt
+      if (res == 0) GeneralFeedDigestStrategy.ordering.compare(a, b)
+      else res
+    }
+  }
+}
+
 sealed case class AllDigestRecos(toUser: Id[User], recos: Seq[DigestReco], isFacebookConnected: Boolean = false)
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
@@ -162,10 +189,10 @@ class FeedDigestEmailSender @Inject() (
     doneF
   }
 
-  def sendToUser(userId: Id[User]): Future[DigestRecoMail] = {
+  def sendToUser(userId: Id[User], recoRankStrategy: RecoRankStrategy = GeneralFeedDigestStrategy): Future[DigestRecoMail] = {
     log.info(s"sending engagement feed email to $userId")
 
-    val recosF = getDigestRecommendationsForUser(userId)
+    val recosF = getRecommendationsForUser(userId, recoRankStrategy)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
     // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
@@ -261,10 +288,12 @@ class FeedDigestEmailSender @Inject() (
     }
   }
 
-  private def getDigestRecommendationsForUser(userId: Id[User]) = {
-    getRecommendationsForUser(userId).flatMap { recos =>
-      FutureHelpers.findMatching(recos, MAX_RECOMMENDATIONS_TO_DELIVER, isEmailWorthy, getDigestReco)
-    }.map { seq => seq.flatten }
+  private def getRecommendationsForUser(userId: Id[User], rankStrategy: RecoRankStrategy) = {
+    val uriRecosF = recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, rankStrategy.recommendationsToQuery, RECO_THRESHOLD)
+    uriRecosF flatMap { recos =>
+      val presortedRecos = recos.sorted(rankStrategy.ordering)
+      FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, getDigestReco)
+    } map (_.flatten)
   }
 
   private def isEmailWorthy(recoOpt: Option[DigestReco]) = {
@@ -295,10 +324,6 @@ class FeedDigestEmailSender @Inject() (
     case throwable =>
       airbrake.notify(s"failed to load uri reco details for $reco", throwable)
       None
-  }
-
-  private def getRecommendationsForUser(userId: Id[User]) = {
-    recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, RECOMMENDATIONS_TO_QUERY, RECO_THRESHOLD)
   }
 
   private def getRecommendationSummaries(uriIds: Id[NormalizedURI]*) = {

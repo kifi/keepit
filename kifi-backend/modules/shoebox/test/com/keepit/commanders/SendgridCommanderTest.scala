@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Injector }
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailRepo, EmailAddress }
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, FakeS3ImageStore }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.{ FakeCuratorServiceClientImpl, CuratorServiceClient, FakeCuratorServiceClientModule }
@@ -61,6 +63,8 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     FakeScraperServiceClientModule(),
     FakeExternalServiceModule(),
     FakeShoeboxStoreModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeScrapeSchedulerModule()
   )
 

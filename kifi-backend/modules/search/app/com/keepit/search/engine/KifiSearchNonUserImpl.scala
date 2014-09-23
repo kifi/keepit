@@ -55,7 +55,7 @@ class KifiSearchNonUserImpl(
     val textHits = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn)
 
     val total = textHits.totalHits
-    val hits = createQueue(numHitsToReturn)
+    val hits = KifiSearch.createQueue(numHitsToReturn)
 
     if (textHits.size > 0) {
       textHits.toRankedIterator.foreach {
@@ -75,9 +75,9 @@ class KifiSearchNonUserImpl(
   }
 
   override def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
-    getKeepRecord(h.keepId) match {
+    getKeepRecord(h.secondaryId) match {
       case Some(r) =>
-        KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
+        KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
       case None =>
         val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
         KifiShardHit(h.id, h.score, h.visibility, -1L, -1L, r.title, r.url, null)

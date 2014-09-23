@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.commanders.emails.EmailTemplateSender
@@ -176,7 +177,8 @@ class ShoeboxController @Inject() (
   def internNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
-    val uri = db.readWrite(attempts = 1) { implicit s => //using cache
+    if (URI.parse(url).isFailure) throw new Exception(s"when calling internNormalizedURI - can't parse url: $url")
+    val uri = db.readWrite { implicit s => //using cache
       normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
@@ -311,7 +313,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
-    val users = db.readOnlyReplica { implicit s =>
+    val users = db.readOnlyMaster { implicit s =>
       var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)
     }
@@ -409,7 +411,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
-    val userInfos = db.readOnlyReplica { implicit session =>
+    val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
           DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
@@ -452,9 +454,9 @@ class ShoeboxController @Inject() (
     val json = request.body
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
-    val accessCode = (json \ "accessCode").asOpt[String]
+    val authToken = (json \ "authToken").asOpt[String]
     val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
-    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, accessCode, passPhrase)))
+    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
 }

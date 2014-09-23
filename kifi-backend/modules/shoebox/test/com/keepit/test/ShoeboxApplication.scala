@@ -8,12 +8,13 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.controller.{ FakeUserActionsModule, FakeActionAuthenticatorModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
@@ -85,7 +86,9 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
-    FakeSearchServiceClientModule()
+    FakeSearchServiceClientModule(),
+    FakeUserActionsModule(),
+    FakeHttpClientModule()
   )
 
   def testFactory(implicit injector: Injector) = inject[ShoeboxTestFactory]

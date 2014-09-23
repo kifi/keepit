@@ -1,0 +1,123 @@
+
+@admin("Index Growth", scripts = List("graphite")) {
+
+<div align="right" class="form-horizontal">
+  <select class="input-medium params" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
+
+<div align="center">
+  <p><img id="articleIndex" class="img-polaroid"></p>
+</div>
+
+<div align="center">
+  <p><img id="keepIndex" class="img-polaroid"></p>
+</div>
+
+<div align="center">
+  <p><img id="libraryIndex" class="img-polaroid"></p>
+</div>
+
+<div align="center">
+  <p><img id="bookmarkIndex" class="img-polaroid"></p>
+</div>
+
+<div align="center">
+  <p><img id="collectionIndex" class="img-polaroid"></p>
+</div>
+
+
+<div align="center">
+  <p><img id="otherIndex" class="img-polaroid"></p>
+</div>
+
+
+<script>
+
+  var timeranges = {
+    "10 Minutes": "-0h10min",
+    "30 Minutes": "-0h30min",
+    "1 Hour": "-1h",
+    "3 Hours": "-3h",
+    "6 Hours": "-6h",
+    "12 Hours": "-12h",
+    "24 Hours": "-24h",
+    "48 Hours": "-48h",
+    "1 Week": "-1w",
+    "2 Weeks": "-2w",
+    "1 Month": "-1mon",
+    "1 Month": "-1mon",
+    "3 Months": "-3mon"
+  };
+
+  $.each(timeranges, function (name, timerange) {
+    $("#timerange").append($("<option>").val(timerange).text(name));
+  });
+  $("#timerange").find('option[value="-12h"]').prop('selected',true)
+
+  var options = $.fn.graphite.defaults = {
+    url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+    lineMode: "connected",
+    width: 1200,
+    height: 600
+  };
+
+  function renderChart(chart) {
+
+    options.from = $("#timerange").val();
+
+    if (chart == "articleIndex") {
+      options.title = "Article Index"
+      options.target = ["substr(stats.gauges.search.index.article_*.size,4,5)"]
+      options.logBase = 2
+    }
+
+    if (chart == "keepIndex") {
+      options.title = "Keep Index"
+      options.target = ["substr(stats.gauges.search.index.keep_*.size,4,5)"]
+      options.logBase = 2
+    }
+
+    if (chart == "libraryIndex") {
+      options.title = "Collection Index"
+      options.target = ["substr(stats.gauges.search.index.library.size,4,5)"]
+      options.logBase = 2
+    }
+
+    if (chart == "bookmarkIndex") {
+      options.title = "Bookmark Index"
+      options.target = ["substr(stats.gauges.search.index.bookmarkStore_*.size,4,5)", "substr(stats.gauges.search.index.urigraph_*.size,4,5)"]
+      options.logBase = 2
+    }
+
+    if (chart == "collectionIndex") {
+      options.title = "Collection Index"
+      options.target = ["substr(stats.gauges.search.index.collectionName_*.size,4,5)", "substr(stats.gauges.search.index.collection_*.size,4,5)"]
+      options.logBase = 2
+    }
+
+    if (chart == "otherIndex") {
+      options.title = "Other Indices"
+      options.target = ["substr(stats.gauges.search.index.user.size,4,5)", "substr(stats.gauges.search.index.message.size,4,5)",
+        "substr(stats.gauges.search.index.userGraph.size,4,5)", "substr(stats.gauges.search.index.searchFriend.size,4,5)"]
+      options.logBase = 2
+    }
+
+    $("#" + chart).graphite(options);
+  }
+
+  function renderAll() {
+    renderChart("articleIndex")
+    renderChart("keepIndex")
+    renderChart("libraryIndex")
+    renderChart("bookmarkIndex")
+    renderChart("collectionIndex")
+    renderChart("otherIndex")
+  }
+
+  $(".params").change(renderAll);
+  $("#update").click(renderAll);
+  setInterval(renderAll, 300000);
+  renderAll()
+</script>
+}

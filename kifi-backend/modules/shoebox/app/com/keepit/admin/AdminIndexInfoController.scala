@@ -36,5 +36,9 @@ class AdminIndexInfoController @Inject() (
 
     Ok(views.html.admin.indexer(infos, totalSizeInfo))
   }
+
+  def viewIndexGrowth = AdminHtmlAction.authenticated { implicit request =>
+    Ok(views.html.admin.indexGrowth())
+  }
 }
 

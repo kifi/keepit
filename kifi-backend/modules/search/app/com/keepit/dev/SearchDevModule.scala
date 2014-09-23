@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.search._
@@ -13,19 +14,21 @@ import com.keepit.search.tracker.DevTrackingModule
 import com.keepit.search.index.DevIndexModule
 import com.keepit.common.util.PlayAppConfigurationModule
 
-case class SearchDevModule() extends SearchModule(
+case class SearchDevModule() extends SearchModule with CommonDevModule {
 
   // Common Functional Modules
-  cacheModule = SearchCacheModule(HashMapMemoryCacheModule()),
-  storeModule = SearchDevStoreModule(),
+  val cacheModule = SearchCacheModule(HashMapMemoryCacheModule())
+  val storeModule = SearchDevStoreModule()
+  val userActionsModule = ProdRemoteUserActionsHelperModule()
 
   // Search Functional Modules
-  indexModule = DevIndexModule(),
-  trackingModule = DevTrackingModule(),
-  spellModule = SpellCorrectorModule()
-) with CommonDevModule {
+  val indexModule = DevIndexModule()
+  val trackingModule = DevTrackingModule()
+  val spellModule = SpellCorrectorModule()
+
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
+  val distributedSearchServiceClientModule = ProdDistributedSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = DevHeimdalServiceClientModule()

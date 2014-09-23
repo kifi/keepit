@@ -78,10 +78,9 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    log.info(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
-    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
-
-      log.info(s"[embedly] for uri $nUri got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
+    val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
+    val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+      watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
       val summary = for {
         nUriId <- nUri.id
@@ -92,42 +91,46 @@ class ScraperURISummaryCommanderImpl @Inject() (
         timing(s"[embedly] syncSavePageInfo for uri ${nUriId.id}") {
           callback.syncSavePageInfo(embedlyInfo.toPageInfo(nUriId))
         }
+        watch.logTimeWith(s"saved page info")
 
         if (descriptionOnly) {
           Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
         } else {
           val images = embedlyInfo.buildImageInfo(nUriId)
-          val nonBlankImages = images.filter { image =>
-            image.url map ScraperURISummaryCommander.filterImageByUrl getOrElse false
-          }
+          val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.filterImageByUrl) }
           val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
 
-          timing(s"[embedly] fetching ${smallImages.size} small images of ${nUriId.id}") {
+          timing(s"fetching ${smallImages.size} small images") {
             //Why are we fetching all those small images? Why do we do in in sync?
             smallImages.foreach { fetchAndInternImage(nUri, _) }
           }
+          watch.logTimeWith(s"all ${smallImages.size} small images")
 
           selectedImageOpt match {
             case None =>
-              log.info(s"[embedly] no selected image for ${nUriId.id}")
+              watch.logTimeWith(s"no selected image")
               Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
             case Some(image) =>
-              log.info(s"[embedly] got a selected image for ${nUriId.id} : $image")
-              timing(s"[embedly] fetching ${smallImages.size} selecteed image of ${nUriId.id}") {
-                fetchAndInternImage(nUri, image) map { imageInfoOpt =>
-                  val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
-                  val widthOpt = imageInfoOpt.flatMap(_.width)
-                  val heightOpt = imageInfoOpt.flatMap(_.height)
-                  Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
-                }
+              watch.logTimeWith(s"got a selected image : $image")
+              val future = fetchAndInternImage(nUri, image) map { imageInfoOpt =>
+                val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
+                val widthOpt = imageInfoOpt.flatMap(_.width)
+                val heightOpt = imageInfoOpt.flatMap(_.height)
+                Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
               }
+              future.onComplete { res =>
+                watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
+              }
+              future
           }
         }
       }
-
       summary getOrElse Future.successful(None)
-
     }
+    fullEmbedlyInfo.onComplete { res =>
+      watch.stop()
+    }
+    fullEmbedlyInfo
   }
 
 }
