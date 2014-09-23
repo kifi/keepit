@@ -38,7 +38,7 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
-  def addLibrary = JsonAction.authenticatedParseJson { request =>
+  def createLibrary = JsonAction.authenticatedParseJson { request =>
     val body = request.body.as[JsObject]
     val name = (body \ "name").as[String]
     val visibility = (body \ "visibility").as[LibraryVisibility]
