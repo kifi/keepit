@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.controller.AdminController
 import views.html
 import com.keepit.common.service.{ FortyTwoServices, ServiceType, ServiceClient }
@@ -14,15 +14,15 @@ import com.keepit.common.cache.InMemoryCachePlugin
 
 @Singleton
 class AdminCacheController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     httpClient: HttpClient,
     localCache: InMemoryCachePlugin,
-    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
-  def serviceView = AdminHtmlAction.authenticated { implicit request =>
+    serviceDiscovery: ServiceDiscovery) extends AdminUserActions {
+  def serviceView = AdminUserPage { implicit request =>
     Ok(html.admin.cacheOverview())
   }
 
-  def clearLocalCaches(service: String, prefix: String) = AdminJsonAction.authenticatedAsync { implicit request =>
+  def clearLocalCaches(service: String, prefix: String) = AdminUserAction.async { implicit request =>
     def shouldBeCleared(serviceType: ServiceType) = service == "all" || ServiceType.fromString(service.toUpperCase) == serviceType
     val prefixOpt = Some(prefix).filter(_.nonEmpty)
     val futureResponsesByService = ServiceClient.register.toSeq.collect {

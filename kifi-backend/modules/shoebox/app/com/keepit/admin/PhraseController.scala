@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{ PhraseStates, PhraseRepo, Phrase }
@@ -11,15 +11,15 @@ import com.keepit.search.{ SearchServiceClient, Lang }
 import views.html
 
 class PhraseController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   phraseRepo: PhraseRepo,
   searchClient: SearchServiceClient)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
   val pageSize = 50
 
-  def displayPhrases(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def displayPhrases(page: Int = 0) = AdminUserPage { implicit request =>
     val (phrasesOpt, count) = db.readOnlyReplica { implicit session =>
       val count = 10 //phraseRepo.count
       val phrasesOpt = if (!PhraseImporter.isInProgress) {
@@ -33,11 +33,11 @@ class PhraseController @Inject() (
     Ok(html.admin.phraseManager(phrasesOpt, page, count, numPages))
   }
 
-  def refreshPhrases = AdminHtmlAction.authenticated { implicit request =>
+  def refreshPhrases = AdminUserPage { implicit request =>
     searchClient.refreshPhrases()
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
-  def addPhrase = AdminHtmlAction.authenticated { implicit request =>
+  def addPhrase = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val phrase = body.get("phrase").get
     val lang = body.get("lang").get
@@ -49,7 +49,7 @@ class PhraseController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
 
-  def savePhrases = AdminHtmlAction.authenticated { implicit request =>
+  def savePhrases = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     db.readWrite { implicit session =>
       val repo = phraseRepo

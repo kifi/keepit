@@ -4,7 +4,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -17,22 +17,22 @@ import scala.Predef._
 import com.keepit.commanders.LocalUserExperimentCommander
 
 class AdminSearchConfigController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,
     searchConfigExperimentRepo: SearchConfigExperimentRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     searchClient: SearchServiceClient,
-    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) {
+    heimdal: HeimdalServiceClient) extends AdminUserActions {
 
-  def showUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def showUserConfig(userId: Id[User]) = AdminUserPage { implicit request =>
     val searchConfigFuture = searchClient.showUserConfig(userId)
     val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     val searchConfig = Await.result(searchConfigFuture, 5 seconds)
     Ok(views.html.admin.searchConfig(user, searchConfig.iterator.toSeq.sortBy(_._1)))
   }
 
-  def setUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def setUserConfig(userId: Id[User]) = AdminUserPage { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
@@ -41,12 +41,12 @@ class AdminSearchConfigController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def resetUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def resetUserConfig(userId: Id[User]) = AdminUserPage { implicit request =>
     searchClient.resetUserConfig(userId)
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
-  def getExperiments = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def getExperiments = AdminUserPage.async { implicit request =>
     heimdal.updateMetrics()
     val experiments = db.readOnlyReplica { implicit s => searchConfigExperimentRepo.getNotInactive() }
     val ids = experiments.map(_.id.get)
@@ -62,13 +62,13 @@ class AdminSearchConfigController @Inject() (
     }
   }
 
-  def addNewExperiment = AdminHtmlAction.authenticated { implicit request =>
+  def addNewExperiment = AdminUserPage { implicit request =>
     val defaultConfig = Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
     saveSearchConfigExperiment(SearchConfigExperiment(description = "New Experiment", config = defaultConfig))
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)
   }
 
-  def deleteExperiment = AdminJsonAction.authenticated { implicit request =>
+  def deleteExperiment = AdminUserAction { implicit request =>
     val id = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
       .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
@@ -78,7 +78,7 @@ class AdminSearchConfigController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def updateExperiment = AdminJsonAction.authenticated { implicit request =>
+  def updateExperiment = AdminUserAction { implicit request =>
     val form = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
     val id = form.get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     val desc = form.get("description").getOrElse("")
