@@ -104,18 +104,18 @@ class KeepImageCommanderImpl @Inject() (
 
   def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     fetchAndSet(imageUrl, keepId, source, overwriteExistingImage = true)(requestId).map { done =>
-      updateRequestState(keepId, requestId, done)
+      finalizeImageRequestState(keepId, requestId, done)
       done
     }
   }
   def setKeepImageFromFile(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     fetchAndSet(image, keepId, source, overwriteExistingImage = true)(requestId).map { done =>
-      updateRequestState(keepId, requestId, done)
+      finalizeImageRequestState(keepId, requestId, done)
       done
     }
   }
 
-  private def updateRequestState(keepId: Id[Keep], requestIdOpt: Option[Id[KeepImageRequest]], doneResult: ImageProcessDone) = {
+  private def finalizeImageRequestState(keepId: Id[Keep], requestIdOpt: Option[Id[KeepImageRequest]], doneResult: ImageProcessDone): Unit = {
     import ImageProcessState._
     import KeepImageRequestStates._
 

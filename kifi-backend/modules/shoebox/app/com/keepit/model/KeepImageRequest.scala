@@ -54,7 +54,7 @@ class KeepImageRequestRepoImpl @Inject() (
     def imageUri = column[String]("image_uri", O.Nullable)
     def source = column[KeepImageSource]("source", O.NotNull)
 
-    def idxSourceFileHashSize = index("keep_image_u_token", token, unique = true)
+    def idxSourceFileHashSize = index("keep_image_request_u_token", token, unique = true)
 
     def * = (id.?, createdAt, updatedAt, state, keepId, token, failureCode.?, failureReason.?, successHash.?, imageUri.?, source) <> ((KeepImageRequest.apply _).tupled, KeepImageRequest.unapply _)
   }
@@ -67,7 +67,7 @@ class KeepImageRequestRepoImpl @Inject() (
   override def deleteCache(model: KeepImageRequest)(implicit session: RSession): Unit = {}
 
   private val getByTokenCompiled = Compiled { token: Column[String] =>
-    for (r <- rows if r.token === token) yield r
+    for (r <- rows if r.token === token && r.state === KeepImageRequestStates.ACTIVE) yield r
   }
   def getByToken(token: String)(implicit session: RSession): Option[KeepImageRequest] = {
     getByTokenCompiled(token).firstOption

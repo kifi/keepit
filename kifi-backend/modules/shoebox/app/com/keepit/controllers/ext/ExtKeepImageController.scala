@@ -54,7 +54,7 @@ class ExtKeepImageController @Inject() (
           Some(NotFound(Json.obj("error" -> "token_not_found")))
         case Some(imageRequest) if imageRequest.state == KeepImageRequestStates.INACTIVE => // success
           Some(Ok(JsString("success")))
-        case Some(imageRequest) if Set(FETCHING, PERSISTING, PROCESSING).contains(imageRequest.state) => // in progress
+        case Some(imageRequest) if Set(ACTIVE, FETCHING, PERSISTING, PROCESSING).contains(imageRequest.state) => // in progress
           None
         case Some(imageRequest) => // failure
           Some(Ok(Json.obj("error" -> imageRequest.failureCode)))

@@ -27,6 +27,7 @@ class ExtLibraryController @Inject() (
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
   val userActionsHelper: UserActionsHelper,
+  keepRepo: KeepRepo,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -72,14 +73,30 @@ class ExtLibraryController @Inject() (
             hcb += ("guided", true)
           }
           implicit val context = hcb.build
+
           val rawBookmark = info.as[RawBookmarkRepresentation]
           val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+
+          // Determine image choice.
+          val imageStatus = (info \ "imageUrl").asOpt[String] match {
+            case Some(imageUrl) if imageUrl.startsWith("http") =>
+              val (keep, keepImageRequest) = db.readWrite { implicit session =>
+                val keep = keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
+                val keepImageRequest = keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
+                (keep, keepImageRequest)
+              }
+              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
+              Json.obj("imageStatusPath" -> keepImageRequest.token) // url
+            case None =>
+              Json.obj()
+          }
+
           Ok(Json.toJson(KeepData(
             keepInfo.id.get,
             mine = true, // TODO: stop assuming keep is mine and removable
             removable = true,
             secret = keepInfo.isPrivate,
-            libraryId = Library.publicId(libraryId))))
+            libraryId = Library.publicId(libraryId))).as[JsObject] ++ imageStatus)
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
