@@ -202,7 +202,7 @@ angular.module('kifi')
         scope.disableEditTags = function () {
           scope.editingTags = false;
         };
-        
+
 
         //
         // Watches and listeners.
@@ -217,8 +217,8 @@ angular.module('kifi')
         scope.$watch(function () {
           return scope.editMode.enabled;
         }, function(enabled) {
-          if (!enabled) { 
-            scope.selection.unselectAll(); 
+          if (!enabled) {
+            scope.selection.unselectAll();
           }
         });
 

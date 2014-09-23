@@ -7,12 +7,13 @@ angular.module('kifi')
   '$rootScope',
   '$analytics',
   '$window',
+  'modalService',
   'recoActionService',
   'recoDecoratorService',
   'recoStateService',
   'undoService',
   function ($scope, $rootScope, $analytics, $window,
-    recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
@@ -77,8 +78,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
-        return;
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');

@@ -101,7 +101,6 @@ angular.module('kifi')
           template: 'common/modal/installExtensionModal.tpl.html',
           scope: $scope
         });
-        return;
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');

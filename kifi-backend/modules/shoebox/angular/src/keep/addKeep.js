@@ -7,9 +7,7 @@ angular.module('kifi')
   function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
     return {
       restrict: 'A',
-      scope: {
-        shown: '='
-      },
+      scope: {},
       require: '^kfModal',
       templateUrl: 'keep/addKeep.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
@@ -85,6 +83,7 @@ angular.module('kifi')
 
             return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
+                scope.resetAndHide();
                 modalService.open({
                   template: 'common/modal/genericErrorModal.tpl.html'
                 });
@@ -113,7 +112,10 @@ angular.module('kifi')
           if (url && util.validateUrl(url)) {
             return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal', 'genericError');
+                scope.resetAndHide();
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
               } else if (result.alreadyKept.length > 0) {
                 scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
@@ -137,7 +139,6 @@ angular.module('kifi')
           }
         };
 
-
         scope.librariesEnabled = libraryService.isAllowed();
         if (scope.librariesEnabled) {
           scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
@@ -149,19 +150,14 @@ angular.module('kifi')
           }).id;
         }
 
-        scope.$watch('shown', function (shown) {
-          if (shown) {
-            $document.on('keydown', processKey);
-            safeFocus();
-          } else {
-            $document.off('keydown', processKey);
-          }
-        });
-
         scope.resetAndHide = function () {
           reset();
           kfModalCtrl.close();
+          $document.off('keydown', processKey);
         };
+
+        $document.on('keydown', processKey);
+        safeFocus();
       }
     };
   }
