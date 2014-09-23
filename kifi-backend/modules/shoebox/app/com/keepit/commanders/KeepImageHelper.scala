@@ -12,6 +12,8 @@ import com.keepit.common.store.ImageSize
 import com.keepit.model.{ KeepImage, ImageHash, ImageFormat }
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.json.{ Json, JsString }
+import play.api.mvc.{ Results, Controller }
 
 import scala.util.{ Failure, Success, Try }
 
@@ -129,11 +131,12 @@ trait KeepImageHelper {
 
 sealed trait ImageProcessState
 sealed trait ImageProcessDone extends ImageProcessState
+sealed trait ImageProcessSuccess extends ImageProcessDone
 sealed trait KeepImageStoreInProgress extends ImageProcessState
-sealed abstract class KeepImageStoreFailure(reason: String) extends ImageProcessState with ImageProcessDone
+sealed abstract class KeepImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
 sealed abstract class KeepImageStoreFailureWithException(ex: Throwable, reason: String) extends KeepImageStoreFailure(reason)
-object ImageProcessState {
-  // In-process
+object ImageProcessState extends Results {
+  // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends KeepImageStoreInProgress
   case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash) extends KeepImageStoreInProgress
   case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int) extends KeepImageStoreInProgress
@@ -149,8 +152,17 @@ object ImageProcessState {
   case class CDNUploadFailed(ex: Throwable) extends KeepImageStoreFailureWithException(ex, "cdn_upload_failed")
 
   // Success
-  case object StoreSuccess extends ImageProcessState with ImageProcessDone
-  case class ExistingStoredImagesFound(images: Seq[KeepImage]) extends ImageProcessState with ImageProcessDone
+  case object StoreSuccess extends ImageProcessState with ImageProcessSuccess
+  case class ExistingStoredImagesFound(images: Seq[KeepImage]) extends ImageProcessState with ImageProcessSuccess
+
+  def stateToResponse(state: ImageProcessDone) = {
+    state match {
+      case fail: KeepImageStoreFailure =>
+        InternalServerError(Json.obj("error" -> fail.reason))
+      case success: ImageProcessSuccess =>
+        Ok(JsString("success"))
+    }
+  }
 }
 
 sealed abstract class KeepImageSize(val name: String, val idealSize: ImageSize)
@@ -178,11 +190,7 @@ object KeepImageSize {
     }.map(_.idealSize).orElse {
       lower.split("x").toList match {
         case width :: height :: Nil =>
-          val imgTry = for {
-            w <- Try(width.toInt)
-            h <- Try(height.toInt)
-          } yield ImageSize(w, h)
-          imgTry.toOption
+          Try(ImageSize(width.toInt, height.toInt)).toOption
         case _ => None
       }
     }

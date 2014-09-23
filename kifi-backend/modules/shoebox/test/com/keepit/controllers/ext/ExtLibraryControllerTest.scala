@@ -307,7 +307,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def getKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
     val route = com.keepit.controllers.ext.routes.ExtLibraryController.getKeep(libraryId, keepId)
     inject[FakeActionAuthenticator].setUser(user)
-    inject[ExtLibraryController].getKeep(libraryId, keepId)(FakeRequest(route.method, route.url))
+    inject[ExtLibraryController].getKeep(libraryId, keepId, None)(FakeRequest(route.method, route.url))
   }
 
   private def removeKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {

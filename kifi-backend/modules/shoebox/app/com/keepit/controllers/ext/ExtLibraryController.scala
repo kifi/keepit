@@ -1,19 +1,23 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepData, KeepsCommander, RawBookmarkRepresentation, LibraryCommander, LibraryData }
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.commanders._
+import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
-import com.keepit.model.{ Keep, KeepRepo, KeepSource, Library, LibraryAccess, LibraryMembershipRepo }
+import com.keepit.model._
+import play.api.libs.concurrent
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json._
 import play.api.mvc.Result
 
-import scala.util.{ Success, Failure }
+import scala.concurrent.{ Promise, Future }
+import scala.util.{ Try, Success, Failure }
 
 class ExtLibraryController @Inject() (
   db: Database,
@@ -23,10 +27,14 @@ class ExtLibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  keepImageRepo: KeepImageRepo,
+  keepImageRequestRepo: KeepImageRequestRepo,
+  keepImageCommander: KeepImageCommander,
+  val userActionsHelper: UserActionsHelper,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def getLibraries() = JsonAction.authenticated { request =>
+  def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
       val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
       LibraryData(
@@ -38,7 +46,7 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
-  def addKeep(libraryPubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
+  def addKeep(libraryPubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
     decode(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
         libraryMembershipRepo.getOpt(request.userId, libraryId)
@@ -52,7 +60,7 @@ class ExtLibraryController @Inject() (
           }
           implicit val context = hcb.build
           val rawBookmark = info.as[RawBookmarkRepresentation]
-          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId(), source)
           Ok(Json.toJson(KeepData(
             keepInfo.id.get,
             mine = true, // TODO: stop assuming keep is mine and removable
@@ -65,16 +73,36 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def getKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  // imgSize is of format "<w>x<h>", such as "300x500"
+  def getKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], imgSize: Option[String]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
-        case Right(keep) => Ok(Json.obj("title" -> keep.title))
+        case Right(keep) =>
+          // As we move to using the notion of "keeps" as the entity clients care about,
+          // this sort of logic is better suited to be moved to the commander. Until then, and
+          // we solidify our use cases, putting it here to keep the commander cleaner.
+          val defaultImageSize = ImageSize(700, 500)
+          val idealSize = if (imgSize.isEmpty || imgSize.get.length == 0) {
+            defaultImageSize
+          } else {
+            val s = imgSize.get.toLowerCase.split("x").toList
+            s match {
+              case w :: h :: Nil => Try(ImageSize(w.toInt, h.toInt)).getOrElse(defaultImageSize)
+              case _ => defaultImageSize
+            }
+          }
+          val keepImages = db.readOnlyReplica { implicit session =>
+            keepImageRepo.getAllForKeepId(keep.id.get)
+          }
+          val keepImage = KeepImageSize.pickBest(idealSize, keepImages)
+          val resp = LateLoadKeepData(keep.title, keepImage.map(keepImageCommander.getUrl))
+          Ok(Json.toJson(resp))
       }
     }
   }
 
-  def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  def removeKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
       keepsCommander.unkeepOneFromLibrary(keepExtId, libraryId, request.userId) match {
@@ -85,7 +113,7 @@ class ExtLibraryController @Inject() (
   }
 
   // Maintainers: Let's keep this endpoint simple, quick and reliable. Complex updates deserve their own endpoints.
-  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = JsonAction.authenticatedParseJson { request =>
+  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     decode(libraryPubId) { libraryId =>
       val body = request.body.as[JsObject]
       val title = (body \ "title").asOpt[String]
