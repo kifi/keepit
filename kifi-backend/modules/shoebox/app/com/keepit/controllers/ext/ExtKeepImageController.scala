@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ImageProcessState, KeepImageCommander, KeepImageSize }
+import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.PublicId
@@ -41,8 +41,11 @@ class ExtKeepImageController @Inject() (
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
         }
         val setImageF = keepImageCommander.setKeepImageFromFile(request.body, keep.id.get, KeepImageSource.UserUpload, Some(imageRequest.id.get))
-        setImageF.map { done =>
-          ImageProcessState.stateToResponse(done)
+        setImageF.map {
+          case fail: KeepImageStoreFailure =>
+            InternalServerError(Json.obj("error" -> fail.reason))
+          case success: ImageProcessSuccess =>
+            Ok(JsString("success"))
         }
       case (None, _) =>
         Future.successful(NotFound(Json.obj("error" -> "invalid_keep_id")))
