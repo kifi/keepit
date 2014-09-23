@@ -73,7 +73,7 @@ class ExtLibraryController @Inject() (
           }
           implicit val context = hcb.build
           val rawBookmark = info.as[RawBookmarkRepresentation]
-          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId(), source)
+          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
           Ok(Json.toJson(KeepData(
             keepInfo.id.get,
             mine = true, // TODO: stop assuming keep is mine and removable
