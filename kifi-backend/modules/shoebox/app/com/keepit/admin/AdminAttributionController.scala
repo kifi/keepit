@@ -108,8 +108,8 @@ class AdminAttributionController @Inject() (
       // todo(ray): batch
       val resF = sorted.map(_._1).map { keepId =>
         heimdalClient.getReKeepsByDegree(userId, keepId).map { res => res.map(_.userIds) } map { userIds =>
-          val users = db.readOnlyReplica { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a, c) => a ++ c }) }
-          db.readOnlyReplica { implicit ro => keepRepo.get(keepId) } -> userIds.map(_.map(uId => users(uId)))
+          val users = db.readOnlyMaster { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a, c) => a ++ c }) }
+          db.readOnlyMaster { implicit ro => keepRepo.get(keepId) } -> userIds.map(_.map(uId => users(uId)))
         }
       }
       Future.sequence(resF) flatMap { users =>
@@ -155,10 +155,10 @@ class AdminAttributionController @Inject() (
     heimdalClient.getUserReKeepsByDegree(keepIds) map { userReKeepsAcc =>
       val sorted = userReKeepsAcc.sortBy(_.userIds.flatten.length)(Ordering[Int].reverse)
       val userIds = sorted.map(_.userIds).flatten.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c }
-      val users = db.readOnlyReplica { implicit ro => userRepo.getUsers(userIds.toSeq) }
+      val users = db.readOnlyMaster { implicit ro => userRepo.getUsers(userIds.toSeq) }
       val richByDeg = sorted.map {
         case UserReKeepsAcc(kId, userIdsByDeg) =>
-          db.readOnlyReplica { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
+          db.readOnlyMaster { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
       }
       val grouped = richByDeg.groupBy(_._1.uriId).map {
         case (uriId, keepsAndUsers) =>

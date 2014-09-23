@@ -161,7 +161,7 @@ class AdminLDAController @Inject() (
     val user = request.userId
     cortex.getSimilarUsers(user, topK).map {
       case (userIds, scores) =>
-        val users = db.readOnlyReplica { implicit s => userIds.map { id => userRepo.get(id) } }
+        val users = db.readOnlyMaster { implicit s => userIds.map { id => userRepo.get(id) } }
         Ok(html.admin.peopleLikeYou(users, scores))
     }
 

@@ -5,7 +5,7 @@ import com.keepit.common.logging.Logging
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
-import com.keepit.common.commanders.{ LDAInfoCommander, LDACommander }
+import com.keepit.common.commanders.{ LDARepresenterCommander, LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
 import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfiguration, LDATopicInfo }
@@ -14,6 +14,7 @@ import com.keepit.common.db.Id
 
 class LDAController @Inject() (
   lda: LDACommander,
+  representer: LDARepresenterCommander,
   infoCommander: LDAInfoCommander)
     extends CortexServiceController with Logging {
 
@@ -33,7 +34,7 @@ class LDAController @Inject() (
   }
 
   def wordTopic(word: String) = Action { request =>
-    val res = lda.wordTopic(word)
+    val res = representer.wordTopic(word)
     Ok(Json.toJson(res))
   }
 
@@ -41,7 +42,7 @@ class LDAController @Inject() (
     val js = request.body
     val doc = (js \ "doc").as[String]
     val wrappedDoc = Document(TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(doc))
-    val res = lda.docTopic(wrappedDoc)
+    val res = representer.docTopic(wrappedDoc)
     Ok(Json.toJson(res))
   }
 
