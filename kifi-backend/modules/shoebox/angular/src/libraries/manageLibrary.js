@@ -2,6 +2,58 @@
 
 angular.module('kifi')
 
+.directive('kfManageLibrary', ['libraryService',
+  function (libraryService) {
+    return {
+      restrict: 'A',
+      scope: {},
+      require: '^kfModal',
+      templateUrl: 'libraries/manageLibrary.tpl.html',
+      link: function (scope, element, attrs, kfModalCtrl) {
+        //
+        // Internal data.
+        //
+
+
+        //
+        // Scope data.
+        //
+
+
+        //
+        // Internal methods.
+        //
+
+
+        //
+        // Scope methods.
+        //
+        scope.close = function () {
+          kfModalCtrl.close();
+        };
+
+
+        //
+        // On link.
+        //
+        if (libraryService.libraryState.library) {
+          scope.library = _.cloneDeep(libraryService.libraryState.library);
+          scope.modalTitle = scope.library.name;
+        } else {
+          scope.library = {
+            'name': '',
+            'visibility': 'discoverable',
+            'description': '',
+            'slug': ''
+          };
+          scope.modalTitle = 'Create a library';
+        }
+      }
+    };
+  }
+])
+
+
 .controller('ManageLibraryCtrl', [
   '$scope', '$routeParams', 'libraryService', 'util', '$timeout', '$location', 'profileService',
   function ($scope, $routeParams, libraryService, util, $timeout, $location, profileService) {

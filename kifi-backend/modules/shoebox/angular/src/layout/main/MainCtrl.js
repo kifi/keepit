@@ -114,10 +114,6 @@ angular.module('kifi')
         case 'importBookmarkFile':
           initBookmarkFileUpload();
           break;
-        case 'manageLibrary':
-          $scope.modal = 'manage_library';
-          $scope.data.showManageLibraryModal = true;
-          break;
       }
     });
 
@@ -154,10 +150,6 @@ angular.module('kifi')
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
       $scope.data.showImportModal = false;
-    };
-
-    $scope.hideModal = function () {
-      $scope.modal = null;
     };
 
     $scope.disableBookmarkImport = true;

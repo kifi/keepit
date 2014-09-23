@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope', '$anchorScroll',
-  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope, $anchorScroll) {
+  '$location', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$anchorScroll',
+  function ($location, util, friendService, modalService, tagService, profileService, libraryService, $anchorScroll) {
     return {
       //replace: true,
       restrict: 'A',
@@ -39,7 +39,9 @@ angular.module('kifi')
         });
 
         scope.addLibrary = function () {
-          $rootScope.$emit('showGlobalModal', 'manageLibrary');
+          modalService.open({
+            template: 'libraries/manageLibraryModal.tpl.html'
+          });
         };
 
         scope.$watch(function () {
