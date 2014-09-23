@@ -6,7 +6,7 @@ import scala.concurrent.promise
 import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._

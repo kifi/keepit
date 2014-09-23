@@ -8,7 +8,7 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{ JsNumber, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 class AdminArticleIndexerController @Inject() (

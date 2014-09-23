@@ -6,7 +6,6 @@ import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.controller.AdminController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model.NormalizedURI

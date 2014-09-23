@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json._

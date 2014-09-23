@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model._
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck._
 
 import views.html
 
-import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 class AdminBenchmarkController @Inject() (

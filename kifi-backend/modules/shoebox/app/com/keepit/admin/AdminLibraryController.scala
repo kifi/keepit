@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
