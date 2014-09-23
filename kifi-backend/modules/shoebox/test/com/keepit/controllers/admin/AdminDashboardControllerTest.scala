@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.controller.{ FakeUserActionsModule, AuthenticatedRequest }
 import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
@@ -30,6 +30,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
+    FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ProdShoeboxSecureSocialModule(),
