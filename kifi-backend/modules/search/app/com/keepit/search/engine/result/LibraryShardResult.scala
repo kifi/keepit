@@ -4,7 +4,7 @@ import com.keepit.model.{ Keep, Library }
 import com.keepit.common.db.{ Id }
 import play.api.libs.json.Json
 
-case class LibraryShardResult(hits: Seq[LibraryShardHit])
+case class LibraryShardResult(hits: Seq[LibraryShardHit], show: Boolean)
 
 case class LibraryShardHit(
   id: Id[Library],

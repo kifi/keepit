@@ -1,15 +1,17 @@
 package com.keepit.search
 
-import com.keepit.search.engine.result.{ KifiPlainResult, LibraryShardResult }
 import scala.concurrent.Future
-import com.keepit.search.sharding.{ ActiveShards, Sharding, Shard }
-import com.keepit.model.{ ExperimentType, User, NormalizedURI }
+import com.keepit.search.sharding.{ Sharding }
+import com.keepit.model._
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.engine.SearchFactory
+import com.keepit.search.engine.{ LibrarySearch, SearchFactory }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.engine.result.LibraryShardResult
+import com.keepit.search.sharding.Shard
+import com.keepit.search.sharding.ActiveShards
 
 case class LibrarySearchRequest(
   userId: Id[User],
@@ -21,8 +23,6 @@ case class LibrarySearchRequest(
   maxHits: Int,
   predefinedConfig: Option[SearchConfig])
 
-case class LibrarySearchResult()
-
 @ImplementedBy(classOf[LibrarySearchCommanderImpl])
 trait LibrarySearchCommander {
   def librarySearch(
@@ -33,7 +33,7 @@ trait LibrarySearchCommander {
     filter: SearchFilter,
     maxHits: Int,
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[LibrarySearchResult]
+    debug: Option[String] = None): Future[LibraryShardResult]
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]]
 }
 
@@ -52,18 +52,26 @@ class LibrarySearchCommanderImpl @Inject() (
     filter: SearchFilter,
     maxHits: Int,
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None): Future[LibrarySearchResult] = {
+    debug: Option[String] = None): Future[LibraryShardResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
     languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, None).flatMap {
       case (lang1, lang2) =>
         val request = LibrarySearchRequest(userId, experiments, query, filter, lang1, lang2, maxHits, predefinedConfig)
         val futureRemoteLibraryShardResults = searchClient.distLibrarySearch(remotePlan, request)
         val futureLocalLibraryShardResult = distLibrarySearch(localShards, request)
-        Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult).map(results => mergeResults(results.flatten))
+        val configFuture = mainSearcherFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
+        val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
+        for {
+          results <- futureResults
+          (config, _) <- configFuture
+        } yield mergeResults(results.flatten, maxHits, filter, config)
     }
   }
 
-  private def mergeResults(libraryShardResults: Seq[LibraryShardResult]): LibrarySearchResult = ???
+  private def mergeResults(libraryShardResults: Seq[LibraryShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig): LibraryShardResult = {
+    val (myHits, friendsHits, othersHits) = LibrarySearch.partition(libraryShardResults.flatMap(_.hits), maxHits)
+    LibrarySearch.merge(myHits, friendsHits, othersHits, maxHits, filter, config)
+  }
 
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]] = {
     mainSearcherFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig).flatMap {
