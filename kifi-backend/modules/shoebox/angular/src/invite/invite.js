@@ -3,7 +3,7 @@
 angular.module('kifi')
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService', 
+  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService',
   function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
@@ -169,8 +169,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialInviteSearch', [
-  '$document', '$log', 'inviteService', 'modalService', 'socialService',
-  function ($document, $log, inviteService, modalService, socialService) {
+  '$document', '$log', 'inviteService', 'modalService',
+  function ($document, $log, inviteService, modalService) {
     return {
       scope: {},
       replace: true,
@@ -245,7 +245,7 @@ angular.module('kifi')
       require: '^kfModal',
       link: function (scope, element, attrs, kfModalCtrl) {
         scope.close = kfModalCtrl.close;
-        
+
         scope.hasNetworks = function () {
           return !!socialService.networks.length;
         };

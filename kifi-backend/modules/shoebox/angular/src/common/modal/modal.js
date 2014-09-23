@@ -8,9 +8,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       replace: true,
-      scope: {
-        show: '='
-      },
+      scope: {},
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
@@ -20,7 +18,7 @@ angular.module('kifi')
           }
 
           $document.off('keydown', escapeModal);
-          
+
           modalService.close();
         };
 
