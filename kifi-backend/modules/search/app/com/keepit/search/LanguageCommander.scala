@@ -40,13 +40,6 @@ class LanguageCommanderImpl @Inject() (
     acceptLangCodes: Seq[String],
     libraryContext: Option[LibraryContext]): Future[(Lang, Option[Lang])] = {
 
-    println("#########################")
-    println("#########################")
-    println(localShards)
-    println(dispatchPlan)
-    println("#########################")
-    println("#########################")
-
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
       val eachLangProb = (majorLangProb / numberOfLangs)
