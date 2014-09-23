@@ -1,7 +1,7 @@
 package com.keepit.search
 
-import com.keepit.search.engine.{ KifiSearch, DebugOption, Visibility, SearchFactory }
-import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardHit, KifiShardResultMerger, KifiShardResult }
+import com.keepit.search.engine.{ KifiSearch, DebugOption, SearchFactory }
+import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger, KifiShardResult }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
@@ -98,12 +98,11 @@ class SearchCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
+    compatibilitySupport: SearchBackwardCompatibilitySupport,
     airbrake: AirbrakeNotifier,
     override val searchClient: DistributedSearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
-
-  private[this] lazy val compatibilitySupport = new SearchCommanderBackwardCompatibilitySupport(shards, searchFactory, mainSearcherFactory)
 
   def search(
     userId: Id[User],
@@ -244,7 +243,7 @@ class SearchCommanderImpl @Inject() (
           debug)
 
         val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-        return compatibilitySupport.toPartialSearchResult(userId, friendIds, result)
+        return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
       }
     }
 
@@ -598,73 +597,5 @@ class SearchCommanderImpl @Inject() (
     override def toString = {
       s"total time = ${elapsed(_endTime)}, pre-search time = ${elapsed(_presearch)}, search time = ${elapsed(_search)}, post-search time = ${elapsed(_postsearch)}"
     }
-  }
-}
-
-class SearchCommanderBackwardCompatibilitySupport(
-    shards: ActiveShards,
-    searchFactory: SearchFactory,
-    mainSearcherFactory: MainSearcherFactory) {
-
-  import com.keepit.search.graph.BookmarkInfoAccessor
-
-  def toPartialSearchResult(userId: Id[User], friendIds: Set[Long], result: KifiShardResult): PartialSearchResult = {
-
-    val hits = result.hits
-
-    def toDetailedSearchHit(h: KifiShardHit, friendStats: FriendStats): DetailedSearchHit = {
-      val uriId = Id[NormalizedURI](h.id)
-      val isMyBookmark = ((h.visibility & Visibility.OWNER) != 0)
-      val isFriendsBookmark = (!isMyBookmark && (h.visibility & Visibility.NETWORK) != 0)
-
-      shards.find(uriId) match {
-        case Some(shard) =>
-          val uriGraphSearcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-          val collectionSearcher = mainSearcherFactory.getCollectionSearcher(shard, userId)
-
-          val sharingInfo = uriGraphSearcher.getSharingUserInfo(uriId)
-          val myUriEdgeAccessor = uriGraphSearcher.myUriEdgeSet.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]]
-
-          val isPrivate = (isMyBookmark && myUriEdgeAccessor.seek(h.id) && !myUriEdgeAccessor.isPublic)
-
-          val basicSearchHit = if (isMyBookmark) {
-            val collections = {
-              val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
-              if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
-            }
-            BasicSearchHit(Some(h.title), h.url, collections, h.externalId)
-          } else {
-            BasicSearchHit(Some(h.title), h.url)
-          }
-
-          val sharingUserIds = sharingInfo.sharingUserIds.toSeq
-          val score = h.score
-          sharingUserIds.foreach { friendId => friendStats.add(friendId.id, score) }
-
-          DetailedSearchHit(
-            uriId.id,
-            sharingInfo.keepersEdgeSetSize,
-            basicSearchHit,
-            isMyBookmark,
-            isFriendsBookmark,
-            isPrivate,
-            sharingUserIds,
-            score,
-            score,
-            new Scoring(score, 0.0f, 0.0f, 0.0f, false)
-          )
-
-        case None =>
-          throw new Exception("shard not found")
-      }
-    }
-
-    val friendStats = FriendStats(friendIds)
-
-    val detailedSearchHits = hits.map { h =>
-      toDetailedSearchHit(h, friendStats)
-    }
-
-    PartialSearchResult(detailedSearchHits, result.myTotal, result.friendsTotal, result.othersTotal, friendStats, result.show)
   }
 }

@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
@@ -38,6 +37,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           searchFactory,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
+          inject[SearchBackwardCompatibilitySupport],
           inject[AirbrakeNotifier],
           inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],
