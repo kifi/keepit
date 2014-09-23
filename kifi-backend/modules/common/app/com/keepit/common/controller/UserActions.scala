@@ -7,11 +7,10 @@ import com.keepit.common.core._
 import com.keepit.common.net.URI
 import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User }
 import play.api.Play
-import play.api.http.ContentTypes
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import securesocial.core.{ UserService, SecureSocial, Identity }
+import securesocial.core.Identity
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
@@ -140,7 +139,7 @@ trait UserActions extends Logging { self: Controller =>
     resF.map(maybeAugmentCORS(_))
   }
 
-  private def PageAction[P[_]] = new ActionFunction[P, P] {
+  protected def PageAction[P[_]] = new ActionFunction[P, P] {
     def invokeBlock[A](request: P[A], block: (P[A]) => Future[Result]): Future[Result] = {
       block(request) // todo(ray): handle error with redirects
     }
@@ -167,6 +166,10 @@ trait UserActions extends Logging { self: Controller =>
     }
   }
   val MaybeUserPage = (MaybeUserAction andThen PageAction)
+
+}
+
+trait AdminUserActions extends UserActions with ShoeboxServiceController {
 
   private object AdminCheck extends ActionFilter[UserRequest] {
     protected def filter[A](request: UserRequest[A]): Future[Option[Result]] = {
