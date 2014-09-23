@@ -224,34 +224,30 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    if (debug.isDefined) {
-      val debugFlags = debug.get.split(",").map(_.toLowerCase).toSet
-      if (debugFlags.contains("newengine")) {
-        val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
-        val result = distSearch2(
-          localShards,
-          userId,
-          firstLang,
-          secondLang,
-          experiments,
-          query,
-          filter,
-          LibraryContext.None,
-          maxHits,
-          context,
-          predefinedConfig,
-          debug)
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-        val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-        return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
-      }
+    if (config.asBoolean("newEngine") == true) {
+      val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
+      val result = distSearch2(
+        localShards,
+        userId,
+        firstLang,
+        secondLang,
+        experiments,
+        query,
+        filter,
+        LibraryContext.None,
+        maxHits,
+        context,
+        predefinedConfig,
+        debug)
+
+      val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
+      return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
     }
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
-
     val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-
-    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
     val searchers = mainSearcherFactory(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
 
@@ -391,10 +387,10 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): KifiShardResult = {
 
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
     val debugOption = new DebugOption with Logging
     if (debug.isDefined) debugOption.debug(debug.get)
-
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     val searchFilter = SearchFilter(filter, library, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)

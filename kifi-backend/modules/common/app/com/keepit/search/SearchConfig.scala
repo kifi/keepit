@@ -46,7 +46,8 @@ object SearchConfig {
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "0",
-      "myLibraryBoost" -> "1.5"
+      "myLibraryBoost" -> "1.5",
+      "newEngine" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -78,7 +79,8 @@ object SearchConfig {
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
-      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search",
+      "newEngine" -> "use new engine"
     )
 
   val empty = new SearchConfig(Map.empty)
