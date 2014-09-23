@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ ImageProcessState, KeepImageCommander, KeepImageSize }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -22,15 +23,20 @@ class ExtKeepImageController @Inject() (
     keepImageRequestRepo: KeepImageRequestRepo,
     db: Database,
     systemValueRepo: SystemValueRepo,
+    imageInfoRepo: ImageInfoRepo,
     val userActionsHelper: UserActionsHelper,
-    imageInfoRepo: ImageInfoRepo) extends UserActions with ShoeboxServiceController {
+    implicit val config: com.keepit.common.crypto.PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
-  def uploadKeepImage(keepExtId: ExternalId[Keep]) = UserAction.async(parse.temporaryFile) { request =>
-    val keepOpt = db.readOnlyMaster { implicit session =>
-      keepRepo.getOpt(keepExtId)
+  def uploadKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction.async(parse.temporaryFile) { request =>
+    val (keepOpt, libOpt) = db.readOnlyMaster { implicit session =>
+      val k = keepRepo.getOpt(keepExtId)
+      val lib = Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
+      (k, lib)
     }
-    keepOpt match {
-      case Some(keep) =>
+    (keepOpt, libOpt) match {
+      case (_, None) =>
+        Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
+      case (Some(keep), _) =>
         val imageRequest = db.readWrite { implicit session =>
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
         }
@@ -38,25 +44,28 @@ class ExtKeepImageController @Inject() (
         setImageF.map { done =>
           ImageProcessState.stateToResponse(done)
         }
-      case None =>
+      case (None, _) =>
         Future.successful(NotFound(Json.obj("error" -> "invalid_keep_id")))
     }
   }
 
-  def checkImageStatus(keepExtId: ExternalId[Keep], token: String) = UserAction.async { request =>
+  def checkImageStatus(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], token: String) = UserAction.async { request =>
     def checkStatus() = {
       import KeepImageRequestStates._
-      val imageRequestOpt = db.readOnlyReplica { implicit session =>
-        keepImageRequestRepo.getByToken(token)
+      val (imageRequestOpt, keepOpt) = db.readOnlyReplica { implicit session =>
+        val img = keepImageRequestRepo.getByToken(token)
+        val k = Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
+        (img, k)
       }
-      imageRequestOpt match {
-        case None =>
+      (keepOpt, imageRequestOpt) match {
+        case (None, _) => Some(NotFound(Json.obj("error" -> "keep_not_found")))
+        case (_, None) =>
           Some(NotFound(Json.obj("error" -> "token_not_found")))
-        case Some(imageRequest) if imageRequest.state == KeepImageRequestStates.INACTIVE => // success
+        case (_, Some(imageRequest)) if imageRequest.state == KeepImageRequestStates.INACTIVE => // success
           Some(Ok(JsString("success")))
-        case Some(imageRequest) if Set(ACTIVE, FETCHING, PERSISTING, PROCESSING).contains(imageRequest.state) => // in progress
+        case (_, Some(imageRequest)) if Set(ACTIVE, FETCHING, PERSISTING, PROCESSING).contains(imageRequest.state) => // in progress
           None
-        case Some(imageRequest) => // failure
+        case (_, Some(imageRequest)) => // failure
           Some(Ok(Json.obj("error" -> imageRequest.failureCode)))
       }
     }
