@@ -22,6 +22,7 @@ trait UserRequest[T] extends MaybeUserRequest[T] {
   def adminUserId: Option[Id[User]]
   def user: User
   def experiments: Set[ExperimentType]
+  def kifiInstallationId: Option[ExternalId[KifiInstallation]]
 }
 
 trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
@@ -39,10 +40,11 @@ case class SimpleUserRequest[T](
     userF: () => Future[User],
     experimentsF: () => Future[Set[ExperimentType]],
     identityOptF: () => Future[Option[Identity]],
-    kifiInstallationId: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
+    kifiInstallationIdF: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
   lazy val user = Await.result(userF.apply, 5 seconds)
   lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
   lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
+  lazy val kifiInstallationId = kifiInstallationIdF.apply
 }
 
 trait UserActionsRequirements {
