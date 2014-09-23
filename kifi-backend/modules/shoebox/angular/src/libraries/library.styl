@@ -25,6 +25,14 @@ placeholder(color)
     color: color
 
 
+//
+// Blocks.
+//
+share-button-image =
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 xmlns:xlink=%22http://www.w3.org/1999/xlink%22 width=%2223%22 height=%2217%22 view-box=%220 0 23 17%22><path d=%22M 0.8 16.99 C 1.11 16.99, 21.71 16.99, 21.98 16.99 L 13.83 8.6 L 11.5 10.56 L 9.12 8.61 L 0.8 16.99 M 0 15.31 L 0 1.28 L 8.01 7.73 L 0.08 15.8 C 0.03 15.65, 0 15.48, 0 15.31 M 22.28 0 L 0.72 0 L 11.5 8.51 L 22.28 0 M 23 1.32 L 23 15.31 C 23 15.48, 22.97 15.65, 22.92 15.8 L 15.01 7.71 L 23 1.32 Z%22 fill=%22#656565%22 /></svg>")
+  background-repeat: no-repeat
+
+
 .kf-library-share-search
   position: relative
 
@@ -40,6 +48,7 @@ placeholder(color)
 
 .library-share-button
   display: block
+  position: relative
   padding: 8px 15px 8px 40px
   border: 1px solid #bbb
   border-radius: 5px
@@ -47,6 +56,18 @@ placeholder(color)
   font-family: Helvetica, Arial, sans-serif
   font-size: 13px
   color: #666
+
+.library-share-button::before
+  position: absolute
+  top: 4px
+  left: 10px
+  width: 22px
+  height: 22px
+  {share-button-image}
+  background-size: 100% 100%
+  background-position: 0px 0px
+  content: ''
+
 
 .library-share-menu
   display: none
@@ -167,7 +188,7 @@ placeholder(color)
 .library-share-contact-gmail-icon
   @extend .library-share-contact-email-icon
   border: 1px solid $border-light-gray
-  background-image: url(/img/gmail_logo.svg)
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 45555 33097%22><path fill=%22%23e75a4d%22 d=%22M41608 250c2030,0 3691,1661 3691,3691l0 1070 -5128 3663 -17458 12026 -17458 -12148 0 24295 -1314 0c-2030,0 -3691,-1661 -3691,-3691l0 -25214c0,-2030 1661,-3691 3691,-3691l18772 13918 18894 -13918z%22/><polygon fill=%22%23e7e4d7%22 points=%225255,8552 5255,32847 40172,32847 40172,8674 22713,20700%22/><polygon fill=%22%23b8b7ae%22 points=%225255,32847 22713,20700 22634,20644 5255,32580%22/><polygon fill=%22%23b7b6ad%22 points=%2240172,8674 40182,32847 22713,20700%22/><path fill=%22%23b2392f%22 d=%22M45299 5011l6 24148c-88,2684 -1251,3642 -5123,3687l-10 -24173 5128 -3663z%22/><polygon fill=%22%23f7f5ed%22 points=%223941,250 22713,14168 41608,250%22/></svg>")
   background-color: #fff
 
 .library-share-contact-summary
@@ -205,5 +226,16 @@ placeholder(color)
   display: inline-block
   position: absolute
   top: 5px
-  padding: 6px 10px 6px 30px
+  padding: 7px 10px 5px 30px
   font-size: 12px
+
+.library-share-contact-button::before
+  position: absolute
+  top: 5px
+  left: 8px
+  width: 16px
+  height: 16px
+  {share-button-image}
+  background-size: 100% 100%
+  background-position: 0px 0px
+  content: ''
