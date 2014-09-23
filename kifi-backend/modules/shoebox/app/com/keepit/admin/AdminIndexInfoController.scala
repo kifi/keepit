@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.common.service.ServiceType
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
@@ -13,11 +13,11 @@ import scala.concurrent.duration._
 import com.keepit.search.IndexInfo
 
 class AdminIndexInfoController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     adminClusterController: AdminClusterController,
-    searchClient: SearchServiceClient) extends AdminController(actionAuthenticator) {
+    searchClient: SearchServiceClient) extends AdminUserActions {
 
-  def all = AdminHtmlAction.authenticated { implicit request =>
+  def all = AdminUserPage { implicit request =>
     val infoFutures = searchClient.indexInfoList()
     val clusterMemberInfos = adminClusterController.clustersInfo.filter(_.serviceType == ServiceType.SEARCH).map { i => (i.zkid, i) }.toMap
 
@@ -37,7 +37,7 @@ class AdminIndexInfoController @Inject() (
     Ok(views.html.admin.indexer(infos, totalSizeInfo))
   }
 
-  def viewIndexGrowth = AdminHtmlAction.authenticated { implicit request =>
+  def viewIndexGrowth = AdminUserPage { implicit request =>
     Ok(views.html.admin.indexGrowth())
   }
 }

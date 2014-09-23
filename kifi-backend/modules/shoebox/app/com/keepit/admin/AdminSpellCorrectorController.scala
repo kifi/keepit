@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions, AdminController }
 import com.google.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -9,11 +9,11 @@ import views.html
 
 class AdminSpellCorrectorController @Inject() (
     searchClient: SearchServiceClient,
-    actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
+    val userActionsHelper: UserActionsHelper) extends AdminUserActions {
 
   val Home = Redirect(routes.AdminSpellCorrectorController.spellChecker())
 
-  def correct() = AdminHtmlAction.authenticated { request =>
+  def correct() = AdminUserPage { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val t1 = System.currentTimeMillis
@@ -23,7 +23,7 @@ class AdminSpellCorrectorController @Inject() (
     Home.flashing("success" -> message)
   }
 
-  def spellChecker() = AdminHtmlAction.authenticated { implicit request =>
+  def spellChecker() = AdminUserPage { implicit request =>
     Ok(html.admin.spellchecker())
   }
 }

@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ AdminController, UserActionsHelper, AdminUserActions }
 import com.keepit.common.zookeeper._
 import com.keepit.common.service.{ ServiceUri, ServiceType, ServiceStatus, ServiceVersion }
 import com.keepit.common.amazon.AmazonInstanceInfo
@@ -17,10 +17,10 @@ case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, 
   localHostName: String, state: ServiceStatus, version: ServiceVersion, name: String)
 
 class AdminClusterController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     serviceVersionMap: ServiceVersionMap,
     serviceDiscovery: ServiceDiscovery,
-    zooKeeperClient: ZooKeeperClient) extends AdminController(actionAuthenticator) {
+    zooKeeperClient: ZooKeeperClient) extends AdminUserActions {
 
   val machineNames = Map[String, String](
     "50.18.183.73" -> "b01",
@@ -55,11 +55,11 @@ class AdminClusterController @Inject() (
     convertData(tree)
   }
 
-  def clustersView = AdminHtmlAction.authenticated { implicit request =>
+  def clustersView = AdminUserPage { implicit request =>
     Ok(html.admin.adminClustersView(clustersInfo))
   }
 
-  def zooKeeperInspector = AdminHtmlAction.authenticated { implicit request =>
+  def zooKeeperInspector = AdminUserPage { implicit request =>
     Ok(zooKeeperData)
   }
 }
