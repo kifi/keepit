@@ -12,7 +12,7 @@ import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.core.Identity
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ Promise, Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
 
@@ -20,7 +20,7 @@ case class NonUserRequest[T](request: Request[T], private val identityF: () => O
   def identityOpt: Option[Identity] = identityF.apply
 }
 
-case class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
+case class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
   implicit val req = request
 
   private val AT_MOST = 5 seconds
@@ -30,6 +30,14 @@ case class UserRequest[T](val request: Request[T], val userId: Id[User], val adm
   lazy val identityOpt: Option[Identity] = Await.result(helper.getSecureSocialIdentityOpt(userId), AT_MOST)
 }
 
+// for backward-compatibility
+trait MaybeCostlyUserAttributes[T] { self: UserRequest[T] =>
+  def user: User
+  def experiments: Set[ExperimentType]
+  def kifiInstallationId: Option[ExternalId[KifiInstallation]]
+}
+
+// for backward-compatibility
 trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
   def identityOpt: Option[Identity]
 }
