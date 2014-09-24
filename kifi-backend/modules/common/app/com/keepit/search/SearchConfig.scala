@@ -12,6 +12,10 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.usersegment.UserSegment
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import scala.Some
+import play.api.libs.json.JsObject
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -88,6 +92,11 @@ object SearchConfig {
       case 3 => new SearchConfig(Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
       case _ => empty
     }
+  }
+
+  implicit val format = new Format[SearchConfig] {
+    def reads(json: JsValue) = json.validate[JsObject].map { obj => SearchConfig(obj.fields.map { case (key, value) => (key, value.as[String]) }: _*) }
+    def writes(config: SearchConfig) = JsObject(config.params.mapValues(JsString(_)).toSeq)
   }
 }
 

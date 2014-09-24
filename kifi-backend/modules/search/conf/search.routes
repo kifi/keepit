@@ -31,6 +31,7 @@ GET         /site/search2                       @com.keepit.controllers.website.
 GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
+GET         /site/search/library                @com.keepit.controllers.website.WebsiteSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
 
 
 ##########################################
@@ -42,6 +43,7 @@ POST        /internal/search/dist/search2         @com.keepit.controllers.search
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
 POST        /internal/search/dist/langFreqs2      @com.keepit.controllers.search.SearchController.distLangFreqs2()
 POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
+POST        /internal/search/dist/librarySearch   @com.keepit.controllers.search.SearchController.distLibrarySearch()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 

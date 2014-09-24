@@ -22,7 +22,7 @@ trait LanguageCommander {
     userId: Id[User],
     query: String,
     acceptLangCodes: Seq[String],
-    libraryContext: Option[LibraryContext]): Future[(Lang, Option[Lang])]
+    libraryContext: LibraryContext): Future[(Lang, Option[Lang])]
 
   def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]]
 }
@@ -38,7 +38,7 @@ class LanguageCommanderImpl @Inject() (
     userId: Id[User],
     query: String,
     acceptLangCodes: Seq[String],
-    libraryContext: Option[LibraryContext]): Future[(Lang, Option[Lang])] = {
+    libraryContext: LibraryContext): Future[(Lang, Option[Lang])] = {
 
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
@@ -49,13 +49,12 @@ class LanguageCommanderImpl @Inject() (
     // TODO: use user profile info as a bias
 
     val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
-    val context = libraryContext getOrElse LibraryContext.None
 
     if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangFreqs2(dispatchPlan, userId, context)
+      resultFutures ++= searchClient.distLangFreqs2(dispatchPlan, userId, libraryContext)
     }
     if (localShards.nonEmpty) {
-      resultFutures += distLangFreqs2(localShards, userId, context)
+      resultFutures += distLangFreqs2(localShards, userId, libraryContext)
     }
 
     val acceptLangs = parseAcceptLangs(acceptLangCodes)
@@ -75,21 +74,30 @@ class LanguageCommanderImpl @Inject() (
 
       val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 0.6d))
       strongCandidates -= firstLang
-      val secondLang = if (strongCandidates.nonEmpty) {
+      val secondLangOpt = if (strongCandidates.nonEmpty) {
         Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 1.0d)))
       } else {
         None
       }
 
       // we may switch first/second langs
-      if (acceptLangs.contains(firstLang)) {
-        (firstLang, secondLang)
-      } else if (acceptLangs.contains(secondLang.get)) {
-        (secondLang.get, Some(firstLang))
-      } else if (profLangs.contains(firstLang)) {
-        (firstLang, secondLang)
-      } else {
-        (secondLang.get, Some(firstLang))
+      secondLangOpt match {
+        case Some(secondLang) =>
+          if (firstLang == secondLang) {
+            (firstLang, None)
+          } else if (acceptLangs.contains(firstLang)) {
+            (firstLang, secondLangOpt)
+          } else if (acceptLangs.contains(secondLang)) {
+            (secondLang, Some(firstLang))
+          } else if (profLangs.contains(firstLang)) {
+            (firstLang, secondLangOpt)
+          } else if (profLangs.contains(secondLang)) {
+            (secondLang, Some(firstLang))
+          } else {
+            (firstLang, secondLangOpt)
+          }
+        case None =>
+          (firstLang, None)
       }
     }
   }

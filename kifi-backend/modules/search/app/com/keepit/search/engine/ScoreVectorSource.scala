@@ -15,7 +15,6 @@ import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.{ MatchAllDocsQuery, Query, Weight, Scorer }
 import org.apache.lucene.util.Bits.MatchAllBits
-import org.apache.lucene.util.PriorityQueue
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -177,65 +176,6 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
       }
     }
   }
-}
-
-final class TaggedScorer(tag: Byte, scorer: Scorer) {
-  def doc = scorer.docID()
-  def next = scorer.nextDoc()
-  def advance(docId: Int) = scorer.advance(docId)
-  def taggedScore(boost: Float) = DataBuffer.taggedFloatBits(tag, scorer.score * boost)
-}
-
-final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer](coreSize) {
-  override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
-
-  private val dependentScores: ArrayBuffer[TaggedScorer] = ArrayBuffer()
-
-  def addDependentScorer(scorer: TaggedScorer): Unit = { dependentScores += scorer }
-
-  def getTaggedScores(taggedScores: Array[Int], boost: Float = 1.0f): Int = {
-    var scorer = top()
-    val docId = scorer.doc
-    var size: Int = 0
-    while (scorer.doc == docId) {
-      taggedScores(size) = scorer.taggedScore(boost)
-      size += 1
-      scorer.next
-      scorer = updateTop()
-    }
-
-    if (size > 0) {
-      var i = 0
-      val len = dependentScores.size
-      while (i < len) {
-        val scorer = dependentScores(i)
-        if (scorer.doc < docId) {
-          if (scorer.advance(docId) == docId) {
-            taggedScores(size) = scorer.taggedScore(1.0f)
-            size += 1
-          }
-        } else if (scorer.doc == docId) {
-          taggedScores(size) = scorer.taggedScore(1.0f)
-          size += 1
-        }
-        i += 1
-      }
-    }
-
-    size
-  }
-
-  def skipCurrentDoc(): Int = {
-    var scorer = top()
-    val docId = scorer.doc
-    while (scorer.doc <= docId) {
-      scorer.next
-      scorer = updateTop()
-    }
-    scorer.doc
-  }
-
-  def createScoreArray: Array[Int] = new Array[Int](size() + dependentScores.size)
 }
 
 //
