@@ -160,7 +160,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]] = {
-    call(ABook.internal.internKifiContacts(userId), Json.toJson(contacts)).map { r =>
+    if (contacts.isEmpty) Future.successful(Seq.empty) else call(ABook.internal.internKifiContacts(userId), Json.toJson(contacts)).map { r =>
       r.json.as[Seq[RichContact]]
     }
   }
