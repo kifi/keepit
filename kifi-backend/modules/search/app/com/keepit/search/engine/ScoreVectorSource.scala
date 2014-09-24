@@ -177,6 +177,17 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
       }
     }
   }
+
+  def listLibraries(debug: DebugOption): Unit = {
+    debug.debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
+    debug.debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
+    debug.debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
+    debug.debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
+    debug.debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
+    debug.debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
+    debug.debugLog(s"""trustedLibKeepCount: ${trustedLibraryKeepCount}""")
+    debug.debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
+  }
 }
 
 final class TaggedScorer(tag: Byte, scorer: Scorer) {

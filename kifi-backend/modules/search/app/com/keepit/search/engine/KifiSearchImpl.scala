@@ -44,28 +44,28 @@ class KifiSearchImpl(
   def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
-    log.info(s"NE: engine created (${timeLogs.elapsed()})")
+    debugLog("engine created")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val numRecs1 = engine.execute(keepScoreSource)
-    log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
+    debugLog(s"UriFromKeepsScoreVectorSource executed recs=$numRecs1")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     val numRec2 = engine.execute(articleScoreSource)
-    log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
+    debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
 
     val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
     timeLogs.clickBoost()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
-      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
+      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
     }
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
-    log.info(s"NE: KifiResultCollector created (${timeLogs.elapsed()})")
+    debugLog("KifiResultCollector created")
     engine.join(collector)
-    log.info(s"NE: KifiResultCollector joined (${timeLogs.elapsed()})")
+    debugLog("engine joined")
 
     collector.getResults()
   }
@@ -141,7 +141,7 @@ class KifiSearchImpl(
     timeLogs.done()
     timing()
 
-    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
+    debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
