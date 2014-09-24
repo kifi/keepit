@@ -24,7 +24,7 @@ angular.module('kifi')
         scope.$watch(function () {
           return libraryService.isAllowed();
         }, function (newVal) {
-          scope.librariesEnabled = newVal || false;
+          scope.librariesEnabled = newVal;
           if (scope.librariesEnabled) {
             libraryService.fetchLibrarySummaries().then(function () {
               var libraries = libraryService.librarySummaries;
