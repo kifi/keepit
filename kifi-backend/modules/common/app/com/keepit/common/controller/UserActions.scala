@@ -16,28 +16,18 @@ import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
 
-class NonUserRequest[T](request: Request[T], identityF: => Option[Identity]) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = identityF
+case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
+  def identityOpt: Option[Identity] = identityF.apply
 }
 
-object NonUserRequest {
-  private def noneIdentityF() = None
-  def apply[T](request: Request[T], identityF: => Option[Identity] = noneIdentityF) = new NonUserRequest[T](request, identityF)
-}
-
-class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
+case class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
   implicit val req = request
 
-  import UserRequest.AT_MOST
+  private val AT_MOST = 5 seconds
   lazy val user: User = Await.result(helper.getUserOpt(userId).map(_.get), AT_MOST)
   lazy val experiments: Set[ExperimentType] = Await.result(helper.getUserExperiments(userId), AT_MOST)
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
   lazy val identityOpt: Option[Identity] = Await.result(helper.getSecureSocialIdentityOpt(userId), AT_MOST)
-}
-
-object UserRequest {
-  val AT_MOST = 5 seconds
-  def apply[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], userActionsHelper: UserActionsHelper) = new UserRequest(request, userId, adminUserId, userActionsHelper)
 }
 
 trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>

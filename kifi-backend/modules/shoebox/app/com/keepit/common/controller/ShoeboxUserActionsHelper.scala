@@ -34,7 +34,7 @@ class ShoeboxUserActionsHelper @Inject() (
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with ShoeboxSecureSocialHelper with Logging {
 
-  override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, getSecureSocialUserFromRequest)
+  override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, () => getSecureSocialUserFromRequest)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
