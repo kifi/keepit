@@ -213,7 +213,7 @@ class ABookCommander @Inject() (
     json
   }
 
-  def internKifiContacts(userId: Id[User], contacts: Seq[BasicContact]): Seq[EContact] = {
+  def internKifiContacts(userId: Id[User], contacts: BasicContact*): Seq[EContact] = {
     val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
     contacts.map(contactInterner.internContact(userId, kifiAbook.id.get, _))
   }

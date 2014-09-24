@@ -237,7 +237,7 @@ class ABookController @Inject() (
     val contact = request.body.as[BasicContact]
     log.info(s"[internKifiContact] userId=$userId contact=$contact")
 
-    val Seq(eContact) = abookCommander.internKifiContacts(userId, Seq(contact))
+    val Seq(eContact) = abookCommander.internKifiContacts(userId, contact)
     val richContact = EContact.toRichContact(eContact)
     Ok(Json.toJson(richContact))
   }
@@ -246,7 +246,7 @@ class ABookController @Inject() (
     val contacts = request.body.as[Seq[BasicContact]]
     log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
 
-    val eContacts = abookCommander.internKifiContacts(userId, contacts)
+    val eContacts = abookCommander.internKifiContacts(userId, contacts: _*)
     val richContacts = eContacts.map(EContact.toRichContact)
     Ok(Json.toJson(richContacts))
   }

@@ -100,17 +100,17 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
         // INTERN KIFI CONTACTS
 
         val e1 = BasicContact.fromString("foobar@42go.com").get
-        val e1Res = commander.internKifiContact(u42, e1)
+        val e1Res = commander.internKifiContacts(u42, e1)
         e1Res.email.address === "foobar@42go.com"
         e1Res.name must beNone
 
         val e2 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
-        val e2Res = commander.internKifiContact(u42, e2)
+        val e2Res = commander.internKifiContacts(u42, e2)
         e2Res.email.address === "doug@kifi.com"
         e2Res.name must beSome("Douglas Adams")
 
         val e3 = BasicContact.fromString("Marvin Adams <marvin@kifi.com>").get.copy(name = Some("Smada Nivram"))
-        val e3Res = commander.internKifiContact(u42, e3)
+        val e3Res = commander.internKifiContacts(u42, e3)
         e3Res.email.address === "marvin@kifi.com"
         e3Res.name must beSome("Smada Nivram")
       }
@@ -149,7 +149,7 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
         val (econRepo) = inject[EContactRepo] // setup()
 
         val e1 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
-        val e1Res = commander.internKifiContact(u42, e1)
+        val e1Res = commander.internKifiContacts(u42, e1)
 
         val result1 = commander.hideEmailFromUser(u42, e1Res.email)
         result1 === true
