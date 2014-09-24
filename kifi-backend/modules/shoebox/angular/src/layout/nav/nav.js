@@ -38,6 +38,33 @@ angular.module('kifi')
           }
         });
 
+        // TODO(yiping): figure out whether this watch should replace the
+        // watch above.
+        scope.$watch(function () {
+          return libraryService.librarySummaries.length;
+        }, function () {
+          if (scope.librariesEnabled) {
+            libraryService.fetchLibrarySummaries().then(function () {
+              var libraries = libraryService.librarySummaries;
+              scope.mainLib = _.find(libraries, function (lib) {
+                  return lib.kind === 'system_main';
+              });
+              scope.secretLib = _.find(libraries, function (lib) {
+                  return lib.kind === 'system_secret';
+              });
+              scope.userLibs = _.filter(libraries, function (lib) {
+                return lib.kind === 'user_created';
+              });
+              scope.invitedLibs = libraryService.invitedSummaries;
+
+              // TODO (aaron): get backend to provide 'numFollowers' field
+              for (var i=0; i<scope.userLibs.length; i++) {
+                scope.userLibs[i].numFollowers = 10;
+              }
+            });
+          }
+        });
+
         scope.addLibrary = function () {
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html'
