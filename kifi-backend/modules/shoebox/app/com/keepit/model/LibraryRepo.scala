@@ -21,7 +21,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
-  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -117,13 +116,6 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
-  }
-
-  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Int = {
-    val newCnt = sql"""SELECT COUNT(id) FROM library_membership WHERE library_id = ${libraryId} and state='active'""".as[Int].first
-    sqlu"UPDATE library SET member_count = ${newCnt} WHERE id = ${libraryId} AND state='active'".execute()
-    deleteCache(get(libraryId))
-    newCnt
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

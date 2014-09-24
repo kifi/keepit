@@ -38,11 +38,6 @@ angular.module('kifi')
                 return lib.kind === 'user_created';
               });
               scope.invitedLibs = libraryService.invitedSummaries;
-
-              // TODO (aaron): get backend to provide 'numFollowers' field
-              for (var i=0; i<scope.userLibs.length; i++) {
-                scope.userLibs[i].numFollowers = 10;
-              }
             });
           }
         });
