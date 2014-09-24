@@ -34,6 +34,7 @@ var parallelize = require('concurrent-transform');
 var through = require('through');
 var order = require('gulp-order');
 var merge = require('merge');
+var svgmin = require('gulp-svgmin');
 
 /********************************************************
   Globals
@@ -128,6 +129,7 @@ var prodFiles = function (files) {
  ********************************************************/
 
 var stylesCache = 'styles';
+var svgCache = 'svg';
 var jsCache = 'js';
 var htmlCache = 'html';
 var jsHintSrcCache = 'jshint-src';
@@ -263,7 +265,28 @@ gulp.task('sprite-classes', function () {
   return es.merge(img, css);
 });
 
-gulp.task('sprite', ['sprite-imports', 'sprite-classes']);
+gulp.task('sprite', ['sprite-imports', 'sprite-classes', 'svg-sprite']);
+
+gulp.task('svg-sprite', function() {
+  var mapToCss = map(function(code, filename) {
+    var split = filename.split('/');
+    var filename = split[split.length - 1];
+    var raw = filename.substr(0, filename.lastIndexOf('.'));
+    var image = code.toString().replace(/#/g, '%23').replace('<desc>Created with Avocode</desc>','');
+    var output = '.svg-' + raw + '{ background-image: url(\'data:image/svg+xml,' + image + '\'); background-repeat: no-repeat; }';
+
+    return output;
+  });
+  return gulp.src('img/svg/*.svg')
+      .pipe(cache(svgCache))
+      .pipe(svgmin())
+      .pipe(mapToCss)
+      .pipe(remember(svgCache))
+      .pipe(order())
+      .pipe(concat('svg.css'))
+      .pipe(cssmin())
+      .pipe(gulp.dest('./dist'));
+});
 
 gulp.task('styles', function () {
   return gulp.src(stylFiles, {base: './'})
