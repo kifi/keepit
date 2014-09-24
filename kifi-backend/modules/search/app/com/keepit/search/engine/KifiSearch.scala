@@ -44,9 +44,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   }
 
   def timing(): Unit = {
-    SafeFuture {
-      timeLogs.send()
-      if ((debugFlags & DebugOption.Timing.flag) != 0) log.info(timeLogs.toString)
-    }
+    SafeFuture { timeLogs.send() }
+    debugLog(timeLogs.toString)
   }
 }

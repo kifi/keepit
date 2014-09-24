@@ -43,25 +43,25 @@ class LibrarySearch(
 
   private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
     val engine = engineBuilder.build()
-    log.info(s"NE: engine created (${timeLogs.elapsed()})")
+    debugLog("engine created")
 
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val numRecs1 = engine.execute(keepScoreSource)
-    log.info(s"NE: LibraryFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
+    debugLog(s"LibraryFromKeepsScoreVectorSource executed recs=$numRecs1")
 
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val numRec2 = engine.execute(libraryScoreSource)
-    log.info(s"NE: LibraryScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
+    debugLog(s"LibraryScoreVectorSource executed recs=${numRec2 - numRecs1}")
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
-      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
+      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
     }
 
     val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    log.info(s"NE: LibraryResultCollector created (${timeLogs.elapsed()})")
+    debugLog(s"LibraryResultCollector created")
     engine.join(collector)
-    log.info(s"NE: LibraryResultCollector joined (${timeLogs.elapsed()})")
+    debug(s"enginer joined")
 
     collector.getResults()
   }
@@ -131,7 +131,6 @@ object LibrarySearch extends Logging {
     }
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
-    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     val libraryShardHits = hits.toSortedList.map { h =>
       LibraryShardHit(Id(h.id), h.score, h.visibility, if (h.secondaryId > 0) Some(Id(h.secondaryId)) else None)
