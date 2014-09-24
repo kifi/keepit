@@ -163,8 +163,7 @@ class FixedResultSearchCommander extends SearchCommander {
       Set(100, 220), // idFilter
       false, // mayHaveMoreHits
       true, //show
-      Some(Id[SearchConfigExperiment](10)), //searchExperimentId
-      Seq.empty[JsObject] // experts
+      Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     ))
   )
 

@@ -53,8 +53,7 @@ class MobileSearchController @Inject() (
       decoratedResult.show,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
+      Nil).json
   }
 }
 

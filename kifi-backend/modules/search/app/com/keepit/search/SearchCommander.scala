@@ -146,10 +146,7 @@ class SearchCommanderImpl @Inject() (
 
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val resultDecorator = {
-      val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
-      new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
-    }
+    val resultDecorator = new ResultDecorator(userId, query, firstLang, searchExperimentId, shoeboxClient, monitoredAwait)
 
     // do the local part
     if (localShards.nonEmpty) {
