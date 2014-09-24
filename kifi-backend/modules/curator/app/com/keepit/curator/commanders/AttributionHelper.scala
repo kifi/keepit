@@ -23,8 +23,6 @@ class SeedAttributionHelper @Inject() (
     search: SearchServiceClient,
     libMemRepo: CuratorLibraryMembershipInfoRepo) {
 
-  val MIN_KEEP_ATTR_SCORE = 2
-
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
     val keepAttrFut = getKeepAttribution(seeds)
