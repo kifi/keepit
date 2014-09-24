@@ -205,7 +205,7 @@ class MessagingCommander @Inject() (
   }
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
-    abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
+    if (nonUsers.isEmpty) Future.successful(Seq.empty) else abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
       richContacts.map(richContact => NonUserEmailParticipant(richContact.email))
     }
   }
