@@ -383,6 +383,17 @@ gulp.task('crx-chrome-dev', ['build', 'config-package-chrome-dev'], shell.task([
   'echo $\'<?xml version="1.0" encoding="UTF-8"?>\\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\\n  <app appid="ddepcfcogoamilbllhdmlojoefkjdofi">\\n    <updatecheck codebase="https://www.kifi.com/extensions/chrome/kifi-dev.crx" version="\'$(grep \'"version"\' out/chrome/manifest.json | cut -d\\" -f4)$\'" />\\n  </app>\\n</gupdate>\' > out/kifi-dev.xml'
 ].join(' && ')]));
 
+gulp.task('config-package-firefox-dev', ['config'], function () {
+  return gulp.src(outDir + '/firefox/package.json', {base: './'})
+    .pipe(jeditor(function (json) {
+      json.id = json.id.replace('@', '-dev@');
+      json.name += '-dev';
+      json.fullName += ' Dev';
+      return json;
+    }))
+    .pipe(gulp.dest('.'));
+});
+
 gulp.task('xpi-firefox', ['build'], shell.task([
   // TODO: verify cfx version before using it
   // cfxver=$(cfx --version)
@@ -393,8 +404,24 @@ gulp.task('xpi-firefox', ['build'], shell.task([
   // fi
   'cd ' + outDir + ' && \
   cfx xpi --pkgdir=firefox \
-    --update-link=https://www.kifi.com/assets/plugins/kifi.xpi \
-    --update-url=https://www.kifi.com/assets/plugins/kifi.update.rdf && \
+    --update-link=https://www.kifi.com/extensions/firefox/kifi.xpi \
+    --update-url=https://www.kifi.com/extensions/firefox/kifi.update.rdf && \
+  cd - > /dev/null'
+]));
+
+gulp.task('xpi-firefox-dev', ['build', 'config-package-firefox-dev'], shell.task([
+  // TODO: verify cfx version before using it
+  // cfxver=$(cfx --version)
+  // if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+  //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
+  //   echo "https://addons.mozilla.org/en-US/developers/builder"
+  //   exit 1
+  // fi
+  'cp icons/dev/kifi.??.png out/firefox/data/icons/',
+  'cd ' + outDir + ' && \
+  cfx xpi --pkgdir=firefox \
+    --update-link=https://www.kifi.com/extensions/firefox/kifi-dev.xpi \
+    --update-url=https://www.kifi.com/extensions/firefox/kifi-dev.update.rdf && \
   cd - > /dev/null'
 ]));
 
@@ -423,7 +450,7 @@ gulp.task('package', function () {
 
 gulp.task('package-dev', function () {
   isRelease = true;
-  runSequence('clean', 'crx-chrome-dev');
+  runSequence('clean', ['crx-chrome-dev', 'xpi-firefox-dev']);
 });
 
 gulp.task('default', function () {
