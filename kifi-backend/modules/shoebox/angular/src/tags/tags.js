@@ -46,10 +46,10 @@ angular.module('kifi')
 
         scope.$watch(function () {
           return libraryService.isAllowed();
-        }, function (n) {
-          scope.librariesEnabled = n || false;
+        }, function (newVal) {
+          scope.librariesEnabled = newVal || false;
         });
-        
+
         var preventClearFilter = false;
         var w = angular.element($window);
         var scrollableTagList = element.find('.kf-scrollable-tags');
