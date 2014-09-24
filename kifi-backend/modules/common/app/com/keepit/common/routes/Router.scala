@@ -222,6 +222,7 @@ object Search extends Service {
     def distLangFreqs2() = ServiceRoute(POST, "/internal/search/dist/langFreqs2")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
+    def distLibrarySearch() = ServiceRoute(POST, "/internal/search/dist/librarySearch")
   }
 }
 

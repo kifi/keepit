@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.concurrent.ExecutionContext._
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.controllers.util.SearchControllerUtil.nonUser
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -10,11 +10,11 @@ import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.{ AugmentationCommander, SearchCommander }
+import com.keepit.search.{ LibrarySearchCommander, AugmentationCommander, SearchCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNumber, JsObject, Json }
 import com.keepit.search.graph.library.LibraryIndexer
 
 class WebsiteSearchController @Inject() (
@@ -23,6 +23,7 @@ class WebsiteSearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
+    librarySearchCommander: LibrarySearchCommander,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration) extends WebsiteController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
@@ -92,5 +93,24 @@ class WebsiteSearchController @Inject() (
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
+  }
+
+  def librarySearch(
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    debug: Option[String]) = UserAction.async { request =>
+
+    val acceptLangs = getAcceptLangs(request)
+    val (userId, experiments) = getUserAndExperiments(request)
+
+    val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
+
+    librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).map { libraryShardResult =>
+      val libraryNames = getLibraryNames(libraryIndexer.getSearcher, libraryShardResult.hits.map(_.id))
+      val json = JsObject(libraryShardResult.hits.map { hit => libraryNames(hit.id) -> JsNumber(hit.score) })
+      Ok(Json.toJson(json))
+    }
   }
 }
