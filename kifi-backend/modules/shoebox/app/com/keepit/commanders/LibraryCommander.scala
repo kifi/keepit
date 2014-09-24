@@ -449,9 +449,9 @@ class LibraryCommander @Inject() (
           case Some(mem) =>
             libraryMembershipRepo.save(mem.copy(access = maxAccess, state = LibraryMembershipStates.ACTIVE, createdAt = DateTime.now()))
         }
-        libraryRepo.updateMemberCount(libraryId)
+        val updatedLib = lib.copy(memberCount = libraryRepo.updateMemberCount(libraryId))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        Right(lib)
+        Right(updatedLib)
       }
     }
   }
@@ -610,6 +610,7 @@ case class LibraryInfo(
   url: String,
   ownerId: ExternalId[User],
   numKeeps: Int,
+  numFollowers: Int,
   kind: LibraryKind)
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
@@ -622,6 +623,7 @@ object LibraryInfo {
     (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
@@ -634,6 +636,7 @@ object LibraryInfo {
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
       ownerId = owner.externalId,
       numKeeps = keepCount,
+      numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind
     )
   }

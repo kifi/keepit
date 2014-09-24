@@ -28,25 +28,27 @@ class KifiSearchNonUserImpl(
   def executeTextSearch(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): HitQueue = {
 
     val engine = engineBuilder.build()
-    log.info(s"NE: engine created (${timeLogs.elapsed()})")
+    debugLog("engine created")
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val numRecs1 = engine.execute(keepScoreSource)
-    log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
+    debugLog(s"UriFromKeepsScoreVectorSource executed recs=$numRecs1")
 
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     val numRec2 = engine.execute(articleScoreSource)
-    log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
+    debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
+
+    timeLogs.search()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
-      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
+      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
     }
 
     val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    log.info(s"NE: KifiNonUserResultCollector created (${timeLogs.elapsed()})")
+    debugLog(s"KifiNonUserResultCollector created")
     engine.join(collector)
-    log.info(s"NE: KifiNonUserResultCollector joined (${timeLogs.elapsed()})")
+    debugLog(s"engine joined")
 
     collector.getResults()
   }
@@ -69,7 +71,7 @@ class KifiSearchNonUserImpl(
     timeLogs.done()
     timing()
 
-    log.info(s"NE: total=${total}")
+    debugLog(s"total=${total}")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), 0, 0, total, true)
   }

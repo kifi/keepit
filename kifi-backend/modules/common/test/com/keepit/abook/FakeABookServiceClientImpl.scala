@@ -88,6 +88,10 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 
+  def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]] = {
+    Future.successful(contacts.map(contact => RichContact(contact.email, contact.name, contact.firstName, contact.lastName, userId = None)))
+  }
+
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful {
     typeaheadHitMap.get(userId) match {
       case None => Seq.empty

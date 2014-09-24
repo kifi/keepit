@@ -51,7 +51,7 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
 
   override def toString() = {
     val total = elapsed(_endTime)
-    val detail = timeLine.map(event => s"${event._1}=${event._2}").mkString("[", ", ", "]")
+    val detail = timeLine.map(event => s"${event._1}=${elapsed(event._2)}").mkString("[", ", ", "]")
 
     s"search time summary: total = $total, detail=$detail"
   }

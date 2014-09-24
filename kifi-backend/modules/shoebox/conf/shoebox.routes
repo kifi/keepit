@@ -608,9 +608,6 @@ GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitatio
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
 POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitationController.rejectUser(id: Id[SocialUserInfo])
 
-GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.AdminClusterController.zooKeeperInspector
 

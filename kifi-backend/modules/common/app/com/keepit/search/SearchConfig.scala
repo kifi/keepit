@@ -13,8 +13,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.usersegment.UserSegment
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import scala.Some
 import play.api.libs.json.JsObject
 
 object SearchConfig {
@@ -40,7 +38,6 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "6.0",
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
-      "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
       "proximityThreshold" -> "0.0",
@@ -72,7 +69,6 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "showExperts" -> "suggest experts when search returns hits",
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",

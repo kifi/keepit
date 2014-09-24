@@ -146,10 +146,7 @@ class SearchCommanderImpl @Inject() (
 
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val resultDecorator = {
-      val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
-      new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
-    }
+    val resultDecorator = new ResultDecorator(userId, query, firstLang, searchExperimentId, shoeboxClient, monitoredAwait)
 
     // do the local part
     if (localShards.nonEmpty) {
@@ -321,8 +318,6 @@ class SearchCommanderImpl @Inject() (
     }
 
     Future.sequence(resultFutures).map { results =>
-      log.info("NE: merging result")
-
       val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
@@ -333,8 +328,6 @@ class SearchCommanderImpl @Inject() (
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
       val plainResult = KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
-
-      log.info("NE: plain result created")
 
       SafeFuture {
         // stash timing information
