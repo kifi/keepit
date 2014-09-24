@@ -65,6 +65,7 @@ var keepBox = keepBox || (function () {
     }))
     .on('click mousedown', '.kifi-keep-box-x', function (e) {
       if (e.which === 1 && $box) {
+        e.preventDefault();
         hide(e, 'x');
       }
     })
