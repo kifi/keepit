@@ -64,6 +64,7 @@
     "protractor": "~1.0.0",
     "run-sequence": "~0.3.6",
     "through": "^2.3.4",
-    "vinyl-map": "~1.0.1"
+    "vinyl-map": "~1.0.1",
+    "gulp-svgmin": "0.4.6"
   }
 }
