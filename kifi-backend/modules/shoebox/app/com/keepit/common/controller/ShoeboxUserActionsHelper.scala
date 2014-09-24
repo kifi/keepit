@@ -24,10 +24,6 @@ trait ShoeboxSecureSocialHelper {
   }
 }
 
-case class ShoeboxNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T] with ShoeboxSecureSocialHelper {
-  val identityOpt = getSecureSocialUserFromRequest(request)
-}
-
 @Singleton
 class ShoeboxUserActionsHelper @Inject() (
     db: Database,
@@ -36,9 +32,9 @@ class ShoeboxUserActionsHelper @Inject() (
     suiRepo: SocialUserInfoRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,
-    val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with Logging {
+    val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with ShoeboxSecureSocialHelper with Logging {
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = ShoeboxNonUserRequest(request)
+  override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, getSecureSocialUserFromRequest)
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful {
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
@@ -56,7 +52,5 @@ class ShoeboxUserActionsHelper @Inject() (
     db.readOnlyMaster { implicit s => Some(userRepo.get(extId)) }
   }
 
-  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]] = Future.successful {
-    db.readOnlyMaster { implicit s => suiRepo.getByUser(userId) }
-  }
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
 }

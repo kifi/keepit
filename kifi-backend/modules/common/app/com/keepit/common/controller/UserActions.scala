@@ -5,7 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
-import com.keepit.model.{ SocialUserInfo, ExperimentType, KifiInstallation, User }
+import com.keepit.model.{ ExperimentType, KifiInstallation, User }
 import play.api.Play
 import play.api.mvc._
 
@@ -15,41 +15,38 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 sealed trait MaybeUserRequest[T] extends Request[T]
-trait NonUserRequest[T] extends MaybeUserRequest[T]
-trait UserRequest[T] extends MaybeUserRequest[T] {
-  def request: Request[T]
-  def userId: Id[User]
-  def adminUserId: Option[Id[User]]
-  def user: User
-  def experiments: Set[ExperimentType]
-  def kifiInstallationId: Option[ExternalId[KifiInstallation]]
+
+class NonUserRequest[T](request: Request[T], identityF: => Option[Identity]) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
+  def identityOpt: Option[Identity] = identityF
+}
+
+object NonUserRequest {
+  private def noneIdentityF() = None
+  def apply[T](request: Request[T], identityF: => Option[Identity] = noneIdentityF) = new NonUserRequest[T](request, identityF)
+}
+
+class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
+  implicit val req = request
+
+  import UserRequest.AT_MOST
+  lazy val user: User = Await.result(helper.getUserOpt(userId).map(_.get), AT_MOST)
+  lazy val experiments: Set[ExperimentType] = Await.result(helper.getUserExperiments(userId), AT_MOST)
+  lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
+  lazy val identityOpt: Option[Identity] = Await.result(helper.getSecureSocialIdentityOpt(userId), AT_MOST)
+}
+
+object UserRequest {
+  val AT_MOST = 5 seconds
+  def apply[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], userActionsHelper: UserActionsHelper) = new UserRequest(request, userId, adminUserId, userActionsHelper)
 }
 
 trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
   def identityOpt: Option[Identity]
 }
 
-case class SimpleNonUserRequest[T](request: Request[T]) extends WrappedRequest(request) with NonUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = None
-}
-
-case class SimpleUserRequest[T](
-    request: Request[T],
-    userId: Id[User],
-    adminUserId: Option[Id[User]],
-    userF: () => Future[User],
-    experimentsF: () => Future[Set[ExperimentType]],
-    identityOptF: () => Future[Option[Identity]],
-    kifiInstallationIdF: () => Option[ExternalId[KifiInstallation]]) extends WrappedRequest(request) with UserRequest[T] with SecureSocialIdentityAccess[T] {
-  lazy val user = Await.result(userF.apply, 5 seconds)
-  lazy val experiments = Await.result(experimentsF.apply, 5 seconds)
-  lazy val identityOpt = Await.result(identityOptF.apply, 5 seconds)
-  lazy val kifiInstallationId = kifiInstallationIdF.apply
-}
-
 trait UserActionsRequirements {
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A]
+  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request)
 
   def kifiInstallationCookie: KifiInstallationCookie
 
@@ -63,7 +60,8 @@ trait UserActionsRequirements {
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]]
 
-  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]]
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]]
+
 }
 
 trait UserActionsHelper extends UserActionsRequirements {
@@ -87,15 +85,7 @@ trait UserActions extends Logging { self: Controller =>
   protected def userActionsHelper: UserActionsHelper
 
   private def buildUserRequest[A](userId: Id[User], adminUserId: Option[Id[User]] = None)(implicit request: Request[A]): UserRequest[A] =
-    SimpleUserRequest(
-      request,
-      userId,
-      adminUserId,
-      () => userActionsHelper.getUserOpt(userId).map(_.get),
-      () => userActionsHelper.getUserExperiments(userId),
-      () => userActionsHelper.getSocialUserInfos(userId).map(_.headOption.flatMap(_.credentials)),
-      () => userActionsHelper.getKifiInstallationIdOpt
-    )
+    UserRequest(request, userId, adminUserId, userActionsHelper)
 
   private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
     request.headers.get("Origin").filter { uri =>

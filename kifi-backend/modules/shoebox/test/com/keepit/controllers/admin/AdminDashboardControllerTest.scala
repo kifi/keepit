@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.common.controller.{ UserActionsHelper, FakeUserActionsHelper, SimpleUserRequest, FakeUserActionsModule }
+import com.keepit.common.controller._
 import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
@@ -76,7 +76,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
         userActionsHelper.setUser(u1, Set(ADMIN))
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
-        val authRequest = SimpleUserRequest(fakeRequest, u1.id.get, None, () => Future.successful(u1), () => Future.successful(Set(ADMIN)), () => Future.successful(None), () => None)
+        val authRequest = UserRequest(fakeRequest, u1.id.get, u1.id, userActionsHelper)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

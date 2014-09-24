@@ -21,8 +21,6 @@ class RemoteUserActionsHelper @Inject() (
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
 
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = SimpleNonUserRequest(request)
-
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments(userId).map(_.contains(ExperimentType.ADMIN))
 
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = shoebox.getUser(userId)
@@ -31,5 +29,6 @@ class RemoteUserActionsHelper @Inject() (
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
-  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]] = shoebox.getSocialUserInfosByUserId(userId)
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = shoebox.getSocialUserInfosByUserId(userId).map(_.headOption.flatMap(_.credentials))
+
 }
