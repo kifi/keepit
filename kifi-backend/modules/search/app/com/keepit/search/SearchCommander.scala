@@ -13,7 +13,6 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.{ Sharding, Shard, ActiveShards }
@@ -71,7 +70,7 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
@@ -131,7 +130,7 @@ class SearchCommanderImpl @Inject() (
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
-    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, None)
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, LibraryContext.None)
     val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
     timing.presearch
@@ -288,17 +287,17 @@ class SearchCommanderImpl @Inject() (
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
-    val library = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
+    val libraryContext = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
 
-    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, Some(library))
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
     val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
-    if (library == LibraryContext.Invalid) {
+    if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
       return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, KifiShardResult.empty, Set(), None))
     }
 
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     timing.presearch
@@ -307,7 +306,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug).foreach { f =>
+      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new KifiShardResult(json))
       }
     }
@@ -316,7 +315,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
         Try {
-          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, library, maxHits, context, predefinedConfig, debug)
+          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
         }
       ).future
     }
@@ -380,7 +379,7 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
@@ -391,7 +390,7 @@ class SearchCommanderImpl @Inject() (
     val debugOption = new DebugOption with Logging
     if (debug.isDefined) debugOption.debug(debug.get)
 
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
