@@ -13,6 +13,7 @@ import com.keepit.model._
 import play.api.libs.json._
 import play.api.mvc.Result
 
+import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
 class ExtLibraryController @Inject() (
