@@ -1,10 +1,10 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
-import com.keepit.search.{AugmentableItem, AugmentationInfo, ItemAugmentationRequest, RestrictedKeepInfo, SearchServiceClient}
+import com.keepit.search.{ AugmentableItem, AugmentationInfo, ItemAugmentationRequest, RestrictedKeepInfo, SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -78,7 +78,8 @@ class SeedAttributionHelper @Inject() (
               case (item, info) =>
                 val idx = uriId2Idx(item.uri)
                 val attr = augmentedInfo2UserAttr(info)
-                ret(idx) = Some(attr)
+                val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
+                if (n > 0) ret(idx) = Some(attr)
             }
             ret
           }
