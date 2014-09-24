@@ -38,6 +38,8 @@ class KifiSearchNonUserImpl(
     val numRec2 = engine.execute(articleScoreSource)
     debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
 
+    timeLogs.search()
+
     if (debugFlags != 0) {
       if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
       if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
