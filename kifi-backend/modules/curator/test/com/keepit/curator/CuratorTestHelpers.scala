@@ -136,7 +136,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeUserAttribution(userId: Id[User]) = {
     UserAttribution(
       friends = Seq.empty,
-      others = 5
+      others = 5,
+      None
     )
   }
 

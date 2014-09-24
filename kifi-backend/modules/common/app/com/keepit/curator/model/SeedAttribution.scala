@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 
 import com.kifi.macros.json
 
-@json case class UserAttribution(friends: Seq[Id[User]], others: Int, friendsLib: Option[Map[Id[User], Id[Library]]] = None)
+@json case class UserAttribution(friends: Seq[Id[User]], others: Int, friendsLib: Option[Map[Id[User], Id[Library]]])
 @json case class KeepAttribution(keeps: Seq[Id[Keep]])
 @json case class TopicAttribution(topicName: String)
 @json case class LibraryAttribution(libraries: Seq[Id[Library]])
