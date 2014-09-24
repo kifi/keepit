@@ -388,7 +388,7 @@ gulp.task('config-package-firefox-dev', ['config'], function () {
     .pipe(jeditor(function (json) {
       json.id = json.id.replace('@', '-dev@');
       json.name += '-dev';
-      json.fullName += ' Dev';
+      json.title += ' Dev';
       return json;
     }))
     .pipe(gulp.dest('.'));
@@ -397,7 +397,7 @@ gulp.task('config-package-firefox-dev', ['config'], function () {
 gulp.task('xpi-firefox', ['build'], shell.task([
   // TODO: verify cfx version before using it
   // cfxver=$(cfx --version)
-  // if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+  // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
   //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
   //   echo "https://addons.mozilla.org/en-US/developers/builder"
   //   exit 1
@@ -412,7 +412,7 @@ gulp.task('xpi-firefox', ['build'], shell.task([
 gulp.task('xpi-firefox-dev', ['build', 'config-package-firefox-dev'], shell.task([
   // TODO: verify cfx version before using it
   // cfxver=$(cfx --version)
-  // if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+  // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
   //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
   //   echo "https://addons.mozilla.org/en-US/developers/builder"
   //   exit 1
