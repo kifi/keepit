@@ -81,8 +81,7 @@ trait SearchControllerUtil {
       decoratedResult.show,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
+      Nil).json
   }
 
   def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
