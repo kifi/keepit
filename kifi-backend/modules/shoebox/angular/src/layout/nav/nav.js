@@ -41,7 +41,7 @@ angular.module('kifi')
 
               // TODO (aaron): get backend to provide 'numFollowers' field
               for (var i=0; i<scope.userLibs.length; i++) {
-                scope.userLibs[i]['numFollowers'] = 10;
+                scope.userLibs[i].numFollowers = 10;
               }
             });
           }
