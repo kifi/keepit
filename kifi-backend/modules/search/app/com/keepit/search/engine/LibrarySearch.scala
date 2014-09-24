@@ -35,8 +35,8 @@ class LibrarySearch(
     //todo(Léo): DRY with KifiSearch
     SafeFuture {
       timeLogs.send()
-      if ((debugFlags & DebugOption.Timing.flag) != 0) log.info(timeLogs.toString)
     }
+    debugLog(timeLogs.toString)
 
     libraryShardResult
   }
@@ -52,6 +52,8 @@ class LibrarySearch(
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val numRec2 = engine.execute(libraryScoreSource)
     debugLog(s"LibraryScoreVectorSource executed recs=${numRec2 - numRecs1}")
+
+    timeLogs.search()
 
     if (debugFlags != 0) {
       if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)

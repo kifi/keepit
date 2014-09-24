@@ -54,13 +54,15 @@ class KifiSearchImpl(
     val numRec2 = engine.execute(articleScoreSource)
     debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
 
-    val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-    timeLogs.clickBoost()
+    timeLogs.search()
 
     if (debugFlags != 0) {
       if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
       if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
     }
+
+    val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
+    timeLogs.clickBoost()
 
     val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
     debugLog("KifiResultCollector created")
