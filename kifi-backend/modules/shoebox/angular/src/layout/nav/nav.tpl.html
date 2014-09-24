@@ -24,7 +24,7 @@
   <ul class="kf-nav-lib-system">
     <li class="kf-nav-lib-item" ng-class="{ active: isActive('mainLib.url') }">
       <a class="kf-nav-link" ng-href="{{mainLib.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-card"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{mainLib.name}}</div>
           <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">{{mainLib.numKeeps}} keeps </div>
@@ -33,7 +33,7 @@
     </li>
     <li class="kf-nav-lib-item" ng-class="{ active: isActive('secretLib.url') }">
       <a class="kf-nav-link" ng-href="{{secretLib.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-card"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{secretLib.name}}</div>
           <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">{{secretLib.numKeeps}} keeps </div>
@@ -44,7 +44,7 @@
 
   <div class="kf-nav-lib-item">
     <a class="kf-nav-link">
-      <span class="sprite sprite-library-card-temp"></span>
+      <span class="library-card svg-new-library-card"></span>
       <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
     </a>
   </div>
@@ -57,7 +57,9 @@
   <ul class="kf-nav-lib-users">
     <li ng-repeat="library in userLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
       <a class="kf-nav-link" ng-href="{{library.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-red-card" ng-if="library.visibility=='secret'"></div>
+        <div class="library-card svg-library-green-card" ng-if="library.visibility=='discoverable'"></div>
+        <div class="library-card svg-library-card" ng-if="library.visibility=='published'"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{library.name}}</div>
           <div class="kf-nav-lib-text">
@@ -78,7 +80,7 @@
   <ul class="kf-nav-lib-users">
     <li ng-repeat="library in invitedLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
       <a class="kf-nav-link" ng-href="{{library.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-card"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{library.name}}</div>
           <div class="kf-nav-lib-text">

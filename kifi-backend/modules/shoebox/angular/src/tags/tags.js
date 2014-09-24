@@ -74,7 +74,9 @@ angular.module('kifi')
         });
 
         function setTagListHeight() {
-          scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          if (scrollableTagList.offset() === {}) {
+            scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          }
         }
         $timeout(setTagListHeight);
 
@@ -288,7 +290,7 @@ angular.module('kifi')
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
-          scope.refreshScroll();
+          scope.refreshScroll && scope.refreshScroll();
         });
 
         tagService.fetchAll();
