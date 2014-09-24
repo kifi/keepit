@@ -16,17 +16,33 @@ angular.module('kifi')
         };
 
         scope.librariesEnabled = false;
-        scope.libraries = [];
-        scope.invited = [];
+        scope.mainLib = {};
+        scope.secretLib = {};
+        scope.userLibs = [];
+        scope.invitedLibs = [];
 
         scope.$watch(function () {
           return libraryService.isAllowed();
-        }, function (n) {
-          scope.librariesEnabled = n || false;
+        }, function (newVal) {
+          scope.librariesEnabled = newVal;
           if (scope.librariesEnabled) {
             libraryService.fetchLibrarySummaries().then(function () {
-              scope.libraries = libraryService.librarySummaries;
-              scope.invited = libraryService.invitedSummaries;
+              var libraries = libraryService.librarySummaries;
+              scope.mainLib = _.find(libraries, function (lib) {
+                  return lib.kind === 'system_main';
+              });
+              scope.secretLib = _.find(libraries, function (lib) {
+                  return lib.kind === 'system_secret';
+              });
+              scope.userLibs = _.filter(libraries, function (lib) {
+                return lib.kind === 'user_created';
+              });
+              scope.invitedLibs = libraryService.invitedSummaries;
+
+              // TODO (aaron): get backend to provide 'numFollowers' field
+              for (var i=0; i<scope.userLibs.length; i++) {
+                scope.userLibs[i].numFollowers = 10;
+              }
             });
           }
         });
