@@ -461,7 +461,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"url":"/bulbasaur/lib1",
              |"ownerId":"${user2.externalId}",
              |"numKeeps":0,
-             |"numFollowers":0,
+             |"numFollowers":1,
              |"kind":"user_created"
              |}
            """.stripMargin)

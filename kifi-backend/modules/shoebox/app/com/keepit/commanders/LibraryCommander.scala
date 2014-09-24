@@ -449,9 +449,9 @@ class LibraryCommander @Inject() (
           case Some(mem) =>
             libraryMembershipRepo.save(mem.copy(access = maxAccess, state = LibraryMembershipStates.ACTIVE, createdAt = DateTime.now()))
         }
-        libraryRepo.updateMemberCount(libraryId)
+        val updatedLib = lib.copy(memberCount = libraryRepo.updateMemberCount(libraryId))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        Right(lib)
+        Right(updatedLib)
       }
     }
   }
