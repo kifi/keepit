@@ -4,8 +4,6 @@ import com.keepit.model.{ Keep, Library }
 import com.keepit.common.db.{ Id }
 import play.api.libs.json.Json
 
-case class LibraryShardResult(hits: Seq[LibraryShardHit])
-
 case class LibraryShardHit(
   id: Id[Library],
   score: Float,
@@ -14,4 +12,10 @@ case class LibraryShardHit(
 
 object LibraryShardHit {
   implicit val format = Json.format[LibraryShardHit]
+}
+
+case class LibraryShardResult(hits: Seq[LibraryShardHit], show: Boolean)
+
+object LibraryShardResult {
+  implicit val format = Json.format[LibraryShardResult]
 }

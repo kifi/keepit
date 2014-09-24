@@ -18,6 +18,10 @@ object DataBuffer {
   @inline def getTaggedFloatTag(bits: Int): Byte = (bits >>> 24).toByte
   @inline def getTaggedFloatValue(bits: Int): Float = java.lang.Float.intBitsToFloat(bits << 8)
 
+  class FloatTagger(tag: Byte) {
+    private[this] val tagBits: Int = (tag & 0xff) << 24
+    @inline def tagFloat(value: Float): Int = tagBits | (java.lang.Float.floatToRawIntBits(value) >>> 8)
+  }
 }
 
 class DataBuffer(maxPages: Int = 10000) {
