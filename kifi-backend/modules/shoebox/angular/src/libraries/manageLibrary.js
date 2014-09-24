@@ -13,6 +13,7 @@ angular.module('kifi')
         //
         // Internal data.
         //
+        var nameInput = element.find('.manage-lib-name-input');
         var returnAction = null;
         var submitting = false;
 
@@ -152,6 +153,8 @@ angular.module('kifi')
           };
           scope.modalTitle = 'Create a library';
         }
+
+        nameInput.focus();
       }
     };
   }
