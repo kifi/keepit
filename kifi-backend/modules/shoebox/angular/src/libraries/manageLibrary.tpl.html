@@ -6,39 +6,37 @@
     <div class="dialog-body">
       <div class="dialog-text">
 
-        <div class="manage-lib-input-wrapper"><!-- Name -->
-          <span class="manage-lib-input-title">Name<span class="manage-lib-error" ng-if="$error.name">{{$error.name}}</span></span>
+        <div class="manage-lib-input-wrapper">
+          <span class="manage-lib-heading manage-lib-input-title">Name<span class="manage-lib-error" ng-if="$error.name">{{$error.name}}</span></span>
           <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
           <span class="manage-lib-slug">kifi.com/{{username}}/
-            <input ng-change="editSlug()" class="manage-lib-slug-input slug-edited ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'slug-edited': !userHasEditedSlug }" type="text" name="slug" placeholder="new-library" novalidate>
+            <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'slug-edited': userHasEditedSlug }" type="text" name="slug" placeholder="new-library" novalidate>
           </span>
         </div>
 
-        <div class="manage-lib-input-wrapper"><!-- Description -->
-          <div class="manage-lib-input-title">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></div>
-          <input class="manage-lib-input ng-pristine ng-valid" ng-model="library.description" type="text" name="description" placeholder="Best links on the internet, as of 30 seconds ago" novalidate>
+        <div class="manage-lib-input-wrapper">
+          <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></span><!-- for removing space between inline-block --><textarea
+          class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate>
         </div>
 
         <div class="manage-lib-input-wrapper">
-          <div class="manage-lib-input-title">Keep it limited?</div>
-          <div>
-            <div>
-              <label><input type="radio" ng-model="library.visibility" value="secret">Secret</label>
+          <div class="manage-lib-heading">Choose who can view your library</div>
+            <div class="manage-lib-visibility">
+              <label class="manage-lib-visibility-choice"><input type="radio" ng-model="library.visibility" value="published">Published</label>
+              <label class="manage-lib-visibility-choice"><input type="radio" ng-model="library.visibility" value="secret">Secret</label>
+              <label class="manage-lib-visibility-choice"><input type="radio" ng-model="library.visibility" value="discoverable">Discoverable</label>
+              <div class="manage-lib-visibility-description">
+                <span class="manage-lib-visibility-description-title">{{(visibility[library.visibility]).title}}:</span>
+                <div class="manage-lib-visibility-description-content">{{(visibility[library.visibility]).content}}</div>
+              </div>
             </div>
-            <div>
-              <label><input type="radio" ng-model="library.visibility" value="discoverable">Discoverable</label>
-            </div>
-            <div>
-              <label><input type="radio" ng-model="library.visibility" value="published">Published</label>
-            </div>
-          </div>
         </div>
 
         <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
       </div>
 
       <div class="dialog-buttons">
-        <button class="create-button" ng-click="saveLibrary()">Create library</button>
+        <button class="manage-lib-create-button" ng-click="saveLibrary()">Create</button>
       </div>
     </div>
   </div>

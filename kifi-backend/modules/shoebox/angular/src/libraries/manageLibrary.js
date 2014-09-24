@@ -19,11 +19,30 @@ angular.module('kifi')
         // Scope data.
         //
         scope.username = profileService.me.username;
+        scope.userHasEditedSlug = false;
+
+        scope.visibility = {
+          'published': {
+            'title': 'Published Library',
+            'content': 'This library is available for everyone to see. It also generates a synamic public page to share with non-Kifi users.'
+          },
+          'secret': {
+            'title': 'Secret Library',
+            'content': 'This library is visible only to you and people you invite.'
+          },
+          'discoverable': {
+            'title': 'Discoverable Library',
+            'content': 'This library can surface in searches conducted by your Kifi friends.'
+          }
+        };
 
 
         //
         // Internal methods.
         //
+        function generateSlug (name) {
+          return name.toLowerCase().replace(/[^\w\s]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '');
+        }
 
 
         //
@@ -33,19 +52,35 @@ angular.module('kifi')
           kfModalCtrl.close();
         };
 
+        scope.$watch(function () {
+          return scope.library.name;
+        }, function (v) {
+          if (!scope.userHasEditedSlug) {
+            scope.library.slug = generateSlug(v);
+          }
+        });
+
+        scope.editSlug = function () {
+          scope.userHasEditedSlug = scope.library.slug? true : false;
+          scope.library.slug = generateSlug(scope.library.slug);
+        };
+
 
         //
         // On link.
         //
         if (libraryService.libraryState.library) {
+          scope.userHasEditedSlug = true;
           scope.library = _.cloneDeep(libraryService.libraryState.library);
           scope.modalTitle = scope.library.name;
         } else {
           scope.library = {
             'name': '',
-            'visibility': 'discoverable',
             'description': '',
-            'slug': ''
+            'slug': '',
+
+            // By default, the create library form selects the "discoverable" visiblity for a new library.
+            'visibility': 'discoverable'
           };
           scope.modalTitle = 'Create a library';
         }

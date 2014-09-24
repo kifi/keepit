@@ -48,7 +48,7 @@
 
   .dialog-header
     padding: 10px 30px
-    background-color: #333  // $kifi-black
+    background-color: kifiBlack
     font-family: Helvetica, Arial, sans-serif
     font-size: 18px
     font-style: normal
@@ -60,14 +60,16 @@
     margin-bottom: 15px
     margin-top: 25px
 
+  .manage-lib-heading
+    font-size: 15px
+    font-weight: bold
+    color: kifiBlack
+
   .manage-lib-input-title
     display: inline-block
     width: 115px
-    font-size: 15px
-    font-weight: bold
-    color: #333  // $kifi-black
 
-  input.manage-lib-input
+  .manage-lib-input
     display: inline-block
     box-sizing: border-box
     border: 1px solid #c7c7c7
@@ -85,62 +87,49 @@
     margin: 7px 0 0 122px
 
     .manage-lib-slug-input
+      border-bottom: 1px dotted #c7c7c7
+      width: 70px
       placeholder secondaryTextGray
 
       &.slug-edited
-        color: textGreyColor
+        border-bottom: none
+
         &:focus
           color: textBlackColor
 
-// ---------------------------------------------
+  .manage-lib-description-title-input
+    padding-top: 10px
 
-  .dialog-buttons
-    padding: 20px 0 0 0
+  .manage-lib-description-input
+    height: 100px
+    resize: none
 
-  .create-button
-    width: 180px
+  .manage-lib-visibility
+    position: relative
+    min-height: 90px
+    overflow: hidden
 
-  // .manage-lib-input-wrapper
-  //   margin-bottom: 15px
-  //   margin-top: 25px
+  .manage-lib-visibility-description
+    position: absolute
+    top: 0
+    right: 0
+    margin-left: 30px
+    width: 250px
 
-  // .manage-lib-input-title
-  //   color: #333
-  //   font-size: 16px
-  //   font-weight: 200
-  //   letter-spacing: 1px
-  //   font-family: "Georgia", Arial, sans-serif
-  //   font-style: italic
+  .manage-lib-visibility-description-title
+    font-size: 15px
+    color: kifiBlack
 
-  // input.manage-lib-input
-  //   height: 29px
-  //   display: inline-block
-  //   font: inherit
-  //   letter-spacing: 0.5px
-  //   border: 0
-  //   margin: 0
-  //   width: 100%
-  //   color: textBlackColor
-  //   padding: 6px 2px
-  //   background-color: transparent
-  //   box-sizing: border-box
-  //   border-bottom: 1px solid #d2dae3
-  //   transition: all .3s ease
+  .manage-lib-visibility-description-content
+    padding-top: 8px
+    font-size: 15px
+    line-height: 18px
+    color: secondaryTextGray
 
-  //   &:focus
-  //     padding-left: 7px
-  //     border: 1px solid blueColor
-  //     border-radius: 2px
-
-  //   &.manage-lib-partial
-  //     width: 50%
-
-  //   &.manage-lib-calced
-  //     color: textGreyColor
-
-  //     &:focus
-  //       color: textBlackColor
-
+  .manage-lib-create-button
+    background-color: kifiBlack
+    font-size: 16px
+    font-weight: bold
 
   .manage-lib-error
     color: redColor
