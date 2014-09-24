@@ -21,15 +21,11 @@ class SeedAttributionHelper @Inject() (
     keepRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
     search: SearchServiceClient,
-    graph: GraphServiceClient,
     libMemRepo: CuratorLibraryMembershipInfoRepo) {
-
-  val MIN_KEEP_ATTR_SCORE = 2
-  protected val MIN_USER_KEEP_SIZE = 20 // too few keeps means graph random walk may not return relevant results
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
-    val keepAttrFut = keepAttributionFromCortex(seeds)
+    val keepAttrFut = getKeepAttribution(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
     val libraryAttrFut = getLibraryAttribution(seeds)
     for {
@@ -85,44 +81,6 @@ class SeedAttributionHelper @Inject() (
   }
 
   private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
-    require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
-
-    val empty = Seq.fill(seeds.size)(None)
-
-    seeds.headOption.map { _.userId } match {
-      case None => Future.successful(empty)
-      case Some(userId) =>
-        val uriIds = seeds.map { _.uriId }
-        val userUriKeepMap = db.readOnlyReplica { implicit s => keepRepo.getUserURIsAndKeeps(userId) }.toMap
-        val userKeeps = userUriKeepMap.values.toSet
-        if (userKeeps.size < MIN_USER_KEEP_SIZE) {
-          Future.successful(empty)
-        } else {
-          graph.explainFeed(userId, uriIds).map { explains =>
-            explains.map { ex => decodeGraphExplanation(ex, userUriKeepMap, userKeeps) }
-          }
-        }
-    }
-
-  }
-
-  private def decodeGraphExplanation(graphExplain: GraphFeedExplanation, uriKeepMap: Map[Id[NormalizedURI], Id[Keep]], userKeeps: Set[Id[Keep]]): Option[KeepAttribution] = {
-    val finalScores = mutable.Map[Id[Keep], Int]().withDefaultValue(0)
-    graphExplain.keepScores.foreach {
-      case (keep, score) =>
-        if (userKeeps.contains(keep)) finalScores(keep) += score
-    }
-
-    graphExplain.uriScores.foreach {
-      case (uri, score) =>
-        uriKeepMap.get(uri).foreach { keep => finalScores(keep) += score }
-    }
-    val filtered = finalScores.filter { case (_, score) => score >= MIN_KEEP_ATTR_SCORE }.toArray
-    val relevantKeeps = filtered.sortBy(-1 * _._2).take(3).map { _._1 }
-    if (relevantKeeps.size == 0) None else Some(KeepAttribution(relevantKeeps))
-  }
-
-  private def keepAttributionFromCortex(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
     require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
 
     val empty = Seq.fill(seeds.size)(None)
