@@ -41,7 +41,7 @@ object DigestEmail {
 
   // exclude recommendations with an image less than this
   val MIN_IMAGE_WIDTH_PX = 535
-  val MAX_IMAGE_HEIGHT_PX = 1000
+  val MAX_IMAGE_HEIGHT_PX = 900
 
   // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10

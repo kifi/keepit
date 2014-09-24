@@ -133,7 +133,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           // shouldn't be in reco list b/c it's below threshold (8)
           makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com"),
           // shouldn't be in reco list b/c image is too tall
-          makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(1001)), {
+          makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(901)), {
             // shouldn't be in reco list b/c trashed
             val tup = makeCompleteUriRecommendation(9, 42, 10f, "http://www.myspace.com")
             tup.copy(_2 = tup._2.copy(trashed = true))
