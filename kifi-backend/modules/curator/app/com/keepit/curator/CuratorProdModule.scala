@@ -2,6 +2,7 @@ package com.keepit.curator
 
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.cache.{ CuratorCacheModule, EhCacheCacheModule, MemcachedCacheModule }
+import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.curator.queue.{ ProdFeedDigestEmailQueueModule, FeedDigestEmailQueueModule }
@@ -15,6 +16,7 @@ import com.keepit.heimdal.ProdHeimdalServiceClientModule
 
 case class CuratorProdModule()
     extends CuratorModule(
+      userActionsModule = ProdRemoteUserActionsHelperModule(),
       cacheModule = CuratorCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
     ) with CommonProdModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

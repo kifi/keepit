@@ -179,13 +179,14 @@ class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) 
 
       if (score > 0.0f) {
         val visibility = ctx.visibility
-        if ((visibility & Visibility.OWNER) != 0) {
-          myHits.insert(id, score, visibility, ctx.secondaryId)
+        val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
+          myHits
         } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
-          friendsHits.insert(id, score, visibility, ctx.secondaryId)
+          friendsHits
         } else {
-          othersHits.insert(id, score, visibility, ctx.secondaryId)
+          othersHits
         }
+        relevantQueue.insert(id, score, visibility, ctx.secondaryId)
       }
     }
   }

@@ -12,4 +12,3 @@ case class FakeDistributedSearchServiceClientModule() extends DistributedSearchS
 }
 
 class FakeDistributedSearchServiceClient() extends DistributedSearchServiceClientImpl(null, null, null, null)
-

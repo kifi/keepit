@@ -57,6 +57,8 @@ class SearchBackwardCompatibilitySupport @Inject() (
             if (libOpt.isDefined) libIds += libOpt.get
             if (usrOpt.isDefined) sharingUserIds += usrOpt.get
         }
+        // keeperCount is not strictly the number of users. It is the number of sharing friends + the number of discoverable/published libraries owned by others
+        val keeperCount = sharingUserIds.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
         sharingUserIds -= userId
 
         sharingUserIds.foreach { friendId => friendStats.add(friendId.id, hit.score) }
@@ -65,7 +67,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
 
         DetailedSearchHit(
           uriId.id,
-          0,
+          keeperCount,
           basicSearchHit,
           isMyBookmark,
           isFriendsBookmark,

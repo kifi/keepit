@@ -2,6 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.cache.{ EhCacheCacheModule, ElizaCacheModule, MemcachedCacheModule }
+import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ElizaProdStoreModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
@@ -13,6 +14,7 @@ import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
 case class ElizaProdModule() extends ElizaModule(
+  userActionsModule = ProdRemoteUserActionsHelperModule(),
   cacheModule = ElizaCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   urbanAirshipModule = ElizaUrbanAirshipModule(),
   storeModule = ElizaProdStoreModule()

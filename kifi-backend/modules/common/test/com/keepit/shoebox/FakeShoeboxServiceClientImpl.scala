@@ -303,11 +303,25 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     allCollections(collectionId) = allCollections(collectionId).copy(seq = nextCollectionSeqNum())
   }
 
+  private def internLibrary(userId: Id[User], isPrivate: Boolean): Library = {
+    val visibility = Keep.isPrivateToVisibility(isPrivate)
+    allLibraries.values.find(library => library.ownerId == userId && library.visibility == visibility) getOrElse {
+      val name = if (isPrivate) "Private Library" else "Main Library"
+      val slug = LibrarySlug(if (isPrivate) "private" else "main")
+      val library = Library(name = name, ownerId = userId, visibility = visibility, slug = slug, memberCount = 0)
+      val libraryId = saveLibraries(library).head.id.get
+      val membership = LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.OWNER, showInSearch = true)
+      saveLibraryMemberships(membership)
+      allLibraries(libraryId)
+    }
+  }
+
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
     val bookmarks = edges.map {
       case (uri, user, optionalTitle) =>
+        val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
-        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = None) // todo(andrew): Library id?
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get))
     }
     saveBookmarks(bookmarks: _*)
   }
@@ -350,17 +364,22 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveLibraries(libs: Library*) = {
-    libs.foreach { lib =>
+  def saveLibraries(libs: Library*): Seq[Library] = {
+    libs.map { lib =>
       val id = lib.id.getOrElse(nextLibraryId)
-      allLibraries(id) = lib.withId(id).copy(seq = nextLibrarySeq())
+      val toBeInserted = lib.withId(id).copy(seq = nextLibrarySeq())
+      allLibraries(id) = toBeInserted
+      toBeInserted
     }
   }
 
   def saveLibraryMemberships(libMems: LibraryMembership*) = {
     libMems.foreach { libMem =>
+      val isNewMember = libMem.id.isEmpty
       val id = libMem.id.getOrElse(nextLibraryMembershipId)
-      saveLibraries(allLibraries(libMem.libraryId))
+      val library = allLibraries(libMem.libraryId)
+      val updatedLibrary = if (isNewMember) library.copy(memberCount = library.memberCount + 1) else library
+      saveLibraries(updatedLibrary)
       allLibraryMemberships(id) = libMem.withId(id).copy(seq = nextLibraryMembershipSeq())
     }
   }
@@ -661,9 +680,26 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
 
-  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
+    val changedLibraries = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
+    val changedLibrariesAndMemberships = changedLibraries.map { library =>
+      val memberships = allLibraryMemberships.values.filter(_.libraryId == library.id.get)
+      LibraryAndMemberships(library, memberships.toSeq)
+    }
+    Future.successful(changedLibrariesAndMemberships)
+  }
 
-  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = Future.successful(Seq.empty)
+  def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]] = {
+    val changedKeeps = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
+    val changedKeepIds = changedKeeps.map(_.id.get).toSet
+    val flattenTags: (Id[Collection], Set[Id[Keep]]) => Set[(Id[Keep], Hashtag)] = {
+      case (collectionId, keepIds) =>
+        keepIds.collect { case keepId if changedKeepIds.contains(keepId) => (keepId, allCollections(collectionId).name) }
+    }
+    val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
+    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, tagsByChangedKeep(keep.id.get)) }
+    Future.successful(changedKeepsAndTags)
+  }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
 

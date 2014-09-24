@@ -1,6 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.common.controller.{ DevRemoteUserActionsHelperModule }
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.eliza.{ ProdElizaServiceClientModule, DevElizaExternalEmailModule, ElizaModule }
@@ -14,6 +15,7 @@ import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
 case class ElizaDevModule() extends ElizaModule(
+  userActionsModule = DevRemoteUserActionsHelperModule(),
   cacheModule = ElizaCacheModule(HashMapMemoryCacheModule()),
   urbanAirshipModule = ElizaUrbanAirshipModule(),
   storeModule = ElizaDevStoreModule()

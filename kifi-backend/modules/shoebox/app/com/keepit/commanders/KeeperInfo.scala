@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
+import com.kifi.macros.json
 import play.api.libs.json.{ __, JsObject, Writes }
 import play.api.libs.functional.syntax._
 
@@ -70,6 +71,10 @@ object KeepData {
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
 }
+
+// The extension uses this object to augment `KeepData` only when needed. It's useless by itself.
+@json
+case class LateLoadKeepData(title: Option[String], image: Option[String])
 
 case class LibraryData(
   id: PublicId[Library],

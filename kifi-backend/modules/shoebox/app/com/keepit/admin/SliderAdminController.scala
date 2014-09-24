@@ -6,7 +6,7 @@ import scala.concurrent.promise
 import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -23,7 +23,7 @@ import play.api.libs.json.JsObject
 import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
 
 class SliderAdminController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
@@ -36,16 +36,16 @@ class SliderAdminController @Inject() (
   domainTagImporter: DomainTagImporter,
   heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
-  def getPatterns = AdminHtmlAction.authenticated { implicit request =>
+  def getPatterns = AdminUserPage { implicit request =>
     val patterns = db.readOnlyReplica { implicit session =>
       urlPatternRepo.all
     }
     Ok(html.admin.sliderPatterns(patterns))
   }
 
-  def savePatterns = AdminHtmlAction.authenticated { implicit request =>
+  def savePatterns = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     val patterns = db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("pattern_")).map(_.substring(8))) {
@@ -71,14 +71,14 @@ class SliderAdminController @Inject() (
     Redirect(routes.SliderAdminController.getPatterns)
   }
 
-  def getDomainTags = AdminHtmlAction.authenticated { implicit request =>
+  def getDomainTags = AdminUserPage { implicit request =>
     val tags = db.readOnlyReplica { implicit session =>
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
   }
 
-  def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def getClassifications(domain: Option[String]) = AdminUserPage.async { implicit request =>
     domain.map(domainClassifier.fetchTags)
       .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
         val tagPairs = tags.map { t =>
@@ -89,7 +89,7 @@ class SliderAdminController @Inject() (
       }
   }
 
-  def saveDomainTags = AdminHtmlAction.authenticated { implicit request =>
+  def saveDomainTags = AdminUserPage { implicit request =>
     val tagIdValue = """sensitive_([0-9]+)""".r
     val sensitiveTags = request.body.asFormUrlEncoded.get.keys
       .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
@@ -115,14 +115,14 @@ class SliderAdminController @Inject() (
     Redirect(routes.SliderAdminController.getDomainTags)
   }
 
-  def getDomainOverrides = AdminHtmlAction.authenticated { implicit request =>
+  def getDomainOverrides = AdminUserPage { implicit request =>
     val domains = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }
     Ok(html.admin.domains(domains))
   }
 
-  def saveDomainOverrides = AdminJsonAction.authenticated { implicit request =>
+  def saveDomainOverrides = AdminUserAction { implicit request =>
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
@@ -152,7 +152,7 @@ class SliderAdminController @Inject() (
     Ok(JsObject(Seq()))
   }
 
-  def getImportEvents = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def getImportEvents = AdminUserPage.async { implicit request =>
     import com.keepit.classify.DomainTagImportEvents._
 
     val eventsFuture = heimdal.getRawEvents[SystemEvent](50, 42000, SystemEventTypes.IMPORTED_DOMAIN_TAGS).map { rawEvents =>
@@ -183,7 +183,7 @@ class SliderAdminController @Inject() (
     eventsFuture.map { events => Ok(html.admin.domainImportEvents(events)) }
   }
 
-  def getVersionForm = AdminHtmlAction.authenticated { implicit request =>
+  def getVersionForm = AdminUserPage { implicit request =>
     val details = kifInstallationStore.getRaw()
 
     val installations = db.readOnlyMaster { implicit session =>
@@ -192,14 +192,14 @@ class SliderAdminController @Inject() (
     Ok(html.admin.versionForm(installations, details))
   }
 
-  def killVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+  def killVersion(ver: String) = AdminUserAction { implicit request =>
     val details = kifInstallationStore.getRaw()
     val newDetails = details.copy(killed = details.killed :+ KifiExtVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }
 
-  def unkillVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+  def unkillVersion(ver: String) = AdminUserAction { implicit request =>
     val details = kifInstallationStore.getRaw()
     val version = KifiExtVersion(ver)
     val newDetails = details.copy(killed = details.killed.filterNot(_.compare(version) == 0))
@@ -207,14 +207,14 @@ class SliderAdminController @Inject() (
     Ok("0")
   }
 
-  def goldenVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+  def goldenVersion(ver: String) = AdminUserAction { implicit request =>
     val details = kifInstallationStore.getRaw()
     val newDetails = details.copy(gold = KifiExtVersion(ver))
     kifInstallationStore.set(newDetails)
     Ok("0")
   }
 
-  def broadcastLatestVersion(ver: String) = AdminJsonAction.authenticated { implicit request =>
+  def broadcastLatestVersion(ver: String) = AdminUserAction { implicit request =>
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
   }

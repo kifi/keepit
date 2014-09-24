@@ -13,7 +13,6 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.{ Sharding, Shard, ActiveShards }
@@ -71,15 +70,13 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
-
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Map[Lang, Int]
 
   def explain(
     userId: Id[User],
@@ -96,6 +93,7 @@ trait SearchCommander {
 class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,
+    languageCommander: LanguageCommander,
     mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
     compatibilitySupport: SearchBackwardCompatibilitySupport,
@@ -132,8 +130,8 @@ class SearchCommanderImpl @Inject() (
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
-    // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs, None)
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, LibraryContext.None)
+    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
     timing.presearch
 
@@ -224,34 +222,30 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    if (debug.isDefined) {
-      val debugFlags = debug.get.split(",").map(_.toLowerCase).toSet
-      if (debugFlags.contains("newengine")) {
-        val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
-        val result = distSearch2(
-          localShards,
-          userId,
-          firstLang,
-          secondLang,
-          experiments,
-          query,
-          filter,
-          LibraryContext.None,
-          maxHits,
-          context,
-          predefinedConfig,
-          debug)
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-        val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-        return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
-      }
+    if (config.asBoolean("newEngine") == true) {
+      val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
+      val result = distSearch2(
+        localShards,
+        userId,
+        firstLang,
+        secondLang,
+        experiments,
+        query,
+        filter,
+        LibraryContext.None,
+        maxHits,
+        context,
+        predefinedConfig,
+        debug)
+
+      val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
+      return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
     }
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
-
     val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-
-    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
     val searchers = mainSearcherFactory(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
 
@@ -293,17 +287,17 @@ class SearchCommanderImpl @Inject() (
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
-    val library = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
+    val libraryContext = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
 
-    // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs, Some(library))
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
+    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
-    if (library == LibraryContext.Invalid) {
+    if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
       return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, KifiShardResult.empty, Set(), None))
     }
 
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     timing.presearch
@@ -312,7 +306,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug).foreach { f =>
+      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new KifiShardResult(json))
       }
     }
@@ -321,7 +315,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[KifiShardResult].complete(
         Try {
-          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, library, maxHits, context, predefinedConfig, debug)
+          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
         }
       ).future
     }
@@ -385,18 +379,18 @@ class SearchCommanderImpl @Inject() (
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: LibraryContext,
+    libraryContext: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): KifiShardResult = {
 
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
     val debugOption = new DebugOption with Logging
     if (debug.isDefined) debugOption.debug(debug.get)
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
-
-    val searchFilter = SearchFilter(filter, library, context)
+    val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -432,97 +426,8 @@ class SearchCommanderImpl @Inject() (
     }
   }
 
-  private def getLangs(
-    localShards: Set[Shard[NormalizedURI]],
-    dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    query: String,
-    acceptLangCodes: Seq[String],
-    libraryContext: Option[LibraryContext]): (Lang, Option[Lang]) = {
-    def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
-      val numberOfLangs = majorLangs.size
-      val eachLangProb = (majorLangProb / numberOfLangs)
-      majorLangs.map(_ -> eachLangProb).toMap
-    }
-
-    // TODO: use user profile info as a bias
-
-    val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
-
-    if (libraryContext.isDefined) {
-      if (dispatchPlan.nonEmpty) {
-        resultFutures ++= searchClient.distLangFreqs2(dispatchPlan, userId, libraryContext.get)
-      }
-      if (localShards.nonEmpty) {
-        resultFutures += searchFactory.distLangFreqsFuture(localShards, userId, libraryContext.get)
-      }
-    } else {
-      if (dispatchPlan.nonEmpty) {
-        resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId)
-      }
-      if (localShards.nonEmpty) {
-        resultFutures += mainSearcherFactory.distLangFreqsFuture(localShards, userId)
-      }
-    }
-
-    val acceptLangs = parseAcceptLangs(acceptLangCodes)
-
-    val langProf = {
-      val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
-      val total = freqs.map(_.values.sum).sum.toFloat
-      freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()) {
-        case (m, (lang, count)) =>
-          m + (lang -> (count.toFloat / total + m.getOrElse(lang, 0.0f)))
-      }.filter { case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => -p._2).take(3).toMap // top N with prob > 0.05
-    }
-
-    val profLangs = langProf.keySet
-
-    var strongCandidates = acceptLangs ++ profLangs
-
-    val firstLang = LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 0.6d))
-    strongCandidates -= firstLang
-    val secondLang = if (strongCandidates.nonEmpty) {
-      Some(LangDetector.detectShortText(query, getLangsPriorProbabilities(strongCandidates, 1.0d)))
-    } else {
-      None
-    }
-
-    // we may switch first/second langs
-    if (acceptLangs.contains(firstLang)) {
-      (firstLang, secondLang)
-    } else if (acceptLangs.contains(secondLang.get)) {
-      (secondLang.get, Some(firstLang))
-    } else if (profLangs.contains(firstLang)) {
-      (firstLang, secondLang)
-    } else {
-      (secondLang.get, Some(firstLang))
-    }
-  }
-
-  private def parseAcceptLangs(acceptLangCodes: Seq[String]): Set[Lang] = {
-    val langs = acceptLangCodes.toSet.flatMap { code: String =>
-      val langCode = code.substring(0, 2)
-      if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
-      else {
-        val lang = Lang(langCode)
-        if (LangDetector.languages.contains(lang)) Set(lang) else Set.empty[Lang]
-      }
-    }
-    if (langs.isEmpty) {
-      log.warn(s"defaulting to English for acceptLang=$acceptLangCodes")
-      Set(DefaultAnalyzer.defaultLang)
-    } else {
-      langs
-    }
-  }
-
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
-  }
-
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Map[Lang, Int] = {
-    monitoredAwait.result(searchFactory.distLangFreqsFuture(shards, userId, libraryContext), 10 seconds, "slow getting lang profile")
   }
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
