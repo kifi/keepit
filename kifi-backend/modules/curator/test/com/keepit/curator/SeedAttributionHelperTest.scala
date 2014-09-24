@@ -39,16 +39,6 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     }
   }
 
-  val fakeGraph = new FakeGraphServiceClientImpl(null, null, null) {
-    override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {
-      val explains = uriIds.map { uriId =>
-        val m = Map(Id[Keep](uriId.id) -> uriId.id.toInt)
-        GraphFeedExplanation(m, Map())
-      }
-      Future.successful(explains)
-    }
-  }
-
   val emptyScore = UriScores(
     socialScore = 0f,
     popularityScore = 0f,
@@ -59,7 +49,8 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     rekeepScore = 0f,
     discoveryScore = 0f,
     curationScore = None,
-    multiplier = Some(1.0f))
+    multiplier = Some(1.0f),
+    libraryInducedScore = Some(0f))
 
   val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), emptyScore.copy(socialScore = 0.01f))
   val scoredItem2 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](2), emptyScore.copy(socialScore = 0.9f))
@@ -83,9 +74,8 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
           }
         }
 
-        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, fakeGraph, inject[CuratorLibraryMembershipInfoRepo]) {
-          override val MIN_USER_KEEP_SIZE = 0
-        }
+        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, inject[CuratorLibraryMembershipInfoRepo])
+
         val itemsWithAttr = Await.result(attrHelper.getAttributions(scoredItems), Duration(5, "seconds"))
         itemsWithAttr(0).attribution.topic.get.topicName === "topic_1"
         itemsWithAttr(0).attribution.user === None

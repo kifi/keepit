@@ -120,7 +120,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       clock,
       fortyTwoServices)
 
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory, shardedKeepIndexer)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {

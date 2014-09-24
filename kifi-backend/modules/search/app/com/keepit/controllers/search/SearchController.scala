@@ -28,6 +28,8 @@ class SearchController @Inject() (
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
     augmentationCommander: AugmentationCommander,
+    languageCommander: LanguageCommander,
+    librarySearchCommander: LibrarySearchCommander,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -112,7 +114,7 @@ class SearchController @Inject() (
     Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
   }
 
-  def distLangFreqs2() = Action(parse.tolerantJson) { request =>
+  def distLangFreqs2() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -124,7 +126,9 @@ class SearchController @Inject() (
       case _ => LibraryContext.None
     }
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs2(shards, userId, libraryContext).map { case (lang, freq) => lang.lang -> freq }))
+    languageCommander.distLangFreqs2(shards, userId, libraryContext).map { freqs =>
+      Ok(Json.toJson(freqs.map { case (lang, freq) => lang.lang -> freq }))
+    }
   }
 
   def distAugmentation() = Action.async(parse.tolerantJson) { request =>
@@ -134,6 +138,16 @@ class SearchController @Inject() (
     val augmentationRequest = (json \ "request").as[ItemAugmentationRequest]
     augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
       Ok(Json.toJson(augmentationResponse))
+    }
+  }
+
+  def distLibrarySearch() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val librarySearchRequest = (json \ "request").as[LibrarySearchRequest]
+    librarySearchCommander.distLibrarySearch(shards, librarySearchRequest).map { libraryShardResults =>
+      Ok(Json.toJson(libraryShardResults))
     }
   }
 

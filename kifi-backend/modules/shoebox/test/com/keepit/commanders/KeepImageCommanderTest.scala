@@ -188,12 +188,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, keep2) = setup()
 
         {
-          val savedF = commander.setKeepImage(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
         {
-          val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
@@ -213,7 +213,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         keepImage1.get.sourceFileHash === keepImage2.get.sourceFileHash
 
         {
-          val savedF = commander.setKeepImage(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }
@@ -227,7 +227,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         keepImage1.get.sourceFileHash !== keepImage3.get.sourceFileHash
 
         {
-          val savedF = commander.setKeepImage(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, KeepImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess
         }

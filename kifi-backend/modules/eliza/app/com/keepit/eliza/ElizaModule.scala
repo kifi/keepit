@@ -1,6 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.common.cache.CacheModule
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.search.SearchServiceClientModule
@@ -20,6 +21,7 @@ case class ElizaServiceTypeModule() extends ServiceTypeModule {
 
 abstract class ElizaModule(
     // Common Functional Modules
+    val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val urbanAirshipModule: UrbanAirshipModule,
     val storeModule: StoreModule) extends ConfigurationModule with CommonServiceModule {

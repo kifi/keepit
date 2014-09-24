@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
@@ -22,7 +21,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory) = initIndexes(store)
+        val (graph, _, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
 
@@ -33,11 +32,15 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
 
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 
+        val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
+
         val searchCommander = new SearchCommanderImpl(
           activeShards,
           searchFactory,
+          languageCommander,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
+          inject[SearchBackwardCompatibilitySupport],
           inject[AirbrakeNotifier],
           inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],

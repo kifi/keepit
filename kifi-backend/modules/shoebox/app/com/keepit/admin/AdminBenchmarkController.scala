@@ -19,17 +19,17 @@ import com.keepit.common.healthcheck._
 
 import views.html
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 class AdminBenchmarkController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   searchServiceClient: SearchServiceClient,
   benchmarkRunner: BenchmarkRunner)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
   import BenchmarkResultsJson._
 
-  def benchmarks = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def benchmarks = AdminUserPage.async { implicit request =>
     val internalPing = pingSearchProcess()
     for {
       searchBenchmark <- searchServiceClient.benchmarks()

@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model._
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -18,7 +18,7 @@ import com.keepit.scraper.ScraperServiceClient
 import com.keepit.normalizer.NormalizedURIInterner
 
 class AdminScreenshotController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   uriSummaryCommander: URISummaryCommander,
   uriImageCommander: URISummaryCommander,
   scraper: ScraperServiceClient,
@@ -28,9 +28,9 @@ class AdminScreenshotController @Inject() (
   imageInfoRepo: ImageInfoRepo,
   normalizedURIInterner: NormalizedURIInterner,
   uriRepo: NormalizedURIRepo)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
-  def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def updateUri(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
     val normUri = db.readOnlyMaster { implicit session =>
       uriRepo.get(uriId)
     }
@@ -41,7 +41,7 @@ class AdminScreenshotController @Inject() (
     }
   }
 
-  def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
+  def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminUserPage { implicit request =>
     val uris = db.readOnlyMaster { implicit session =>
       keepRepo.getByUser(userId).map(_.uriId)
     }
@@ -57,11 +57,11 @@ class AdminScreenshotController @Inject() (
     Ok("Goin!")
   }
 
-  def images() = AdminHtmlAction.authenticated { request =>
+  def images() = AdminUserPage { request =>
     Ok(html.admin.images())
   }
 
-  def imageInfos() = AdminHtmlAction.authenticated { request =>
+  def imageInfos() = AdminUserPage { request =>
     val imageInfos = db.readOnlyMaster { implicit ro =>
       imageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
     }
@@ -69,7 +69,7 @@ class AdminScreenshotController @Inject() (
     Ok(html.admin.imageInfos(imageInfos))
   }
 
-  def imagesForUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
+  def imagesForUri(uriId: Id[NormalizedURI]) = AdminUserPage.async { request =>
     Try {
       db.readOnlyReplica { implicit ro =>
         uriRepo.get(uriId)
@@ -85,7 +85,7 @@ class AdminScreenshotController @Inject() (
   }
 
   val compareForm = Form("uriIds" -> text)
-  def imagesCompare() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def imagesCompare() = AdminUserPage.async { implicit request =>
     try {
       val uriIds = compareForm.bindFromRequest.get.split(',').map(s => Id[NormalizedURI](s.toLong)).toSeq
       val tuplesF = uriIds map { uriId =>
@@ -109,7 +109,7 @@ class AdminScreenshotController @Inject() (
     }
   }
 
-  def getImageInfo() = AdminJsonAction.authenticatedParseJsonAsync { request =>
+  def getImageInfo() = AdminUserAction.async(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageInfo] body=${request.body} url=${urlOpt}")
     val resOpt = urlOpt map { url =>
@@ -125,7 +125,7 @@ class AdminScreenshotController @Inject() (
     resOpt.getOrElse(Future.successful(NotFound(Json.obj("code" -> "not_found"))))
   }
 
-  def getImageInfos() = AdminJsonAction.authenticatedParseJsonAsync { request =>
+  def getImageInfos() = AdminUserAction.async(parse.tolerantJson) { request =>
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     log.info(s"[getImageInfos] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {

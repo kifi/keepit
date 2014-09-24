@@ -14,18 +14,18 @@ import securesocial.core.SecureSocial
 
 import views.html
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 class AdminHealthController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   healthcheckPlugin: HealthcheckPlugin,
   services: FortyTwoServices,
   airbrake: AirbrakeNotifier,
   globalCacheStatistics: GlobalCacheStatistics)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
-  def serviceView = AdminHtmlAction.authenticated { implicit request =>
+  def serviceView = AdminUserPage { implicit request =>
     val errorCount = healthcheckPlugin.errorCount
     val recentErrors = healthcheckPlugin.errors()
     val cacheStats = globalCacheStatistics.getStatistics
@@ -34,16 +34,16 @@ class AdminHealthController @Inject() (
       services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
-  def getErrors() = AdminHtmlAction.authenticated { implicit request =>
+  def getErrors() = AdminUserPage { implicit request =>
     Ok(healthcheckPlugin.errors().mkString("\n"))
   }
 
-  def reportErrors() = AdminHtmlAction.authenticated { implicit request =>
+  def reportErrors() = AdminUserPage { implicit request =>
     healthcheckPlugin.reportErrors()
     Ok("reported")
   }
 
-  def resetErrorCount() = AdminHtmlAction.authenticated { implicit request =>
+  def resetErrorCount() = AdminUserPage { implicit request =>
     healthcheckPlugin.resetErrorCount
     Redirect(routes.AdminHealthController.serviceView)
   }

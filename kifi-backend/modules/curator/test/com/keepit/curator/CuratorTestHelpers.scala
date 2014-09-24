@@ -72,7 +72,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     rekeepScore = 1.0f,
     curationScore = None,
     multiplier = Some(1.0f),
-    discoveryScore = 1.0f)
+    discoveryScore = 1.0f,
+    libraryInducedScore = Some(0f))
 
   def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float, allScores: UriScores = defaultAllScores) = {
     val userId = Id[User](userIdInt)
@@ -104,7 +105,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         rekeepScore = 1.0f,
         curationScore = None,
         multiplier = Some(1.0f),
-        discoveryScore = 1.0f),
+        discoveryScore = 1.0f,
+        libraryInducedScore = Some(0f)),
       delivered = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId))
   }

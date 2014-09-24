@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
@@ -16,13 +16,13 @@ import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
 
 class WanderingAdminController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     graphClient: GraphServiceClient,
     db: Database,
     userRepo: UserRepo,
     socialUserRepo: SocialUserInfoRepo,
     uriRepo: NormalizedURIRepo,
-    clock: Clock) extends AdminController(actionAuthenticator) {
+    clock: Clock) extends AdminUserActions {
 
   private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
     graphClient.wander(wanderlust).map { collisions =>
@@ -45,7 +45,7 @@ class WanderingAdminController @Inject() (
     }
   }
 
-  def wander() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def wander() = AdminUserPage.async { implicit request =>
     request.request.method.toLowerCase match {
       case "get" => {
         graphClient.getGraphKinds().map { graphKinds =>
@@ -95,7 +95,7 @@ class WanderingAdminController @Inject() (
     }
   }
 
-  def fromParisWithLove() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def fromParisWithLove() = AdminUserPage.async { implicit request =>
     val start = clock.now()
     val promisedResult = Promise[Result]()
 
@@ -113,7 +113,7 @@ class WanderingAdminController @Inject() (
     promisedResult.future
   }
 
-  def uriWandering(steps: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def uriWandering(steps: Int) = AdminUserPage.async { implicit request =>
     val userId = request.userId
     val start = clock.now()
 

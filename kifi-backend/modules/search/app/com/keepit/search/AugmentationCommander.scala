@@ -56,7 +56,7 @@ class AugmentationCommanderImpl @Inject() (
     val futureRemoteAugmentationResponses = searchClient.distAugmentation(remotePlan, request)
     val futureLocalAugmentationResponse = distAugmentation(localShards, request)
     Future.sequence(futureRemoteAugmentationResponses :+ futureLocalAugmentationResponse).map { augmentationResponses =>
-      augmentationResponses.reduceLeft { (mergedResponse, nextResponse) =>
+      augmentationResponses.foldLeft(ItemAugmentationResponse.empty) { (mergedResponse, nextResponse) =>
         ItemAugmentationResponse(mergedResponse.infos ++ nextResponse.infos, mergedResponse.scores merge nextResponse.scores)
       }
     }
@@ -96,13 +96,14 @@ class AugmentationCommanderImpl @Inject() (
           itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, userIdFilter, libraryIdFilter)(item) }.toMap
         }
     }.toSeq
-    Future.sequence(futureAugmentationInfosByShard).map(_.reduce(_ ++ _))
+    Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, AugmentationInfo])(_ ++ _))
   }
 
   private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): AugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
-    var publishedKeeps = 0
+    var otherPublishedKeeps = 0
+    var otherDiscoverableKeeps = 0
 
     (keepSearcher.indexReader.getContext.leaves()).foreach { atomicReaderContext =>
       val reader = atomicReaderContext.reader().asInstanceOf[WrappedSubReader]
@@ -139,16 +140,20 @@ class AugmentationCommanderImpl @Inject() (
               keeps += RestrictedKeepInfo(record.externalId, None, Some(Id(userId)), Set.empty)
             case SECRET => // ignore
           }
-          else if (visibility == PUBLISHED) { // kept in a public library
-            publishedKeeps += 1
-            //todo(Léo): define which published libraries are relevant
+          else visibility match { // kept by others
+            case PUBLISHED =>
+              otherPublishedKeeps += 1
+            //todo(Léo): define which published libraries are relevant (should we count irrelevant library keeps in otherDiscoverableKeeps?)
+            case DISCOVERABLE =>
+              otherDiscoverableKeeps += 1
+            case SECRET => // ignore
           }
 
           docId = docs.nextDoc()
         }
       }
     }
-    AugmentationInfo(keeps.toList, publishedKeeps)
+    AugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps)
   }
 
   private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): AugmentationScores = {

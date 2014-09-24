@@ -379,6 +379,7 @@ class KeepsCommander @Inject() (
   }
 
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
+  // TODO: Can this return a Keep object?
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
