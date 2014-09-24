@@ -449,7 +449,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def addExperiment(userId: Id[User], experiment: String) = AdminUserAction(parse.tolerantJson) { request =>
+  def addExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
     val expType = ExperimentType.get(experiment)
     db.readWrite { implicit session =>
       (userExperimentRepo.get(userId, expType, excludeState = None) match {
@@ -493,24 +493,25 @@ class AdminUserController @Inject() (
     }
   }
 
-  def userValue(userId: Id[User]) = AdminUserAction(parse.tolerantJson) { implicit request =>
-    val json = request.body
-    val req = ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
-      case (Some(name), Some(value), None) =>
-        Some(db.readWrite { implicit session => // set it
-          userValueRepo.setValue(userId, name, value)
-        })
-      case (Some(name), _, Some(c)) => // clear it
-        Some(db.readWrite { implicit session =>
-          userValueRepo.clearValue(userId, name).toString
-        })
-      case (Some(name), _, _) => // get it
-        db.readOnlyMaster { implicit session =>
-          userValueRepo.getValueStringOpt(userId, name)
-        }
-      case _ =>
-        None.asInstanceOf[Option[String]]
-    }
+  def userValue(userId: Id[User]) = AdminUserAction { implicit request =>
+    val req = request.body.asJson.map { json =>
+      ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+        case (Some(name), Some(value), None) =>
+          Some(db.readWrite { implicit session => // set it
+            userValueRepo.setValue(userId, name, value)
+          })
+        case (Some(name), _, Some(c)) => // clear it
+          Some(db.readWrite { implicit session =>
+            userValueRepo.clearValue(userId, name).toString
+          })
+        case (Some(name), _, _) => // get it
+          db.readOnlyMaster { implicit session =>
+            userValueRepo.getValueStringOpt(userId, name)
+          }
+        case _ =>
+          None.asInstanceOf[Option[String]]
+      }
+    }.flatten
 
     req.map { result =>
       Ok(Json.obj("success" -> result))
@@ -519,7 +520,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def changeState(userId: Id[User], state: String) = AdminUserAction(parse.tolerantJson) { request =>
+  def changeState(userId: Id[User], state: String) = AdminUserAction { request =>
     val userState = state match {
       case UserStates.ACTIVE.value => UserStates.ACTIVE
       case UserStates.INACTIVE.value => UserStates.INACTIVE
@@ -531,7 +532,7 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def removeExperiment(userId: Id[User], experiment: String) = AdminUserAction(parse.tolerantJson) { request =>
+  def removeExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
     db.readWrite { implicit session =>
       val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
       ue foreach { ue =>
@@ -811,7 +812,7 @@ class AdminUserController @Inject() (
     }
   }
 
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction(parse.tolerantJson) { request =>
+  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>
     log.info(s"About to deactivate UserEmailAddress $id")
     val inactiveEmail = db.readWrite { implicit session =>
       val userEmail = emailRepo.get(id)
