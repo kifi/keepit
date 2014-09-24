@@ -7,7 +7,7 @@ import com.keepit.model.{ User, NormalizedURI }
 import scala.concurrent.Future
 import com.keepit.search.engine.result.LibraryShardResult
 import com.keepit.common.db.Id
-import play.api.libs.json.{ Json, JsNumber, JsValue }
+import play.api.libs.json.{ JsArray, Json, JsNumber, JsValue }
 import com.keepit.common.routes.{ Search, ServiceRoute }
 import com.keepit.common.net.{ HttpClient, ClientResponse }
 import com.google.inject.Inject
@@ -17,7 +17,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait DistributedSearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
-  def distLibrarySearch(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Set[LibraryShardResult]]] = ???
   //
   // Distributed Search
   //
@@ -47,6 +46,8 @@ trait DistributedSearchServiceClient extends ServiceClient {
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
+
+  def distLibrarySearch(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Seq[LibraryShardResult]]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
 
@@ -160,6 +161,12 @@ class DistributedSearchServiceClientImpl @Inject() (
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]] = {
     if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distAugmentation(), Json.toJson(request)).map { futureClientResponse =>
       futureClientResponse.map { r => r.json.as[ItemAugmentationResponse] }
+    }
+  }
+
+  def distLibrarySearch(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Seq[LibraryShardResult]]] = {
+    if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distLibrarySearch(), Json.toJson(request)).map { futureClientResponse =>
+      futureClientResponse.map { r => r.json.as[JsArray].value.map(_.as[LibraryShardResult]) }
     }
   }
 

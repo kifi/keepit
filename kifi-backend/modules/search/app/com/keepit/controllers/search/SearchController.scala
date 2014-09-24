@@ -29,6 +29,7 @@ class SearchController @Inject() (
     searchCommander: SearchCommander,
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
+    librarySearchCommander: LibrarySearchCommander,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -137,6 +138,16 @@ class SearchController @Inject() (
     val augmentationRequest = (json \ "request").as[ItemAugmentationRequest]
     augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
       Ok(Json.toJson(augmentationResponse))
+    }
+  }
+
+  def distLibrarySearch() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val librarySearchRequest = (json \ "request").as[LibrarySearchRequest]
+    librarySearchCommander.distLibrarySearch(shards, librarySearchRequest).map { libraryShardResults =>
+      Ok(Json.toJson(libraryShardResults))
     }
   }
 
