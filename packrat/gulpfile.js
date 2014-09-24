@@ -19,7 +19,7 @@ var livereload = require('gulp-livereload');
 var gutil = require('gulp-util');
 var map = require('./gulp/vinyl-map.js');
 
-var isRelease = false;
+var target = 'local';
 
 var outDir = 'out';
 
@@ -35,7 +35,7 @@ var backgroundScripts = [
   'scorefilter.js',
   'contact_search_cache.js'
 ];
-var devBackgroundScripts = ['livereload.js']
+var localBackgroundScripts = ['livereload.js']
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
@@ -127,7 +127,7 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
-  var scripts = isRelease ? backgroundScripts : backgroundScripts.concat(devBackgroundScripts);
+  var scripts = backgroundScripts.concat(target === 'local' ? localBackgroundScripts : []);
 
   var background = gulp.src(scripts)
     .pipe(cache('background'))
@@ -174,7 +174,6 @@ gulp.task('html2js', function () {
 gulp.task('scripts', ['html2js', 'copy']);
 
 gulp.task('styles', function () {
-
   function insulateSelectors(rule) {
     if (rule.selectors) {
       rule.selectors = rule.selectors.map(function (selector) {
@@ -190,21 +189,22 @@ gulp.task('styles', function () {
     }
   }
 
-  var insulate = function (code) {
+  function insulate(code) {
     var obj = css.parse(code.toString())
     obj.stylesheet.rules.map(insulateRule);
     return css.stringify(obj);
-  };
+  }
 
-  var chromify = function (code) {
+  function chromify(code) {
     return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
-  };
+  }
 
-  var firefoxify = function (code) {
-    return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
-  };
+  var ffBaseUri = 'resource://kifi' + (target === 'dev' ? '-dev' : '') + '-at-42go-dot-com/kifi/data/images/';
+  function firefoxify(code) {
+    return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, ffBaseUri);
+  }
 
-  var mainStylesOnly = function (pipefun) {
+  function mainStylesOnly(pipefun) {
     return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), map(pipefun));
   }
 
@@ -330,7 +330,7 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('chrome/manifest.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
-      if (!isRelease) {
+      if (target === 'local') {
         json.background.scripts.push('livereload.js');
       }
       return json;
@@ -435,7 +435,7 @@ gulp.task('watch', function () {
       resourceFiles,
       rwsocketScript,
       backgroundScripts,
-      devBackgroundScripts,
+      localBackgroundScripts,
       htmlFiles),
     ['scripts']);
   gulp.watch(styleFiles, ['styles']);
@@ -444,12 +444,12 @@ gulp.task('watch', function () {
 });
 
 gulp.task('package', function () {
-  isRelease = true;
+  target = 'prod';
   runSequence('clean', ['zip-chrome', 'xpi-firefox']);
 });
 
 gulp.task('package-dev', function () {
-  isRelease = true;
+  target = 'dev';
   runSequence('clean', ['crx-chrome-dev', 'xpi-firefox-dev']);
 });
 
