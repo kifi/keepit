@@ -9,6 +9,7 @@ import scala.collection.mutable.ListBuffer
 
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging {
 
+  private[this] var debugOption: DebugOption = null
   private[this] var tracedIds: Set[Long] = null
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
   private[this] val matchWeights: Array[Float] = new Array[Float](totalSize)
@@ -70,7 +71,10 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getCoreSize(): Int = coreSize
   def getMatchWeights(): Array[Float] = matchWeights
 
-  def trace(ids: Set[Long]): Unit = { tracedIds = ids }
+  def trace(ids: Set[Long], debug: DebugOption): Unit = {
+    tracedIds = ids
+    debugOption = debug
+  }
 
   private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
     if (tracedIds == null) {
@@ -81,15 +85,15 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       new JoinerManager(32) {
         def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector) {
           override def set(id: Long) = {
-            if (tracedIds.contains(id)) log.info(s"NE: joiner-set id=$id")
+            if (tracedIds.contains(id)) debugOption.debugLog(s"joiner-set id=$id")
             super.set(id)
           }
           override def join(reader: DataBufferReader) = {
-            if (tracedIds.contains(id)) log.info(s"NE: joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
+            if (tracedIds.contains(id)) debugOption.debugLog(s"joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
             super.join(reader)
           }
           override def flush() = {
-            if (tracedIds.contains(id)) log.info(s"NE: joiner-flush id=$id")
+            if (tracedIds.contains(id)) debugOption.debugLog(s"joiner-flush id=$id")
             super.flush()
           }
         }
@@ -114,7 +118,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           }
           out.mkString("[", ", ", "]")
         }
-        log.info(s"NE: databuf id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
+        debugOption.debugLog(s"databuf id=$id id2=$id2 recType=${reader.recordType} scores=${scores}")
       }
     }
   }
