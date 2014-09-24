@@ -5,15 +5,16 @@
     <h1 class="dialog-header">{{modalTitle}}</h1>
     <div class="dialog-body">
       <div class="dialog-text">
-        <div class="manage-lib-input-wrapper">
-          <div class="manage-lib-input-title">Library Name<span class="manage-lib-error" ng-if="$error.name">{{$error.name}}</span></div>
-          <input class="manage-lib-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Snazzy links" novalidate>
-          <div><span>kifi.com/{{username}}/</span>
-            <input ng-change="editSlug()" class="manage-lib-input manage-lib-partial ng-pristine ng-valid manage-lib-calced" ng-model="library.slug" ng-class="{'manage-lib-calced':!userHasEditedSlug}" type="text" name="slug" placeholder="new-library" novalidate>
-          </div>
+
+        <div class="manage-lib-input-wrapper"><!-- Name -->
+          <span class="manage-lib-input-title">Name<span class="manage-lib-error" ng-if="$error.name">{{$error.name}}</span></span>
+          <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
+          <span class="manage-lib-slug">kifi.com/{{username}}/
+            <input ng-change="editSlug()" class="manage-lib-slug-input slug-edited ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'slug-edited': !userHasEditedSlug }" type="text" name="slug" placeholder="new-library" novalidate>
+          </span>
         </div>
 
-        <div class="manage-lib-input-wrapper">
+        <div class="manage-lib-input-wrapper"><!-- Description -->
           <div class="manage-lib-input-title">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></div>
           <input class="manage-lib-input ng-pristine ng-valid" ng-model="library.description" type="text" name="description" placeholder="Best links on the internet, as of 30 seconds ago" novalidate>
         </div>

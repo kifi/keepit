@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManageLibrary', ['libraryService',
-  function (libraryService) {
+.directive('kfManageLibrary', ['libraryService', 'profileService',
+  function (libraryService, profileService) {
     return {
       restrict: 'A',
       scope: {},
@@ -18,6 +18,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.username = profileService.me.username;
 
 
         //
