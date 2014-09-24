@@ -205,12 +205,9 @@ class MessagingCommander @Inject() (
   }
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
-    val pimpedParticipants = nonUsers.map { emailContact =>
-      abookServiceClient.internKifiContact(userId, emailContact).map {
-        case richContact => NonUserEmailParticipant(richContact.email) // todo(Léo): we may want to get a name here
-      }
+    abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
+      richContacts.map(richContact => NonUserEmailParticipant(richContact.email))
     }
-    Future.sequence(pimpedParticipants)
   }
 
   private def updateMessageSearchHistoryWithEmailAddresses(userId: Id[User], nups: Seq[NonUserParticipant]) = {

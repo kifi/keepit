@@ -103,6 +103,6 @@ class EContactCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyT
 
 case class EContactKey(id: Id[EContact]) extends Key[EContact] {
   val namespace = "econtact"
-  override val version = 2
+  override val version = 3
   def toKey(): String = id.id.toString
 }
