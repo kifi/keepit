@@ -103,6 +103,12 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res2(2).networkType === SocialNetworks.EMAIL.name
         res2(2).value === "email/chan@jing.com"
         res2(2).label === "陳家洛 電郵"
+
+        val res2a = search("陳家", 2)
+        res2a.length === 2
+
+        val res2b = search("陳家", 1)
+        res2b.length === 1
       }
     }
 
@@ -165,6 +171,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵"
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
       }
     }
 
@@ -229,6 +239,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵" // email lower priority (& deduped)
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
 
         val res4 = search("kwok") // kwok@jing.com (deduped)
         res4.length === 1

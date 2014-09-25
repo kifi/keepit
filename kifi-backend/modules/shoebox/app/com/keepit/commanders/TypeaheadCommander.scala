@@ -284,9 +284,7 @@ class TypeaheadCommander @Inject() (
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
       (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
-      if (zHits.length >= limit) zHits.take(limit) else {
-        allHits.sorted(hitOrd)
-      }
+      (if (zHits.length >= limit) zHits else allHits.sorted(hitOrd)).take(limit)
     }
   }
 
