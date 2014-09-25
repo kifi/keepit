@@ -151,11 +151,6 @@ angular.module('kifi')
           scope.modifyingExistingLibrary = true;
           scope.userHasEditedSlug = true;
           scope.modalTitle = scope.library.name;
-
-          scope.library.owner = profileService.me;
-          scope.library.followers.forEach(function (follower) {
-            follower.image = friendService.getPictureUrlForUser(follower);
-          });
         } else {
           scope.library = {
             'name': '',

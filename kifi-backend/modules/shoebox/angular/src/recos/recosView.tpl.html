@@ -37,7 +37,7 @@
       </header>
 
       <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)"></div>
-      <div ng-if="reco.recoData.kind === 'library'" kf-library-card library="reco.recoLib"></div>
+      <div ng-if="reco.recoData.kind === 'library'" kf-library-card library="reco.recoLib" recommendation="true"></div>
 
       <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
         <span ng-if="hasTwoOrMoreReasons()">
