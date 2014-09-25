@@ -42,16 +42,17 @@ angular.module('kifi')
           if (scope.librariesEnabled) {
             libraryService.fetchLibrarySummaries().then(function () {
               var libraries = libraryService.librarySummaries;
-              scope.mainLib = _.find(libraries, function (lib) {
-                  return lib.kind === 'system_main';
-              });
-              scope.secretLib = _.find(libraries, function (lib) {
-                  return lib.kind === 'system_secret';
-              });
               scope.userLibs = _.filter(libraries, function (lib) {
                 return lib.kind === 'user_created';
               });
-              scope.invitedLibs = libraryService.invitedSummaries;
+            });
+          }
+        });
+
+        $rootScope.$on('deletedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.userLibs = _.filter(libraryService.librarySummaries, function (lib) {
+              return lib.kind === 'user_created';
             });
           }
         });

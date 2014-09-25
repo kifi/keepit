@@ -258,6 +258,14 @@ angular.module('kifi')
         util.replaceArrayInPlace(invitedLibsToShow, newMyInvited);
 
         return userLibsToShow.concat(invitedLibsToShow);
+      },
+
+      deleteLibrary: function (libraryId) {
+        return $http.post(routeService.deleteLibrary(libraryId)).then( function () {
+          _.remove(librarySummaries, function (library) {
+            return library.id === libraryId;
+          });
+        });
       }
 
     };

@@ -124,6 +124,13 @@ angular.module('kifi')
       }
     });
 
+    $rootScope.$on('changedLibrary', function () {
+      // TODO(yiping): figure out why this is slow to update.
+      libraryService.getLibraryByUserSlug(username, librarySlug).then(function (library) {
+        util.replaceObjectInPlace($scope.library, library);
+      });
+    });
+
 
     //
     // On LibraryCtrl initialization.

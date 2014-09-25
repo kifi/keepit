@@ -114,6 +114,20 @@ angular.module('kifi')
           });
         };
 
+        scope.deleteLibrary = function () {
+          if (submitting) {
+            return;
+          }
+
+          submitting = true;
+
+          libraryService.deleteLibrary(scope.library.id).then(function () {
+            $rootScope.$emit('deletedLibrary');
+            scope.close();
+            $location.path('/');
+          });
+        };
+
 
         //
         // Watches and listeners.
