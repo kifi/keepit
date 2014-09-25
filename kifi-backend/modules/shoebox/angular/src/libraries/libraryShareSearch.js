@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'util',
-  function ($document, friendService, keyIndices, libraryService, socialService, util) {
+.directive('kfLibraryShareSearch', ['$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'util',
+  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -44,8 +44,16 @@ angular.module('kifi')
           $document.on('click', onClick);
           show = true;
           shareMenu.show();
-          searchInput.focus();
-          populateDropDown();
+
+          if (!scope.manageLibInvite) {
+            // When we test this conditional, Angular thinks that we're trying to
+            // enter an already-in-progress digest loop. To get around this, use
+            // $timeout to schedule the following code in a future call stack.
+            $timeout(function () {
+              searchInput.focus();
+              populateDropDown();
+            }, 0);
+          }
         }
 
         function hideMenu() {
@@ -58,7 +66,11 @@ angular.module('kifi')
           // Clicking outside the menu will close the menu.
           if (!element.find(e.target)[0]) {
             scope.$apply(function () {
-              hideMenu();
+              if (!scope.manageLibInvite) {
+                hideMenu();
+              } else {
+                scope.results.length = 0;
+              }
             });
           }
         }
@@ -192,6 +204,10 @@ angular.module('kifi')
         scope.onSearchInputChange = _.debounce(function () {
           populateDropDown(scope.search.name);
         }, 200);
+
+        scope.onSearchInputFocus = function () {
+          populateDropDown(scope.search.name);
+        };
 
         scope.onResultHover = function (result) {
           clearSelection();

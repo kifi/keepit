@@ -226,7 +226,11 @@ manage-lib-button =
     font-size: 12px
 
   .manage-lib-invite
+    box-sizing: border-box
+    min-height: 60px
+
     .library-share-menu
+      top: 5px
       display: block
       width: 540px
 
@@ -250,6 +254,9 @@ manage-lib-button =
         border: 1px solid #c7c7c7
         border-bottom-left-radius: 5px
         border-bottom-right-radius: 5px
+
+        &:empty
+          display: none
 
       .library-share-contact
         width: 100%
