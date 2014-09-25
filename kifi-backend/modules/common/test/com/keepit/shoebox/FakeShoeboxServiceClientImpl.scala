@@ -48,7 +48,7 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
-  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
+  def saveImageInfo(imageInfo: ImageInfo): Future[Unit] = ???
 
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
 

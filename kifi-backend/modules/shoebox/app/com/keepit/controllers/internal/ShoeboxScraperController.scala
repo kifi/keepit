@@ -231,6 +231,7 @@ class ShoeboxScraperController @Inject() (
     Ok(Json.toJson(imageInfo))
   }
 
+  // Todo(Eishay): Stop returning ImageInfo
   def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val info = json.as[ImageInfo]
