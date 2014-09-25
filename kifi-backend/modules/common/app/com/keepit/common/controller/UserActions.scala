@@ -20,14 +20,29 @@ case class NonUserRequest[T](request: Request[T], private val identityF: () => O
   def identityOpt: Option[Identity] = identityF.apply
 }
 
-case class UserRequest[T](val request: Request[T], val userId: Id[User], val adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
+case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
   implicit val req = request
 
-  private val AT_MOST = 5 seconds
-  lazy val user: User = Await.result(helper.getUserOpt(userId).map(_.get), AT_MOST)
-  lazy val experiments: Set[ExperimentType] = Await.result(helper.getUserExperiments(userId), AT_MOST)
+  private class Lazily[A](f: => Future[A]) {
+    private lazy val cachedF: Future[A] = f
+    private lazy val cachedV = Await.result(cachedF, 5 seconds)
+    def get: Future[A] = cachedF
+    def awaitGet: A = cachedV
+  }
+
+  private val user0: Lazily[User] = new Lazily(helper.getUserOpt(userId).map(_.get))
+  def userF = user0.get
+  def user = user0.awaitGet
+
+  private val experiments0: Lazily[Set[ExperimentType]] = new Lazily(helper.getUserExperiments(userId))
+  def experimentsF = experiments0.get
+  def experiments = experiments0.awaitGet
+
+  private val identityOpt0: Lazily[Option[Identity]] = new Lazily(helper.getSecureSocialIdentityOpt(userId))
+  def identityOptF = identityOpt0.get
+  def identityOpt = identityOpt0.awaitGet
+
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
-  lazy val identityOpt: Option[Identity] = Await.result(helper.getSecureSocialIdentityOpt(userId), AT_MOST)
 }
 
 // for backward-compatibility
