@@ -9,7 +9,6 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
-import com.keepit.controllers.ext.routes.{ ExtLibraryController => Routes }
 import com.keepit.model.{ FakeSliderHistoryTrackerModule, Keep, KeepSource }
 import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryVisibility }
 import com.keepit.model.{ NormalizedURI, URLFactory, User, Username }
@@ -321,33 +320,34 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].getLibraries()(request(Routes.getLibraries()))
+    controller.getLibraries()(request(routes.ExtLibraryController.getLibraries()))
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].createLibrary()(request(Routes.createLibrary()).withBody(body))
+    controller.createLibrary()(request(routes.ExtLibraryController.createLibrary()).withBody(body))
   }
 
   private def addKeep(user: User, libraryId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].addKeep(libraryId)(request(Routes.addKeep(libraryId)).withBody(body))
+    controller.addKeep(libraryId)(request(routes.ExtLibraryController.addKeep(libraryId)).withBody(body))
   }
 
   private def getKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].getKeep(libraryId, keepId, None)(request(Routes.getKeep(libraryId, keepId)))
+    controller.getKeep(libraryId, keepId, None)(request(routes.ExtLibraryController.getKeep(libraryId, keepId)))
   }
 
   private def removeKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].removeKeep(libraryId, keepId)(request(Routes.removeKeep(libraryId, keepId)))
+    controller.removeKeep(libraryId, keepId)(request(routes.ExtLibraryController.removeKeep(libraryId, keepId)))
   }
 
   private def updateKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtLibraryController].updateKeep(libraryId, keepId)(request(Routes.updateKeep(libraryId, keepId)).withBody(body))
+    controller.updateKeep(libraryId, keepId)(request(routes.ExtLibraryController.updateKeep(libraryId, keepId)).withBody(body))
   }
 
+  private def controller(implicit injector: Injector) = inject[ExtLibraryController]
   private def request(route: Call) = FakeRequest(route.method, route.url)
 }

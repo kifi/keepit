@@ -88,7 +88,7 @@ class ExtLibraryController @Inject() (
                 (keep, keepImageRequest)
               }
               keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Json.obj("imageStatusPath" -> com.keepit.controllers.ext.routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
+              Json.obj("imageStatusPath" -> routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
             case _ =>
               val keep = db.readOnlyMaster { implicit session =>
                 keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.

@@ -40,7 +40,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
   "ExtSearchController" should {
     "search keeps" in {
       withInjector(modules: _*) { implicit injector =>
-        val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).toString
+        val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
