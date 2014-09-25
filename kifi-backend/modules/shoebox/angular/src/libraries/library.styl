@@ -33,7 +33,6 @@
   background-position: 0px 0px
   content: ''
 
-
 .library-share-menu
   display: none
   position: absolute
@@ -66,7 +65,7 @@
       min-height: 50px
 
     &.library-share-search-input
-      width: 270px
+      width: 320px
 
   .library-share-search-spinner
     float: right
@@ -186,21 +185,22 @@
   text-overflow: ellipsis
   white-space: nowrap
 
-.library-share-contact-button
-  @extend .library-share-button
-  display: inline-block
-  position: absolute
-  top: 5px
-  padding: 7px 10px 5px 30px
-  font-size: 12px
+.kf-library-share-search
+  .library-share-contact-button
+    @extend .library-share-button
+    display: inline-block
+    position: absolute
+    top: 5px
+    padding: 7px 10px 5px 30px
+    font-size: 12px
 
-.library-share-contact-button::before
-  position: absolute
-  top: 5px
-  left: 8px
-  width: 16px
-  height: 16px
-  {share-button-image}
-  background-size: 100% 100%
-  background-position: 0px 0px
-  content: ''
+  .library-share-contact-button::before
+    position: absolute
+    top: 5px
+    left: 8px
+    width: 16px
+    height: 16px
+    {share-button-image}
+    background-size: 100% 100%
+    background-position: 0px 0px
+    content: ''

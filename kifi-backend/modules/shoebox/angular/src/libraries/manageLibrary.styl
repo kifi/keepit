@@ -224,3 +224,53 @@ manage-lib-button =
   .manage-lib-name-error
     margin-top: -5px
     font-size: 12px
+
+  .manage-lib-invite
+    .library-share-menu
+      display: block
+      width: 540px
+
+    .library-share-menu-content
+      border: none
+      box-shadow: none
+
+      .library-share-input-box
+        border: none
+
+      .library-share-input.library-share-search-input
+        box-sizing: border-box
+        border: 1px solid #c7c7c7
+        border-radius: 5px
+        width: 540px
+        background-color: #fff
+
+      .library-share-contact-list
+        position: relative
+        top: -5px
+        border: 1px solid #c7c7c7
+        border-bottom-left-radius: 5px
+        border-bottom-right-radius: 5px
+
+      .library-share-contact
+        width: 100%
+
+      .library-share-contact-button
+        // Override a bunch of global dialog button styles.
+        width: inherit
+        height: inherit
+        line-height: inherit
+        font-weight: inherit
+
+        right: 3px
+        padding-top: 4px
+        padding-bottom: 4px
+
+        &:hover
+          color: #666
+
+        &::before
+          top: 5px
+
+.manage-lib-followers
+  min-height: 305px
+

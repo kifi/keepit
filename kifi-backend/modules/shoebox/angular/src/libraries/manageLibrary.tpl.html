@@ -53,6 +53,12 @@
         <div ng-if="$error.general" class="manage-lib-input-wrapper manage-lib-error">{{$error.general}}</div>
       </div>
 
+      <div kf-library-share-search library="library" manage-lib-invite="true" class="manage-lib-invite"></div>
+
+      <div class="manage-lib-followers">
+        Owner and followers go here.
+      </div>
+
       <button class="manage-lib-create-button" ng-if="!modifyingExistingLibrary" ng-click="saveLibrary()">Create</button>
       <button class="manage-lib-save-button" ng-if="modifyingExistingLibrary" ng-click="saveLibrary()">Save</button>
       <a class="manage-lib-delete-link" href="javascript:" ng-click="deleteLibrary()">Delete library</a>

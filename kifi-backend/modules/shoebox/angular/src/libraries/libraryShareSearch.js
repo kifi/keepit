@@ -8,7 +8,8 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        library: '='
+        library: '=',
+        manageLibInvite: '='
       },
       templateUrl: 'libraries/libraryShareSearch.tpl.html',
       link: function (scope, element/*, attrs*/) {
@@ -290,6 +291,15 @@ angular.module('kifi')
         scope.importGmail = function () {
           socialService.importGmail();
         };
+
+
+        //
+        // On link.
+        //
+        if (scope.manageLibInvite) {
+          searchInput.attr('placeholder', 'Type a name or email');
+          showMenu();
+        }
       }
     };
   }
