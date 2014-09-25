@@ -784,6 +784,8 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 
+GET     /internal/shoebox/removeDuplicateKifiABooks     @com.keepit.controllers.internal.ShoeboxController.removeDuplicateKifiABooks(readOnly: Boolean)
+
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/public/ng/img", file)

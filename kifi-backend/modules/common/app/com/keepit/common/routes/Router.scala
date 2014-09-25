@@ -324,6 +324,7 @@ object ABook extends Service {
     def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
     def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
     def getIrrelevantPeople(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/getIrrelevantPeople")
+    def removeDuplicateKifiABooks(readOnly: Boolean) = ServiceRoute(GET, "/internal/abook/removeDuplicateKifiABooks", Param("readOnly", readOnly))
   }
 }
 

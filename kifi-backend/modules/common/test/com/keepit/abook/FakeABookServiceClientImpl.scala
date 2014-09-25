@@ -123,4 +123,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
 
+  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue] = ???
 }
