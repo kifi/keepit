@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope', '$window', '$anchorScroll',
-  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope, $window, $anchorScroll) {
+  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope', '$anchorScroll',
+  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope, $anchorScroll) {
     return {
       //replace: true,
       restrict: 'A',
@@ -70,7 +70,7 @@ angular.module('kifi')
         };
 
         // SCROLL-BAR STUFF
-        scope.gotoBottom = function() {
+        scope.scrollAround = function() {
           $anchorScroll();
         };
       }

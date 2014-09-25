@@ -54,7 +54,7 @@
       <input class="kf-lib-filter-input" placeholder="Find a library..." maxlength="32">
   </div>
 
-  <div class="kf-scrollable-libs" ng-click="gotoBottom()">
+  <div class="kf-scrollable-libs" ng-click="scrollAround()">
     <ul class="kf-nav-lib-users">
       <li ng-repeat="library in userLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
         <a class="kf-nav-link" ng-href="{{library.url}}">
@@ -81,9 +81,7 @@
           <div class="library-card svg-library-card"></div>
           <div class="kf-nav-lib-info">
             <div class="kf-nav-lib-name">{{library.name}}</div>
-            <div class="kf-nav-lib-text">
-              invitation pending
-            </div>
+            <div class="kf-nav-lib-text">invitation pending</div>
           </div>
         </a>
       </li>
