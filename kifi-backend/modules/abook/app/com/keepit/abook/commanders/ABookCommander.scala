@@ -241,24 +241,4 @@ class ABookCommander @Inject() (
     db.readOnlyReplica { implicit session => econtactRepo.getUserIdsByEmail(email) }.toSet
   }
 
-  def removeDuplicateKifiABooks(readOnly: Boolean) = {
-    val data = db.readWrite { implicit session =>
-      abookInfoRepo.all().filter(_.origin == ABookOrigins.KIFI).groupBy(_.userId).collect {
-        case (userId, kifiAdressBooks) if kifiAdressBooks.length > 1 =>
-          val Seq(firstKifiABook, duplicates @ _*) = kifiAdressBooks.sortBy(_.id.get)
-          (userId, firstKifiABook, duplicates.map { duplicateKifiABook =>
-            val contacts = econtactRepo.getByAbookId(duplicateKifiABook.id.get)
-            if (!readOnly) {
-              contacts.foreach { contact =>
-                econtactRepo.save(contact.copy(abookId = firstKifiABook.id.get))
-              }
-              abookInfoRepo.save(duplicateKifiABook.copy(state = ABookInfoStates.INACTIVE))
-            }
-            duplicateKifiABook -> contacts
-          })
-      }
-    }
-    if (!readOnly) data.foreach { case (userId, _, _) => econtactTypeahead.refresh(userId) }
-    data
-  }
 }

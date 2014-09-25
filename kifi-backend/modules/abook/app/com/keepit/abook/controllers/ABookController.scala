@@ -263,20 +263,4 @@ class ABookController @Inject() (
     Ok(Json.toJson(userIds))
   }
 
-  def removeDuplicateKifiABooks(readOnly: Boolean) = Action { request =>
-    val data = abookCommander.removeDuplicateKifiABooks(readOnly)
-    val json = JsArray(
-      data.toSeq.map {
-        case (userId, primaryKifiABook, duplicatesWithContacts) =>
-          Json.obj(
-            "userId" -> userId.id,
-            "primaryKifiABook" -> primaryKifiABook.id.get.id,
-            "duplicateKifiABooks" -> JsArray(duplicatesWithContacts.map {
-              case (duplicateKifiABook, contacts) =>
-                Json.obj("duplicateABookId" -> duplicateKifiABook.id.get.id, "relevantContactIds" -> JsArray(contacts.map(contact => JsNumber(contact.id.get.id))))
-            }))
-      }
-    )
-    Ok(json)
-  }
 }

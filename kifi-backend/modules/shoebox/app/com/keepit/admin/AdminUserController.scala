@@ -892,9 +892,4 @@ class AdminUserController @Inject() (
     SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
   }
-
-  def removeDuplicateKifiABooks(readOnly: Boolean) = AdminUserPage.async { request =>
-    abookClient.removeDuplicateKifiABooks(readOnly).map(Ok(_))
-  }
-
 }

@@ -59,7 +59,6 @@ trait ABookServiceClient extends ServiceClient {
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
   def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople]
-  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -259,9 +258,5 @@ class ABookServiceClientImpl @Inject() (
 
   def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
     call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
-  }
-
-  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue] = {
-    call(ABook.internal.removeDuplicateKifiABooks(readOnly)).map(_.json)
   }
 }
