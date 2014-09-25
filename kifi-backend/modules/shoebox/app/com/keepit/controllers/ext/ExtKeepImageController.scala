@@ -28,15 +28,13 @@ class ExtKeepImageController @Inject() (
     implicit val config: com.keepit.common.crypto.PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def uploadKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction.async(parse.temporaryFile) { request =>
-    val (keepOpt, libOpt) = db.readOnlyMaster { implicit session =>
-      val k = keepRepo.getOpt(keepExtId)
-      val lib = Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
-      (k, lib)
+    val keepOpt = db.readOnlyMaster { implicit session =>
+      Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
     }
-    (keepOpt, libOpt) match {
-      case (_, None) | (None, _) =>
+    keepOpt match {
+      case None =>
         Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
-      case (Some(keep), Some(lib)) =>
+      case Some(keep) =>
         val imageRequest = db.readWrite { implicit session =>
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
         }
@@ -89,20 +87,18 @@ class ExtKeepImageController @Inject() (
   }
 
   def changeKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    val (keepOpt, libOpt) = db.readOnlyMaster { implicit session =>
-      val k = keepRepo.getOpt(keepExtId)
-      val lib = Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
-      (k, lib)
+    val keepOpt = db.readOnlyMaster { implicit session =>
+      Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
     }
     val imageJson = request.body \ "image"
 
-    (keepOpt, libOpt, imageJson) match {
-      case (None, _, _) | (_, None, _) =>
+    (keepOpt, imageJson) match {
+      case (None, _) =>
         Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
-      case (Some(keep), _, JsNull) =>
+      case (Some(keep), JsNull) =>
         keepImageCommander.removeKeepImageForKeep(keep.id.get)
         Future.successful(NoContent)
-      case (Some(keep), _, JsString(imageUrl)) if imageUrl.startsWith("http") =>
+      case (Some(keep), JsString(imageUrl)) if imageUrl.startsWith("http") =>
         val imageRequest = db.readWrite { implicit session =>
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
         }
@@ -113,7 +109,7 @@ class ExtKeepImageController @Inject() (
           case success: ImageProcessSuccess =>
             Ok(JsString("success"))
         }
-      case (_, _, badJson) =>
+      case (_, badJson) =>
         Future.successful(BadRequest(Json.obj("error" -> "couldnt_parse_image_url")))
     }
   }

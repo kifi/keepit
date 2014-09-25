@@ -45,7 +45,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     FakeHttpClientModule()
   )
 
-  "ExtLibraryController" should {
+  "ExtKeepImageControlle" should {
 
     "support image uploads" in {
       withDb(controllerTestModules: _*) { implicit injector =>
@@ -66,8 +66,10 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         val keepExtId = (keepJson \ "id").as[ExternalId[Keep]]
         val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
 
+        libPubId === libraryPubId
+
         db.readOnlyMaster { implicit session =>
-          keepImageRepo.all().length === 0
+          keepImageRepo.all() === Seq.empty
         }
 
         { // Wrong user
@@ -115,7 +117,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
 
         db.readOnlyMaster { implicit session =>
-          keepImageRepo.all().length === 0
+          keepImageRepo.all() === Seq.empty
         }
 
         { // Wrong user
@@ -134,8 +136,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
           status(changeResp) === INTERNAL_SERVER_ERROR
 
           db.readOnlyMaster { implicit session =>
-            println(keepImageRequestRepo.all())
-            keepImageRequestRepo.all().length === 1
+            keepImageRequestRepo.all().head.failureCode === Some("source_fetch_failed")
           }
         }
 
@@ -147,7 +148,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
           //
           //        db.readOnlyMaster { implicit session =>
           //          println(keepImageRequestRepo.all())
-          //          keepImageRequestRepo.all().length === 1
+          //          keepImageRequestRepo.all() === Seq.empty
           //        }
         }
 
@@ -178,7 +179,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
   //      val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
   //
   //      db.readOnlyMaster { implicit session =>
-  //        keepImageRepo.all().length === 0
+  //        keepImageRepo.all() === Seq.empty
   //      }
   //
   //      val changeResp = changeImage(user1, libPubId, keepExtId, Json.obj("image" -> "http://www.bestimages.ever/the_sky.png"))
