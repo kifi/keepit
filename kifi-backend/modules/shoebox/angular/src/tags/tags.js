@@ -285,7 +285,9 @@ angular.module('kifi')
         };
 
         angular.element($window).resize(_.throttle(function () {
-          scope.refreshScroll();
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
         }, 150));
 
         scope.$watch('filter.name', function () {

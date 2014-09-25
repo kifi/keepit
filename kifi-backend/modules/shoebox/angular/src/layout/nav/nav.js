@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope',
-  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope) {
+  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope', '$anchorScroll',
+  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope, $anchorScroll) {
     return {
       //replace: true,
       restrict: 'A',
@@ -67,6 +67,11 @@ angular.module('kifi')
 
         scope.inRecoExperiment = function () {
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
+        };
+
+        // SCROLL-BAR STUFF
+        scope.scrollAround = function() {
+          $anchorScroll();
         };
       }
     };
