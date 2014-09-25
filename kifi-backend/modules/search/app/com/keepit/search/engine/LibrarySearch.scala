@@ -45,25 +45,19 @@ class LibrarySearch(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
+    val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
     val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRecs1 = engine.execute(keepScoreSource)
-    debugLog(s"LibraryFromKeepsScoreVectorSource executed recs=$numRecs1")
-
     val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRec2 = engine.execute(libraryScoreSource)
-    debugLog(s"LibraryScoreVectorSource executed recs=${numRec2 - numRecs1}")
-
-    timeLogs.search()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
-      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
+      engine.debug(this)
+      keepScoreSource.debug(this)
     }
 
-    val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    debugLog(s"LibraryResultCollector created")
-    engine.join(collector)
-    debug(s"enginer joined")
+    engine.execute(collector, keepScoreSource, libraryScoreSource)
+    debug(s"engine executed")
+
+    timeLogs.search()
 
     collector.getResults()
   }

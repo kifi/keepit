@@ -41,33 +41,30 @@ class KifiSearchImpl(
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
+  private[this] val clickBoostsProvider: () => ResultClickBoosts = { () =>
+    val ret = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts")
+    timeLogs.clickBoost()
+    ret
+  }
+
   def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
     debugLog("engine created")
 
+    val collector = new KifiResultCollector(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRecs1 = engine.execute(keepScoreSource)
-    debugLog(s"UriFromKeepsScoreVectorSource executed recs=$numRecs1")
-
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    val numRec2 = engine.execute(articleScoreSource)
-    debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
-
-    timeLogs.search()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
-      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
+      engine.debug(this)
+      keepScoreSource.debug(this)
     }
 
-    val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-    timeLogs.clickBoost()
+    engine.execute(collector, keepScoreSource, articleScoreSource)
+    debugLog("engine executed")
 
-    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
-    debugLog("KifiResultCollector created")
-    engine.join(collector)
-    debugLog("engine joined")
+    timeLogs.search()
 
     collector.getResults()
   }

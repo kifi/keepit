@@ -30,25 +30,19 @@ class KifiSearchNonUserImpl(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
+    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRecs1 = engine.execute(keepScoreSource)
-    debugLog(s"UriFromKeepsScoreVectorSource executed recs=$numRecs1")
-
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    val numRec2 = engine.execute(articleScoreSource)
-    debugLog(s"UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1}")
-
-    timeLogs.search()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds, this)
-      if ((debugFlags & DebugOption.Library.flag) != 0) keepScoreSource.listLibraries(this)
+      engine.debug(this)
+      keepScoreSource.debug(this)
     }
 
-    val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    debugLog(s"KifiNonUserResultCollector created")
-    engine.join(collector)
-    debugLog(s"engine joined")
+    engine.execute(collector, keepScoreSource, articleScoreSource)
+    debugLog(s"engine executed")
+
+    timeLogs.search()
 
     collector.getResults()
   }
