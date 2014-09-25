@@ -130,8 +130,10 @@ manage-lib-button =
     overflow: hidden
 
   .manage-lib-choice-card
+    position: relative
     display: inline-block
     margin-right: 15px
+    padding-top: 4px
     width: 80px
     text-align: center
 
@@ -140,6 +142,49 @@ manage-lib-button =
     width: 58px
     height: 77px
     background-repeat: no-repeat
+
+  .manage-lib-choice-input
+    display: none
+
+  .manage-lib-custom-radio
+    position: absolute
+    top: 52px
+    right: 5px
+    border: 1px solid #c7c7c7
+    border-radius: 100%
+    width: 30px
+    height: 30px
+    background-color: #fff
+    font-size: 0
+    cursor: pointer
+    z-index: 3
+
+  .manage-lib-custom-radio-check
+    display: none
+
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      border-radius: 2px
+      width: 4px;
+      background-color: kifiBlack
+      font-size: 0
+
+    &::before
+      left: 52%
+      top: 7px
+      bottom: 5px
+      transform: translate(-1px) rotate(45deg)
+
+    &::after
+      left: 28%
+      top: 14px
+      bottom: 8px
+      transform: translate(-1px) rotate(-45deg)
+
+  input.manage-lib-choice-input:checked ~ .manage-lib-custom-radio .manage-lib-custom-radio-check
+    display: block
 
   .manage-lib-visibility-description
     position: absolute
