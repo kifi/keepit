@@ -67,7 +67,7 @@ class KeepImageRequestRepoImpl @Inject() (
   override def deleteCache(model: KeepImageRequest)(implicit session: RSession): Unit = {}
 
   private val getByTokenCompiled = Compiled { token: Column[String] =>
-    for (r <- rows if r.token === token && r.state === KeepImageRequestStates.ACTIVE) yield r
+    for (r <- rows if r.token === token) yield r
   }
   def getByToken(token: String)(implicit session: RSession): Option[KeepImageRequest] = {
     getByTokenCompiled(token).firstOption
