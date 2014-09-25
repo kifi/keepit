@@ -56,7 +56,10 @@ angular.module('kifi')
           library: $scope.library,
           returnAction: function () {
             libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-              libraryService.getLibraryByUserSlug(username, data.library.slug, true);
+              libraryService.getLibraryByUserSlug(username, data.library.slug, true).then(function (library) {
+                util.replaceObjectInPlace($scope.library, library);
+              });
+
               if (data.library.slug !== librarySlug) {
                 $location.path('/' + username + '/' + data.library.slug);
               }
@@ -122,13 +125,6 @@ angular.module('kifi')
       if (libSlug === librarySlug) {
         $scope.keeps.unshift(keep);
       }
-    });
-
-    $rootScope.$on('changedLibrary', function () {
-      // TODO(yiping): figure out why this is slow to update.
-      libraryService.getLibraryByUserSlug(username, librarySlug).then(function (library) {
-        util.replaceObjectInPlace($scope.library, library);
-      });
     });
 
 

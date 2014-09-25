@@ -40,17 +40,6 @@ angular.module('kifi')
 
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function () {
-              var libraries = libraryService.librarySummaries;
-              scope.userLibs = _.filter(libraries, function (lib) {
-                return lib.kind === 'user_created';
-              });
-            });
-          }
-        });
-
-        $rootScope.$on('deletedLibrary', function () {
-          if (scope.librariesEnabled) {
             scope.userLibs = _.filter(libraryService.librarySummaries, function (lib) {
               return lib.kind === 'user_created';
             });

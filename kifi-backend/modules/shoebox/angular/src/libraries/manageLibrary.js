@@ -79,10 +79,9 @@ angular.module('kifi')
           }
 
           promise.then(function (resp) {
-              scope.$error = {};
-              submitting = false;
-              libraryService.fetchLibrarySummaries(true);
-
+            scope.$error = {};
+            submitting = false;
+            libraryService.fetchLibrarySummaries(true).then(function () {
               $rootScope.$emit('changedLibrary');
               scope.close();
 
@@ -91,6 +90,7 @@ angular.module('kifi')
               } else {
                 returnAction(resp);
               }
+            });
           })['catch'](function (err) {
             submitting = false;
             var error = err.data && err.data.error;
@@ -122,7 +122,7 @@ angular.module('kifi')
           submitting = true;
 
           libraryService.deleteLibrary(scope.library.id).then(function () {
-            $rootScope.$emit('deletedLibrary');
+            $rootScope.$emit('changedLibrary');
             scope.close();
             $location.path('/');
           });
