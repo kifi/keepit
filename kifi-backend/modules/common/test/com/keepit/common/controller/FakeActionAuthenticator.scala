@@ -35,7 +35,7 @@ case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
 }
 
 case class FakeIdentity(user: User) extends Identity {
-  def identityId: IdentityId = IdentityId("const_fake_id", "some_network")
+  def identityId: IdentityId = IdentityId("const_fake_id@mailserver.com", "some_network")
   def firstName: String = user.firstName
   def lastName: String = user.lastName
   def fullName: String = s"$firstName $lastName"
