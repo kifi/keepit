@@ -38,6 +38,18 @@ angular.module('kifi')
                 return lib.kind === 'user_created';
               });
               scope.invitedLibs = libraryService.invitedSummaries;
+
+              var lines;
+              for (var i = 0; i < scope.userLibs.length; i++) {
+                lines = shortenName(scope.userLibs[i].name);
+                scope.userLibs[i].firstLine = lines[0];
+                scope.userLibs[i].secondLine = lines[1];
+              }
+              for (i = 0; i < scope.invitedLibs.length; i++) {
+                lines = shortenName(scope.invitedLibs[i].name);
+                scope.invitedLibs[i].firstLine = lines[0];
+                scope.invitedLibs[i].secondLine = lines[1];
+              }
             });
           }
         });
@@ -69,7 +81,74 @@ angular.module('kifi')
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
 
-        // SCROLL-BAR STUFF
+        var maxLength = 22;
+        function shortenName (fullName) {
+          var firstLine = fullName;
+          var secondLine = '';
+          if (fullName.length > maxLength) {
+            var full = false;
+            var line = '';
+            while (!full) {
+              var pos = fullName.indexOf(' ');
+              if (line.length + pos < maxLength) {
+                line = line + fullName.substr(0, pos+1);
+                fullName = fullName.slice(pos+1);
+              } else {
+                full = true;
+              }
+            }
+            firstLine = line;
+            var remainingLen = fullName.length;
+            if (remainingLen > 0) {
+              if (remainingLen < maxLength) {
+                secondLine = fullName.substr(0, remainingLen);
+              } else {
+                secondLine = fullName.substr(0, maxLength-3) + '...';
+              }
+            }
+          }
+          return [firstLine, secondLine];
+        }
+
+        // Filter Box Stuff
+        scope.filter = {};
+        scope.isFilterFocused = false;
+        var preventClearFilter = false;
+        scope.filter.name = '';
+        scope.focusFilter = function () {
+          scope.isFilterFocused = true;
+        };
+
+        scope.disableClearFilter = function () {
+          preventClearFilter = true;
+        };
+
+        scope.enableClearFilter = function () {
+          preventClearFilter = false;
+        };
+
+        scope.blurFilter = function () {
+          scope.isFilterFocused = false;
+          if (!preventClearFilter) {
+            scope.clearFilter();
+          }
+        };
+
+        scope.clearFilter = function () {
+          scope.filter.name = '';
+          scope.onFilterChange();
+        };
+
+        /*
+        function getFilterValue() {
+          return scope.filter && scope.filter.name || '';
+        }*/
+
+        scope.onFilterChange = function () {
+          //libraryService.filterList(scope.filter.name);
+        };
+
+        // Scroll-Bar Stuff
         scope.scrollAround = function() {
           $anchorScroll();
         };
