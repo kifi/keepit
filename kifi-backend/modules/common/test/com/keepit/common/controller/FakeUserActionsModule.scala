@@ -6,6 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ SocialUserInfo, User, ExperimentType }
 import play.api.mvc.Request
+import securesocial.core.Identity
 
 import scala.concurrent.Future
 
@@ -31,10 +32,9 @@ class FakeUserActionsHelper @Inject() (
   }
 
   override def getUserIdOpt(implicit request: Request[_]): Option[Id[User]] = fixedUser.flatMap(_.id)
-  def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = SimpleNonUserRequest(request)
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)
-  def getSocialUserInfos(userId: Id[User]): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(None)
 }

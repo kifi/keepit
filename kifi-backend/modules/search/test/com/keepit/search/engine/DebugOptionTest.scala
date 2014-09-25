@@ -33,11 +33,11 @@ class DebugOptionTest extends Specification {
     "ignore bogus options" in {
       var obj = debugOption
       obj.debug("foo,trace, bar")
-      (obj.flags & Trace.flag) === 0
+      (obj.debugFlags & Trace.flag) === 0
 
       obj = debugOption
       obj.debug("foo, trace:2:3,bar")
-      ((obj.flags & Trace.flag) != 0) === true
+      ((obj.debugFlags & Trace.flag) != 0) === true
     }
   }
 }

@@ -25,7 +25,7 @@ trait ScoreVectorSource {
   def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer): Unit
 }
 
-trait ScoreVectorSourceLike extends ScoreVectorSource with Logging {
+trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
     val weights = new ArrayBuffer[(Weight, Float)]
     val weight = searcher.createWeight(query)
@@ -110,8 +110,6 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])]
   protected val monitoredAwait: MonitoredAwait
 
-  private[this] val published = LibraryFields.Visibility.PUBLISHED
-
   lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
   lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds, authorizedLibraryIds) = {
@@ -121,12 +119,6 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds), LongArraySet.fromSet(authorizedLibIds))
   }
-
-  var myOwnLibraryKeepCount = 0
-  var memberLibraryKeepCount = 0
-  var trustedLibraryKeepCount = 0
-  var authorizedLibraryKeepCount = 0
-  var discoverableKeepCount = 0
 
   @inline
   protected def getKeepVisibility(docId: Int, libId: Long, userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): Int = {
@@ -144,7 +136,7 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.MEMBER // the keep is in an authorized library
     } else {
-      if (visibilityDocValues.get(docId) == published) {
+      if (visibilityDocValues.get(docId) == LibraryFields.Visibility.PUBLISHED) {
         if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
           Visibility.NETWORK // the keep is in a published library, and my friend kept it
         } else if (trustedLibraryIds.findIndex(libId) >= 0) {
@@ -169,7 +161,7 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.MEMBER // the keep is in an authorized library
     } else {
-      if (visibilityDocValues.get(docId) == published) {
+      if (visibilityDocValues.get(docId) == LibraryFields.Visibility.PUBLISHED) {
         Visibility.OTHERS // a published library
       } else {
         Visibility.RESTRICTED
@@ -177,15 +169,11 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
     }
   }
 
-  def listLibraries(debug: DebugOption): Unit = {
-    debug.debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
-    debug.debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
-    debug.debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
-    debug.debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
-    debug.debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
-    debug.debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
-    debug.debugLog(s"""trustedLibKeepCount: ${trustedLibraryKeepCount}""")
-    debug.debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
+  protected def listLibraries(): Unit = {
+    debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
   }
 }
 
@@ -243,6 +231,12 @@ class UriFromKeepsScoreVectorSource(
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
+
+  private[this] var myOwnLibraryKeepCount = 0
+  private[this] var memberLibraryKeepCount = 0
+  private[this] var trustedLibraryKeepCount = 0
+  private[this] var authorizedLibraryKeepCount = 0
+  private[this] var discoverableKeepCount = 0
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
@@ -350,6 +344,18 @@ class UriFromKeepsScoreVectorSource(
       }
       count + cnt
     }
+
+    if ((debugFlags & DebugOption.Library.flag) != 0) {
+      listLibraries()
+      listLibraryKeepCounts()
+    }
+  }
+
+  private def listLibraryKeepCounts(): Unit = {
+    debugLog(s"""myOwnLibKeepCount: ${myOwnLibraryKeepCount}""")
+    debugLog(s"""memberLibKeepCount: ${memberLibraryKeepCount}""")
+    debugLog(s"""trustedLibKeepCount: ${trustedLibraryKeepCount}""")
+    debugLog(s"""authorizedLibKeepCount: ${authorizedLibraryKeepCount}""")
   }
 }
 

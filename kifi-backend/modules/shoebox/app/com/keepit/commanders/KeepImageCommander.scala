@@ -181,6 +181,7 @@ class KeepImageCommanderImpl @Inject() (
       Future.successful(ImageProcessState.ExistingStoredImagesFound(existingImagesForKeep))
     } else {
       updateRequestState(KeepImageRequestStates.FETCHING)
+
       fetcher.flatMap {
         case Right(loadedImage) =>
           updateRequestState(KeepImageRequestStates.PROCESSING)
@@ -236,6 +237,7 @@ class KeepImageCommanderImpl @Inject() (
         ImageProcessState.UploadedImage(image.key, image.format, image.image)
       }
     }
+
     Future.sequence(uploads).map { results =>
       val keepImages = results.map {
         case uploadedImage =>
@@ -244,14 +246,10 @@ class KeepImageCommanderImpl @Inject() (
           uploadedImage.image.flush()
           ki
       }
-      val existingImagesForKeep = db.readOnlyMaster { implicit session =>
-        keepImageRepo.getAllForKeepId(keepId)
-      }
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
+        val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId)
         if (existingImagesForKeep.isEmpty) {
-          keepImages.map { keepImage =>
-            keepImageRepo.save(keepImage)
-          }
+          keepImages.map(keepImageRepo.save)
         } else {
           val (shouldBeActive, shouldBeInactive) = existingImagesForKeep.partition { existingImg =>
             keepImages.find { newImg =>
@@ -267,11 +265,14 @@ class KeepImageCommanderImpl @Inject() (
           }
 
           log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
-          toDeactivate.foreach(keepImageRepo.save)
-          (toActivate ++ toCreate).map(keepImageRepo.save)
+          db.readWrite { implicit session =>
+            toDeactivate.foreach(keepImageRepo.save)
+            (toActivate ++ toCreate).map(keepImageRepo.save)
+          }
         }
-        ImageProcessState.StoreSuccess
       }
+
+      ImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist keepimage", ex)

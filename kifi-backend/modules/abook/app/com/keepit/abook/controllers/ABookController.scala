@@ -233,15 +233,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(name))
   }
 
-  def internKifiContact(userId: Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internKifiContact] userId=$userId contact=$contact")
-
-    val Seq(eContact) = abookCommander.internKifiContacts(userId, Seq(contact))
-    val richContact = EContact.toRichContact(eContact)
-    Ok(Json.toJson(richContact))
-  }
-
   def internKifiContacts(userId: Id[User]) = Action(parse.json) { request =>
     val contacts = request.body.as[Seq[BasicContact]]
     log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
@@ -271,4 +262,5 @@ class ABookController @Inject() (
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
+
 }

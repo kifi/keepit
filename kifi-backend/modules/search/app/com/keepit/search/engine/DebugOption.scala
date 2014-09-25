@@ -15,10 +15,7 @@ object DebugOption {
 
   object Library {
     val flag = 0x00000002
-    def unapply(str: String): Option[Set[Long]] = {
-      val parts = str.split(":", 0).toSeq
-      if (parts.length > 0 && parts.head == "library") Some(parts.tail.map(_.toLong).toSet) else None
-    }
+    def unapply(str: String): Boolean = (str == "library")
   }
 
   object Timing {
@@ -43,11 +40,10 @@ object DebugOption {
 }
 
 trait DebugOption { self: Logging =>
-  protected var debugStartTime: Long = System.currentTimeMillis()
-  protected var debugFlags: Int = 0
-  protected var debugTracedIds: Set[Long] = null
-  protected var debugLibraryIds: Set[Long] = null
   protected var debugLogDestination: (InetAddress, Int) = null
+  protected var debugStartTime: Long = System.currentTimeMillis()
+  var debugFlags: Int = 0
+  var debugTracedIds: Set[Long] = null
 
   // debug flags
   def debug(debugMode: String): Unit = {
@@ -57,8 +53,7 @@ trait DebugOption { self: Logging =>
         case Trace(ids) =>
           debugTracedIds = ids
           flags | Trace.flag
-        case Library(ids) =>
-          debugLibraryIds = ids
+        case Library() =>
           flags | Library.flag
         case Timing() =>
           flags | Timing.flag
@@ -76,13 +71,11 @@ trait DebugOption { self: Logging =>
   }
 
   def debug(debugOption: DebugOption): Unit = {
+    debugStartTime = debugOption.debugStartTime
     debugFlags = debugOption.debugFlags
     debugTracedIds = debugOption.debugTracedIds
-    debugLibraryIds = debugOption.debugLibraryIds
     debugLogDestination = debugOption.debugLogDestination
   }
-
-  def flags: Int = debugFlags
 
   def debugLog(msg: => String) = {
     if ((debugFlags & DebugOption.Log.flag) != 0) {

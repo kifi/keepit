@@ -893,5 +893,4 @@ class AdminUserController @Inject() (
     SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
   }
-
 }

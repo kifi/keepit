@@ -27,6 +27,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import com.keepit.abook.ABookServiceClient
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -62,6 +63,7 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
+  abook: ABookServiceClient,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {

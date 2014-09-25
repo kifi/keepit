@@ -1,18 +1,12 @@
 package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
-import com.keepit.graph.GraphServiceClient
-import com.keepit.graph.model.GraphFeedExplanation
-import com.keepit.model.{ Keep, NormalizedURI }
-import com.keepit.search.SearchServiceClient
-
+import com.keepit.search.{ AugmentableItem, AugmentationInfo, ItemAugmentationRequest, RestrictedKeepInfo, SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.collection.mutable
 import scala.concurrent.Future
 
 @Singleton
@@ -58,6 +52,15 @@ class SeedAttributionHelper @Inject() (
     require(seeds.map(_.userId).toSet.size <= 1, "Batch looking up of sharing users must be all for the same user")
 
     def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.1f
+    def augmentedInfo2UserAttr(info: AugmentationInfo): UserAttribution = {
+      val users = info.keeps.flatMap(_.keptBy)
+      val user2Lib = info.keeps.flatMap {
+        case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
+        case _ => None
+      }.toMap
+      val others = info.otherDiscoverableKeeps + info.otherPublishedKeeps
+      UserAttribution(users, others, Some(user2Lib))
+    }
 
     val ret: Array[Option[UserAttribution]] = Array.fill(seeds.size)(None)
 
@@ -65,14 +68,18 @@ class SeedAttributionHelper @Inject() (
       case None => Future.successful(ret)
       case Some(userId) =>
         // get uriIds for lookup and the corresponding indexes
-        val (idxes, uriIds) = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((i, seeds(i).uriId)) else None }.unzip
-        if (uriIds.size == 0) {
+        val uriId2Idx = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((seeds(i).uriId, i)) else None }.toMap
+        if (uriId2Idx.size == 0) {
           Future.successful(ret)
         } else {
-          search.sharingUserInfo(userId, uriIds).map { sharingUsersInfo =>
-            (idxes zip sharingUsersInfo).foreach {
-              case (idx, info) =>
-                if (info.sharingUserIds.size > 0) ret(idx) = Some(UserAttribution(info.sharingUserIds.toSeq, info.keepersEdgeSetSize - info.sharingUserIds.size))
+          val request = ItemAugmentationRequest.uniform(userId, uriId2Idx.keys.toSeq.map { uriId => AugmentableItem(uriId) }: _*)
+          search.augmentation(request).map { resp =>
+            resp.infos.foreach {
+              case (item, info) =>
+                val idx = uriId2Idx(item.uri)
+                val attr = augmentedInfo2UserAttr(info)
+                val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
+                if (n > 0) ret(idx) = Some(attr)
             }
             ret
           }

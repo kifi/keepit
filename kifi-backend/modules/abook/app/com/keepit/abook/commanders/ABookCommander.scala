@@ -237,6 +237,8 @@ class ABookCommander @Inject() (
     relevantContacts getOrElse allContacts
   }
 
-  def getUsersWithContact(email: EmailAddress): Set[Id[User]] =
+  def getUsersWithContact(email: EmailAddress): Set[Id[User]] = {
     db.readOnlyReplica { implicit session => econtactRepo.getUserIdsByEmail(email) }.toSet
+  }
+
 }

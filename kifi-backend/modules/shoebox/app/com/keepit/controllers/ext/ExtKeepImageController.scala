@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsNull, JsString, Json }
 import play.api.mvc.{ Result, Action, Controller }
 
 import scala.concurrent.Future
@@ -34,9 +34,9 @@ class ExtKeepImageController @Inject() (
       (k, lib)
     }
     (keepOpt, libOpt) match {
-      case (_, None) =>
+      case (_, None) | (None, _) =>
         Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
-      case (Some(keep), _) =>
+      case (Some(keep), Some(lib)) =>
         val imageRequest = db.readWrite { implicit session =>
           keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
         }
@@ -47,8 +47,6 @@ class ExtKeepImageController @Inject() (
           case success: ImageProcessSuccess =>
             Ok(JsString("success"))
         }
-      case (None, _) =>
-        Future.successful(NotFound(Json.obj("error" -> "invalid_keep_id")))
     }
   }
 
@@ -88,6 +86,36 @@ class ExtKeepImageController @Inject() (
     }
 
     checkStatus().map(Future.successful).getOrElse(pollCheck())
+  }
+
+  def changeKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
+    val (keepOpt, libOpt) = db.readOnlyMaster { implicit session =>
+      val k = keepRepo.getOpt(keepExtId)
+      val lib = Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
+      (k, lib)
+    }
+    val imageJson = request.body \ "image"
+
+    (keepOpt, libOpt, imageJson) match {
+      case (None, _, _) | (_, None, _) =>
+        Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
+      case (Some(keep), _, JsNull) =>
+        keepImageCommander.removeKeepImageForKeep(keep.id.get)
+        Future.successful(NoContent)
+      case (Some(keep), _, JsString(imageUrl)) if imageUrl.startsWith("http") =>
+        val imageRequest = db.readWrite { implicit session =>
+          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+        }
+        val setImageF = keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, Some(imageRequest.id.get))
+        setImageF.map {
+          case fail: KeepImageStoreFailure =>
+            InternalServerError(Json.obj("error" -> fail.reason))
+          case success: ImageProcessSuccess =>
+            Ok(JsString("success"))
+        }
+      case (_, _, badJson) =>
+        Future.successful(BadRequest(Json.obj("error" -> "couldnt_parse_image_url")))
+    }
   }
 
   // migration

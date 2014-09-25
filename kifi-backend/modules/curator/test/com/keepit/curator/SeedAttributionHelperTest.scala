@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.FakeCortexServiceClientImpl
 import com.keepit.curator.commanders.SeedAttributionHelper
@@ -8,7 +8,7 @@ import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceClientImpl
 import com.keepit.graph.model.GraphFeedExplanation
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
-import com.keepit.search.{ SharingUserInfo, FakeSearchServiceClient }
+import com.keepit.search._
 import org.specs2.mutable.Specification
 
 import scala.concurrent.Future
@@ -19,20 +19,32 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
 
   val fakeSearch = new FakeSearchServiceClient() {
 
-    private def genFakeSharingUserInfo(uriId: Id[NormalizedURI]): SharingUserInfo = {
-      if (uriId.id > 5) SharingUserInfo(Set(), 0)
-      else {
-        val userIds = (1 to uriId.id.toInt).map { Id[User](_) }.toSet
-        SharingUserInfo(userIds, userIds.size + uriId.id.toInt)
+    private def genAugmentationInfo(uriId: Id[NormalizedURI]): AugmentationInfo = {
+      val n = uriId.id.toInt
+      if (n > 5) return AugmentationInfo(Seq(), 0, 0)
+
+      val keepInfo = (1 to n) map { i =>
+        val extId = ExternalId.apply[Keep]()
+        val lib = if (i % 2 == 1) Some(Id[Library](i)) else None // half of the users have associated lib
+        val user = Some(Id[User](i))
+        RestrictedKeepInfo(extId, lib, user, Set())
       }
+      val otherPublishedKeeps = n
+      val otherDiscoverableKeeps = n
+      AugmentationInfo(keepInfo, otherPublishedKeeps, otherDiscoverableKeeps)
     }
 
-    override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
-      Future.successful(uriIds.map { genFakeSharingUserInfo(_) })
+    override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
+      val augs = request.items.map { case item => (item, genAugmentationInfo(item.uri)) }.toMap
+      val scores = AugmentationScores(Map(), Map(), Map())
+      Future.successful(ItemAugmentationResponse(augs, scores))
     }
   }
 
   val fakeCortex = new FakeCortexServiceClientImpl(null) {
+    override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = {
+      Future.successful(uriIds.map { uid => if (uid.id.toInt % 2 == 1) Seq.empty[Id[Keep]] else Seq(Id[Keep](uid.id)) })
+    }
     override def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = {
       val names = uris.map { uri => Some("topic_" + uri.id) }
       Future.successful(names)
@@ -82,16 +94,18 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(0).attribution.keep === None
 
         itemsWithAttr(1).attribution.user.get.friends.map { _.id } === List(1, 2)
-        itemsWithAttr(1).attribution.user.get.others === 2
+        itemsWithAttr(1).attribution.user.get.friendsLib.get.map { case (userId, libId) => (userId.id, libId.id) }.toMap === Map(1 -> 1)
+        itemsWithAttr(1).attribution.user.get.others === 4
 
         itemsWithAttr(2).attribution.user === None
 
         itemsWithAttr(3).attribution.user.get.friends.map { _.id } === List(1, 2, 3)
-        itemsWithAttr(3).attribution.user.get.others === 3
+        itemsWithAttr(3).attribution.user.get.friendsLib.get.map { case (userId, libId) => (userId.id, libId.id) }.toMap === Map(1 -> 1, 3 -> 3)
+        itemsWithAttr(3).attribution.user.get.others === 6
 
         itemsWithAttr(4).attribution.user === None
         itemsWithAttr(4).attribution.topic.get.topicName === "topic_4"
-        //itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
+        itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
       }
     }
   }
