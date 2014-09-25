@@ -649,6 +649,8 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
+GET     /admin/removeDuplicateKifiABooks     @com.keepit.controllers.admin.AdminUserController.removeDuplicateKifiABooks(readOnly: Boolean)
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
@@ -780,8 +782,6 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
-
-GET     /internal/shoebox/removeDuplicateKifiABooks     @com.keepit.controllers.internal.ShoeboxController.removeDuplicateKifiABooks(readOnly: Boolean)
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/public/ng/dist", file)
