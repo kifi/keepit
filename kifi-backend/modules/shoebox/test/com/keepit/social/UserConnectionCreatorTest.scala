@@ -138,7 +138,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
     "updateUserConnections sends emails to new user (LinkedIn)" in
       runTest(SocialNetworks.LINKEDIN, now) { outbox =>
-        outbox(0).subject === "Your LinkedIn friend Greg just joined Kifi"
+        outbox(0).subject === "Your LinkedIn connection Greg just joined Kifi"
       }
 
     "updateUserConnections sends emails to old user (LinkedIn)" in

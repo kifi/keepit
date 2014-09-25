@@ -15,6 +15,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
@@ -76,13 +77,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       email.to === Seq(EmailAddress("johnny@gmail.com"))
       email.category === NotificationCategory.toElectronicMailCategory(category)
       val html = email.htmlBody.value
-      html must contain("Hey Johnny")
+      html must contain("Hi Johnny")
 
       email
     }
 
     "friend request accepted email" in {
-      "sends email without PYMK tip" in {
+      "sends email" in {
         withDb(modules: _*) { implicit injector =>
           val toUser = db.readWrite { implicit rw =>
             inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
@@ -94,20 +95,19 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
           val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your Kifi friend request"
-          html must contain("Billy accepted your Kifi")
-          html must contain("You and Billy Madison are now")
+          html must contain("Billy Madison accepted your Kifi")
           html must contain("utm_campaign=friendRequestAccepted")
 
           val text = email.textBody.get.value
-          text must contain("Billy accepted your Kifi")
+          text must contain("Billy Madison accepted your Kifi")
         }
       }
     }
 
     "connection made email for new user from Facebook/LinkedIn" in {
       Seq(
-        (SocialNetworks.FACEBOOK, "Facebook"),
-        (SocialNetworks.LINKEDIN, "LinkedIn")
+        (SocialNetworks.FACEBOOK, "Facebook friend"),
+        (SocialNetworks.LINKEDIN, "LinkedIn connection")
       ).map {
           case (network, networkName) => withDb(modules: _*) { implicit injector =>
             val (toUser, friends) = db.readWrite { implicit rw =>
@@ -124,13 +124,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
             val email = testFriendConnectionMade(toUser, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(network))
             val html = email.htmlBody.value
             val text = email.textBody.get.value
-            email.subject === s"Your $networkName friend Billy just joined Kifi"
+            email.subject === s"Your $networkName Billy just joined Kifi"
             html must contain("utm_campaign=socialFriendJoined")
-            html must contain("You and Billy Madison are now")
-            html must contain(s"Your $networkName friend Billy just joined Kifi")
+            html must contain(s"Your $networkName, Billy Madison, joined Kifi")
+            html must contain(s"You and Billy are now")
 
-            text must contain("You and Billy Madison are now")
-            text must contain(s"Your $networkName friend Billy just joined Kifi")
+            text must contain(s"Your $networkName, Billy Madison, joined Kifi")
+            text must contain(s"You and Billy are now")
           }
         }
     }
@@ -149,17 +149,16 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
-          val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE)
+          val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
           val html = email.htmlBody.value
           val text = email.textBody.get.value
           email.subject === "You are now friends with Billy Madison on Kifi!"
           html must contain("utm_campaign=connectionMade")
-          html must contain("You and Billy Madison are now")
-          html must contain("now friends with Billy Madison on Kifi. Enjoy Billy’s")
-          html must contain("message Billy directly")
+          html must contain("You have a new connection on Kifi")
+          html must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
 
-          text must contain("now friends with Billy Madison on Kifi. Enjoy Billy's")
-          text must contain("message Billy directly")
+          text must contain("You have a new connection on Kifi")
+          text must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
         }
       }
     }
