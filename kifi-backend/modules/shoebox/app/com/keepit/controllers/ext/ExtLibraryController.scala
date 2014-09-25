@@ -130,7 +130,7 @@ class ExtLibraryController @Inject() (
             }
           }
           val keepImages = db.readOnlyReplica { implicit session =>
-            keepImageRepo.getAllForKeepId(keep.id.get)
+            keepImageRepo.getForKeepId(keep.id.get)
           }
           val keepImage = KeepImageSize.pickBest(idealSize, keepImages)
           val resp = LateLoadKeepData(keep.title, keepImage.map(keepImageCommander.getUrl))
