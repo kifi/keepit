@@ -38,9 +38,8 @@
         <div ng-if="$error.general" class="manage-lib-input-wrapper manage-lib-error">{{$error.general}}</div>
       </div>
 
-      <div class="dialog-buttons">
-        <button class="manage-lib-create-button" ng-click="saveLibrary()">Create</button>
-      </div>
+      <button class="manage-lib-create-button" ng-if="!modifyingExistingLibrary" ng-click="saveLibrary()">Create</button>
+      <button class="manage-lib-save-button" ng-if="modifyingExistingLibrary" ng-click="saveLibrary()">Save</button>
     </div>
   </div>
 </div>

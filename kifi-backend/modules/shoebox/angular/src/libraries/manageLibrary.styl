@@ -1,3 +1,17 @@
+manage-lib-button =
+  background-color: kifiBlack
+    display: block
+    font-size: 16px
+    font-weight: bold
+
+    &:hover
+    &:focus
+      background-color: #aaa
+
+    &:active
+      background-color: #888
+
+
 .manage-library
   .dialog-content
     padding-bottom: 0
@@ -45,6 +59,7 @@
 
   .dialog-body
     padding: 0 30px 15px
+    overflow: hidden
 
   .dialog-header
     padding: 10px 30px
@@ -130,16 +145,12 @@
     color: secondaryTextGray
 
   .manage-lib-create-button
-    background-color: kifiBlack
-    font-size: 16px
-    font-weight: bold
+    {manage-lib-button}
+    margin: 0 auto
 
-    &:hover
-    &:focus
-      background-color: #888
-
-    &:active
-      background-color: #aaa
+  .manage-lib-save-button
+    {manage-lib-button}
+    float: right
 
   .manage-lib-error
     display: block
@@ -149,5 +160,3 @@
   .manage-lib-name-error
     margin-top: -5px
     font-size: 12px
-
-

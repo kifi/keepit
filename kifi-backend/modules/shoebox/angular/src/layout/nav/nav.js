@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$anchorScroll',
-  function ($location, util, friendService, modalService, tagService, profileService, libraryService, $anchorScroll) {
+  '$location', '$rootScope', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$anchorScroll',
+  function ($location, $rootScope, util, friendService, modalService, tagService, profileService, libraryService, $anchorScroll) {
     return {
       //replace: true,
       restrict: 'A',
@@ -38,11 +38,7 @@ angular.module('kifi')
           }
         });
 
-        // TODO(yiping): figure out whether this watch should replace the
-        // watch above.
-        scope.$watch(function () {
-          return libraryService.librarySummaries.length;
-        }, function () {
+        $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
             libraryService.fetchLibrarySummaries().then(function () {
               var libraries = libraryService.librarySummaries;
@@ -56,11 +52,6 @@ angular.module('kifi')
                 return lib.kind === 'user_created';
               });
               scope.invitedLibs = libraryService.invitedSummaries;
-
-              // TODO (aaron): get backend to provide 'numFollowers' field
-              for (var i=0; i<scope.userLibs.length; i++) {
-                scope.userLibs[i].numFollowers = 10;
-              }
             });
           }
         });

@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util',
-  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
+.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'modalService', 'profileService', 'util',
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, modalService, profileService, util) {
     //
     // Internal data.
     //
@@ -50,6 +50,8 @@ angular.module('kifi')
     };
 
     $scope.manageLibrary = function () {
+      // TODO(yiping): remove libraryState from libraryService. Instead, pass it in
+      // as data to the modalService.
       libraryService.libraryState = {
         library: $scope.library,
         returnAction: function () {
@@ -61,7 +63,10 @@ angular.module('kifi')
           });
         }
       };
-      $rootScope.$emit('showGlobalModal', 'manageLibrary');
+
+      modalService.open({
+        template: 'libraries/manageLibraryModal.tpl.html'
+      });
     };
 
     $scope.canBeShared = function (library) {
