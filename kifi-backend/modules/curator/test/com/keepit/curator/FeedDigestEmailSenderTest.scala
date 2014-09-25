@@ -112,13 +112,13 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           {
             val tuple = makeCompleteUriRecommendation(1, 42, 8f, "https://www.kifi.com", 10000)
             tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
-              user = Some(UserAttribution(friends = Seq(friend1, friend2).map(_.id.get), others = 1)),
+              user = Some(UserAttribution(friends = Seq(friend1, friend2).map(_.id.get), others = 1, None)),
               topic = Some(TopicAttribution("Reading"))
             )))
           }, {
             val tuple = makeCompleteUriRecommendation(2, 42, 9f, "https://www.google.com", 2500)
             tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
-              user = Some(UserAttribution(friends = Seq(friend1.id.get), others = 2)),
+              user = Some(UserAttribution(friends = Seq(friend1.id.get), others = 2, None)),
               topic = Some(TopicAttribution("Searching"))
             )))
           },
