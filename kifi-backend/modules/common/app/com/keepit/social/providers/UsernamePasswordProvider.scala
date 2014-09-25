@@ -27,12 +27,13 @@ class UsernamePasswordProvider(app: Application)
     UPP.loginForm.bindFromRequest().fold(
       errors => Left(error("bad_form")),
       credentials => {
-        UserService.find(IdentityId(credentials._1, id)) match {
+        val (username, password) = credentials
+        UserService.find(IdentityId(username.trim, id)) match {
           case Some(identity) =>
             identity match {
               case userIdentity: UserIdentity =>
                 log.info(s"[doAuth] userIdentity=$userIdentity")
-                if (passwordAuth.authenticate(userIdentity.userId.get, credentials._2)) Right(userIdentity) else Left(error("wrong_password"))
+                if (passwordAuth.authenticate(userIdentity.userId.get, password)) Right(userIdentity) else Left(error("wrong_password"))
               case _ =>
                 log.error(s"[doAuth] identity passed in is not of type <UserIdentity>; class=${identity.getClass}; obj=$identity")
                 Left(error("wrong_password")) // wrong_password for compatibility; auth_failure/internal_error more accurate
