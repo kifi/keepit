@@ -72,6 +72,7 @@ class ScraperCallbackHelper @Inject() (
     }
   }
 
+  // Todo(Eishay): Stop returning ImageInfo
   def saveImageInfo(info: ImageInfo): ImageInfo = {
     withLock(imageInfoLock) {
       db.readWrite(attempts = 3) { implicit s =>
