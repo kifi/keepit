@@ -40,7 +40,6 @@ class KifiSearchNonUserImpl(
     }
 
     engine.execute(collector, keepScoreSource, articleScoreSource)
-    debugLog(s"engine executed")
 
     timeLogs.search()
 

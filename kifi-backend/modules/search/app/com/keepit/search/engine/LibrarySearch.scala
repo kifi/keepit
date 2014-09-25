@@ -55,7 +55,6 @@ class LibrarySearch(
     }
 
     engine.execute(collector, keepScoreSource, libraryScoreSource)
-    debug(s"engine executed")
 
     timeLogs.search()
 
