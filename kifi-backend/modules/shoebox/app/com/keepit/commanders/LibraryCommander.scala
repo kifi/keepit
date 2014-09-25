@@ -449,7 +449,7 @@ class LibraryCommander @Inject() (
           case Some(mem) =>
             libraryMembershipRepo.save(mem.copy(access = maxAccess, state = LibraryMembershipStates.ACTIVE, createdAt = DateTime.now()))
         }
-        val updatedLib = lib.copy(memberCount = libraryRepo.updateMemberCount(libraryId))
+        val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         Right(updatedLib)
       }
@@ -470,7 +470,8 @@ class LibraryCommander @Inject() (
         case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail("cannot_leave_own_library"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
-          libraryRepo.updateMemberCount(libraryId)
+          val lib = libraryRepo.get(libraryId)
+          libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
           Right()
         }
       }

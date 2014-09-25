@@ -24,7 +24,7 @@
   <ul class="kf-nav-lib-system">
     <li class="kf-nav-lib-item" ng-class="{ active: isActive('mainLib.url') }">
       <a class="kf-nav-link" ng-href="{{mainLib.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-card"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{mainLib.name}}</div>
           <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">{{mainLib.numKeeps}} keeps </div>
@@ -33,7 +33,7 @@
     </li>
     <li class="kf-nav-lib-item" ng-class="{ active: isActive('secretLib.url') }">
       <a class="kf-nav-link" ng-href="{{secretLib.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
+        <div class="library-card svg-library-card"></div>
         <div class="kf-nav-lib-info">
           <div class="kf-nav-lib-name">{{secretLib.name}}</div>
           <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">{{secretLib.numKeeps}} keeps </div>
@@ -44,7 +44,7 @@
 
   <div class="kf-nav-lib-item">
     <a class="kf-nav-link">
-      <span class="sprite sprite-library-card-temp"></span>
+      <span class="library-card svg-new-library-card"></span>
       <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
     </a>
   </div>
@@ -54,39 +54,38 @@
       <input class="kf-lib-filter-input" placeholder="Find a library..." maxlength="32">
   </div>
 
-  <ul class="kf-nav-lib-users">
-    <li ng-repeat="library in userLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
-      <a class="kf-nav-link" ng-href="{{library.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
-        <div class="kf-nav-lib-info">
-          <div class="kf-nav-lib-name">{{library.name}}</div>
-          <div class="kf-nav-lib-text">
-            <ng-pluralize count="library.numKeeps"
-                          when="{'0': '',
-                                 'one': '1 keep',
-                                 'other': '{} keeps'}"></ng-pluralize>
-            <ng-pluralize count="library.numFollowers"
-                          when="{'0': '',
-                                 'one': ' 1 follower',
-                                 'other':' {} followers'}"></ng-pluralize>
+  <div class="kf-scrollable-libs" ng-click="scrollAround()">
+    <ul class="kf-nav-lib-users">
+      <li ng-repeat="library in userLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
+        <a class="kf-nav-link" ng-href="{{library.url}}">
+          <div class="library-card svg-red-card-with-lock" ng-if="library.visibility=='secret'"></div>
+          <div class="library-card svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
+          <div class="library-card svg-green-card-with-globe" ng-if="library.visibility=='published'"></div>
+          <div class="kf-nav-lib-info">
+            <div class="kf-nav-lib-name">{{library.name}}</div>
+            <div class="kf-nav-lib-text">
+              <ng-pluralize count="library.numKeeps"
+                            when="{'0': '',
+                                   'one': '1 keep',
+                                   'other': '{} keeps'}"></ng-pluralize>
+              <ng-pluralize count="library.numFollowers"
+                            when="{'0': '',
+                                   'one': ' 1 follower',
+                                   'other':' {} followers'}"></ng-pluralize>
+            </div>
           </div>
-        </div>
-      </a>
-    </li>
-  </ul>
-
-  <ul class="kf-nav-lib-users">
-    <li ng-repeat="library in invitedLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
-      <a class="kf-nav-link" ng-href="{{library.url}}">
-        <div class="sprite sprite-library-card-temp"></div>
-        <div class="kf-nav-lib-info">
-          <div class="kf-nav-lib-name">{{library.name}}</div>
-          <div class="kf-nav-lib-text">
-            invitation pending
+        </a>
+      </li>
+      <li ng-repeat="library in invitedLibs" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
+        <a class="kf-nav-link" ng-href="{{library.url}}">
+          <div class="library-card svg-library-card"></div>
+          <div class="kf-nav-lib-info">
+            <div class="kf-nav-lib-name">{{library.name}}</div>
+            <div class="kf-nav-lib-text">invitation pending</div>
           </div>
-        </div>
-      </a>
-    </li>
-  </ul>
+        </a>
+      </li>
+    </ul>
+  </div>
 
 </div>

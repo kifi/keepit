@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope',
-  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope) {
+  '$location', 'util', 'friendService', 'tagService', 'profileService', 'libraryService', '$rootScope', '$anchorScroll',
+  function ($location, util, friendService, tagService, profileService, libraryService, $rootScope, $anchorScroll) {
     return {
       //replace: true,
       restrict: 'A',
@@ -38,11 +38,6 @@ angular.module('kifi')
                 return lib.kind === 'user_created';
               });
               scope.invitedLibs = libraryService.invitedSummaries;
-
-              // TODO (aaron): get backend to provide 'numFollowers' field
-              for (var i=0; i<scope.userLibs.length; i++) {
-                scope.userLibs[i].numFollowers = 10;
-              }
             });
           }
         });
@@ -72,6 +67,11 @@ angular.module('kifi')
 
         scope.inRecoExperiment = function () {
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
+        };
+
+        // SCROLL-BAR STUFF
+        scope.scrollAround = function() {
+          $anchorScroll();
         };
       }
     };

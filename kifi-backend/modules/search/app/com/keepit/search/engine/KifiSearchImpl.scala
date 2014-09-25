@@ -115,7 +115,6 @@ class KifiSearchImpl(
     var othersHighScore = -1.0f
     var othersTotal = othersHits.totalHits
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      val queue = createQueue(numHitsToReturn - hits.size)
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall { hit =>
@@ -127,14 +126,13 @@ class KifiSearchImpl(
           }
           hit.score = hit.score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
           hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
-          queue.insert(hit)
+          hits.insert(hit)
           rank += 1
         } else {
           othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue
       }
-      queue.foreach { h => hits.insert(h) }
     }
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)

@@ -74,7 +74,9 @@ angular.module('kifi')
         });
 
         function setTagListHeight() {
-          scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          if (scrollableTagList.offset()) {
+            scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          }
         }
         $timeout(setTagListHeight);
 
@@ -283,12 +285,16 @@ angular.module('kifi')
         };
 
         angular.element($window).resize(_.throttle(function () {
-          scope.refreshScroll();
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
         }, 150));
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
-          scope.refreshScroll();
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
         });
 
         tagService.fetchAll();
