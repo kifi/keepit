@@ -8,8 +8,7 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [],
         userLibsToShow = [],
-        invitedLibsToShow = [],
-        libraryState = {}; // This is a variable to pass state from different library components of the system
+        invitedLibsToShow = [];
 
     var fuseOptions = {
        keys: ['name'],
@@ -112,7 +111,6 @@ angular.module('kifi')
     }
 
     var api = {
-      libraryState: libraryState,
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
       userLibsToShow: userLibsToShow,

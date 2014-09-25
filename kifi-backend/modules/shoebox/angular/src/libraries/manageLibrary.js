@@ -6,7 +6,6 @@ angular.module('kifi')
   function ($location, $rootScope, libraryService, profileService) {
     return {
       restrict: 'A',
-      scope: {},
       require: '^kfModal',
       templateUrl: 'libraries/manageLibrary.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
@@ -133,11 +132,9 @@ angular.module('kifi')
         //
         // On link.
         //
-        if (libraryService.libraryState.library) {
-          scope.library = _.cloneDeep(libraryService.libraryState.library);
-          returnAction = libraryService.libraryState.returnAction || null;
-          libraryService.libraryState = {};
-
+        if (scope.modalData) {
+          scope.library = _.cloneDeep(scope.modalData.library);
+          returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
           scope.userHasEditedSlug = true;
           scope.modalTitle = scope.library.name;

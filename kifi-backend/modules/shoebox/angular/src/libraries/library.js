@@ -50,22 +50,19 @@ angular.module('kifi')
     };
 
     $scope.manageLibrary = function () {
-      // TODO(yiping): remove libraryState from libraryService. Instead, pass it in
-      // as data to the modalService.
-      libraryService.libraryState = {
-        library: $scope.library,
-        returnAction: function () {
-          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
-            if (data.library.slug !== librarySlug) {
-              $location.path('/' + username + '/' + data.library.slug);
-            }
-          });
-        }
-      };
-
       modalService.open({
-        template: 'libraries/manageLibraryModal.tpl.html'
+        template: 'libraries/manageLibraryModal.tpl.html',
+        modalData: {
+          library: $scope.library,
+          returnAction: function () {
+            libraryService.getLibraryById($scope.library.id, true).then(function (data) {
+              libraryService.getLibraryByUserSlug(username, data.library.slug, true);
+              if (data.library.slug !== librarySlug) {
+                $location.path('/' + username + '/' + data.library.slug);
+              }
+            });
+          }
+        }
       });
     };
 
