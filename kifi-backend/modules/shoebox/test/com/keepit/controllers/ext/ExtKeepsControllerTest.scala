@@ -108,7 +108,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.unkeep(k1.externalId).toString
+        val path = routes.ExtBookmarksController.unkeep(k1.externalId).url
         path === s"/ext/keeps/${k1.externalId}/unkeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -182,7 +182,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.removeTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.removeTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/removeFromKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -251,7 +251,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.addTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -310,7 +310,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uris.size === 0
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.addTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
