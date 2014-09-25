@@ -33,7 +33,8 @@ var backgroundScripts = [
   'threadlist.js',
   'lzstring.min.js',
   'scorefilter.js',
-  'contact_search_cache.js'
+  'contact_search_cache.js',
+  'keep_image_uploader.js'
 ];
 var localBackgroundScripts = ['livereload.js']
 var tabScripts = ['scripts/**'];

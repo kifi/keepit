@@ -546,7 +546,7 @@ api.port.on({
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
         title: data.title,
-        imageUrl: data.imageUrl,
+        image: data.image,
         canonical: data.canonical,
         og: data.og,
         guided: data.guided
@@ -567,7 +567,12 @@ api.port.on({
           d.keeps.push(keep);
         }
         var how = d.howKept();
-        respond(true);
+        respond(keep);
+        if (keep.imageStatusPath) {
+          var keepImageUploader = global.keepImageUploader || require('./keep_image_uploader').keepImageUploader;
+          keepImageUploader.checkStatus(keep.imageStatusPath);
+          delete keep.imageStatusPath;
+        }
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(!!how, tab);
           api.tabs.emit(tab, 'kept', {kept: how});
@@ -670,7 +675,7 @@ api.port.on({
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
       ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, data.updates, function () {
         if (keep.details) {
-          ['title','imageUrl'].forEach(function (prop) {
+          ['title'].forEach(function (prop) {
             if (prop in data.updates) {
               keep.details[prop] = data.updates[prop];
             }
@@ -679,6 +684,21 @@ api.port.on({
         respond(true);
       }, respond.bind(null, false));
     }
+  },
+  save_keep_image: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/image', {image: data.image}, function () {
+        if (keep.details) {
+          keep.details.image = data.image;
+        }
+        respond(true);
+      }, respond.bind(null, false));
+    }
+  },
+  buffer_keep_image: function (data) {
+    // TODO: pass to keepImageUploader
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
