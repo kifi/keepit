@@ -126,8 +126,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
-      libraryRepo.save(libMurica.copy(memberCount = libraryMembershipRepo.countMemberships(libMurica.id.get)))
-      libraryRepo.save(libScience.copy(memberCount = libraryMembershipRepo.countMemberships(libScience.id.get)))
+      libraryRepo.save(libMurica.copy(memberCount = libraryMembershipRepo.count(libMurica.id.get)))
+      libraryRepo.save(libScience.copy(memberCount = libraryMembershipRepo.count(libScience.id.get)))
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
