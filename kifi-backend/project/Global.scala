@@ -86,7 +86,6 @@ object Global {
 
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
-    //updateOptions := updateOptions.value.withConsolidatedResolution(true),
     offline := false, // set to true to do work offline
     scalaVersion := "2.10.4",
     version := Version.appVersion,
@@ -102,7 +101,8 @@ object Global {
     aggregate in update := false,
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
       .setPreference(DoubleIndentClassDeclaration, true),
-    javaOptions in Test += "-Dlogger.resource=test-logger.xml"
+    javaOptions in Test += "-Dlogger.resource=test-logger.xml",
+    updateOptions := updateOptions.value.withConsolidatedResolution(true)
   )
 
 }
