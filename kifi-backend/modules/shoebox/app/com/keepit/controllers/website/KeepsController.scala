@@ -8,7 +8,7 @@ import com.keepit.heimdal._
 import com.keepit.commanders._
 import com.keepit.commanders.RawBookmarksWithCollection._
 import com.keepit.commanders.KeepInfo._
-import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
@@ -21,19 +21,17 @@ import org.joda.time.Seconds
 import scala.concurrent.Future
 import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
-import scala.Some
 import play.api.libs.json.JsObject
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.normalizer.NormalizedURIInterner
 
 class KeepsController @Inject() (
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
-  actionAuthenticator: ActionAuthenticator,
   uriSummaryCommander: URISummaryCommander,
   collectionCommander: CollectionCommander,
   bookmarksCommander: KeepsCommander,
@@ -43,9 +41,9 @@ class KeepsController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryCommander: LibraryCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>
+  def updateCollectionOrdering() = UserAction(parse.tolerantJson) { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
     val newCollectionIds = db.readWrite { implicit s => collectionCommander.setCollectionOrdering(request.userId, orderedIds) }
@@ -54,7 +52,7 @@ class KeepsController @Inject() (
     ))
   }
 
-  def updateCollectionIndexOrdering() = JsonAction.authenticatedParseJson { request =>
+  def updateCollectionIndexOrdering() = UserAction(parse.tolerantJson) { request =>
     val (id, currInd) = {
       val json = request.body
       val tagId = (json \ "tagId").as[ExternalId[Collection]]
@@ -72,7 +70,7 @@ class KeepsController @Inject() (
   }
 
   // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getScreenshotUrl() = JsonAction.authenticatedParseJsonAsync { request =>
+  def getScreenshotUrl() = UserAction.async(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
@@ -118,7 +116,7 @@ class KeepsController @Inject() (
   }
 
   // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getImageUrl() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+  def getImageUrl() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
     urlOpt match {
@@ -140,7 +138,7 @@ class KeepsController @Inject() (
   }
 
   // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+  def getImageUrls() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {
@@ -171,7 +169,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def exportKeeps() = AnyAction.authenticated { request =>
+  def exportKeeps() = UserAction { request =>
     val exports: Seq[KeepExport] = db.readOnlyReplica { implicit ro =>
       keepRepo.getKeepExports(request.userId)
     }
@@ -181,7 +179,7 @@ class KeepsController @Inject() (
       .as("text/html")
   }
 
-  def keepMultiple(separateExisting: Boolean = false) = JsonAction.authenticatedParseJson { request =>
+  def keepMultiple(separateExisting: Boolean = false) = UserAction(parse.tolerantJson) { request =>
     try {
       Json.fromJson[RawBookmarksWithCollection](request.body).asOpt map { fromJson =>
         val source = KeepSource.site
@@ -214,7 +212,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def unkeepMultiple() = JsonAction.authenticated { request =>
+  def unkeepMultiple() = UserAction { request =>
     request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { keepInfos =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepMultiple(keepInfos, request.userId)
@@ -226,7 +224,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+  def unkeepBatch() = UserAction(parse.tolerantJson) { request =>
     implicit val keepFormat = ExternalId.format[Keep]
     val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
     idsOpt map { ids =>
@@ -241,7 +239,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def unkeepBulk() = JsonAction.authenticatedParseJson { request =>
+  def unkeepBulk() = UserAction(parse.tolerantJson) { request =>
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val deactivatedKeepInfos = bookmarksCommander.unkeepBulk(keepSet, request.userId)
@@ -253,7 +251,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def rekeepBulk() = JsonAction.authenticatedParseJson { request =>
+  def rekeepBulk() = UserAction(parse.tolerantJson) { request =>
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val numRekept = bookmarksCommander.rekeepBulk(keepSet, request.userId)
@@ -263,15 +261,15 @@ class KeepsController @Inject() (
     }
   }
 
-  def makePublicBulk() = JsonAction.authenticatedParseJson { request =>
+  def makePublicBulk() = UserAction(parse.tolerantJson) { request =>
     setKeepPrivacyBulk(request, false)
   }
 
-  def makePrivateBulk() = JsonAction.authenticatedParseJson { request =>
+  def makePrivateBulk() = UserAction(parse.tolerantJson) { request =>
     setKeepPrivacyBulk(request, true)
   }
 
-  private def setKeepPrivacyBulk(request: AuthenticatedRequest[JsValue], isPrivate: Boolean) = {
+  private def setKeepPrivacyBulk(request: UserRequest[JsValue], isPrivate: Boolean) = {
     Json.fromJson[BulkKeepSelection](request.body).asOpt map { keepSet =>
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val numUpdated = bookmarksCommander.setKeepPrivacyBulk(keepSet, request.userId, isPrivate)
@@ -281,11 +279,11 @@ class KeepsController @Inject() (
     }
   }
 
-  def tagKeepBulk() = JsonAction.authenticatedParseJson(editKeepTagBulk(_, true))
+  def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))
 
-  def untagKeepBulk() = JsonAction.authenticatedParseJson(editKeepTagBulk(_, false))
+  def untagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, false))
 
-  private def editKeepTagBulk(request: AuthenticatedRequest[JsValue], isAdd: Boolean) = {
+  private def editKeepTagBulk(request: UserRequest[JsValue], isAdd: Boolean) = {
     val res = for {
       collectionId <- (request.body \ "collectionId").asOpt[ExternalId[Collection]]
       keepSet <- (request.body \ "keeps").asOpt[BulkKeepSelection]
@@ -297,7 +295,7 @@ class KeepsController @Inject() (
     res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep selection and/or collection id from request body"))
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
     val resOpt = if (withFullInfo) {
       bookmarksCommander.getFullKeepInfo(id, request.userId, true) map { infoFut =>
         infoFut map { info =>
@@ -313,7 +311,7 @@ class KeepsController @Inject() (
     resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
   }
 
-  def updateKeepInfo(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  def updateKeepInfo(id: ExternalId[Keep]) = UserAction { request =>
     val toBeUpdated = request.body.asJson map { json =>
       val isPrivate = (json \ "isPrivate").asOpt[Boolean]
       val title = (json \ "title").asOpt[String]
@@ -332,7 +330,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     bookmarksCommander.unkeep(id, request.userId) map { ki =>
       Ok(Json.toJson(ki))
@@ -341,7 +339,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
     bookmarksCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
         ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
@@ -360,7 +358,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
+  def allCollections(sort: String) = UserAction.async { request =>
     val numKeepsFuture = SafeFuture { db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     for {
@@ -374,7 +372,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def saveCollection() = JsonAction.authenticated { request =>
+  def saveCollection() = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
@@ -382,7 +380,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def deleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+  def deleteCollection(id: ExternalId[Collection]) = UserAction { request =>
     db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.deleteCollection(coll)
@@ -392,7 +390,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def undeleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+  def undeleteCollection(id: ExternalId[Collection]) = UserAction { request =>
     db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.undeleteCollection(coll)
@@ -402,7 +400,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def removeKeepsFromCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+  def removeKeepsFromCollection(id: ExternalId[Collection]) = UserAction { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
     db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
@@ -418,7 +416,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def keepToCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
+  def keepToCollection(id: ExternalId[Collection]) = UserAction { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndExternalId(request.userId, id)
@@ -436,13 +434,13 @@ class KeepsController @Inject() (
     }
   }
 
-  def numKeeps() = JsonAction.authenticated { request =>
+  def numKeeps() = UserAction { request =>
     Ok(Json.obj(
       "numKeeps" -> db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) }
     ))
   }
 
-  def importStatus() = JsonAction.authenticated { request =>
+  def importStatus() = UserAction { request =>
     val values = db.readOnlyMaster { implicit session =>
       userValueRepo.getValues(request.user.id.get, UserValueName.BOOKMARK_IMPORT_LAST_START, UserValueName.BOOKMARK_IMPORT_DONE, UserValueName.BOOKMARK_IMPORT_TOTAL)
     }

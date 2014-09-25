@@ -276,17 +276,15 @@ class TypeaheadCommander @Inject() (
   }
 
   private def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[NetworkTypeAndHit])]]): Future[Seq[NetworkTypeAndHit]] = {
-    val zHits = new ArrayBuffer[NetworkTypeAndHit] // hits with score == 0
+    val bestHits = new ArrayBuffer[NetworkTypeAndHit] // hits with score == 0
     val allHits = new ArrayBuffer[NetworkTypeAndHit]
     FutureHelpers.processWhile[Seq[NetworkTypeAndHit]](futures, { hits =>
       val ordered = hits.sorted(hitOrd)
-      log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} zHits.size=${zHits.size}")
-      zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
-      (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
+      log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} bestHits.size=${bestHits.size}")
+      bestHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
+      (bestHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
-      if (zHits.length >= limit) zHits.take(limit) else {
-        allHits.sorted(hitOrd)
-      }
+      (if (bestHits.length >= limit) bestHits else allHits.sorted(hitOrd)).take(limit)
     }
   }
 

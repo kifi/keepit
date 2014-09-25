@@ -8,12 +8,13 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [],
         libraryState = {}; // This is a variable to pass state from different library components of the system
-
-    // var fuseOptions = {
-    //   keys: ['name'],
-    //   threshold: 0.3
-    // };
-    // var fuseSearch = new Fuse(libraries, fuseOptions);
+    /*
+    var fuseOptions = {
+       keys: ['name'],
+       threshold: 0.3
+    };
+    var fuseSearch = new Fuse(libraries, fuseOptions);
+    */
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {

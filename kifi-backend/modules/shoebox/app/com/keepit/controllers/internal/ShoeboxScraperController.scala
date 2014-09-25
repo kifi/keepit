@@ -235,9 +235,8 @@ class ShoeboxScraperController @Inject() (
   def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val info = json.as[ImageInfo]
-    val saved = scraperHelper.saveImageInfo(info)
-    log.debug(s"[saveImageInfo] result=$saved")
-    Ok(Json.toJson(saved))
+    scraperHelper.saveImageInfo(info)
+    Ok
   }
 
   def savePageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
