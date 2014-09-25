@@ -15,7 +15,6 @@ GET      /internal/abook/getABookInfoByExternalId               @com.keepit.aboo
 GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.controllers.ABookController.getEContactCount(userId:Id[User])
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.controllers.ABookController.getABookRawInfos(userId:Id[User])
 POST     /internal/abook/:userId/getContactNameByEmail          @com.keepit.abook.controllers.ABookController.getContactNameByEmail(userId:Id[User])
-POST     /internal/abook/:userId/internKifiContact              @com.keepit.abook.controllers.ABookController.internKifiContact(userId:Id[User])
 POST     /internal/abook/:userId/internKifiContacts              @com.keepit.abook.controllers.ABookController.internKifiContacts(userId:Id[User])
 GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.controllers.ABookController.getContactsByUser(userId:Id[User], page: Int ?= 0, pageSize: Option[Int] ?= None)
 GET      /internal/abook/getUsersWithContact                    @com.keepit.abook.controllers.ABookController.getUsersWithContact(email: EmailAddress)
@@ -42,7 +41,7 @@ POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.aboo
 
 GET      /internal/abook/database/getEmailAccountsChanged       @com.keepit.abook.controllers.ABookDataPipeController.getEmailAccountsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EmailAccount], fetchSize: Int)
 GET      /internal/abook/database/getContactsChanged            @com.keepit.abook.controllers.ABookDataPipeController.getContactsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EContact], fetchSize: Int)
-
+GET      /internal/abook/removeDuplicateKifiABooks              @com.keepit.abook.controllers.ABookController.removeDuplicateKifiABooks(readOnly: Boolean)
 ->  / common.Routes
 
 

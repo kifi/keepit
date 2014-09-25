@@ -48,7 +48,6 @@ trait ABookServiceClient extends ServiceClient {
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]]
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
   def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]]
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Future[Seq[RichContact]]
@@ -60,6 +59,7 @@ trait ABookServiceClient extends ServiceClient {
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
   def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople]
+  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -150,12 +150,6 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
       if (r.json == null) None // TODO: revisit
       else r.json.as[Option[OAuth2Token]]
-    }
-  }
-
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = {
-    call(ABook.internal.internKifiContact(userId), Json.toJson(contact)).map { r =>
-      r.json.as[RichContact]
     }
   }
 
@@ -267,4 +261,7 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
   }
 
+  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue] = {
+    call(ABook.internal.removeDuplicateKifiABooks(readOnly)).map(_.json)
+  }
 }

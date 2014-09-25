@@ -233,15 +233,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(name))
   }
 
-  def internKifiContact(userId: Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internKifiContact] userId=$userId contact=$contact")
-
-    val Seq(eContact) = abookCommander.internKifiContacts(userId, Seq(contact))
-    val richContact = EContact.toRichContact(eContact)
-    Ok(Json.toJson(richContact))
-  }
-
   def internKifiContacts(userId: Id[User]) = Action(parse.json) { request =>
     val contacts = request.body.as[Seq[BasicContact]]
     log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
@@ -270,5 +261,22 @@ class ABookController @Inject() (
   def getUsersWithContact(email: EmailAddress) = Action { request =>
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
+  }
+
+  def removeDuplicateKifiABooks(readOnly: Boolean) = Action { request =>
+    val data = abookCommander.removeDuplicateKifiABooks(readOnly)
+    val json = JsArray(
+      data.toSeq.map {
+        case (userId, primaryKifiABook, duplicatesWithContacts) =>
+          Json.obj(
+            "userId" -> userId.id,
+            "primaryKifiABook" -> primaryKifiABook.id.get.id,
+            "duplicateKifiABooks" -> JsArray(duplicatesWithContacts.map {
+              case (duplicateKifiABook, contacts) =>
+                Json.obj("duplicateABookId" -> duplicateKifiABook.id.get.id, "relevantContactIds" -> JsArray(contacts.map(contact => JsNumber(contact.id.get.id))))
+            }))
+      }
+    )
+    Ok(json)
   }
 }

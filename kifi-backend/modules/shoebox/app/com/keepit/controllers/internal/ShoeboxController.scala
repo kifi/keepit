@@ -27,6 +27,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import com.keepit.abook.ABookServiceClient
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -62,6 +63,7 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
+  abook: ABookServiceClient,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -458,5 +460,9 @@ class ShoeboxController @Inject() (
     val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
     Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
+  }
+
+  def removeDuplicateKifiABooks(readOnly: Boolean) = Action.async { request =>
+    abook.removeDuplicateKifiABooks(readOnly).map(Ok(_))
   }
 }

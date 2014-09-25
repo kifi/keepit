@@ -86,8 +86,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
 
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
-
   def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]] = {
     Future.successful(contacts.map(contact => RichContact(contact.email, contact.name, contact.firstName, contact.lastName, userId = None)))
   }
@@ -125,4 +123,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
 
+  def removeDuplicateKifiABooks(readOnly: Boolean): Future[JsValue] = ???
 }
