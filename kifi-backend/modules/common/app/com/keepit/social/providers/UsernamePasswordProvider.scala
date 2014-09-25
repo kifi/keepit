@@ -2,6 +2,7 @@ package com.keepit.social.providers
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model.User
 import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 
@@ -27,8 +28,9 @@ class UsernamePasswordProvider(app: Application)
     UPP.loginForm.bindFromRequest().fold(
       errors => Left(error("bad_form")),
       credentials => {
-        val (username, password) = credentials
-        UserService.find(IdentityId(username.trim, id)) match {
+        val (emailString, password) = credentials
+        val identityId = IdentityId(EmailAddress.validate(emailString.trim).get.address, id)
+        UserService.find(identityId) match {
           case Some(identity) =>
             identity match {
               case userIdentity: UserIdentity =>
