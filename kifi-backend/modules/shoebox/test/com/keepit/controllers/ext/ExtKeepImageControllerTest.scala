@@ -71,7 +71,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         }
 
         { // Wrong user
-          val uploadResp = uploadFile(user1, libraryPubId, keepExtId, fakeFile)
+          // val uploadResp = uploadFile(user1, libraryPubId, keepExtId, fakeFile)
           // TODO !!!!
         }
 
@@ -94,7 +94,102 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
         1 === 1
       }
     }
+
+    "check status of upload" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          (user1, user2, lib, mem1, mem2)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+        val libPubId = Library.publicId(lib.id.get)
+
+        val keepResp = addKeep(user1, libPubId, Json.obj("url" -> "http://www.foo.com", "title" -> "Foo"))
+        status(keepResp) === OK
+        val keepJson = contentAsJson(keepResp)
+        val keepExtId = (keepJson \ "id").as[ExternalId[Keep]]
+        val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
+
+        db.readOnlyMaster { implicit session =>
+          keepImageRepo.all().length === 0
+        }
+
+        { // Wrong user
+          // val uploadResp = uploadFile(user1, libraryPubId, keepExtId, fakeFile)
+          // TODO !!!!
+        }
+
+        { // Bad keep ID
+          val uploadResp = checkImageStatus(user1, libraryPubId, keepExtId, "wrongtoken")
+          status(uploadResp) === NOT_FOUND
+        }
+
+        { // Non-mocked WS
+          val changeResp = changeImage(user1, libPubId, keepExtId, Json.obj("image" -> "http://www.bestimages.ever/the_sky.png"))
+
+          status(changeResp) === INTERNAL_SERVER_ERROR
+
+          db.readOnlyMaster { implicit session =>
+            println(keepImageRequestRepo.all())
+            keepImageRequestRepo.all().length === 1
+          }
+        }
+
+        { // Correct request
+          // TODO !!!! WS needs to be mocked!
+          //        val changeResp = changeImage(user1, libPubId, keepExtId, Json.obj("image" -> "http://www.bestimages.ever/the_sky.png"))
+          //
+          //        status(changeResp) === INTERNAL_SERVER_ERROR
+          //
+          //        db.readOnlyMaster { implicit session =>
+          //          println(keepImageRequestRepo.all())
+          //          keepImageRequestRepo.all().length === 1
+          //        }
+        }
+
+        1 === 1
+      }
+    }
   }
+
+  // Disabled for now. We need to be able to mock WS (the remote image fetcher)
+  //  "change keep image" in {
+  //    withDb(controllerTestModules: _*) { implicit injector =>
+  //      val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+  //        val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+  //        val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+  //        val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+  //        val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+  //        val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+  //        (user1, user2, lib, mem1, mem2)
+  //      }
+  //
+  //      implicit val config = inject[PublicIdConfiguration]
+  //      val libPubId = Library.publicId(lib.id.get)
+  //
+  //      val keepResp = addKeep(user1, libPubId, Json.obj("url" -> "http://www.foo.com", "title" -> "Foo"))
+  //      status(keepResp) === OK
+  //      val keepJson = contentAsJson(keepResp)
+  //      val keepExtId = (keepJson \ "id").as[ExternalId[Keep]]
+  //      val libraryPubId = (keepJson \ "libraryId").as[PublicId[Library]]
+  //
+  //      db.readOnlyMaster { implicit session =>
+  //        keepImageRepo.all().length === 0
+  //      }
+  //
+  //      val changeResp = changeImage(user1, libPubId, keepExtId, Json.obj("image" -> "http://www.bestimages.ever/the_sky.png"))
+  //      println(contentAsString(changeResp))
+  //      status(changeResp) === OK
+  //
+  //
+  //
+  //      1 === 1
+  //    }
+  //  }
 
   private def addKeep(user: User, libraryId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
@@ -103,7 +198,17 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
 
   private def uploadFile(user: User, libraryId: PublicId[Library], keepExtId: ExternalId[Keep], file: TemporaryFile)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtKeepImageController].uploadKeepImage(libraryId, keepExtId)(request(routes.ExtLibraryController.addKeep(libraryId)).withBody(file))
+    inject[ExtKeepImageController].uploadKeepImage(libraryId, keepExtId)(request(routes.ExtKeepImageController.uploadKeepImage(libraryId, keepExtId)).withBody(file))
+  }
+
+  private def changeImage(user: User, libraryId: PublicId[Library], keepExtId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    inject[ExtKeepImageController].changeKeepImage(libraryId, keepExtId)(request(routes.ExtKeepImageController.changeKeepImage(libraryId, keepExtId)).withBody(body))
+  }
+
+  private def checkImageStatus(user: User, libraryId: PublicId[Library], keepExtId: ExternalId[Keep], token: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    inject[ExtKeepImageController].checkImageStatus(libraryId, keepExtId, token)(request(routes.ExtKeepImageController.checkImageStatus(libraryId, keepExtId, token)))
   }
 
   private def request(route: Call) = FakeRequest(route.method, route.url)

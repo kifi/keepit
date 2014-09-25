@@ -181,6 +181,7 @@ class KeepImageCommanderImpl @Inject() (
       Future.successful(ImageProcessState.ExistingStoredImagesFound(existingImagesForKeep))
     } else {
       updateRequestState(KeepImageRequestStates.FETCHING)
+
       fetcher.flatMap {
         case Right(loadedImage) =>
           updateRequestState(KeepImageRequestStates.PROCESSING)
@@ -231,11 +232,12 @@ class KeepImageCommanderImpl @Inject() (
 
   private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
-      println(s"[kic] Persisting ${image.key} (${image.bytes} B)")
+      log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
       keepImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
         ImageProcessState.UploadedImage(image.key, image.format, image.image)
       }
     }
+
     Future.sequence(uploads).map { results =>
       val keepImages = results.map {
         case uploadedImage =>
@@ -244,25 +246,16 @@ class KeepImageCommanderImpl @Inject() (
           uploadedImage.image.flush()
           ki
       }
-      val existingImagesForKeep = db.readOnlyMaster { implicit session =>
-        keepImageRepo.getAllForKeepId(keepId)
-      }
-      db.readWrite { implicit session =>
+      db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
+        val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId)
         if (existingImagesForKeep.isEmpty) {
-          println("0:\n\n" + keepImageRepo.all().mkString("\n"))
-          keepImages.map { keepImage =>
-            println("xx: " + keepImage)
-            keepImageRepo.save(keepImage)
-          }
+          keepImages.map(keepImageRepo.save)
         } else {
-          println("1: " + existingImagesForKeep.toString())
           val (shouldBeActive, shouldBeInactive) = existingImagesForKeep.partition { existingImg =>
             keepImages.find { newImg =>
               existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
             }.nonEmpty
           }
-          println("2: " + shouldBeActive.toString())
-          println("3: " + shouldBeInactive.toString())
           val toActivate = shouldBeActive.filter(_.state != KeepImageStates.ACTIVE).map(_.copy(state = KeepImageStates.ACTIVE))
           val toDeactivate = shouldBeInactive.filter(_.state != KeepImageStates.INACTIVE).map(_.copy(state = KeepImageStates.INACTIVE))
           val toCreate = keepImages.filter { newImg =>
@@ -271,16 +264,15 @@ class KeepImageCommanderImpl @Inject() (
             }.isEmpty
           }
 
-          println("3: " + toActivate.toString())
-          println("4: " + toDeactivate.toString())
-          println("5: " + toCreate.toString())
-
           log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
-          toDeactivate.foreach(keepImageRepo.save)
-          (toActivate ++ toCreate).map(keepImageRepo.save)
+          db.readWrite { implicit session =>
+            toDeactivate.foreach(keepImageRepo.save)
+            (toActivate ++ toCreate).map(keepImageRepo.save)
+          }
         }
-        ImageProcessState.StoreSuccess
       }
+
+      ImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist keepimage", ex)
