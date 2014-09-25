@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.model.{ Library, NotificationCategory, User }
+import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -20,7 +21,7 @@ class EmailTestController @Inject() (
     waitListSender: FeatureWaitlistEmailSender,
     friendRequestEmailSender: FriendRequestEmailSender,
     contactJoinedEmailSender: ContactJoinedEmailSender,
-    friendRequestAcceptedSender: FriendConnectionMadeEmailSender,
+    connectionMadeSender: FriendConnectionMadeEmailSender,
     libraryInviteEmailSender: LibraryInviteEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
@@ -75,8 +76,9 @@ class EmailTestController @Inject() (
         val feature = request.getQueryString("feature").getOrElse(waitListSender.emailTriggers.keys.head)
         waitListSender.sendToUser(sendTo, feature)
       case "friendRequest" => friendRequestEmailSender.sendToUser(userId, friendId)
-      case "friendRequestAccepted" => friendRequestAcceptedSender.sendToUser(userId, friendId, NotificationCategory.User.FRIEND_ACCEPTED)
-      case "connectionMade" => friendRequestAcceptedSender.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE)
+      case "friendRequestAccepted" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.FRIEND_ACCEPTED)
+      case "connectionMade" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
+      case "socialFriendJoined" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(FACEBOOK))
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
       case "libraryInviteUser" => libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
       case "libraryInviteNonUser" => libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)

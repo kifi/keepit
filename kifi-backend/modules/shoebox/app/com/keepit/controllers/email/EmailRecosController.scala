@@ -35,20 +35,20 @@ class EmailRecosController @Inject() (
   )
 
   def keepReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
-    val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-    val source = KeepSource.emailReco
-    val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-    implicit val context = hcb.build
+    db.readOnlyReplica(uriRepo.getOpt(uriId)(_)) map { uri =>
+      val source = KeepSource.emailReco
+      val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
+      implicit val context = hcb.build
 
-    // todo(josh) check privacy w/ Product
-    val rawBookmark = RawBookmarkRepresentation(url = uri.url, isPrivate = None)
-    val (main, _) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
-    keepInterner.internRawBookmark(rawBookmark, request.userId, main, source)
+      val rawBookmark = RawBookmarkRepresentation(url = uri.url, isPrivate = None)
+      val (main, _) = db.readWrite(libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(_))
+      keepInterner.internRawBookmark(rawBookmark, request.userId, main, source)
 
-    curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
-      clientType = Some(RecommendationClientType.Email)))
+      curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
+        clientType = Some(RecommendationClientType.Email)))
 
-    Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home())
+      Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home())
+    } getOrElse BadRequest
   }
 
   def sendReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>

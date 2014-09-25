@@ -117,7 +117,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
           val extId = ExternalId[NormalizedURI](java.util.UUID.randomUUID.toString) // another UUID bites the dust
           val controller = inject[EmailRecosController]
-          controller.keepReco(extId)(FakeRequest()) must throwA[NoSuchElementException]
+          val call = controller.keepReco(extId)(FakeRequest())
+          status(call) === BAD_REQUEST
         }
       }
     }
