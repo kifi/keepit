@@ -893,4 +893,8 @@ class AdminUserController @Inject() (
     NoContent
   }
 
+  def removeDuplicateKifiABooks(readOnly: Boolean) = AdminUserPage.async { request =>
+    abookClient.removeDuplicateKifiABooks(readOnly).map(Ok(_))
+  }
+
 }

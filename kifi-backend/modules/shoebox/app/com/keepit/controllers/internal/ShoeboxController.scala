@@ -461,8 +461,4 @@ class ShoeboxController @Inject() (
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
     Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
-
-  def removeDuplicateKifiABooks(readOnly: Boolean) = Action.async { request =>
-    abook.removeDuplicateKifiABooks(readOnly).map(Ok(_))
-  }
 }
