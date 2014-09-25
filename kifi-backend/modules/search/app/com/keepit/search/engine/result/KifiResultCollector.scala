@@ -88,7 +88,7 @@ object KifiResultCollector {
   def createQueue(sz: Int) = new HitQueue(sz)
 }
 
-class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
 
   import KifiResultCollector._
 
@@ -97,6 +97,8 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
+
+  private[this] lazy val clickBoosts: ResultClickBoosts = clickBoostsProvider()
 
   override def collect(ctx: ScoreContext): Unit = {
     val id = ctx.id

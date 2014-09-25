@@ -388,7 +388,7 @@ class SearchCommanderImpl @Inject() (
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val searches = if (userId.id < 0 || (debugOption.flags & DebugOption.AsNonUser.flag) != 0) {
+    val searches = if (userId.id < 0 || (debugOption.debugFlags & DebugOption.AsNonUser.flag) != 0) {
       try {
         searchFactory.getKifiNonUserSearch(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
       } catch {

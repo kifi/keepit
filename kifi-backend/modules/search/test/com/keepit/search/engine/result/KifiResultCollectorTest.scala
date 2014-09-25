@@ -16,7 +16,7 @@ class KifiResultCollectorTest extends Specification {
   "MainResultCollector" should {
     "collect hits above MIN_MATCHING" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(),
+        clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
@@ -44,7 +44,7 @@ class KifiResultCollectorTest extends Specification {
 
     "collect hits above matchingThreshold" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(),
+        clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.7f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
@@ -80,7 +80,7 @@ class KifiResultCollectorTest extends Specification {
 
     "collect a hit below percentMatchThreshold if clicked" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(Set(20L), 3.0f),
+        clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.9f)
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
@@ -112,7 +112,7 @@ class KifiResultCollectorTest extends Specification {
 
     "collect hits by category" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
+        clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f)
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
@@ -150,7 +150,7 @@ class KifiResultCollectorTest extends Specification {
 
     "not collect restricted hits" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
+        clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f)
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
