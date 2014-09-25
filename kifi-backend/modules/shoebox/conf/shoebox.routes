@@ -649,8 +649,6 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
-GET     /admin/removeDuplicateKifiABooks     @com.keepit.controllers.admin.AdminUserController.removeDuplicateKifiABooks(readOnly: Boolean)
-
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
