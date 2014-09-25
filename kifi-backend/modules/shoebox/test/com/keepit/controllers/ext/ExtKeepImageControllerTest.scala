@@ -45,7 +45,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     FakeHttpClientModule()
   )
 
-  "ExtKeepImageControlle" should {
+  "ExtKeepImageController" should {
 
     "support image uploads" in {
       withDb(controllerTestModules: _*) { implicit injector =>
