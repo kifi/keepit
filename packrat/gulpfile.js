@@ -352,18 +352,18 @@ gulp.task('build', ['scripts', 'styles', 'meta', 'config']);
 
 gulp.task('config-package-chrome', ['config'], function () {
   return gulp.src(outDir + '/chrome/manifest.json', {base: './'})
-    .pipe(map(function (code) {
-      return code.toString().replace(/(http|ws):\/\/dev\.ezkeep\.com:\d+\s*/g, '');
-    }))
-    .pipe(gulp.dest('.'));
-});
-
-gulp.task('config-package-chrome-dev', ['config-package-chrome'], function () {
-  return gulp.src(outDir + '/chrome/manifest.json', {base: './'})
     .pipe(jeditor(function (json) {
-      json.name += ' Dev';
-      json.short_name += ' Dev';
-      json.update_url = 'https://www.kifi.com/extensions/chrome/kifi-dev.xml';
+      if (target !== 'local') {
+        json.content_security_policy = json.content_security_policy.replace(/(http|ws):\/\/dev\.ezkeep\.com:\d+\s*/g, '');
+        json.content_scripts.forEach(function (scr) {
+          scr.matches = scr.matches.filter(function (expr) { return expr.indexOf('://dev.ezkeep.com/') < 0; });
+        });
+      }
+      if (target === 'dev') {
+        json.name += ' Dev';
+        json.short_name += ' Dev';
+        json.update_url = 'https://www.kifi.com/extensions/chrome/kifi-dev.xml';
+      }
       return json;
     }))
     .pipe(gulp.dest('.'));
@@ -375,7 +375,7 @@ gulp.task('zip-chrome', ['build', 'config-package-chrome'], function () {
     .pipe(gulp.dest(outDir));
 });
 
-gulp.task('crx-chrome-dev', ['build', 'config-package-chrome-dev'], shell.task([[
+gulp.task('crx-chrome-dev', ['build', 'config-package-chrome'], shell.task([[
   'cp icons/dev/* out/chrome/icons/',
   '/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome' +
   ' --pack-extension=out/chrome --pack-extension-key=kifi-dev.pem > /dev/null',
@@ -383,47 +383,33 @@ gulp.task('crx-chrome-dev', ['build', 'config-package-chrome-dev'], shell.task([
   'echo $\'<?xml version="1.0" encoding="UTF-8"?>\\n<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">\\n  <app appid="ddepcfcogoamilbllhdmlojoefkjdofi">\\n    <updatecheck codebase="https://www.kifi.com/extensions/chrome/kifi-dev.crx" version="\'$(grep \'"version"\' out/chrome/manifest.json | cut -d\\" -f4)$\'" />\\n  </app>\\n</gupdate>\' > out/kifi-dev.xml'
 ].join(' && ')]));
 
-gulp.task('config-package-firefox-dev', ['config'], function () {
+gulp.task('xpi-firefox', ['build', 'config'], function () {
   return gulp.src(outDir + '/firefox/package.json', {base: './'})
     .pipe(jeditor(function (json) {
-      json.id = json.id.replace('@', '-dev@');
-      json.name += '-dev';
-      json.title += ' Dev';
+      if (target === 'dev') {
+        json.id = json.id.replace('@', '-dev@');
+        json.name += '-dev';
+        json.title += ' Dev';
+      }
       return json;
     }))
-    .pipe(gulp.dest('.'));
+    .pipe(gulp.dest('.'))
+    .pipe(shell([
+      // TODO: verify cfx version before using it
+      // cfxver=$(cfx --version)
+      // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
+      //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
+      //   echo "https://addons.mozilla.org/en-US/developers/builder"
+      //   exit 1
+      // fi
+      (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') + '\
+      cd ' + outDir + ' && \
+      cfx xpi --pkgdir=firefox \
+        --update-link=https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi \
+        --update-url=https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf && \
+      cd - > /dev/null'
+    ]));
 });
-
-gulp.task('xpi-firefox', ['build'], shell.task([
-  // TODO: verify cfx version before using it
-  // cfxver=$(cfx --version)
-  // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
-  //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
-  //   echo "https://addons.mozilla.org/en-US/developers/builder"
-  //   exit 1
-  // fi
-  'cd ' + outDir + ' && \
-  cfx xpi --pkgdir=firefox \
-    --update-link=https://www.kifi.com/extensions/firefox/kifi.xpi \
-    --update-url=https://www.kifi.com/extensions/firefox/kifi.update.rdf && \
-  cd - > /dev/null'
-]));
-
-gulp.task('xpi-firefox-dev', ['build', 'config-package-firefox-dev'], shell.task([
-  // TODO: verify cfx version before using it
-  // cfxver=$(cfx --version)
-  // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
-  //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
-  //   echo "https://addons.mozilla.org/en-US/developers/builder"
-  //   exit 1
-  // fi
-  'cp icons/dev/kifi.??.png out/firefox/data/icons/',
-  'cd ' + outDir + ' && \
-  cfx xpi --pkgdir=firefox \
-    --update-link=https://www.kifi.com/extensions/firefox/kifi-dev.xpi \
-    --update-url=https://www.kifi.com/extensions/firefox/kifi-dev.update.rdf && \
-  cd - > /dev/null'
-]));
 
 gulp.task('watch', function () {
   livereload.listen();
@@ -450,7 +436,7 @@ gulp.task('package', function () {
 
 gulp.task('package-dev', function () {
   target = 'dev';
-  runSequence('clean', ['crx-chrome-dev', 'xpi-firefox-dev']);
+  runSequence('clean', ['crx-chrome-dev', 'xpi-firefox']);
 });
 
 gulp.task('default', function () {
