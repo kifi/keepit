@@ -54,7 +54,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val elapsed = System.currentTimeMillis() - startTime
 
-    debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} time=$elapsed")
+    debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
   }
 
   private def execute(source: ScoreVectorSource): Int = {
