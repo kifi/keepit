@@ -143,8 +143,8 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'recoActionService',
-  function ($scope, recoActionService) {
+  '$scope', 'modalService', 'recoActionService',
+  function ($scope, modalService, recoActionService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
@@ -166,11 +166,13 @@ angular.module('kifi')
       $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
     };
 
-    $scope.showRecoImproveModal = false;
     $scope.improvement = {};
 
     $scope.showImprovementModal = function () {
-      $scope.showRecoImproveModal = true;
+      modalService.open({
+        template: 'recos/recoImproveModal.tpl.html',
+        scope: $scope
+      });
     };
 
     $scope.submitImprovement = function (reco) {
