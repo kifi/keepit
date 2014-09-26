@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.concurrent.ExecutionContext._
-import com.keepit.common.crypto.{ PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.controllers.util.SearchControllerUtil.nonUser
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -14,19 +14,14 @@ import com.keepit.search.{ LibrarySearchCommander, AugmentationCommander, Search
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-import play.api.libs.json._
+import play.api.libs.json.{ JsNumber, JsObject, Json }
 import com.keepit.search.graph.library.LibraryIndexer
-import com.keepit.search.graph.keep.KeepIndexer
-import com.keepit.common.crypto.PublicIdConfiguration
-import play.api.libs.json.JsArray
-import com.keepit.model.Library
 
 class WebsiteSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    keepIndexer: KeepIndexer,
     searchCommander: SearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     val userActionsHelper: UserActionsHelper,
@@ -113,31 +108,8 @@ class WebsiteSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).map { libraryShardResult =>
-      val libraries = {
-        val librarySearcher = libraryIndexer.getSearcher
-        libraryShardResult.hits.map(_.id).map { libId =>
-          libId -> getLibraryRecord(librarySearcher, libId)
-        }.toMap
-      }
-
-      val keeps = {
-        val keepSearcher = keepIndexer.getSearcher
-        libraryShardResult.hits.map(_.keepId).flatten.map { keepId =>
-          keepId -> getKeepRecord(keepSearcher, keepId)
-        }.toMap
-      }
-
-      val json = JsArray(libraryShardResult.hits.map { hit =>
-        val library = libraries(hit.id)
-        val mostRelevantKeep = hit.keepId.flatMap(keeps(_))
-        Json.obj(
-          "id" -> Library.publicId(hit.id),
-          "score" -> hit.score,
-          "name" -> library.map(_.name),
-          "description" -> library.map(_.description.getOrElse("")),
-          "mostRelevantKeep" -> mostRelevantKeep.map(keep => Json.obj("id" -> keep.externalId, "title" -> JsString(keep.title.getOrElse(""))))
-        )
-      })
+      val libraryNames = getLibraryNames(libraryIndexer.getSearcher, libraryShardResult.hits.map(_.id))
+      val json = JsObject(libraryShardResult.hits.map { hit => libraryNames(hit.id) -> JsNumber(hit.score) })
       Ok(Json.toJson(json))
     }
   }
