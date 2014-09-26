@@ -111,14 +111,6 @@ class DataBufferReader {
     _current += 2
     ret
   }
-  // Tagged Float Tag
-  def peekTaggedFloatTag(): Byte = {
-    (_page(_current) >>> 8).toByte
-  }
-  // Tagged Float Value
-  def nextTaggedFloatValue(): Float = {
-    DataBuffer.getTaggedFloatValue(nextTaggedFloatBits())
-  }
 
   def skipTaggedFloat(): Unit = { _current += 2 }
 
@@ -128,12 +120,5 @@ class DataBufferReader {
     var ret = _page(off) & 0xffff
     ret = ret << 16 | (_page(off + 1) & 0xffff)
     ret
-  }
-  def getTaggedFloatTag(offset: Int): Byte = {
-    val off = _offset + (offset >>> 1)
-    (_page(_offset) >>> 8).toByte
-  }
-  def getTaggedFloatValue(offset: Int): Float = {
-    DataBuffer.getTaggedFloatValue(getTaggedFloatBits(offset))
   }
 }
