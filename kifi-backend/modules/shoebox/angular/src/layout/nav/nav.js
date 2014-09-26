@@ -18,8 +18,8 @@ angular.module('kifi')
         scope.librariesEnabled = false;
         scope.mainLib = {};
         scope.secretLib = {};
-        scope.userLibs = [];
-        scope.invitedLibs = [];
+        scope.userLibs = libraryService.userLibsToShow;
+        scope.invitedLibs = libraryService.invitedLibsToShow;
 
         scope.$watch(function () {
           return libraryService.isAllowed();
@@ -34,22 +34,6 @@ angular.module('kifi')
               scope.secretLib = _.find(libraries, function (lib) {
                   return lib.kind === 'system_secret';
               });
-              scope.userLibs = _.filter(libraries, function (lib) {
-                return lib.kind === 'user_created';
-              });
-              scope.invitedLibs = libraryService.invitedSummaries;
-
-              var lines;
-              for (var i = 0; i < scope.userLibs.length; i++) {
-                lines = shortenName(scope.userLibs[i].name);
-                scope.userLibs[i].firstLine = lines[0];
-                scope.userLibs[i].secondLine = lines[1];
-              }
-              for (i = 0; i < scope.invitedLibs.length; i++) {
-                lines = shortenName(scope.invitedLibs[i].name);
-                scope.invitedLibs[i].firstLine = lines[0];
-                scope.invitedLibs[i].secondLine = lines[1];
-              }
             });
           }
         });
@@ -80,35 +64,6 @@ angular.module('kifi')
         scope.inRecoExperiment = function () {
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
-
-        var maxLength = 22;
-        function shortenName (fullName) {
-          var firstLine = fullName;
-          var secondLine = '';
-          if (fullName.length > maxLength) {
-            var full = false;
-            var line = '';
-            while (!full) {
-              var pos = fullName.indexOf(' ');
-              if (line.length + pos < maxLength) {
-                line = line + fullName.substr(0, pos+1);
-                fullName = fullName.slice(pos+1);
-              } else {
-                full = true;
-              }
-            }
-            firstLine = line;
-            var remainingLen = fullName.length;
-            if (remainingLen > 0) {
-              if (remainingLen < maxLength) {
-                secondLine = fullName.substr(0, remainingLen);
-              } else {
-                secondLine = fullName.substr(0, maxLength-3) + '...';
-              }
-            }
-          }
-          return [firstLine, secondLine];
-        }
 
         // Filter Box Stuff
         scope.filter = {};
@@ -145,7 +100,7 @@ angular.module('kifi')
         }*/
 
         scope.onFilterChange = function () {
-          //libraryService.filterList(scope.filter.name);
+          libraryService.filterLibraries(scope.filter.name);
         };
 
         // Scroll-Bar Stuff

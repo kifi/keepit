@@ -7,19 +7,38 @@ angular.module('kifi')
   function ($http, util, profileService, routeService, Clutch, $q) {
     var librarySummaries = [],
         invitedSummaries = [],
+        userLibsToShow = [],
+        invitedLibsToShow = [],
         libraryState = {}; // This is a variable to pass state from different library components of the system
-    /*
+    
     var fuseOptions = {
        keys: ['name'],
        threshold: 0.3
     };
-    var fuseSearch = new Fuse(libraries, fuseOptions);
-    */
+    var fuseSearch1 = new Fuse(librarySummaries, fuseOptions);
+    var fuseSearch2 = new Fuse(invitedSummaries, fuseOptions);
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
-        util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
-        util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
+        var libs = res.data.libraries || [];
+        var invites = res.data.invited || [];
+        var i, lines;
+        for (i = 0; i < libs.length; i++) {
+          lines = shortenLibName(libs[i].name);
+          libs[i].firstLine = lines[0];
+          libs[i].secondLine = lines[1];
+        }
+        for (i = 0; i < invites.length; i++) {
+          lines = shortenLibName(invites[i].name);
+          invites[i].firstLine = lines[0];
+          invites[i].secondLine = lines[1];
+        }
+        util.replaceArrayInPlace(librarySummaries, libs);
+        util.replaceArrayInPlace(invitedSummaries, invites);
+        util.replaceArrayInPlace(userLibsToShow, _.filter(librarySummaries, function (lib) {
+          return lib.kind === 'user_created';
+        }));
+        util.replaceArrayInPlace(invitedLibsToShow, invitedSummaries);
         return res.data;
       });
     });
@@ -62,10 +81,42 @@ angular.module('kifi')
       return candidate;
     };
 
+    var maxLength = 22;
+    
+    function shortenLibName (fullName) {
+      var firstLine = fullName;
+      var secondLine = '';
+      if (fullName.length > maxLength) {
+        var full = false;
+        var line = '';
+        while (!full) {
+          var pos = fullName.indexOf(' ');
+          if (line.length + pos < maxLength) {
+            line = line + fullName.substr(0, pos+1);
+            fullName = fullName.slice(pos+1);
+          } else {
+            full = true;
+          }
+        }
+        firstLine = line;
+        var remainingLen = fullName.length;
+        if (remainingLen > 0) {
+          if (remainingLen < maxLength) {
+            secondLine = fullName.substr(0, remainingLen);
+          } else {
+            secondLine = fullName.substr(0, maxLength-3) + '...';
+          }
+        }
+      }
+      return [firstLine, secondLine];
+    }
+
     var api = {
       libraryState: libraryState,
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
+      userLibsToShow: userLibsToShow,
+      invitedLibsToShow: invitedLibsToShow,
       librarySlugSuggestion: librarySlugSuggestion,
 
       isAllowed: function () {
@@ -192,6 +243,23 @@ angular.module('kifi')
             return library.id === libraryId;
           });
         });
+      },
+
+      filterLibraries: function(term) {
+        var newMyLibs = librarySummaries;
+        var newMyInvited = invitedSummaries;
+        if (term.length) {
+          newMyLibs = fuseSearch1.search(term);
+          newMyInvited = fuseSearch2.search(term);
+        }
+        newMyLibs = _.filter(newMyLibs, function (lib) {
+          return lib.kind === 'user_created';
+        });
+
+        util.replaceArrayInPlace(userLibsToShow, newMyLibs);
+        util.replaceArrayInPlace(invitedLibsToShow, newMyInvited);
+
+        return userLibsToShow.concat(invitedLibsToShow);
       }
 
     };
