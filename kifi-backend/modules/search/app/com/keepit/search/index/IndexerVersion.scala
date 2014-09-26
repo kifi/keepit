@@ -12,9 +12,9 @@ object IndexerVersion {
   implicit def fromInt(value: Int) = IndexerVersion(value)
 }
 
-abstract class IndexerVersionProvider(activeVersion: IndexerVersion, backupVersion: IndexerVersion) {
+sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, backupVersion: IndexerVersion) {
   require(backupVersion >= activeVersion)
-  def getVerionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.isBackup) backupVersion else activeVersion
+  def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.isBackup) backupVersion else activeVersion
 }
 
 object IndexerVersionProviders {
