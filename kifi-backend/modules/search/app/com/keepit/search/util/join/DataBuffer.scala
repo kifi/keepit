@@ -20,9 +20,9 @@ object DataBuffer {
   @inline def getTaggedFloatValue(bits: Int): Float = JFloat.intBitsToFloat(bits) // this doesn't clear the tag bits
   @inline def clearTag(value: Float): Float = JFloat.intBitsToFloat(JFloat.floatToRawIntBits(value) & 0xffffff00)
 
-  class FloatTagger(tag: Byte) {
-    private[this] val tagBits: Int = (tag & 0xff)
-    @inline def tagFloat(value: Float): Int = tagBits | (JFloat.floatToRawIntBits(value) & 0xffffff00)
+  class FloatTagger(tag: Int) {
+    require(0 <= tag && tag <= Byte.MaxValue, "tag value out of range")
+    @inline def tagFloat(value: Float): Int = tag | (JFloat.floatToRawIntBits(value) & 0xffffff00)
   }
 }
 
