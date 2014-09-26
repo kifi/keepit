@@ -46,10 +46,18 @@ abstract class MongoEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends 
   val getEventCompanion = implicitly[HeimdalEventCompanion[E]]
   val mixpanel: MixpanelClient
   def persist(event: E): Unit = {
+    log.info(s"[tmp_debug_events] MongoEventRepo.persist($event)")
     insert(event)
     descriptors.getByName(event.eventType) map {
-      case None => descriptors.upsert(EventDescriptor(event.eventType))
-      case Some(description) if description.mixpanel => mixpanel.track(event)
+      case None => {
+        log.info(s"[tmp_debug_events] eventByName(${event.eventType}) not found: $event")
+        descriptors.upsert(EventDescriptor(event.eventType))
+      }
+      case Some(description) if description.mixpanel => {
+        log.info(s"[tmp_debug_events] calling mixpanel.track($event)")
+        mixpanel.track(event)
+      }
+      case _ => log.info(s"[tmp_debug_events] nothing done with event $event")
     }
   }
 
