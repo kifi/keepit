@@ -14,7 +14,6 @@
 
 var keepBox = keepBox || (function () {
   'use strict';
-  var $box;
 
   if (!Array.prototype.find) {
     Object.defineProperty(Array.prototype, 'find', {
@@ -27,7 +26,10 @@ var keepBox = keepBox || (function () {
       }
     });
   }
+
+  var $box;
   var matches = ['matches', 'mozMatchesSelector', 'webkitMatchesSelector'].find(function (p) { return p in document.body; });
+  var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
     show: function ($parent, howKept, keepPage, unkeepPage) {
@@ -339,17 +341,23 @@ var keepBox = keepBox || (function () {
   }
 
   function showKeep(library, keep, replace) {
-    var title, imageUrls = findImages(), imageIdx;
+    var title, images = findImages(), canvases = [], imageIdx;
     if (keep) {
       title = keep.title || formatTitleFromUrl(document.URL);
       if (keep.image) {
-        imageUrls.unshift(keep.image);
+        var img = new Image;
+        img.src = keep.image;
+        images.unshift(img);
+        canvases.unshift(newKeepCanvas(img));
         imageIdx = 0;
       } else {
-        imageIdx = imageUrls.length;
+        imageIdx = images.length;
       }
     } else {
       title = authoredTitle() || formatTitleFromUrl(document.URL);
+      if (images.length) {
+        canvases.unshift(newKeepCanvas(images[0]));
+      }
       imageIdx = 0;
     }
     var $view = $(render('html/keeper/keep_box_keep', {
@@ -359,13 +367,14 @@ var keepBox = keepBox || (function () {
       dirty: !keep,
       title: title,
       site: document.location.hostname,
-      imageUrl: imageUrls[imageIdx],
-      hasImages: imageUrls.length > 0
+      hasImages: images.length > 0
     }, {
       keep_box_lib: 'keep_box_lib'
     }));
+    $view.find('.kifi-keep-box-keep-image-cart').append(canvases[imageIdx] || newNoImage());
     $view.data({
-      imageUrls: imageUrls,
+      images: images,
+      canvases: canvases,
       saved: {
         title: keep ? keep.title : null,
         imageIdx: keep && keep.image ? 0 : null,
@@ -381,7 +390,7 @@ var keepBox = keepBox || (function () {
   }
 
   function findImages() {
-    return Array.prototype.slice.call(document.getElementsByTagName('img')).filter(isSuitableImage).map(getSrc);
+    return Array.prototype.slice.call(document.getElementsByTagName('img')).filter(isSuitableImage);
   }
 
   function isSuitableImage(img) {
@@ -394,9 +403,47 @@ var keepBox = keepBox || (function () {
       !img[matches]('.kifi-root *'));
   }
 
+  function newKeepCanvas(img) {
+    var cv = document.createElement('canvas');
+    cv.className = 'kifi-keep-box-keep-image';
+    var gc = cv.getContext('2d');
+    var scale = (window.devicePixelRatio || 1) /  // html5rocks.com/en/tutorials/canvas/hidpi/
+      (gc.webkitBackingStorePixelRatio ||
+       gc.mozBackingStorePixelRatio ||
+       gc.backingStorePixelRatio || 1);
+    cv.width = IMAGE_WIDTH * scale;
+    cv.height = IMAGE_HEIGHT * scale;
+    if (scale !== 1) {
+      cv.style.width = IMAGE_WIDTH + 'px';
+      cv.style.height = IMAGE_HEIGHT + 'px';
+      gc.scale(scale, scale);
+    }
+    if (img.complete) {
+      fillWith(cv, img);
+    } else {
+      img.onload = fillWith.bind(null, cv, img);
+    }
+    return cv;
+  }
+
+  function fillWith(canvas, img) {
+    var w = img.naturalWidth;
+    var h = img.naturalHeight;
+    var scale = Math.min(1, IMAGE_WIDTH / w, IMAGE_HEIGHT / h);
+    var dw = w * scale;
+    var dh = h * scale;
+    var dx = (IMAGE_WIDTH - dw) / 2;
+    var dy = (IMAGE_HEIGHT - dh) / 2;
+    canvas.getContext('2d').drawImage(img, dx, dy, dw, dh);
+  }
+
+  function newNoImage() {
+    return '<div class="kifi-keep-box-keep-image kifi-none"></div>';
+  }
+
   function swipeImage($view, back) {
     var data = $view.data();
-    var n = data.imageUrls.length;
+    var n = data.images.length;
     var i = data.shown.imageIdx;
     var $cart = $view.find('.kifi-keep-box-keep-image-cart');
     if ($cart.hasClass('kifi-animated')) {
@@ -404,13 +451,8 @@ var keepBox = keepBox || (function () {
       return i;
     }
     data.shown.imageIdx = i = (i + (back ? n : 1)) % (n + 1);
-    var $old = $cart.find('.kifi-keep-box-keep-image');
-    var $new = $old.clone();
-    if (i < n) {
-      $new.removeClass('kifi-none').css('background-image', 'url("' + encodeURI(data.imageUrls[i]) + '")');
-    } else {
-      $new.addClass('kifi-none').css('background-image', '');
-    }
+    var $old = $cart.find('.kifi-keep-box-keep-image');  // TODO: verify new img still qualifies, capture its current src
+    var $new = $(i < n ? data.canvases[i] || (data.canvases[i] = newKeepCanvas(data.images[i])) : newNoImage());
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     $new[back ? 'prependTo' : 'appendTo']($cart).layout();
     $cart.addClass('kifi-animated').layout()
@@ -444,11 +486,13 @@ var keepBox = keepBox || (function () {
   function saveKeep($view, $btn) {
     var libraryId = $view.find('.kifi-keep-box-lib').data('id');
     var data = $view.data();
+    var n = data.images.length;
+    var i = data.shown.imageIdx;
     var title = data.shown.title;
     if (title) {
-      var imageUrl = data.imageUrls[data.shown.imageIdx];
+      var imageUrl = i < n ? getSrc(data.images[i]) : null;
       var imageIsDataUrl = (imageUrl || '').lastIndexOf('data:', 0) === 0;
-      var imageIsChanging = data.shown.imageIdx !== data.saved.imageIdx;
+      var imageIsChanging = i !== data.saved.imageIdx;
       var promises = [];
       if ($view.hasClass('kifi-kept')) {
         if (title !== data.saved.title) {
@@ -592,7 +636,22 @@ var keepBox = keepBox || (function () {
   }
 
   function getSrc(img) {
-    return img.src;
+    return img.currentSrc || largestSrc(img.srcset) || img.src;
+  }
+
+  function largestSrc(srcset) { // until currentSrc is widely supported
+    if (srcset) {
+      var uri = srcset.split(/\s*,\s*/).map(function (s) {
+        return s.split(/\s+/);
+      }).sort(function (a, b) {
+        return (parseFloat(b[1]) || 0) - (parseFloat(a[1]) || 0);
+      })[0][0];
+      if (uri) {
+        try {
+          return new URL(uri, document.baseURI).toString();
+        } catch (e) {}
+      }
+    }
   }
 
   function propsEqual(o1, o2, p) {

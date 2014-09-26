@@ -689,9 +689,9 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
-      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/image', {image: data.image}, function () {
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/image', {image: data.image}, function (resp) {
         if (keep.details) {
-          keep.details.image = data.image;
+          keep.details.image = resp.image;
         }
         respond(true);
       }, respond.bind(null, false));
