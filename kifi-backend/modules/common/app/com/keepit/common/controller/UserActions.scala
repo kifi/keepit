@@ -135,7 +135,7 @@ trait UserActions extends Logging { self: Controller =>
         impersonate(userId, impExtId).flatMap {
           case (req, impUserId) =>
             block(req).map { res =>
-              res.withSession(request.session + ActionAuthenticator.FORTYTWO_USER_ID -> impUserId.toString)
+              res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
             }
         }
       case None =>
@@ -155,7 +155,7 @@ trait UserActions extends Logging { self: Controller =>
       implicit val req = request
       userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
-        case None => Future.successful(Forbidden)
+        case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
       }
     }
   }
