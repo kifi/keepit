@@ -23,7 +23,6 @@ import play.api.libs.json.JsObject
 import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
 
 import scala.util.{ Failure, Success }
-import com.keepit.search.graph.keep.{ KeepRecord, KeepFields }
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -112,16 +111,8 @@ trait SearchControllerUtil {
 
   def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
     libraryIds.map { libId =>
-      libId -> getLibraryRecord(librarySearcher, libId).get.name
+      libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
     }.toMap
-  }
-
-  def getLibraryRecord(librarySearcher: Searcher, libraryId: Id[Library])(implicit decode: (Array[Byte], Int, Int) => LibraryRecord): Option[LibraryRecord] = {
-    librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
-  }
-
-  def getKeepRecord(keepSearcher: Searcher, keepId: Id[Keep])(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
-    keepSearcher.getDecodedDocValue(KeepFields.recordField, keepId.id)
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
