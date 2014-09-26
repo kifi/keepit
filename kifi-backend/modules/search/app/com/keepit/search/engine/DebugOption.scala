@@ -20,7 +20,7 @@ object DebugOption {
 
   object DirectPath {
     val flag = 0x00000004
-    def unapply(str: String): Boolean = (str == "directPath")
+    def unapply(str: String): Boolean = (str == "directpath")
   }
 
   object AsNonUser {
