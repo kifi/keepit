@@ -247,7 +247,7 @@ class KeepImageCommanderImpl @Inject() (
           ki
       }
       db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
-        val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId)
+        val existingImagesForKeep = keepImageRepo.getForKeepId(keepId, excludeState = None)
         if (existingImagesForKeep.isEmpty) {
           keepImages.map(keepImageRepo.save)
         } else {
