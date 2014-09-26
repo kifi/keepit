@@ -204,7 +204,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
 
   private def changeImage(user: User, libraryId: PublicId[Library], keepExtId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    inject[ExtKeepImageController].changeKeepImage(libraryId, keepExtId)(request(routes.ExtKeepImageController.changeKeepImage(libraryId, keepExtId)).withBody(body))
+    inject[ExtKeepImageController].changeKeepImage(libraryId, keepExtId, None)(request(routes.ExtKeepImageController.changeKeepImage(libraryId, keepExtId)).withBody(body))
   }
 
   private def checkImageStatus(user: User, libraryId: PublicId[Library], keepExtId: ExternalId[Keep], token: String)(implicit injector: Injector): Future[Result] = {

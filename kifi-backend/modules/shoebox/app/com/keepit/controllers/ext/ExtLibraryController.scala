@@ -115,7 +115,7 @@ class ExtLibraryController @Inject() (
       keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) =>
-          val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ImageSize(700, 500))
+          val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
           val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)
           Ok(Json.toJson(LateLoadKeepData(keep.title, keepImageUrl)))
       }
@@ -151,4 +151,8 @@ class ExtLibraryController @Inject() (
       case Success(id) => action(id)
     }
   }
+}
+
+object ExtLibraryController {
+  val defaultImageSize = ImageSize(600, 480)
 }
