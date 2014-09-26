@@ -48,8 +48,8 @@ class KeepImageRepoImpl @Inject() (
 
   override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {}
 
-  private def getForKeepIdCompiled(keepId: Column[Id[Keep]], excludeState: Option[State[KeepImage]]) = Compiled {
-    for (r <- rows if r.keepId === keepId && r.state =!= excludeState.orNull) yield r
+  private val getForKeepIdCompiled = Compiled { (keepId: Column[Id[Keep]], excludeState: Column[Option[State[KeepImage]]]) =>
+    for (r <- rows if r.keepId === keepId && r.state =!= excludeState) yield r
   }
   def getForKeepId(keepId: Id[Keep], excludeState: Option[State[KeepImage]])(implicit session: RSession): Seq[KeepImage] = {
     getForKeepIdCompiled(keepId, excludeState).list
