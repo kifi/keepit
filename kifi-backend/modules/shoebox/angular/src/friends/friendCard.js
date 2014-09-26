@@ -4,8 +4,8 @@ angular.module('kifi')
 
 
 .directive('kfFriendCard', [
-  '$log', 'friendService',
-  function ($log, friendService) {
+  '$log', 'friendService', 'modalService',
+  function ($log, friendService, modalService) {
     return {
       scope: {
         'friend': '&'
@@ -27,7 +27,10 @@ angular.module('kifi')
         scope.searchFriend = friend.searchFriend;
 
         scope.unfriend = function () {
-          scope.showUnfriendConfirm = true;
+          modalService.open({
+            template: 'friends/unfriendConfirmModal.tpl.html',
+            scope: scope
+          });
         };
 
         scope.reallyUnfriend = function () {
