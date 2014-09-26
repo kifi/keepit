@@ -108,7 +108,8 @@ class ExtKeepImageController @Inject() (
               val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
               Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)))
           }
-        case JsString(_) =>
+        case JsString(badUrl) =>
+          log.info(s"rejecting image url: $badUrl")
           Future.successful(BadRequest(Json.obj("error" -> "bad_image_url")))
         case _ =>
           Future.successful(BadRequest(Json.obj("error" -> "no_image_url")))
