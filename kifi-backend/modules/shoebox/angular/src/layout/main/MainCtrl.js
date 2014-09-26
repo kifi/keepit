@@ -79,8 +79,7 @@ angular.module('kifi')
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.data.showEmailModal = true;
-          $scope.modal = 'email';
+          $scope.showEmailVerifiedModal = true;
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
           $scope.tooltipMessage = msg;
