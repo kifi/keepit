@@ -78,7 +78,8 @@ class LibrarySearchCommanderImpl @Inject() (
   }
 
   private def mergeResults(libraryShardResults: Seq[LibraryShardResult], maxHits: Int, filter: SearchFilter, config: SearchConfig): LibraryShardResult = {
-    val (myHits, friendsHits, othersHits, keepRecords) = LibrarySearch.partition(libraryShardResults.flatMap(_.hits), maxHits)
+    val uniqueHits = libraryShardResults.flatMap(_.hits).groupBy(_.id).mapValues(_.maxBy(_.score)).values.toSeq
+    val (myHits, friendsHits, othersHits, keepRecords) = LibrarySearch.partition(uniqueHits, maxHits)
     LibrarySearch.merge(myHits, friendsHits, othersHits, maxHits, filter, config)(keepRecords(_))
   }
 
