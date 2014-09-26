@@ -22,14 +22,14 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       ctx.set(20)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -50,24 +50,24 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(40)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -86,18 +86,18 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(20)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(0, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
       ctx.set(30)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -118,24 +118,24 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(1)
+      ctx.addVisibility(Visibility.RESTRICTED)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
       ctx.set(10)
+      ctx.addVisibility(Visibility.OTHERS)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.OTHERS
       ctx.flush()
       ctx.set(20)
+      ctx.addVisibility(Visibility.NETWORK)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.NETWORK
       ctx.flush()
       ctx.set(30)
+      ctx.addVisibility(Visibility.MEMBER)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.MEMBER
       ctx.flush()
       ctx.set(40)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.OWNER
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()
@@ -156,16 +156,16 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(10)
+      ctx.addVisibility(Visibility.RESTRICTED)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
       ctx.set(20)
+      ctx.addVisibility(Visibility.RESTRICTED)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
       ctx.set(30)
+      ctx.addVisibility(Visibility.RESTRICTED)
       ctx.addScore(0, 1.0f)
-      ctx.visibility = Visibility.RESTRICTED
       ctx.flush()
 
       val (mHits, fHits, oHits) = collector.getResults()

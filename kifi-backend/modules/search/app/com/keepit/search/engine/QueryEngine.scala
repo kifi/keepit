@@ -36,10 +36,13 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   }
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
+
+    val directScoreContext = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
+
     sources.foldLeft(0) { (total, source) =>
       val startTime = System.currentTimeMillis()
 
-      val newTotal = execute(source)
+      val newTotal = execute(source, directScoreContext)
 
       val elapsed = System.currentTimeMillis() - startTime
       if ((debugFlags & DebugOption.Log.flag) != 0) {
@@ -57,7 +60,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
   }
 
-  private def execute(source: ScoreVectorSource): Int = {
+  private def execute(source: ScoreVectorSource, directScoreContext: ScoreContext): Int = {
     // if NullExpr, no need to execute
     if (scoreExpr.isNullExpr) return dataBuffer.size
 
@@ -66,7 +69,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       // extract and accumulate information from Weights for later use (percent match)
       accumulateWeightInfo(weights)
 
-      source.execute(weights, coreSize, dataBuffer)
+      source.execute(weights, coreSize, dataBuffer, directScoreContext)
     } else {
       log.error("no weight created")
     }
