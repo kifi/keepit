@@ -18,9 +18,9 @@ object DebugOption {
     def unapply(str: String): Boolean = (str == "library")
   }
 
-  object Timing {
+  object DirectPath {
     val flag = 0x00000004
-    def unapply(str: String): Boolean = (str == "timing")
+    def unapply(str: String): Boolean = (str == "directPath")
   }
 
   object AsNonUser {
@@ -55,8 +55,8 @@ trait DebugOption { self: Logging =>
           flags | Trace.flag
         case Library() =>
           flags | Library.flag
-        case Timing() =>
-          flags | Timing.flag
+        case DirectPath() =>
+          flags | DirectPath.flag
         case AsNonUser() =>
           flags | AsNonUser.flag
         case Log(address, port) =>

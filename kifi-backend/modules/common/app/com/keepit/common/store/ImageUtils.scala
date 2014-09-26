@@ -15,6 +15,13 @@ object ImageSize {
     (__ \ 'width).format[Int] and
     (__ \ 'height).format[Int]
   )(ImageSize.apply _, unlift(ImageSize.unapply))
+
+  private val xRe = """(\d{1,5})x(\d{1,5})""".r
+
+  def apply(size: String): ImageSize = {
+    val xRe(w, h) = size
+    ImageSize(w.toInt, h.toInt)
+  }
 }
 
 //                        w

@@ -21,9 +21,9 @@ class DebugOptionTest extends Specification {
       ids.get === Set(1L, 100L, 1000L)
     }
 
-    "parse timing" in {
-      val res = "timing" match {
-        case Timing() => true
+    "parse library" in {
+      val res = "library" match {
+        case Library() => true
         case _ => false
       }
 

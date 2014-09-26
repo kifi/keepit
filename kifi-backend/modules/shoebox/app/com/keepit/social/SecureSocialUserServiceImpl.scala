@@ -168,11 +168,19 @@ class SecureSocialUserPluginImpl @Inject() (
         socialUserInfoRepo.getOpt(socialId, socialNetworkType),
         userId orElse {
           // Automatically connect accounts with existing emails
-          socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
-            case e if e.state == UserEmailAddressStates.VERIFIED => e.userId
+          socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
+            emailRepo.getVerifiedOwner(emailAddress) tap {
+              _.foreach { existingUserId =>
+                log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
+              }
+            }
           }
-        } flatMap { u =>
-          scala.util.Try(userRepo.get(u)).toOption
+        } flatMap { existingUserId =>
+          scala.util.Try(userRepo.get(existingUserId)).toOption.filterNot { existingUser =>
+            val isInactive = (existingUser.state == UserStates.INACTIVE)
+            if (isInactive) { log.warn(s"[internUser] User $existingUserId is inactive!") }
+            isInactive
+          }
         }
       )
     }
