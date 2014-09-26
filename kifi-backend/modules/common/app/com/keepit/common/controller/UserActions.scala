@@ -139,8 +139,8 @@ trait UserActions extends Logging { self: Controller =>
   private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] = {
     val resF = userActionsHelper.getImpersonatedUserIdOpt match {
       case Some(impExtId) =>
-        impersonate(userId, impExtId).flatMap { req =>
-          block(req).map(maybeSetUserIdInSession(userId, _))
+        impersonate(userId, impExtId).flatMap { userRequest =>
+          block(userRequest).map(maybeSetUserIdInSession(userId, _))
         }
       case None =>
         block(buildUserRequest(userId)).map(maybeSetUserIdInSession(userId, _))
