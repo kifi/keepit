@@ -33,10 +33,7 @@ class LibrarySearch(
     timeLogs.processHits()
     timeLogs.done()
 
-    //todo(Léo): DRY with KifiSearch
-    SafeFuture {
-      timeLogs.send()
-    }
+    SafeFuture { timeLogs.send() }
     debugLog(timeLogs.toString)
 
     libraryShardResult
