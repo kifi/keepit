@@ -118,13 +118,20 @@ trait UserActions extends Logging { self: Controller =>
     } getOrElse res
   }
 
-  private def impersonate[A](adminUserId: Id[User], impersonateExtId: ExternalId[User])(implicit request: Request[A]): Future[(UserRequest[A], Id[User])] = {
+  private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
+    userActionsHelper.getUserIdOpt(request) match {
+      case Some(id) if (id == userId) => res
+      case _ => res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
+    }
+  }
+
+  private def impersonate[A](adminUserId: Id[User], impersonateExtId: ExternalId[User])(implicit request: Request[A]): Future[UserRequest[A]] = {
     userActionsHelper.isAdmin(adminUserId) flatMap { isAdmin =>
       if (!isAdmin) throw new IllegalStateException(s"non admin user $adminUserId tries to impersonate to $impersonateExtId")
       userActionsHelper.getUserByExtIdOpt(impersonateExtId) map { impUserOpt =>
         val impUserId = impUserOpt.get.id.get // fail hard
         log.info(s"[impersonate] admin user $adminUserId is impersonating user $impUserId with request ${request.path}")
-        buildUserRequest(impUserId, Some(adminUserId)) -> impUserId
+        buildUserRequest(impUserId, Some(adminUserId))
       }
     }
   }
@@ -132,14 +139,11 @@ trait UserActions extends Logging { self: Controller =>
   private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] = {
     val resF = userActionsHelper.getImpersonatedUserIdOpt match {
       case Some(impExtId) =>
-        impersonate(userId, impExtId).flatMap {
-          case (req, impUserId) =>
-            block(req).map { res =>
-              res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
-            }
+        impersonate(userId, impExtId).flatMap { userRequest =>
+          block(userRequest).map(maybeSetUserIdInSession(userId, _))
         }
       case None =>
-        block(buildUserRequest(userId))
+        block(buildUserRequest(userId)).map(maybeSetUserIdInSession(userId, _))
     }
     resF.map(maybeAugmentCORS(_))
   }
