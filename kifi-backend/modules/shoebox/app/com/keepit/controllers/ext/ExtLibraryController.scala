@@ -24,7 +24,6 @@ class ExtLibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  keepImageRepo: KeepImageRepo,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
   val userActionsHelper: UserActionsHelper,
@@ -116,25 +115,9 @@ class ExtLibraryController @Inject() (
       keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) =>
-          // As we move to using the notion of "keeps" as the entity clients care about,
-          // this sort of logic is better suited to be moved to the commander. Until then, and
-          // we solidify our use cases, putting it here to keep the commander cleaner.
-          val defaultImageSize = ImageSize(700, 500)
-          val idealSize = if (imgSize.isEmpty || imgSize.get.length == 0) {
-            defaultImageSize
-          } else {
-            val s = imgSize.get.toLowerCase.split("x").toList
-            s match {
-              case w :: h :: Nil => Try(ImageSize(w.toInt, h.toInt)).getOrElse(defaultImageSize)
-              case _ => defaultImageSize
-            }
-          }
-          val keepImages = db.readOnlyReplica { implicit session =>
-            keepImageRepo.getForKeepId(keep.id.get)
-          }
-          val keepImage = KeepImageSize.pickBest(idealSize, keepImages)
-          val resp = LateLoadKeepData(keep.title, keepImage.map(keepImageCommander.getUrl))
-          Ok(Json.toJson(resp))
+          val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ImageSize(700, 500))
+          val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)
+          Ok(Json.toJson(LateLoadKeepData(keep.title, keepImageUrl)))
       }
     }
   }
