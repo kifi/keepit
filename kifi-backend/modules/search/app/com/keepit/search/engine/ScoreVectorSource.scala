@@ -191,10 +191,10 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
-    val bloomFilter = if ((debugFlags & DebugOption.DirectPath.flag) != 0) {
-      BloomFilter(output) // a bloom filter which test if a uri id is in the buffer
-    } else {
+    val bloomFilter = if ((debugFlags & DebugOption.NoDirectPath.flag) != 0) {
       BloomFilter.full // this disables the direct path.
+    } else {
+      BloomFilter(output) // a bloom filter which test if a uri id is in the buffer
     }
 
     val articleVisibility = ArticleVisibility(reader)
@@ -204,7 +204,6 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
 
     val taggedScores = pq.createScoreArray // tagged floats
 
-    var directWriteCount = 0
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val uriId = idMapper.getId(docId)
@@ -232,7 +231,6 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
               i += 1
             }
             directScoreContext.flush()
-            directWriteCount += 1
           }
           docId = pq.top.doc // next doc
         } else {
@@ -242,7 +240,6 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
         docId = pq.skipCurrentDoc() // skip this doc
       }
     }
-    debugLog(s"direct write count=$directWriteCount")
   }
 }
 
