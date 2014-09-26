@@ -8,12 +8,15 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.net.URI
+import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNull, JsString, Json }
 import play.api.mvc.{ Result, Action, Controller }
 
 import scala.concurrent.Future
+import scala.util.Try
 
 class ExtKeepImageController @Inject() (
     keepImageCommander: KeepImageCommander,
@@ -86,31 +89,32 @@ class ExtKeepImageController @Inject() (
     checkStatus().map(Future.successful).getOrElse(pollCheck())
   }
 
-  def changeKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    val keepOpt = db.readOnlyMaster { implicit session =>
+  def changeKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], size: Option[String]) = UserAction.async(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit session =>
       Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
-    }
-    val imageJson = request.body \ "image"
-
-    (keepOpt, imageJson) match {
-      case (None, _) =>
-        Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
-      case (Some(keep), JsNull) =>
-        keepImageCommander.removeKeepImageForKeep(keep.id.get)
-        Future.successful(NoContent)
-      case (Some(keep), JsString(imageUrl)) if imageUrl.startsWith("http") =>
-        val imageRequest = db.readWrite { implicit session =>
-          keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
-        }
-        val setImageF = keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, Some(imageRequest.id.get))
-        setImageF.map {
-          case fail: KeepImageStoreFailure =>
-            InternalServerError(Json.obj("error" -> fail.reason))
-          case success: ImageProcessSuccess =>
-            Ok(JsString("success"))
-        }
-      case (_, badJson) =>
-        Future.successful(BadRequest(Json.obj("error" -> "couldnt_parse_image_url")))
+    } map { keep =>
+      (request.body \ "image") match {
+        case JsNull =>
+          keepImageCommander.removeKeepImageForKeep(keep.id.get)
+          Future.successful(Ok(Json.obj("image" -> JsNull)))
+        case JsString(imageUrl @ URI(scheme, _, _, _, _, _, _)) if scheme.exists(_.startsWith("http")) =>
+          val imageRequest = db.readWrite { implicit session =>
+            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserUpload))
+          }
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserUpload, imageRequest.id) map {
+            case fail: KeepImageStoreFailure =>
+              InternalServerError(Json.obj("error" -> fail.reason))
+            case _: ImageProcessSuccess =>
+              val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
+              Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)))
+          }
+        case JsString(_) =>
+          Future.successful(BadRequest(Json.obj("error" -> "bad_image_url")))
+        case _ =>
+          Future.successful(BadRequest(Json.obj("error" -> "no_image_url")))
+      }
+    } getOrElse {
+      Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
     }
   }
 
