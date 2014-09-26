@@ -33,6 +33,7 @@ class EventTrackingController @Inject() (
   }
 
   private def handleUserEvent(userEvent: UserEvent) = {
+    log.info(s"[tmp_debug_events] handleUserEvent($userEvent)")
     userEventLoggingRepo.persist(userEvent)
     userEvent.eventType match {
       case UserEventTypes.RECOMMENDATION_USER_ACTION =>

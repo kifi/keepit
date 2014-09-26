@@ -70,19 +70,19 @@ class SendgridCommander @Inject() (
         contextBuilder.addEmailInfo(email)
         contextBuilder.build
       }
-      log.info(s"[sendHeimdalEvent] content = $context")
+      log.info(s"[tmp_debug_events] content = $context")
 
       val relevantUsers = if (NotificationCategory.User.all.contains(email.category)) {
         db.readOnlyReplica { implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(captureLocation)
       } else Set.empty
-      log.info(s"[sendHeimdalEvent] relevantUsers = $relevantUsers")
+      log.info(s"[tmp_debug_events] relevantUsers = $relevantUsers")
 
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
-        log.info(s"[sendHeimdalEvent] calling trackEvent UserEvent(userId=$userId")
+        log.info(s"[tmp_debug_events] calling trackEvent UserEvent(userId=$userId")
         heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, event.timestamp))
       }
       else if (NotificationCategory.NonUser.all.contains(email.category)) {
-        log.info(s"[sendHeimdalEvent] calling trackEvent NonUserEvent(address=${address.address})")
+        log.info(s"[tmp_debug_events] calling trackEvent NonUserEvent(address=${address.address})")
         heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
       }
     }
