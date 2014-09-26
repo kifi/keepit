@@ -46,7 +46,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
       val elapsed = System.currentTimeMillis() - startTime
       if ((debugFlags & DebugOption.Log.flag) != 0) {
-        debugLog(s"source executed: class=${source.getClass.getName} rows=${newTotal - total} time=$elapsed")
+        debugLog(s"source executed: class=${source.getClass.getSimpleName} rows=${newTotal - total} time=$elapsed")
       }
       newTotal
     }
