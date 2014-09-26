@@ -7,8 +7,7 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[KeepImageRepoImpl])
 trait KeepImageRepo extends Repo[KeepImage] {
-  def getForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
-  def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage]
+  def getForKeepId(keepId: Id[Keep], excludeState: Option[State[KeepImage]] = Some(KeepImageStates.INACTIVE))(implicit session: RSession): Seq[KeepImage]
   def getBySourceHash(hash: ImageHash)(implicit session: RSession): Seq[KeepImage]
 }
 
@@ -49,18 +48,11 @@ class KeepImageRepoImpl @Inject() (
 
   override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {}
 
-  private val getForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
-    for (r <- rows if r.keepId === keepId && r.state === KeepImageStates.ACTIVE) yield r
+  private def getForKeepIdCompiled(keepId: Column[Id[Keep]], excludeState: Option[State[KeepImage]]) = Compiled {
+    for (r <- rows if r.keepId === keepId && r.state =!= excludeState.orNull) yield r
   }
-  def getForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
-    getForKeepIdCompiled(keepId).list
-  }
-
-  private val getAllForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
-    for (r <- rows if r.keepId === keepId) yield r
-  }
-  def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
-    getAllForKeepIdCompiled(keepId).list
+  def getForKeepId(keepId: Id[Keep], excludeState: Option[State[KeepImage]])(implicit session: RSession): Seq[KeepImage] = {
+    getForKeepIdCompiled(keepId, excludeState).list
   }
 
   private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
