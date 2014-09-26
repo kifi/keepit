@@ -3,14 +3,12 @@
 angular.module('kifi')
 
 
-.directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', function ($window, $http, routeService, inviteService) {
+.directive('kfConnectionCard', ['$window', '$http', '$timeout', 'routeService', 'inviteService', 'modalService',
+  function ($window, $http, $timeout, routeService, inviteService, modalService) {
   return {
     scope: {
       'friend': '&',
-      'refreshScroll': '=',
-      'showGenericInviteError': '=',
-      'showLinkedinTokenExpiredModal': '=',
-      'showLinkedinHitRateLimitModal': '='
+      'showAddNetworksModal': '&'
     },
     replace: true,
     restrict: 'A',
@@ -36,6 +34,14 @@ angular.module('kifi')
       scope.linkedin = network === 'linkedin';
       scope.email    = network === 'email';
 
+      scope.reconnectLinkedIn = function () {
+        $timeout(function () {
+          modalService.open({
+            template: 'social/addNetworksModal.tpl.html'
+          });
+        }, 0);
+      };
+
       scope.action = function () {
         inviteService.invite(network, inNetworkId).then(function () {
           scope.invited = true;
@@ -49,14 +55,22 @@ angular.module('kifi')
           }
         }, function (err) {
           if (err === 'token_expired') {
-            scope.showLinkedinTokenExpiredModal = true;
+            modalService.open({
+              template: 'invite/linkedinTokenExpiredModal.tpl.html',
+              scope: scope
+            });
           } else if (err === 'hit_rate_limit_reached') {
-            scope.showLinkedinHitRateLimitModal = true;
+            modalService.open({
+              template: 'invite/linkedinHitRateLimitModal.tpl.html'
+            });
           } else {
-            scope.showGenericInviteError = true;
+            modalService.open({
+              template: 'invite/genericInviteErrorModal.tpl.html'
+            });
           }
         });
       };
+
       scope.closeAction = function () {
         scope.hidden = true;
         var data = {

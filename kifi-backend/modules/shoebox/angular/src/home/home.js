@@ -129,6 +129,13 @@ angular.module('kifi')
     // On HomeCtrl initialization.
     //
     $window.document.title = 'Kifi • Your Keeps';
+
+    if ($scope.showEmailVerifiedModal) {
+      modalService.open({
+        template: 'home/emailVerifiedModal.tpl.html'
+      });
+    }
+
     $scope.enableSearch();
     $scope.getNextKeeps();
   }

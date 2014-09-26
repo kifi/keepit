@@ -44,19 +44,25 @@ angular.module('kifi')
 
         function onClickOutsideInput(event) {
           // When user clicks outside the input and save button, cancel edits.
-          if (!event.target.classList.contains('profile-email-input') &&
-            !event.target.classList.contains('profile-input-save')) {
+          if (!event.target.classList ||
+              (!event.target.classList.contains('profile-email-input') &&
+               !event.target.classList.contains('profile-input-save'))) {
             $document.off('mousedown', onClickOutsideInput);
-            scope.$apply(cancel);
+            $timeout(function () {
+              cancel();
+            }, 0);
           }
         }
 
         function onFocusOutsideInput(event) {
           // When user focuses outside the inputs and save button, cancel edits.
-          if (!event.target.classList.contains('profile-name-input') &&
-            !event.target.classList.contains('profile-input-save')) {
-            $window.removeEventListener('focus', onFocusOutsideInput, true);
-            scope.$apply(cancel);
+          if (!event.target.classList ||
+              (!event.target.classList.contains('profile-email-input') &&
+               !event.target.classList.contains('profile-input-save'))) {
+              $window.removeEventListener('focus', onFocusOutsideInput, true);
+            $timeout(function () {
+              cancel();
+            }, 0);
           }
         }
 

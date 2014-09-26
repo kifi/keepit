@@ -5,8 +5,9 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
+  'modalService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService, modalService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -79,8 +80,7 @@ angular.module('kifi')
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.data.showEmailModal = true;
-          $scope.modal = 'email';
+          $scope.showEmailVerifiedModal = true;
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
           $scope.tooltipMessage = msg;
@@ -93,17 +93,22 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal = true;
+      modalService.open({
+        template: 'common/modal/importBookmarksModal.tpl.html',
+        scope: $scope
+      });
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
     function initBookmarkFileUpload() {
-      $scope.modal = 'import_bookmark_file';
-      $scope.data.showBookmarkFileModal1 = true;
       // make sure file input is empty
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
+
+      modalService.open({
+        template: 'common/modal/importBookmarkFileModal.tpl.html',
+        scope: $scope
+      });
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -118,38 +123,43 @@ angular.module('kifi')
     });
 
     $scope.importBookmarks = function (makePublic) {
-      $scope.data.showImportModal = false;
+      $scope.forceClose = true;
 
-      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+      $timeout(function () {
+        var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
-      if (!kifiVersion) {
-        $scope.modal = 'import_bookmarks_error';
-        $scope.data.showImportError = true;
-        return;
-      }
+        if (!kifiVersion) {
+          modalService.open({
+            template: 'common/modal/importBookmarksErrorModal.tpl.html'
+          });
+          return;
+        }
 
-      $analytics.eventTrack('user_clicked_page', {
-        'type': 'browserImport',
-        'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
-      });
+        $analytics.eventTrack('user_clicked_page', {
+          'type': 'browserImport',
+          'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+        });
 
-      var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
-      var message = 'import_bookmarks';
-      if (makePublic) {
-        message = 'import_bookmarks_public';
-      }
-      if (event) {
-        event.source.postMessage(message, $scope.msgEvent.origin);
-      } else {
-        $window.postMessage(message, '*');
-      }
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal2 = true;
+        var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        var message = 'import_bookmarks';
+        if (makePublic) {
+          message = 'import_bookmarks_public';
+        }
+        if (event) {
+          event.source.postMessage(message, $scope.msgEvent.origin);
+        } else {
+          $window.postMessage(message, '*');
+        }
+
+        modalService.open({
+          template: 'common/modal/importBookmarksInProgressModal.tpl.html'
+        });
+
+      }, 0);
     };
 
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
-      $scope.data.showImportModal = false;
     };
 
     $scope.disableBookmarkImport = true;
@@ -224,16 +234,21 @@ angular.module('kifi')
           uploadBookmarkFileHelper(file, makePublic).then(function success(result) {
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
-            if (!result.error) { // success!
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileModal2 = true;
-              $scope.modal = 'import_bookmark_file';
-            } else { // hrmph.
-              $scope.modal = 'import_bookmarks_error';
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileError = true;
-              $scope.modal = 'import_bookmark_error';
-            }
+
+            $scope.forceClose = true;
+
+            $timeout(function () {
+              if (!result.error) { // success!
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
+                });
+              } else { // hrmph.
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+                });
+              }
+            }, 0);
+
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
             $scope.disableBookmarkImport = false;
@@ -248,7 +263,6 @@ angular.module('kifi')
 
     $scope.cancelBookmarkUpload = function () {
       $scope.disableBookmarkImport = true;
-      $scope.modal = '';
       $scope.importFilename = '';
       $scope.importFileStatus = '';
     };
