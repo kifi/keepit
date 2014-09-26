@@ -37,6 +37,7 @@ trait ServiceDiscovery {
   def amIUp: Boolean = myStatus.exists { status =>
     myHealthyStatus.exists(_ == status)
   }
+  def isBackup: Boolean = thisInstance.exists(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP)
   def isCanary: Boolean
 }
 
