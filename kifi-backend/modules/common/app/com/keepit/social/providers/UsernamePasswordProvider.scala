@@ -33,7 +33,7 @@ class UsernamePasswordProvider(app: Application)
         val (emailString, password) = credentials
         EmailAddress.validate(emailString.trim) match {
           case Failure(e) =>
-            log.error(s"bad email format $emailString used for login", e)
+            log.error(s"bad email format $emailString used for login - $e")
             Left(BadRequest("bad_email_format"))
           case Success(email) =>
             val identityId = IdentityId(email.address, id)
