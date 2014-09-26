@@ -9,7 +9,7 @@ import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 import play.api.Application
 import play.api.libs.json.Json
 import play.api.mvc.{ Request, Result }
-import play.api.mvc.Results.Forbidden
+import play.api.mvc.Results.{ Forbidden, BadRequest }
 
 import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
 import securesocial.core._
@@ -34,7 +34,7 @@ class UsernamePasswordProvider(app: Application)
         EmailAddress.validate(emailString.trim) match {
           case Failure(e) =>
             log.error(s"bad email format $emailString used for login", e)
-            Left(error("bad_email_format"))
+            Left(BadRequest("bad_email_format"))
           case Success(email) =>
             val identityId = IdentityId(email.address, id)
             UserService.find(identityId) match {
