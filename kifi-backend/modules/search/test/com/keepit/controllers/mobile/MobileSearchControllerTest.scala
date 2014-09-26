@@ -8,7 +8,7 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.engine.result.KifiShardResult
-import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
+import com.keepit.search.index._
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
 import com.keepit.social.BasicUser
@@ -105,7 +105,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
