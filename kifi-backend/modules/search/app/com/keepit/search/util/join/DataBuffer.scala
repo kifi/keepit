@@ -1,6 +1,7 @@
 package com.keepit.search.util.join
 
 import scala.collection.mutable.ArrayBuffer
+import java.lang.{ Float => JFloat }
 
 object DataBuffer {
   type Page = Array[Short]
@@ -14,13 +15,14 @@ object DataBuffer {
   val MAX_RECTYPEID = 100 // this needs to fit in 7-bit
   val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
 
-  @inline def taggedFloatBits(tag: Byte, value: Float): Int = ((tag & 0xff) << 24) | (java.lang.Float.floatToRawIntBits(value) >>> 8)
-  @inline def getTaggedFloatTag(bits: Int): Byte = (bits >>> 24).toByte
-  @inline def getTaggedFloatValue(bits: Int): Float = java.lang.Float.intBitsToFloat(bits << 8)
+  @inline def taggedFloatBits(tag: Byte, value: Float): Int = (tag & 0xff) | (JFloat.floatToRawIntBits(value) & 0xffffff00)
+  @inline def getTaggedFloatTag(bits: Int): Byte = bits.toByte
+  @inline def getTaggedFloatValue(bits: Int): Float = JFloat.intBitsToFloat(bits) // this doesn't clear the tag bits
+  @inline def clearTag(value: Float): Float = JFloat.intBitsToFloat(JFloat.floatToRawIntBits(value) & 0xffffff00)
 
   class FloatTagger(tag: Byte) {
-    private[this] val tagBits: Int = (tag & 0xff) << 24
-    @inline def tagFloat(value: Float): Int = tagBits | (java.lang.Float.floatToRawIntBits(value) >>> 8)
+    private[this] val tagBits: Int = (tag & 0xff)
+    @inline def tagFloat(value: Float): Int = tagBits | (JFloat.floatToRawIntBits(value) & 0xffffff00)
   }
 }
 
