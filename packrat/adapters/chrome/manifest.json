@@ -31,8 +31,7 @@
       "lzstring.min.js",
       "main.js",
       "scorefilter.js",
-      "contact_search_cache.js",
-      "keep_image_uploader.js"
+      "contact_search_cache.js"
     ]
   },
   "content_scripts": [

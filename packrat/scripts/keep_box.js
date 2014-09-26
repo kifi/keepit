@@ -400,6 +400,7 @@ var keepBox = keepBox || (function () {
       img.offsetWidth > 0 &&
       img.offsetHeight > 0 &&
       img.complete &&
+      img.src.lastIndexOf('http', 0) === 0 &&
       !img[matches]('.kifi-root *'));
   }
 
@@ -491,8 +492,6 @@ var keepBox = keepBox || (function () {
     var title = data.shown.title;
     if (title) {
       var imageUrl = i < n ? getSrc(data.images[i]) : null;
-      var imageIsDataUrl = (imageUrl || '').lastIndexOf('data:', 0) === 0;
-      var imageIsChanging = i !== data.saved.imageIdx;
       var promises = [];
       if ($view.hasClass('kifi-kept')) {
         if (title !== data.saved.title) {
@@ -505,7 +504,7 @@ var keepBox = keepBox || (function () {
           });
           promises.push(d1.promise);
         }
-        if (imageIsChanging && !imageIsDataUrl) {
+        if (i !== data.saved.imageIdx) {
           var d2 = Q.defer();
           api.port.emit('save_keep_image', {
             libraryId: libraryId,
@@ -520,7 +519,7 @@ var keepBox = keepBox || (function () {
         $box.data('keepPage')({
           libraryId: libraryId,
           title: title,
-          image: imageIsDataUrl ? 'data:,' : imageUrl
+          image: imageUrl
         }, function (keep) {
           if (keep) {
             $view.addClass('kifi-kept');
@@ -528,9 +527,6 @@ var keepBox = keepBox || (function () {
           d3[keep ? 'resolve' : 'reject']();
         });
         promises.push(d3.promise);
-      }
-      if (imageIsChanging) {
-        api.port.emit('buffer_keep_image', {});  // TODO: actually encode image
       }
       if (promises.length) {
         var $progress = $btn.find('.kifi-keep-box-progress');

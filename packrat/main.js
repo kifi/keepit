@@ -568,11 +568,7 @@ api.port.on({
         }
         var how = d.howKept();
         respond(keep);
-        if (keep.imageStatusPath) {
-          var keepImageUploader = global.keepImageUploader || require('./keep_image_uploader').keepImageUploader;
-          keepImageUploader.checkStatus(keep.imageStatusPath);
-          delete keep.imageStatusPath;
-        }
+        delete keep.imageStatusPath;
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(!!how, tab);
           api.tabs.emit(tab, 'kept', {kept: how});
@@ -696,9 +692,6 @@ api.port.on({
         respond(true);
       }, respond.bind(null, false));
     }
-  },
-  buffer_keep_image: function (data) {
-    // TODO: pass to keepImageUploader
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
