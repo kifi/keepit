@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.graph.library.LibraryIndexer
+import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexer }
 import com.keepit.search.graph.keep.KeepIndexer
 import com.keepit.common.crypto.PublicIdConfiguration
 import play.api.libs.json.JsArray
@@ -26,7 +26,6 @@ class WebsiteSearchController @Inject() (
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
-    keepIndexer: KeepIndexer,
     searchCommander: SearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     val userActionsHelper: UserActionsHelper,
@@ -116,26 +115,18 @@ class WebsiteSearchController @Inject() (
       val libraries = {
         val librarySearcher = libraryIndexer.getSearcher
         libraryShardResult.hits.map(_.id).map { libId =>
-          libId -> getLibraryRecord(librarySearcher, libId)
-        }.toMap
-      }
-
-      val keeps = {
-        val keepSearcher = keepIndexer.getSearcher
-        libraryShardResult.hits.map(_.keepId).flatten.map { keepId =>
-          keepId -> getKeepRecord(keepSearcher, keepId)
+          libId -> LibraryRecord.retrieve(librarySearcher, libId)
         }.toMap
       }
 
       val json = JsArray(libraryShardResult.hits.map { hit =>
         val library = libraries(hit.id)
-        val mostRelevantKeep = hit.keepId.flatMap(keeps(_))
         Json.obj(
           "id" -> Library.publicId(hit.id),
           "score" -> hit.score,
           "name" -> library.map(_.name),
           "description" -> library.map(_.description.getOrElse("")),
-          "mostRelevantKeep" -> mostRelevantKeep.map(keep => Json.obj("id" -> keep.externalId, "title" -> JsString(keep.title.getOrElse(""))))
+          "mostRelevantKeep" -> hit.keep.map { case (_, keepRecord) => Json.obj("id" -> keepRecord.externalId, "title" -> JsString(keepRecord.title.getOrElse("")), "url" -> keepRecord.url) }
         )
       })
       Ok(Json.toJson(json))
