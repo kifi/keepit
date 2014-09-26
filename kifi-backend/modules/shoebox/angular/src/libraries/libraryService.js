@@ -10,7 +10,7 @@ angular.module('kifi')
         userLibsToShow = [],
         invitedLibsToShow = [],
         libraryState = {}; // This is a variable to pass state from different library components of the system
-    
+
     var fuseOptions = {
        keys: ['name'],
        threshold: 0.3
@@ -82,7 +82,7 @@ angular.module('kifi')
     };
 
     var maxLength = 22;
-    
+
     function shortenLibName (fullName) {
       var firstLine = fullName;
       var secondLine = '';
@@ -91,7 +91,7 @@ angular.module('kifi')
         var line = '';
         while (!full) {
           var pos = fullName.indexOf(' ');
-          if (line.length + pos < maxLength) {
+          if (pos >= 0 && line.length + pos <= maxLength) {
             line = line + fullName.substr(0, pos+1);
             fullName = fullName.slice(pos+1);
           } else {
