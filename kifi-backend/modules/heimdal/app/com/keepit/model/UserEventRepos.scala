@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -53,8 +54,8 @@ class ProdUserEventLoggingRepo(
   def delete(userId: Id[User]): Unit = mixpanel.delete(userId)
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit = mixpanel.alias(userId, externalId)
 
-  override def persist(userEvent: UserEvent): Unit =
-    EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).foreach { augmentedContext =>
+  override def persist(userEvent: UserEvent): Future[Unit] =
+    EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).flatMap { augmentedContext =>
       super.persist(userEvent.copy(context = augmentedContext))
     }
 }
