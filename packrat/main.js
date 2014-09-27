@@ -573,7 +573,7 @@ api.port.on({
           setIcon(!!how, tab);
           api.tabs.emit(tab, 'kept', {kept: how});
         });
-        updateKifiAppTabs('update_keeps');
+        notifyKifiAppTabs({type: 'keep', libraryId: libraryId, keepId: keep.id});
       }, function fail(o) {
         log('[keep:fail]', data.url, o);
         delete d.state;
@@ -613,7 +613,7 @@ api.port.on({
             setIcon(!!how, tab);
             api.tabs.emit(tab, 'kept', {kept: how});
           });
-          updateKifiAppTabs('update_keeps');
+          notifyKifiAppTabs({type: 'unkeep', libraryId: keep.libraryId, keepId: keep.id});
         }, function fail() {
           log('[unkeep:fail]', d.keepId);
           delete d.state;
@@ -655,6 +655,7 @@ api.port.on({
         libraries.push(library);
       }
       respond(library);
+      notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
     }, respond.bind(null, null));
   },
   delete_library: function (libraryId, respond) {
@@ -663,6 +664,7 @@ api.port.on({
         libraries = libraries.filter(idIsNot(libraryId));
       }
       respond(true);
+      notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
     }, respond.bind(null, false));
   },
   get_keep: function (libraryId, respond, tab) {
@@ -1554,12 +1556,12 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function updateKifiAppTabs(message) {
+function notifyKifiAppTabs(data) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
     if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
-        api.tabs.emit(tab, message);
+        api.tabs.emit(tab, 'post_message', data);
       });
     }
   }

@@ -9,23 +9,20 @@
   var origin = location.origin;
 
   api.port.on({
-    update_keeps: function () {
-      window.postMessage('update_keeps', origin);
-    },
-    update_tags: function () {
-      window.postMessage('update_tags', origin);
+    post_message: function (data) {
+      window.postMessage(data, origin);
     }
   });
 
-  window.addEventListener('message', onMessage);
+  window.addEventListener('message', onMessageEvent);
   api.onEnd.push(function () {
-    window.removeEventListener('message', onMessage);
+    window.removeEventListener('message', onMessageEvent);
   });
 
-  function onMessage(event) {
+  function onMessageEvent(event) {
     if (event.origin === origin) {
       var data = event.data;
-      log('[onMessage]', data);
+      log('[onMessageEvent]', data);
       switch (data && data.type || data) {
       case 'start_guide':
         api.port.emit('start_guide', data.pages);
