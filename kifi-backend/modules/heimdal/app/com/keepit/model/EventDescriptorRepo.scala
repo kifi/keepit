@@ -21,7 +21,7 @@ trait ProdEventDescriptorRepo[E <: HeimdalEvent] extends MongoRepo[EventDescript
   def toBSON(obj: EventDescriptor): BSONDocument = handler.write(obj)
   def fromBSON(doc: BSONDocument): EventDescriptor = handler.read(doc)
 
-  override def insert(obj: EventDescriptor, dropDups: Boolean = false): Unit = { upsert(obj) } // Do not allow unchecked inserts of descriptors
+  override def insert(obj: EventDescriptor, dropDups: Boolean = false): Future[Unit] = { upsert(obj) map (_ => ()) } // Do not allow unchecked inserts of descriptors
   def upsert(obj: EventDescriptor): Future[Int] = new SafeFuture(
     collection.update(
       selector = BSONDocument("name" -> obj.name),

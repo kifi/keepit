@@ -40,7 +40,7 @@ class ProdMetricDescriptorRepo(val collection: BSONCollection, protected val air
 
 class DevMetricDescriptorRepo(val collection: BSONCollection, protected val airbrake: AirbrakeNotifier) extends MetricDescriptorRepo {
   def upsert(obj: MetricDescriptor): Future[LastError] = Future.failed(new NotImplementedError)
-  override def insert(obj: MetricDescriptor, dropDups: Boolean = false): Unit = {}
+  override def insert(obj: MetricDescriptor, dropDups: Boolean = false): Future[Unit] = Future.successful(())
   override def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
     Promise.successful(
       Stream(BSONDocument("command" -> BSONArray(command.map(_.makePipe))))

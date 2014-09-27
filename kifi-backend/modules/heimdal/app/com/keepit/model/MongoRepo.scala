@@ -47,9 +47,9 @@ trait MongoRepo[T] {
 
   }
 
-  def insert(obj: T, dropDups: Boolean = false): Unit = {
+  def insert(obj: T, dropDups: Boolean = false): Future[Unit] = {
     val bson = toBSON(obj)
-    safeInsert(bson, dropDups)
+    safeInsert(bson, dropDups) map (_ => ())
   }
 
   def performAggregation(command: Seq[PipelineOperator]): Future[Stream[BSONDocument]] = {
@@ -70,7 +70,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] with Logging { //Convoluted?
   val bufferSize = new AtomicLong(0)
   val hasWarned = new AtomicBoolean(false)
 
-  override def insert(obj: T, dropDups: Boolean = false): Unit = {
+  override def insert(obj: T, dropDups: Boolean = false): Future[Unit] = {
     if (bufferSize.get >= maxBufferSize) {
       airbrake.notify(s"Mongo Insert Buffer Full! (${bufferSize.get})")
       throw MongoInsertBufferFullException()
