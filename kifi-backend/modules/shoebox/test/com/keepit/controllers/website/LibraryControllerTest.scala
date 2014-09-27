@@ -184,7 +184,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.removeLibrary(pubId2).url
         val request2 = FakeRequest("POST", testPath2)
         val result2 = libraryController.removeLibrary(pubId2)(request2)
-        status(result2) must equalTo(BAD_REQUEST)
+        status(result2) must equalTo(FORBIDDEN)
         contentType(result2) must beSome("application/json")
       }
     }
