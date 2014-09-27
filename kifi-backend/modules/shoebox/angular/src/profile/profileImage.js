@@ -13,8 +13,6 @@ angular.module('kifi')
       },
       templateUrl: 'profile/profileImage.tpl.html',
       link: function (scope, element) {
-        scope.showImageUploadFailedDialog = {value: false};
-
         var maskOffset = 40, maskSize;
         var positioning = {};
         var dragging = {};
@@ -225,8 +223,13 @@ angular.module('kifi')
 
         function imageUploadError() {
           scope.forceClose = true;
-          scope.showImageUploadFailedDialog.value = true;
-          scope.resetChooseImage();
+
+          scope.$apply(function () {
+            modalService.open({
+              template: 'profile/imageUploadFailedModal.tpl.html'
+            });
+            scope.resetChooseImage();
+          });
         }
 
         scope.uploadImage = function () {
