@@ -26,8 +26,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
-  def modelChanged(c: Collection, isActive: Boolean = false)(implicit session: RWSession)
-  def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
 }
 
@@ -135,26 +134,13 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession) {
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession): Collection = {
+    val collection = get(collectionId)
     if (isNewKeep) {
-      save(get(collectionId) withLastKeptTo clock.now())
+      save(collection withLastKeptTo clock.now())
     } else {
-      (for (c <- rows if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
-
-      // invalidate count cache
-      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collectionId))
-    }
-  }
-
-  // caller-supplied model
-  def modelChanged(col: Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
-    if (isNewKeep) {
-      save(col withLastKeptTo clock.now())
-    } else {
-      (for (c <- rows if c.id === col.id.get) yield c.seq).update(sequence.incrementAndGet())
-
-      // invalidate count cache
-      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(col.id.get))
+      val keepCount = getBookmarkCount(collectionId)
+      if (keepCount > 0) save(collection) else save(collection.copy(state = CollectionStates.INACTIVE))
     }
   }
 
