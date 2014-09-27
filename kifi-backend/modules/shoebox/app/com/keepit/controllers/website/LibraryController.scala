@@ -73,15 +73,14 @@ class LibraryController @Inject() (
   }
 
   def removeLibrary(pubId: PublicId[Library]) = UserAction { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
-      case Failure(ex) =>
+    Library.decodePublicId(pubId) match {
+      case Failure(_) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         libraryCommander.removeLibrary(id, request.userId) match {
-          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-          case Right(success) => Ok(JsString(success))
+          case Some((status, message)) => Status(status)(Json.obj("error" -> message))
+          case _ => Ok(JsString("success"))
         }
     }
   }
