@@ -657,6 +657,14 @@ api.port.on({
       respond(library);
     }, respond.bind(null, null));
   },
+  delete_library: function (libraryId, respond) {
+    ajax('DELETE', '/ext/libraries/' + libraryId, function () {
+      if (libraries) {
+        libraries = libraries.filter(idIsNot(libraryId));
+      }
+      respond(true);
+    }, respond.bind(null, false));
+  },
   get_keep: function (libraryId, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {

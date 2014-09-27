@@ -130,7 +130,7 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function swipeTo($new, replace) {
+  function swipeTo($new) {
     var $cart = $box.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view');
     var back = !$new;
@@ -144,17 +144,14 @@ var keepBox = keepBox || (function () {
           $old.remove();
         } else {
           $cart.removeClass('kifi-animated kifi-back kifi-forward');
-          if (replace) {
-            $new.data('$prev', $old.data('$prev'));
-            $old.remove();
-          } else {
-            $new.data('$prev', $old);
-            $old.detach();
-          }
+          $new.data('$prev', $old);
+          $old.detach();
         }
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        ($new.find('textarea')[0] || $new.find('input')[0]).focus();
+        var input = $new.find('textarea')[0] || $new.find('input')[0];
+        input.focus();
+        input.select();
       }
     });
   }
@@ -259,6 +256,18 @@ var keepBox = keepBox || (function () {
     $view
     .on('click', '.kifi-keep-box-back', function (e) {
       if (e.which === 1) {
+        var $old = $view.data('$prev');
+        if ($old.hasClass('kifi-keep-box-view-new-lib')) {
+          var libraryId = $view.find('.kifi-keep-box-lib').data('id');
+          api.port.emit('delete_library', libraryId, function (success) {
+            if (success) {
+              var $libView = $old.data('$prev');
+              delete $libView.data('librariesById')[libraryId];
+              $libView.data('$all').add($libView).find('.kifi-keep-box-lib[data-id=' + libraryId + ']').remove();
+            }
+          });
+          $old.find('.kifi-keep-box-progress').css('width', '').parent().removeClass('kifi-done');
+        }
         swipeTo();
       }
     })
@@ -291,6 +300,7 @@ var keepBox = keepBox || (function () {
     $view
     .on('click', '.kifi-keep-box-back', function (e) {
       if (e.which === 1) {
+        $view.data('$prev').find('.kifi-keep-box-lib-input').removeData('q').trigger('input');
         swipeTo();
       }
     })
@@ -340,7 +350,7 @@ var keepBox = keepBox || (function () {
     swipeTo($view);
   }
 
-  function showKeep(library, keep, replace) {
+  function showKeep(library, keep) {
     var title, images = findImages(), canvases = [], imageIdx;
     if (keep) {
       title = keep.title || formatTitleFromUrl(document.URL);
@@ -386,7 +396,7 @@ var keepBox = keepBox || (function () {
       dirty: !keep
     });
     addKeepBindings($view);
-    swipeTo($view, replace);
+    swipeTo($view);
   }
 
   function findImages() {
@@ -574,8 +584,11 @@ var keepBox = keepBox || (function () {
         if (library) {
           var $old = $view.data('$prev');
           $old.data('librariesById')[library.id] = library;
-          $old.find('.kifi-keep-box-lib.kifi-create').before(render('html/keeper/keep_box_lib', library));
-          setTimeout(showKeep.bind(null, library, null, true), 200);
+          $old.data('$all').find('.kifi-keep-box-lib.kifi-create').before(render('html/keeper/keep_box_lib', library));
+          setTimeout(function () {
+            $name.prop('disabled', false);
+            showKeep(library);
+          }, 200);
         }
       });
       updateProgress.call($progress[0], 0);
