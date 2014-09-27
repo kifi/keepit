@@ -8,7 +8,9 @@ angular.module('kifi')
     return {
       restrict: 'A',
       replace: true,
-      scope: {},
+      scope: {
+        forceClose: '='
+      },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
@@ -43,6 +45,14 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
+
+        scope.$watch(function () {
+          return scope.forceClose;
+        }, function (newVal) {
+          if (newVal) {
+            scope.close();
+          }
+        });
       }
     };
   }
