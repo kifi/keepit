@@ -18,12 +18,6 @@
               ng-model="emailInput.value"
               type="text" name="email" placeholder="Enter your email address" novalidate>
           </div>
-          <div kf-modal show="showEmailChangeDialog.value">
-            <div kf-basic-modal-content with-cancel action-text="Continue" action="confirmSaveEmail()" cancel="cancelSaveEmail()">
-              <p>You are about to change your primary email to <span class="email-address">{{emailInput.value}}</span>.</p>
-              <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
-            </div>
-          </div>
         </div>
         <div class="profile-email-address-unverified" ng-if="isUnverified({value: me.primaryEmail})">
           Your email is pending your verification
@@ -35,12 +29,12 @@
           <a class="profile-email-pending-cancel" href="javascript:" ng-click="cancelPendingPrimary()">Cancel</a>).
         </div>
         <div kf-profile-email-addresses input-state="addEmailInput" email-list="me.emails" validate-email-action="validateEmail(value)" add-email-action="addEmail(value)" resend-verification-email-action="resendVerificationEmail(value)"></div>
-        <div kf-modal show="showResendVerificationEmailDialog.value">
+        <!-- <div kf-modal show="showResendVerificationEmailDialog.value">
           <div kf-basic-modal-content title="{{emailForVerificationModalTitle}}">
             <p>You will shortly receive a verification email from us at the following address: <span class="email-address">{{emailForVerification}}</span>.</p>
             <p>To verify, please click on a verification link on the email.</p>
           </div>
-        </div>
+        </div> -->
         <div kf-profile-change-password></div>
       </div>
       <div class="profile-section">

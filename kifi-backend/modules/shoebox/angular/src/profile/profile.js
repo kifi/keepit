@@ -3,15 +3,14 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
-  function ($scope, $http, profileService, routeService, $window, socialService) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
     $window.document.title = 'Kifi • Your Profile';
     socialService.refresh();
 
-    $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
     $scope.me = profileService.me;
@@ -127,7 +126,11 @@ angular.module('kifi')
       }
       // email is available || (not primary && not pending primary && not verified)
       emailToBeSaved = email;
-      $scope.showEmailChangeDialog.value = true;
+
+      modalService.open({
+        template: 'profile/emailChangeModal.tpl.html',
+        scope: $scope
+      });
       return profileService.successInputActionResult();
     }
 
