@@ -53,7 +53,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Let's get started with Kifi"
         val html = email.htmlBody.value
         html must contain("Hey Billy,")
-        html must contain("utm_source=confirmEmail&utm_medium=email&utm_campaign=welcomeEmail")
+        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn")
 
         val text = email.textBody.get.value
         text must contain("Hey Billy,")

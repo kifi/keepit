@@ -43,13 +43,16 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
         subject = "Test",
         campaign = Some("testing"),
         category = NotificationCategory.User.DIGEST,
-        htmlTemplate = Html("this is <b>html</b>")
+        htmlTemplate = Html("this is <b>html</b>"),
+        closingLines = Seq("Happy Keeping!", "The Kifi team")
       )
 
       val expectedJson = """
           |{"title":"Kifi","from":"eng@42go.com","to":"josh@kifi.com","cc":[],"subject":"Test",
           |"htmlTemplate":"this is <b>html</b>","category":"digest","fromName":"Kifi",
-          |"campaign":"testing","tips":[]}
+          |"campaign":"testing","tips":[],
+          |"closingLines":["Happy Keeping!","The Kifi team"]
+          |}
         """.stripMargin
       val jsVal = Json.parse(expectedJson)
       Json.toJson(em) === jsVal

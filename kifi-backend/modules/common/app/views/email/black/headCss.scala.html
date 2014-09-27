@@ -88,195 +88,21 @@ text-decoration: none;
 color: #fffff;
 }
 
-@@media only screen and (max-width:480px)
+@{/*
+iPhone 6:      1334 x 750px  2x Retina display  => 667px
+iPhone 6 Plus: 1920 x 1080px 3x Retina display  => 640px
+*/}
+@@media only screen and (max-device-width: 667px)
 {
-table[class=wrapper]
-{
-width: 100% !important;
+  table.main_table {
+    width: 100% !important;
+  }
+  .hide {
+    display: none !important;
+  }
+  td.side1 {
+    display: none !important;
+  }
 }
 
-table[class=main_table]
-{
-width: 320px !important;
-}
-
-td[class=center]
-{
-text-align: center !important;
-}
-
-img[class=banner]
-{
-width: 100% !important;
-height: auto !important;
-}
-
-td[class=banner]
-{
-width: 100% !important;
-height: auto !important;
-}
-
-td[class=center1]
-{
-text-align: center !important;
-}
-
-td[class=hide]
-{
-display: none !important;
-}
-
-img[class=hide]
-{
-display: none !important;
-}
-
-table[class=hide]
-{
-display: none !important;
-}
-
-td[class=text]
-{
-text-align: center !important;
-}
-
-td[class=top_space]
-{
-padding-top: 20px !important;
-}
-
-td[class=pad_top]
-{
-padding-top: 20px !important;
-}
-
-td[class=pad_bottom]
-{
-padding-bottom: 20px !important;
-}
-
-br[class=break]
-{
-display: none !important;
-}
-
-td[class=cen]
-{
-padding-left: 10px !important;
-padding-right: 10px !important;
-}
-
-br[class=br1]
-{
-display: none !important;
-}
-
-span[class=br2]
-{
-display: block !important;
-}
-
-span[class=hide]
-{
-display: none !important;
-}
-
-td[class=side1]
-{
-width: 15px !important;
-};
-}
-
-@@media only screen and (min-width:480px) and (max-width:599px)
-{
-table[class=wrapper]
-{
-width: 100% !important;
-}
-
-table[class=main_table]
-{
-width: 480px !important;
-}
-
-img[class=hide]
-{
-display: none !important;
-}
-
-img[class=banner]
-{
-width: 100% !important;
-height: auto !important;
-}
-
-td[class=banner]
-{
-width: 100% !important;
-height: auto !important;
-}
-
-td[class=center]
-{
-text-align: center !important;
-}
-
-td[class=center1]
-{
-text-align: center !important;
-}
-
-td[class=top_space]
-{
-padding-top: 20px !important;
-}
-
-td[class=side1]
-{
-width: 15px !important;
-}
-
-span[class=hide]
-{
-display: none !important;
-}
-
-td[class=hide]
-{
-display: none !important;
-}
-
-span[class=br2]
-{
-display: block !important;
-}
-
-table[class=hide]
-{
-display: none !important;
-}
-
-td[class=text]
-{
-text-align: center !important;
-}
-
-td[class=cen]
-{
-padding-left: 10px !important;
-padding-right: 10px !important;
-}
-
-br[class=br1]
-{
-display: none !important;
-}
-
-td[class=pad_bottom]
-{
-padding-bottom: 20px !important;
-};
-}
 </style>
