@@ -613,6 +613,7 @@ class KeepsCommander @Inject() (
   def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
     val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
+      val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
       val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
       val newK2C = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
@@ -624,14 +625,14 @@ class KeepsCommander @Inject() (
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
       }
 
-      val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0)
+      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+        collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
       }
       val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
       tagged.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
+        keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt)
       }
       tagged
     }
