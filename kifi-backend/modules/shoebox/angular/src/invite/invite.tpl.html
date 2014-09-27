@@ -19,17 +19,13 @@
       <div class="invite-list-header" ng-show="whoToInvite.length > 0">Recommended people to invite</div>
 
       <div class="kf-connection-card-container">
-        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
+        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
       <div ng-if="whoToInvite.length < 6 && wtiLoaded" class="social-connect-friends">
         <div kf-social-connect-networks></div>
       </div>
-
-      <!-- <div kf-modal show="data.showGenericInviteError">
-        <div kf-basic-modal-content action-text="Ok" title="Sorry, an error occurred, please try again later."></div>
-      </div> -->
 
       <!-- <div kf-modal show="data.showLinkedinHitRateLimitModal">
         <div kf-basic-modal-content action-text="Ok">

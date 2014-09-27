@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 
-.directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', function ($window, $http, routeService, inviteService) {
+.directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', 'modalService',
+  function ($window, $http, routeService, inviteService, modalService) {
   return {
     scope: {
       'friend': '&',
       'refreshScroll': '=',
-      'showGenericInviteError': '=',
       'showLinkedinTokenExpiredModal': '=',
       'showLinkedinHitRateLimitModal': '='
     },
@@ -53,7 +53,9 @@ angular.module('kifi')
           } else if (err === 'hit_rate_limit_reached') {
             scope.showLinkedinHitRateLimitModal = true;
           } else {
-            scope.showGenericInviteError = true;
+            modalService.open({
+              template: 'invite/genericInviteErrorModal.tpl.html'
+            });
           }
         });
       };
