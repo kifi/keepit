@@ -11,8 +11,6 @@ angular.module('kifi')
     $window.document.title = 'Kifi • Your Profile';
     socialService.refresh();
 
-    $scope.showResendVerificationEmailDialog = {value: false};
-
     $scope.me = profileService.me;
     profileService.getMe();
 
@@ -103,7 +101,10 @@ angular.module('kifi')
 
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
-      $scope.showResendVerificationEmailDialog.value = true;
+      modalService.open({
+        template: 'profile/emailResendVerificationModal.tpl.html',
+        scope: $scope
+      });
     }
 
     function getEmailInfo(email) {

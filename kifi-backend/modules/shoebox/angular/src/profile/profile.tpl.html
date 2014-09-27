@@ -29,12 +29,6 @@
           <a class="profile-email-pending-cancel" href="javascript:" ng-click="cancelPendingPrimary()">Cancel</a>).
         </div>
         <div kf-profile-email-addresses input-state="addEmailInput" email-list="me.emails" validate-email-action="validateEmail(value)" add-email-action="addEmail(value)" resend-verification-email-action="resendVerificationEmail(value)"></div>
-        <!-- <div kf-modal show="showResendVerificationEmailDialog.value">
-          <div kf-basic-modal-content title="{{emailForVerificationModalTitle}}">
-            <p>You will shortly receive a verification email from us at the following address: <span class="email-address">{{emailForVerification}}</span>.</p>
-            <p>To verify, please click on a verification link on the email.</p>
-          </div>
-        </div> -->
         <div kf-profile-change-password></div>
       </div>
       <div class="profile-section">
