@@ -10,6 +10,7 @@ import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
 import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class SendgridCommander @Inject() (
@@ -24,6 +25,7 @@ class SendgridCommander @Inject() (
 
   import SendgridEventTypes._
 
+  val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
   val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
   val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE)
 
@@ -75,11 +77,17 @@ class SendgridCommander @Inject() (
         db.readOnlyReplica { implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(captureLocation)
       } else Set.empty
 
+      def eventTime =
+        if (event.timestamp.isBefore(earliestAcceptableEventTime)) {
+          log.warn(s"Sendgrid event timestamp rejected! $event")
+          currentDateTime
+        } else event.timestamp
+
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
-        heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, event.timestamp))
+        heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, eventTime))
       }
       else if (NotificationCategory.NonUser.all.contains(email.category)) {
-        heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, event.timestamp))
+        heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, eventTime))
       }
     }
   }
