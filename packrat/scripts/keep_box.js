@@ -94,12 +94,9 @@ var keepBox = keepBox || (function () {
   function onShown(e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onShown]');
-      $box.off('transitionend', onShown)
-      var $libs = $box.find('.kifi-keep-box-libs');
-      $libs.antiscroll({x: false});
-      var scroller = $libs.data('antiscroll');
-      $(window).off('resize.keepBox').on('resize.keepBox', scroller.refresh.bind(scroller));
-      $box.find('input').focus();
+      $box.off('transitionend', onShown);
+      $box.find('input').first().focus();
+      makeLibsScrollable($box.find('.kifi-keep-box-libs'));
     }
   }
 
@@ -240,16 +237,6 @@ var keepBox = keepBox || (function () {
         hide(e, 'action');
       }
     });
-
-    $view.find('.kifi-scroll-inner')
-    .on('mousewheel', function (e) {
-      var dY = e.originalEvent.deltaY;
-      var sT = this.scrollTop;
-      if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||
-          dY < 0 && sT > 0) {
-        e.originalEvent.didScroll = true; // crbug.com/151734
-      }
-    });
   }
 
   function addKeepBindings($view) {
@@ -322,6 +309,22 @@ var keepBox = keepBox || (function () {
   function showLibs($new) {
     highlightLibrary($new.find('.kifi-keep-box-lib')[0]);
     $box.find('.kifi-keep-box-libs').replaceWith($new);
+    makeLibsScrollable($new);
+  }
+
+  function makeLibsScrollable($libs) {
+    $libs.children('.kifi-scrollbar').remove();
+    $libs.antiscroll({x: false});
+    $libs.children('.kifi-scroll-inner').on('mousewheel', onScrollInnerWheel);
+  }
+
+  function onScrollInnerWheel(e) {
+    var dY = e.originalEvent.deltaY;
+    var sT = this.scrollTop;
+    if (dY > 0 && sT + this.clientHeight < this.scrollHeight ||
+        dY < 0 && sT > 0) {
+      e.originalEvent.didScroll = true; // crbug.com/151734
+    }
   }
 
   function highlightLibrary(el) {
