@@ -43,7 +43,7 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
-  def createLibrary = UserAction(parse.tolerantJson) { request =>
+  def createLibrary() = UserAction(parse.tolerantJson) { request =>
     val body = request.body.as[JsObject]
     val name = (body \ "name").as[String]
     val visibility = (body \ "visibility").as[LibraryVisibility]
@@ -57,6 +57,16 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
+  }
+
+  def deleteLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.removeLibrary(libraryId, request.userId) match {
+        case Some((status, message)) => Status(status)(Json.obj("error" -> message))
+        case _ => NoContent
+      }
     }
   }
 
