@@ -53,7 +53,7 @@ angular.module('kifi')
 
         function onFocusOutsideInput(event) {
           // When user focuses outside the inputs and save button, cancel edits.
-          if (!event.target.classList.contains('profile-name-input') &&
+          if (!event.target.classList.contains('profile-email-input') &&
             !event.target.classList.contains('profile-input-save')) {
             $window.removeEventListener('focus', onFocusOutsideInput, true);
             scope.$apply(cancel);
