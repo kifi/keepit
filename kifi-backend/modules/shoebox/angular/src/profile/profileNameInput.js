@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfProfileNameInput', ['$document', '$timeout', '$window', 'keyIndices', 'util',
-  function ($document, $timeout, $window, keyIndices, util) {
+.directive('kfProfileNameInput', ['$document', '$window', 'keyIndices', 'util',
+  function ($document, $window, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -45,26 +45,16 @@ angular.module('kifi')
         }
 
         function onClickOutsideInput(event) {
-          // When user clicks outside the inputs and save button, cancel edits.
-          if (!event.target.classList ||
-              (!event.target.classList.contains('profile-name-input') &&
-               !event.target.classList.contains('profile-input-save'))) {
+          if (!angular.element(event.target).is('.profile-name-input, .profile-input-save')) {
             $document.off('mousedown', onClickOutsideInput);
-            $timeout(function () {
-              cancel();
-            }, 0);
+            scope.$apply(cancel);
           }
         }
 
         function onFocusOutsideInput(event) {
-          // When user focuses outside the inputs and save button, cancel edits.
-          if (!event.target.classList ||
-              (!event.target.classList.contains('profile-name-input') &&
-               !event.target.classList.contains('profile-input-save'))) {
-              $window.removeEventListener('focus', onFocusOutsideInput, true);
-            $timeout(function () {
-              cancel();
-            }, 0);
+          if (!angular.element(event.target).is('.profile-name-input, .profile-input-save')) {
+            $window.removeEventListener('focus', onFocusOutsideInput, true);
+            scope.$apply(cancel);
           }
         }
 

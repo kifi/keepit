@@ -34,18 +34,10 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document',
-  '$rootScope',
-  '$rootElement',
-  'installService',
-  'keepActionService',
-  'libraryService',
-  'modalService',
-  'recoActionService',
-  'tagService',
-  'undoService',
-  'util',
-  function ($document, $rootScope, $rootElement, installService, keepActionService, libraryService, modalService, recoActionService, tagService, undoService, util) {
+  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService',
+  'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
+  function ($document, $rootScope, $rootElement, installService, keepActionService,
+            libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
       scope: {

@@ -27,7 +27,7 @@ angular.module('kifi')
         scope.visibility = {
           'published': {
             'title': 'Published Library',
-            'content': 'This library is available for everyone to see. It also generates a synamic public page to share with non-Kifi users.'
+            'content': 'This library is available for everyone to see. It also generates a dynamic public page to share with non-Kifi users.'
           },
           'secret': {
             'title': 'Secret Library',
@@ -56,7 +56,7 @@ angular.module('kifi')
         };
 
         scope.editSlug = function () {
-          scope.userHasEditedSlug = scope.library.slug? true : false;
+          scope.userHasEditedSlug = !!scope.library.slug;
           scope.library.slug = generateSlug(scope.library.slug);
         };
 
@@ -135,9 +135,8 @@ angular.module('kifi')
         scope.$watch(function () {
           return scope.library.name;
         }, function (newVal, oldVal) {
-          scope.userHasEditedSlug = scope.library.name ? true : false;
-
           if (newVal !== oldVal) {
+            scope.userHasEditedSlug = !!scope.library.name;
             scope.library.slug = generateSlug(newVal);
           }
         });

@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('modalService', ['$compile', '$rootScope', '$templateCache', '$timeout',
-  function ($compile, $rootScope, $templateCache, $timeout) {
+.factory('modalService', ['$compile', '$rootScope', '$templateCache',
+  function ($compile, $rootScope, $templateCache) {
     function open (opts) {
       opts = opts || {};
 
@@ -18,10 +18,8 @@ angular.module('kifi')
         scope.modalData = opts.modalData;
       }
 
-      $timeout(function () {
-        $compile($modal)(scope);
-        angular.element(document.body).append($modal);
-      });
+      $compile($modal)(scope);
+      angular.element(document.body).append($modal);
     }
 
     function close () {

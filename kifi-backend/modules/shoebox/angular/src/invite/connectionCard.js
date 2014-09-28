@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 
-.directive('kfConnectionCard', ['$window', '$http', '$timeout', 'routeService', 'inviteService', 'modalService',
-  function ($window, $http, $timeout, routeService, inviteService, modalService) {
+.directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', 'modalService',
+  function ($window, $http, routeService, inviteService, modalService) {
   return {
     scope: {
       'friend': '&',
@@ -35,11 +35,9 @@ angular.module('kifi')
       scope.email    = network === 'email';
 
       scope.reconnectLinkedIn = function () {
-        $timeout(function () {
-          modalService.open({
-            template: 'social/addNetworksModal.tpl.html'
-          });
-        }, 0);
+        modalService.open({
+          template: 'social/addNetworksModal.tpl.html'
+        });
       };
 
       scope.action = function () {
