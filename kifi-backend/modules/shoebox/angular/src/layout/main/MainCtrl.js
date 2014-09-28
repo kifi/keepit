@@ -101,11 +101,14 @@ angular.module('kifi')
     }
 
     function initBookmarkFileUpload() {
-      $scope.modal = 'import_bookmark_file';
-      $scope.data.showBookmarkFileModal1 = true;
       // make sure file input is empty
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
+
+      modalService.open({
+        template: 'common/modal/importBookmarkFileModal.tpl.html',
+        scope: $scope
+      });
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -149,7 +152,7 @@ angular.module('kifi')
         }
 
         modalService.open({
-          template: 'common/modal/importBookmarksInProcessModal.tpl.html'
+          template: 'common/modal/importBookmarksInProgressModal.tpl.html'
         });
 
       }, 0);
@@ -231,16 +234,21 @@ angular.module('kifi')
           uploadBookmarkFileHelper(file, makePublic).then(function success(result) {
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
-            if (!result.error) { // success!
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileModal2 = true;
-              $scope.modal = 'import_bookmark_file';
-            } else { // hrmph.
-              $scope.modal = 'import_bookmarks_error';
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileError = true;
-              $scope.modal = 'import_bookmark_error';
-            }
+
+            $scope.forceClose = true;
+
+            $timeout(function () {
+              if (!result.error) { // success!
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
+                });
+              } else { // hrmph.
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+                });
+              }
+            }, 0);
+
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
             $scope.disableBookmarkImport = false;
@@ -255,7 +263,6 @@ angular.module('kifi')
 
     $scope.cancelBookmarkUpload = function () {
       $scope.disableBookmarkImport = true;
-      $scope.modal = '';
       $scope.importFilename = '';
       $scope.importFileStatus = '';
     };
