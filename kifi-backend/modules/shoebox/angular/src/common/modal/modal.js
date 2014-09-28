@@ -30,6 +30,10 @@ angular.module('kifi')
           }
         }
         $document.on('keydown', escapeModal);
+
+        $scope.$on('$destroy', function () {
+          $document.off('keydown', escapeModal);
+        });
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -58,7 +62,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfBasicModalContent', [function () {
+.directive('kfBasicModalContent', ['$window',
+  function ($window) {
   return {
     restrict: 'A',
     replace: true,
@@ -82,14 +87,31 @@ angular.module('kifi')
       // scope.singleAction will be set to true.
       scope.singleAction = attrs.singleAction || true;
 
+
+      var wrap = element.find('.dialog-body-wrap');
+      var resizeWindow = _.debounce(function () {
+        var winHeight = $window.innerHeight;
+        wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
+      }, 100);
+      $window.addEventListener('resize', resizeWindow);
+
       scope.cancelAndClose = function () {
+        $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.cancel);
       };
       scope.actionAndClose = function () {
+        $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.action);
       };
 
-      scope.close = kfModalCtrl.close;
+      scope.close = function () {
+        $window.removeEventListener('resize', resizeWindow);
+        kfModalCtrl.close();
+      };
+
+      scope.$on('$destroy', function () {
+        $window.removeEventListener('resize', resizeWindow);
+      });
     }
   };
 }]);
