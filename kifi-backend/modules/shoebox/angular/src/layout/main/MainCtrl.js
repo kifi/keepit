@@ -5,8 +5,9 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
+  'modalService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService, modalService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -92,8 +93,10 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal = true;
+      modalService.open({
+        template: 'common/modal/importBookmarksModal.tpl.html',
+        scope: $scope
+      });
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
@@ -117,38 +120,43 @@ angular.module('kifi')
     });
 
     $scope.importBookmarks = function (makePublic) {
-      $scope.data.showImportModal = false;
+      $scope.forceClose = true;
 
-      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+      $timeout(function () {
+        var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
-      if (!kifiVersion) {
-        $scope.modal = 'import_bookmarks_error';
-        $scope.data.showImportError = true;
-        return;
-      }
+        if (!kifiVersion) {
+          modalService.open({
+            template: 'common/modal/importBookmarksErrorModal.tpl.html'
+          });
+          return;
+        }
 
-      $analytics.eventTrack('user_clicked_page', {
-        'type': 'browserImport',
-        'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
-      });
+        $analytics.eventTrack('user_clicked_page', {
+          'type': 'browserImport',
+          'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+        });
 
-      var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
-      var message = 'import_bookmarks';
-      if (makePublic) {
-        message = 'import_bookmarks_public';
-      }
-      if (event) {
-        event.source.postMessage(message, $scope.msgEvent.origin);
-      } else {
-        $window.postMessage(message, '*');
-      }
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal2 = true;
+        var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        var message = 'import_bookmarks';
+        if (makePublic) {
+          message = 'import_bookmarks_public';
+        }
+        if (event) {
+          event.source.postMessage(message, $scope.msgEvent.origin);
+        } else {
+          $window.postMessage(message, '*');
+        }
+
+        modalService.open({
+          template: 'common/modal/importBookmarksInProcessModal.tpl.html'
+        });
+
+      }, 0);
     };
 
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
-      $scope.data.showImportModal = false;
     };
 
     $scope.disableBookmarkImport = true;
