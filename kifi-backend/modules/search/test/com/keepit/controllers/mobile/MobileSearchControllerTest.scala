@@ -222,6 +222,6 @@ class FixedResultSearchCommander extends SearchCommander {
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
   def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext) = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }

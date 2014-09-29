@@ -202,8 +202,7 @@ class SearchServiceClientImpl(
   }
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
-    log.info("running explain in distributed mode")
-    distRouter.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
+    call(Search.internal.explain(query, userId, uriId, Some(lang))).map(r => Html(r.body))
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
