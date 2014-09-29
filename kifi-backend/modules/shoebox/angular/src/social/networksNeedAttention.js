@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 
-.directive('kfNetworksNeedAttention', ['socialService', '$rootScope',
-  function (socialService, $rootScope) {
+.directive('kfNetworksNeedAttention', ['modalService', 'socialService',
+  function (modalService, socialService) {
     return {
       replace: true,
       restrict: 'A',
@@ -15,7 +15,9 @@ angular.module('kifi')
         };
         scope.data = {};
         scope.doShow = function () {
-          $rootScope.$emit('showGlobalModal', 'addNetworks');
+          modalService.open({
+            template: 'social/addNetworksModal.tpl.html'
+          });
         };
       }
     };

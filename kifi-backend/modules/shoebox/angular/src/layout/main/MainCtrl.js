@@ -5,8 +5,9 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
+  'modalService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService, modalService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -79,8 +80,7 @@ angular.module('kifi')
     function handleInjectedState(state) {
       if (state) {
         if (state.m && state.m === '1') {
-          $scope.data.showEmailModal = true;
-          $scope.modal = 'email';
+          $scope.showEmailVerifiedModal = true;
         } else if (state.m) { // show small tooltip
           var msg = messages[state.m];
           $scope.tooltipMessage = msg;
@@ -93,100 +93,75 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal = true;
+      modalService.open({
+        template: 'common/modal/importBookmarksModal.tpl.html',
+        scope: $scope
+      });
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
     function initBookmarkFileUpload() {
-      $scope.modal = 'import_bookmark_file';
-      $scope.data.showBookmarkFileModal1 = true;
       // make sure file input is empty
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
-    }
 
-    function initAddKeep() {
-      $scope.modal = 'add_keeps';
-      $scope.data.initAddKeeps = true;
-      $scope.data.showAddKeeps = true;
+      modalService.open({
+        template: 'common/modal/importBookmarkFileModal.tpl.html',
+        scope: $scope
+      });
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
-        case 'addNetworks':
-          $scope.modal = 'add_networks';
-          $scope.data.showAddNetworks = true;
-          break;
-        case 'seeMutualFriends':
-          $scope.modal = 'see_mutual_friends';
-          $scope.data.seeMutualFriends = true;
-          break;
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
           break;
         case 'importBookmarkFile':
           initBookmarkFileUpload();
           break;
-        case 'addKeeps':
-          initAddKeep();
-          break;
-        case 'genericError':
-          $scope.modal = 'generic_error';
-          $scope.data.showGenericErrorModal = true;
-          break;
-        case 'installExtension':
-          $scope.modal = 'install_extension';
-          $scope.data.showInstallExtension = true;
-          break;
-        case 'installExtensionError':
-          $scope.modal = 'install_extension_error';
-          $scope.data.showInstallErrorModal = true;
-          break;
-        case 'manageLibrary':
-          $scope.modal = 'manage_library';
-          $scope.data.showManageLibraryModal = true;
-          break;
       }
     });
 
     $scope.importBookmarks = function (makePublic) {
-      $scope.data.showImportModal = false;
+      $scope.forceClose = true;
 
-      var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // the next modal.
+      $scope.$evalAsync(function () {
+        var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
-      if (!kifiVersion) {
-        $scope.modal = 'import_bookmarks_error';
-        $scope.data.showImportError = true;
-        return;
-      }
+        if (!kifiVersion) {
+          modalService.open({
+            template: 'common/modal/importBookmarksErrorModal.tpl.html'
+          });
+          return;
+        }
 
-      $analytics.eventTrack('user_clicked_page', {
-        'type': 'browserImport',
-        'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+        $analytics.eventTrack('user_clicked_page', {
+          'type': 'browserImport',
+          'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+        });
+
+        var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        var message = 'import_bookmarks';
+        if (makePublic) {
+          message = 'import_bookmarks_public';
+        }
+        if (event) {
+          event.source.postMessage(message, $scope.msgEvent.origin);
+        } else {
+          $window.postMessage(message, '*');
+        }
+
+        modalService.open({
+          template: 'common/modal/importBookmarksInProgressModal.tpl.html'
+        });
+
       });
-
-      var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
-      var message = 'import_bookmarks';
-      if (makePublic) {
-        message = 'import_bookmarks_public';
-      }
-      if (event) {
-        event.source.postMessage(message, $scope.msgEvent.origin);
-      } else {
-        $window.postMessage(message, '*');
-      }
-      $scope.modal = 'import_bookmarks';
-      $scope.data.showImportModal2 = true;
     };
 
     $scope.cancelImport = function () {
       $window.postMessage('import_bookmarks_declined', '*');
-      $scope.data.showImportModal = false;
-    };
-
-    $scope.hideModal = function () {
-      $scope.modal = null;
     };
 
     $scope.disableBookmarkImport = true;
@@ -261,16 +236,23 @@ angular.module('kifi')
           uploadBookmarkFileHelper(file, makePublic).then(function success(result) {
             $timeout.cancel(tooSlowTimer);
             $scope.importFileStatus = '';
-            if (!result.error) { // success!
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileModal2 = true;
-              $scope.modal = 'import_bookmark_file';
-            } else { // hrmph.
-              $scope.modal = 'import_bookmarks_error';
-              $scope.data.showBookmarkFileModal1 = false;
-              $scope.data.showBookmarkFileError = true;
-              $scope.modal = 'import_bookmark_error';
-            }
+
+            $scope.forceClose = true;
+
+            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // opening the next modal.
+            $scope.$evalAsync(function () {
+              if (!result.error) { // success!
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
+                });
+              } else { // hrmph.
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+                });
+              }
+            });
+
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
             $scope.disableBookmarkImport = false;
@@ -285,7 +267,6 @@ angular.module('kifi')
 
     $scope.cancelBookmarkUpload = function () {
       $scope.disableBookmarkImport = true;
-      $scope.modal = '';
       $scope.importFilename = '';
       $scope.importFileStatus = '';
     };
@@ -317,12 +298,6 @@ angular.module('kifi')
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-    $scope.triggerInstall = function () {
-      installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal','installExtensionError');
-      });
-    };
 
     $scope.showDelightedSurvey = function () {
       return profileService.prefs && profileService.prefs.show_delighted_question;

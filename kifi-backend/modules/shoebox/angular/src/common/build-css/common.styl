@@ -1,3 +1,6 @@
+//
+// Mixins and functions.
+//
 long-text()
   white-space: nowrap
   overflow: hidden
@@ -8,3 +11,29 @@ title-text()
   font-style: italic
   font-smoothing: antialiased
   color: textDarkColor
+
+placeholder(color)
+  &::-webkit-input-placeholder
+    font-style: normal
+    color: color
+  &::-moz-placeholder
+    font-style: normal
+    color: color
+  &:-ms-input-placeholder
+    font-style: normal
+    color: color
+
+
+//
+// Blocks.
+//
+share-button-image =
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 xmlns:xlink=%22http://www.w3.org/1999/xlink%22 width=%2223%22 height=%2217%22 view-box=%220 0 23 17%22><path d=%22M 0.8 16.99 C 1.11 16.99, 21.71 16.99, 21.98 16.99 L 13.83 8.6 L 11.5 10.56 L 9.12 8.61 L 0.8 16.99 M 0 15.31 L 0 1.28 L 8.01 7.73 L 0.08 15.8 C 0.03 15.65, 0 15.48, 0 15.31 M 22.28 0 L 0.72 0 L 11.5 8.51 L 22.28 0 M 23 1.32 L 23 15.31 C 23 15.48, 22.97 15.65, 22.92 15.8 L 15.01 7.71 L 23 1.32 Z%22 fill=%22#656565%22 /></svg>")
+  background-repeat: no-repeat
+
+
+//
+// Styles.
+//
+[contenteditable]:empty::before
+  content: attr(placeholder)

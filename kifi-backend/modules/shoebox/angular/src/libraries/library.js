@@ -2,8 +2,11 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util',
-  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
+.controller('LibraryCtrl', [
+  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
+  'modalService', 'profileService', 'util',
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
+            modalService, profileService, util) {
     //
     // Internal data.
     //
@@ -50,18 +53,23 @@ angular.module('kifi')
     };
 
     $scope.manageLibrary = function () {
-      libraryService.libraryState = {
-        library: $scope.library,
-        returnAction: function () {
-          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
-            if (data.library.slug !== librarySlug) {
-              $location.path('/' + username + '/' + data.library.slug);
-            }
-          });
+      modalService.open({
+        template: 'libraries/manageLibraryModal.tpl.html',
+        modalData: {
+          library: $scope.library,
+          returnAction: function () {
+            libraryService.getLibraryById($scope.library.id, true).then(function (data) {
+              libraryService.getLibraryByUserSlug(username, data.library.slug, true).then(function (library) {
+                util.replaceObjectInPlace($scope.library, library);
+              });
+
+              if (data.library.slug !== librarySlug) {
+                $location.path('/' + username + '/' + data.library.slug);
+              }
+            });
+          }
         }
-      };
-      $rootScope.$emit('showGlobalModal', 'manageLibrary');
+      });
     };
 
     $scope.canBeShared = function (library) {
