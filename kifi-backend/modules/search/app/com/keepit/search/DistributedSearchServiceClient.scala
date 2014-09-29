@@ -66,12 +66,15 @@ trait DistributedSearchServiceClient extends ServiceClient {
 }
 
 class DistributedSearchServiceClientImpl @Inject() (
-    searchClient: SearchServiceClient,
     val serviceCluster: ServiceCluster,
     val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends DistributedSearchServiceClient {
 
-  private lazy val distRouter = searchClient.distRouter
+  private lazy val distRouter = {
+    val router = new DistributedSearchRouter(this)
+    serviceCluster.setCustomRouter(Some(router))
+    router
+  }
 
   def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
     distRouter.plan(userId, shards, maxShardsPerInstance)

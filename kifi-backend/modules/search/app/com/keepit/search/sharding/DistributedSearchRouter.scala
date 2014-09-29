@@ -5,11 +5,11 @@ import com.keepit.common.net.ClientResponse
 import com.keepit.common.routes.ServiceRoute
 import com.keepit.common.zookeeper.{ ServiceInstance, CustomRouter }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ DistributedSearchServiceClient }
 import play.api.libs.json.{ JsObject, JsString, JsNull, JsValue }
 import scala.concurrent.Future
 
-class DistributedSearchRouter(client: SearchServiceClient) extends CustomRouter {
+class DistributedSearchRouter(client: DistributedSearchServiceClient) extends CustomRouter {
 
   type T = NormalizedURI
 
