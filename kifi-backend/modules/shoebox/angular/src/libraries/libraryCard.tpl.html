@@ -7,17 +7,15 @@
     </div>
 
     <div class="kf-keep-lib-info">
-      <div class="kf-keep-lib-name" ng-bind-html="library.name"></div><!-- ng-href="{{library.url}}" target="_blank" ng-attr-title="{{library.name}}" -->
+      <div class="kf-keep-lib-name" ng-bind-html="library.name"></div>
 
       <div class="kf-keep-lib-owner">
         <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image">
         <div class="kf-keep-lib-owner-text">
           <div class="kf-keep-lib-curator">Curator:</div>
-          <div class="kf-keep-lib-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div><!-- should this be in HTML safe? -->
         </div>
       </div>
 
-      <!-- should this be in HTML safe? -->
       <div ng-switch="clippedDescription">
         <p ng-switch-when="true" class="kf-keep-lib-description">
           {{library.shortDescription}}&hellip;

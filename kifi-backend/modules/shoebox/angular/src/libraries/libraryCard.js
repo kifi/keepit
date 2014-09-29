@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', ['$location', 'friendService', 'libraryService', 'modalService', 'profileService', 'util',
-  function ($location, friendService, libraryService, modalService, profileService, util) {
+.directive('kfLibraryCard', ['$location', 'friendService', 'libraryService', 'modalService', 'profileService',
+  function ($location, friendService, libraryService, modalService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -73,10 +73,7 @@ angular.module('kifi')
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
         scope.followingLibrary = function (library) {
-          var alreadyFollowing = _.some(scope.library.followers, function (follower) {
-            return follower.id === profileService.me.id;
-          });
-
+          var alreadyFollowing = _.some(scope.library.followers, {id: profileService.me.id});
           return !alreadyFollowing && library.ownerId !== profileService.me.id;
         };
 
