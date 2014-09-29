@@ -137,7 +137,7 @@ class SearchServiceClientImpl(
       augmentation(request).map { response =>
         items.map { item =>
           val info = response.infos(item)
-          SharingUserInfo(info.keeps.map(_.keptBy).flatten.toSet, info.keeps.size + info.otherDiscoverableKeeps + info.otherDiscoverableKeeps)
+          SharingUserInfo(info.keeps.map(_.keptBy).flatten.toSet - userId, info.keeps.size + info.otherDiscoverableKeeps + info.otherDiscoverableKeeps)
         }
       }
     }
