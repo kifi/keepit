@@ -37,13 +37,15 @@ angular.module('kifi')
   '$document',
   '$rootScope',
   '$rootElement',
+  'installService',
   'keepActionService',
   'libraryService',
+  'modalService',
   'recoActionService',
   'tagService',
   'undoService',
   'util',
-  function ($document, $rootScope, $rootElement, keepActionService, libraryService, recoActionService, tagService, undoService, util) {
+  function ($document, $rootScope, $rootElement, installService, keepActionService, libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -62,6 +64,7 @@ angular.module('kifi')
         if (!scope.keep) {
           return;
         }
+
 
         //
         // Internal data.
@@ -267,10 +270,6 @@ angular.module('kifi')
           keepActionService.togglePrivateOne(keep);
         };
 
-        scope.triggerInstall = function () {
-          $rootScope.$emit('showGlobalModal', 'installExtension');
-        };
-
         scope.keepPublic = function (keep) {
           keepOne(keep, false);
         };
@@ -306,6 +305,21 @@ angular.module('kifi')
         scope.onTagDrop = function (tag) {
           tagService.addKeepToTag(tag, scope.keep);
           scope.isDragTarget = false;
+        };
+
+        scope.triggerInstall = function () {
+          installService.triggerInstall(function () {
+            modalService.open({
+              template: 'common/modal/installExtensionErrorModal.tpl.html'
+            });
+          });
+        };
+
+        scope.showInstallExtensionModal = function () {
+          modalService.open({
+            template: 'common/modal/installExtensionModal.tpl.html',
+            scope: scope
+          });
         };
 
 

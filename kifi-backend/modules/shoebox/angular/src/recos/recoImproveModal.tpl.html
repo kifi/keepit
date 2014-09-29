@@ -1,0 +1,19 @@
+<div kf-modal class="kf-reco-improve-modal">
+  <div kf-basic-modal-content action-text="Submit" action="submitImprovement(reco)">
+    <p>Why was the recommendation not great?</p>
+    <ul>
+      <li>
+        <input type="radio" name="improvement" id="r1" value="irrelevant" ng-model="improvement.type">
+        <label for="r1">It's not relevant to my interests</label>
+      </li>
+      <li>
+        <input type="radio" name="improvement" id="r2" value="too similar" ng-model="improvement.type">
+        <label for="r2">It's too similar to what I'm seeing</label>
+      </li>
+      <li>
+        <input type="radio" name="improvement" id="r3" value="offensive" ng-model="improvement.type">
+        <label for="r3">It's offensive</label>
+      </li>
+    </div>
+  </div>
+</div>
