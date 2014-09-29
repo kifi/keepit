@@ -90,6 +90,7 @@ angular.module('util', [])
           return map;
         }, {});
 
+        var that = this;
         _.forEach(keeps, function (keep) {
           var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
             return idMap[tagId] || null;
@@ -97,7 +98,7 @@ angular.module('util', [])
             return tag != null;
           });
           if (keep.tagList) {
-            util.replaceArrayInPlace(keep.tagList, newTagList);
+            that.replaceArrayInPlace(keep.tagList, newTagList);
           } else {
             keep.tagList = newTagList;
           }

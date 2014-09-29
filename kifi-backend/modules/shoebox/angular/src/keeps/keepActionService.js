@@ -11,8 +11,7 @@ angular.module('kifi')
   'env',
   'routeService',
   'Clutch',
-  'util',
-  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch, util) {
+  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
     var limit = 10;
     var smallLimit = 4;
 
