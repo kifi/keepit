@@ -11,8 +11,22 @@ angular.module('kifi')
     // Whenever new keeps are loaded or when tags have been added or removed,
     // sync up the keep tags with the current list of tags.
     function joinTags() {
-      if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
-        util.joinTags($scope.keeps, tagService.allTags);
+      var keeps = $scope.keeps;
+      var tags = tagService.allTags;
+      if (keeps && keeps.length && tags.length) {
+        var tagsById = _.indexBy(tags, 'id');
+        var toTag = function (id) {
+          return tagsById[id];
+        };
+
+        _.forEach(keeps, function (keep) {
+          var newTagList = _(keep.collections).union(keep.tags).map(toTag).compact().value();
+          if (keep.tagList) {
+            util.replaceArrayInPlace(keep.tagList, newTagList);
+          } else {
+            keep.tagList = newTagList;
+          }
+        });
       }
     }
     $scope.$watch(function () {
@@ -202,7 +216,7 @@ angular.module('kifi')
         scope.disableEditTags = function () {
           scope.editingTags = false;
         };
-        
+
 
         //
         // Watches and listeners.
@@ -217,8 +231,8 @@ angular.module('kifi')
         scope.$watch(function () {
           return scope.editMode.enabled;
         }, function(enabled) {
-          if (!enabled) { 
-            scope.selection.unselectAll(); 
+          if (!enabled) {
+            scope.selection.unselectAll();
           }
         });
 
