@@ -39,7 +39,7 @@ angular.module('kifi')
       params = params || {};
       params.withPageInfo = true;
 
-      // Pass the id of the last keep received to the server so the server 
+      // Pass the id of the last keep received to the server so the server
       // knows which keeps to send next.
       params.before = lastKeepId;
 
@@ -174,7 +174,7 @@ angular.module('kifi')
     }
 
     // When a url is added as a keep, the returned keep does not have the full
-    // keep information we need to display it. This function fetches that 
+    // keep information we need to display it. This function fetches that
     // information.
     function fetchFullKeepInfo(keep) {
       var url = routeService.getKeep(keep.id);
@@ -183,8 +183,7 @@ angular.module('kifi')
       };
 
       return $http.get(url, config).then(function (result) {
-        util.completeObjectInPlace(keep, result.data);
-        return keep;
+        return _.assign(keep, result.data);
       });
     }
 
