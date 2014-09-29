@@ -132,7 +132,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
 
         coll2.isActive must beTrue
         db.readWrite { implicit s =>
-          collectionRepo.collectionChanged(coll2.id.get)
+          collectionRepo.collectionChanged(coll2.id.get, inactivateIfEmpty = true)
         }.isActive must beFalse
 
       }

@@ -26,7 +26,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession): Collection
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
 }
 
@@ -132,14 +132,11 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession): Collection = {
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection = {
     val collection = get(collectionId)
-    if (isNewKeep) {
-      save(collection withLastKeptTo clock.now())
-    } else {
-      val keepCount = getBookmarkCount(collectionId)
-      if (keepCount > 0) save(collection) else save(collection.copy(state = CollectionStates.INACTIVE))
-    }
+    if (isNewKeep) { save(collection withLastKeptTo clock.now()) }
+    else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) { save(collection.copy(state = CollectionStates.INACTIVE)) }
+    else { save(collection) }
   }
 
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)

@@ -687,7 +687,7 @@ class KeepsCommander @Inject() (
         collection <- collectionRepo.getOpt(id)
       } {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
-        collectionRepo.collectionChanged(collection.id.get)
+        collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
         keptAnalytics.untaggedPage(collection, keep, context)
       }
@@ -705,7 +705,7 @@ class KeepsCommander @Inject() (
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
         keepRepo.save(keep) // notify keep index
-        collectionRepo.collectionChanged(ktc.collectionId)
+        collectionRepo.collectionChanged(ktc.collectionId, inactivateIfEmpty = true)
       }
     }
     searchClient.updateURIGraph()
