@@ -69,8 +69,8 @@ class ScoreContext(
     if (visibility != Visibility.RESTRICTED) collector.collect(this)
   }
 
-  private[engine] def addVisibility(theVisibility: Int) = {
-    visibility = visibility | theVisibility
+  private[engine] def setVisibility(theVisibility: Int) = {
+    visibility = theVisibility
   }
 
   private[engine] def addScore(idx: Int, scr: Float) = {
@@ -88,19 +88,28 @@ class DirectScoreContext(
   private[this] var docId = -1
   private[this] var pq: TaggedScorerQueue = null
 
-  override def score(): Float = {
-    require(pq != null, "score invoked out of context")
-    pq.addBoostScores(this, docId)
-    super.score()
-  }
-
-  def flushDirectly(taggedScorerQueue: TaggedScorerQueue): Unit = {
+  def setScorerQueue(taggedScorerQueue: TaggedScorerQueue): Unit = {
     pq = taggedScorerQueue
-    docId = pq.addCoreScores(this)
-    super.flush()
-    pq = null
   }
 
-  override def flush(): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support flush()")
+  override def score(): Float = {
+    pq.addBoostScores(this, docId)
+    scoreExpr()(this)
+  }
+
+  override private[engine] def addScore(idx: Int, scr: Float) = {
+    // there shouldn't be any duplicate index in the direct path
+    scoreMax(idx) = scr
+    scoreSum(idx) = scr
+  }
+
+  override def flush(): Unit = {
+    if (visibility != Visibility.RESTRICTED) {
+      docId = pq.addCoreScores(this)
+      collector.collect(this)
+      docId = -1
+    }
+  }
+
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
 }
