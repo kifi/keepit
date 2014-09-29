@@ -189,7 +189,7 @@ object Search extends Service {
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
-    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
+    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def correctSpelling(input: String, enableBoost: Boolean) = ServiceRoute(GET, "/internal/search/spell/suggest", Param("input", input), Param("enableBoost", enableBoost))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
