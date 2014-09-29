@@ -33,7 +33,9 @@ class EventTrackingController @Inject() (
     case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
   }
 
-  private def handleUserEvent(userEvent: UserEvent) = {
+  private def handleUserEvent(rawUserEvent: UserEvent) = {
+    //Some user events are coming in from clients with the "user_" prefix already present. This is a stop gap to end fragmentation in mixpanel into user_* and user_user_*. Investigating to stop the cause.
+    val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
     SafeFuture { userEventLoggingRepo.persist(userEvent) }
     userEvent.eventType match {
       case UserEventTypes.RECOMMENDATION_USER_ACTION =>
