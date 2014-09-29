@@ -50,9 +50,7 @@ angular.module('kifi')
               (!event.target.classList.contains('profile-name-input') &&
                !event.target.classList.contains('profile-input-save'))) {
             $document.off('mousedown', onClickOutsideInput);
-            $timeout(function () {
-              cancel();
-            }, 0);
+            cancel();
           }
         }
 
@@ -62,9 +60,7 @@ angular.module('kifi')
               (!event.target.classList.contains('profile-name-input') &&
                !event.target.classList.contains('profile-input-save'))) {
               $window.removeEventListener('focus', onFocusOutsideInput, true);
-            $timeout(function () {
-              cancel();
-            }, 0);
+            cancel();
           }
         }
 

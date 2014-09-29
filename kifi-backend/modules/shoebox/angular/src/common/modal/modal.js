@@ -15,13 +15,12 @@ angular.module('kifi')
       transclude: true,
       controller: ['$scope', function ($scope) {
         $scope.close = this.close = function (closeAction) {
+          $document.off('keydown', escapeModal);
+          modalService.close();
+
           if (angular.isFunction(closeAction)) {
             closeAction();
           }
-
-          $document.off('keydown', escapeModal);
-
-          modalService.close();
         };
 
         function escapeModal (event) {
@@ -95,11 +94,11 @@ angular.module('kifi')
       }, 100);
       $window.addEventListener('resize', resizeWindow);
 
-      scope.cancelAndClose = function () {
+      scope.closeAndCancel = function () {
         $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.cancel);
       };
-      scope.actionAndClose = function () {
+      scope.closeAndAction = function () {
         $window.removeEventListener('resize', resizeWindow);
         kfModalCtrl.close(scope.action);
       };

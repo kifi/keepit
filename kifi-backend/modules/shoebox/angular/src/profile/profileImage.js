@@ -18,7 +18,7 @@ angular.module('kifi')
         var dragging = {};
         var isImageLoaded = false;
         var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
-          PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
+            PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
         var photoXhr2;
 
         function refreshZoom() {
@@ -177,6 +177,8 @@ angular.module('kifi')
             scope: scope
           });
 
+          // Use $timeout here so that the DOM elements in the edit-image modal
+          // can be loaded and found.
           $timeout(function () {
             imageElement = $document.find('.kf-profile-image-dialog-image');
             imageMask = $document.find('.kf-profile-image-dialog-mask');
@@ -224,7 +226,9 @@ angular.module('kifi')
         function imageUploadError() {
           scope.forceClose = true;
 
-          scope.$apply(function () {
+          // Use $evalAsync to wait for forceClose to close the currently open modal before
+          // opening the next modal.
+          scope.$evalAsync(function () {
             modalService.open({
               template: 'profile/imageUploadFailedModal.tpl.html'
             });
@@ -233,40 +237,38 @@ angular.module('kifi')
         }
 
         scope.uploadImage = function () {
-          $timeout(function () {
-            modalService.open({
-              template: 'profile/imageUploadingModal.tpl.html',
-              scope: scope
-            });
+          modalService.open({
+            template: 'profile/imageUploadingModal.tpl.html',
+            scope: scope
+          });
 
-            var upload = uploadPhotoXhr2(scope.files);
-            if (upload) {
-              upload.promise.then(function (result) {
-                var scaling = positioning.imageWidth / positioning.currentWidth;
-                var data = {
-                  picToken: result && result.token,
-                  picWidth: positioning.imageWidth,
-                  picHeight: positioning.imageHeight,
-                  cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
-                  cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
-                  cropSize: Math.floor(Math.min(scaling * maskSize, scaling * maskSize))
-                };
-                $http.post(PHOTO_CROP_UPLOAD_URL, data)
-                .then(function () {
-                  profileService.fetchMe();
-                  scope.forceClose = true;
+          var upload = uploadPhotoXhr2(scope.files);
+          if (upload) {
+            upload.promise.then(function (result) {
+              var scaling = positioning.imageWidth / positioning.currentWidth;
+              var data = {
+                picToken: result && result.token,
+                picWidth: positioning.imageWidth,
+                picHeight: positioning.imageHeight,
+                cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
+                cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
+                cropSize: Math.floor(Math.min(scaling * maskSize, scaling * maskSize))
+              };
+              $http.post(PHOTO_CROP_UPLOAD_URL, data)
+              .then(function () {
+                profileService.fetchMe();
+                scope.forceClose = true;
 
-                  scope.resetChooseImage();
-                  $analytics.eventTrack('user_clicked_page', {
-                    'action': 'uploadImage',
-                    'path': $location.path()
-                  });
-                }, imageUploadError);
+                scope.resetChooseImage();
+                $analytics.eventTrack('user_clicked_page', {
+                  'action': 'uploadImage',
+                  'path': $location.path()
+                });
               }, imageUploadError);
-            } else {
-              imageUploadError();
-            }
-          }, 0);
+            }, imageUploadError);
+          } else {
+            imageUploadError();
+          }
         };
       }
     };

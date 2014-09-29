@@ -125,7 +125,9 @@ angular.module('kifi')
     $scope.importBookmarks = function (makePublic) {
       $scope.forceClose = true;
 
-      $timeout(function () {
+      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // the next modal.
+      $scope.$evalAsync(function () {
         var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -155,7 +157,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarksInProgressModal.tpl.html'
         });
 
-      }, 0);
+      });
     };
 
     $scope.cancelImport = function () {
@@ -237,7 +239,9 @@ angular.module('kifi')
 
             $scope.forceClose = true;
 
-            $timeout(function () {
+            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // opening the next modal.
+            $scope.$evalAsync(function () {
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
@@ -247,7 +251,7 @@ angular.module('kifi')
                   template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
                 });
               }
-            }, 0);
+            });
 
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
