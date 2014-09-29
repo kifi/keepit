@@ -14,7 +14,7 @@ object IndexerVersion {
 
 sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, backupVersion: IndexerVersion) {
   require(backupVersion >= activeVersion)
-  def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.isBackup) backupVersion else activeVersion
+  def getVersionByStatus(service: ServiceDiscovery): IndexerVersion = if (service.hasBackupCapability) backupVersion else activeVersion
 }
 
 object IndexerVersionProviders {
