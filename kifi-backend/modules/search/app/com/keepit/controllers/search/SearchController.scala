@@ -212,14 +212,6 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
-    SafeFuture {
-      val uriIds = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      val info = searchCommander.sharingUserInfo(userId, uriIds)
-      Ok(Json.toJson(info))
-    }
-  }
-
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
     searchCommander.explain(userId, uriId, lang, userExperiments, query) match {
