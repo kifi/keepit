@@ -610,7 +610,7 @@ case class LibraryInfo(
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
-  ownerId: ExternalId[User],
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   kind: LibraryKind)
@@ -623,20 +623,20 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: User, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
-      ownerId = owner.externalId,
+      owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind
