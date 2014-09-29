@@ -134,9 +134,13 @@ class CollectionRepoImpl @Inject() (
 
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection = {
     val collection = get(collectionId)
-    if (isNewKeep) { save(collection withLastKeptTo clock.now()) }
-    else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) { save(collection.copy(state = CollectionStates.INACTIVE)) }
-    else { save(collection) }
+    if (isNewKeep) {
+      save(collection withLastKeptTo clock.now())
+    } else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) {
+      save(collection.copy(state = CollectionStates.INACTIVE))
+    } else {
+      save(collection)
+    }
   }
 
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
