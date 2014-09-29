@@ -193,6 +193,8 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
     val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
+    directScoreContext.setScorerQueue(pq)
+
     val bloomFilter = if ((debugFlags & DebugOption.NoDirectPath.flag) != 0) {
       BloomFilter.full // this disables the direct path.
     } else {
@@ -224,8 +226,8 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
             directScoreContext.set(uriId)
-            directScoreContext.addVisibility(Visibility.OTHERS)
-            directScoreContext.flushDirectly(pq)
+            directScoreContext.setVisibility(Visibility.OTHERS)
+            directScoreContext.flush()
           }
           docId = pq.top.doc // next doc
         } else {
