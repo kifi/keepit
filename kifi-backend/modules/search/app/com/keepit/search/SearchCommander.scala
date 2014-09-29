@@ -85,8 +85,6 @@ trait SearchCommander {
     experiments: Set[ExperimentType],
     query: String): Option[(Query, Explanation)]
 
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
-
   def warmUp(userId: Id[User]): Unit
 }
 
@@ -435,18 +433,6 @@ class SearchCommanderImpl @Inject() (
     shards.find(uriId).flatMap { shard =>
       val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
       searcher.explain(uriId)
-    }
-  }
-
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    uriIds.map { uriId =>
-      shards.find(uriId) match {
-        case Some(shard) =>
-          val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-          searcher.getSharingUserInfo(uriId)
-        case None =>
-          throw new Exception("shard not found")
-      }
     }
   }
 
