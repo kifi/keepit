@@ -29,10 +29,10 @@ angular.module('util', [])
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
-        _.forOwn(oldObj || {}, function (num, key) {
+        _.forOwn(oldObj, function (num, key) {
           delete oldObj[key];
         });
-        _.forOwn(newObj || {}, function (num, key) {
+        _.forOwn(newObj, function (num, key) {
           oldObj[key] = newObj[key];
         });
       },
@@ -81,28 +81,6 @@ angular.module('util', [])
         fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
         return domain + (fileName ? ' · ' + fileName : '');
-      },
-      joinTags: function (keeps, tags) {
-        var idMap = _.reduce(tags, function (map, tag) {
-          if (tag && tag.id) {
-            map[tag.id] = tag;
-          }
-          return map;
-        }, {});
-
-        var that = this;
-        _.forEach(keeps, function (keep) {
-          var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
-            return idMap[tagId] || null;
-          }).filter(function (tag) {
-            return tag != null;
-          });
-          if (keep.tagList) {
-            that.replaceArrayInPlace(keep.tagList, newTagList);
-          } else {
-            keep.tagList = newTagList;
-          }
-        });
       },
       validateUrl: function (keepUrl) {
         // Extremely simple for now, can be developed in the future
