@@ -1,37 +1,125 @@
-.kf-library-share-search
+// TODO(yiping): move library card styles to its own .styl file
+.kf-library-card-header
+  padding: 0 25px 0 30px
+
+// TODO(yiping): figure out why there is a white space in library cards
+// between the header and the body. The following is a hack to make things
+// a little prettier.
+.kf-reco
+  .kf-keep.library-card
+    border-top: 1px solid #fff
+
+.library-card
+
+
+  .kf-keep-lib-icon
+    float: left
+    display: block
+    width: 58px
+    height: 77px
+    background-repeat: no-repeat
+
+  .kf-keep-lib-info
+    margin: 22px 25px 10px 80px
+    color: kifiBlack
+    vertical-align: top
+
+  .kf-keep-lib-owner
+    padding: 10px 0
+
+  .kf-keep-lib-name
+    font-family: "Georgia", Arial, sans-serif
+    font-size: 24px
+    font-weight: 500
+
+  .kf-keep-lib-user-image
+    display: inline-block
+    margin-right: 10px
+    border-radius: 100%
+    width: 42px
+    height: 42px
+
+  .kf-keep-lib-owner-text
+    display: inline-block
+    font-size: 14px
+    line-height: 1.3em
+    vertical-align: middle
+
+  .kf-keep-lib-owner-name
+    color: #939393
+
+  .kf-keep-lib-description
+    margin: 10px 0
+
+  .kf-keep-lib-stats
+    padding-top: 10px
+    border-top: 1px solid #dadae2
+
+  .kf-keep-lib-keeps-followers-stats
+    display: inline-block
+    margin: 0 20px 0 5px
+    font-size: 12px
+
+  .kf-keep-lib-stats-heading
+  .kf-keep-lib-stats-number
+    display: block
+
+  .kf-keep-lib-stats-heading
+    color: textDarkGrey
+    text-transform: uppercase
+
+  .kf-keep-lib-stats-number
+    padding-top: 3px
+    font-size: 16px
+    font-weight: bold
+    text-align: center
+
+  .kf-keep-footer
+    overflow: hidden
+    border-top: 2px solid #f5f5f5
+    padding: 15px 20px
+    background-color: #fff
+
+  .library-action-button
+    float: right
+    margin-right: 0
+
+  .kf-subtitle
+    margin-top: 15px
+
+
+// This should be in common; it's so messy right now.
+.kf-keep-lib-footer-button
+  display: inline-block
   position: relative
-
-  // Note: the following styles are for dev only.
-  // When there is a real library header, we won't need this
-  // background anymore.
-  background-color: #fff
-  padding: 15px
-
-  [contenteditable]:empty::before{
-    color: secondaryTextGray
-  }
-
-.library-share-button
-  display: block
-  position: relative
-  padding: 8px 15px 8px 40px
+  margin-right: 15px
   border: 1px solid #bbb
   border-radius: 5px
+  padding: 8px 15px 8px 40px
   background: linear-gradient(to top, #f3f3f3, #fff)
   font-family: Helvetica, Arial, sans-serif
   font-size: 13px
   color: #666
 
-.library-share-button::before
+.kf-keep-lib-footer-button::before
   position: absolute
   top: 4px
   left: 10px
   width: 22px
   height: 22px
-  {share-button-image}
   background-size: 100% 100%
   background-position: 0px 0px
   content: ''
+  {share-button-image}  // Migrate this to use new svg "sprite" classes.
+
+
+.kf-library-share-search
+  position: relative
+  display: inline-block
+
+  [contenteditable]:empty::before{
+    color: secondaryTextGray
+  }
 
 .library-share-menu
   display: none
@@ -40,6 +128,7 @@
   box-sizing: border-box
   margin-top: 5px
   width: 320px
+  line-height: normal
   z-index: 2
 
 .library-share-menu-content
@@ -106,7 +195,7 @@
     border-top: none
 
   &.library-share-selected
-      background-color: #f8f8f8
+    background-color: #f8f8f8
 
 .library-share-actionable
   &:hover
@@ -156,7 +245,9 @@
 
 .library-share-contact-summary
   display: inline-block
+  margin-top: 3px
   width: 164px
+  line-height: 1.4em
 
 .library-share-contact-name
   overflow: hidden
@@ -177,7 +268,7 @@
 
 .library-share-contact-import-gmail
   position: relative
-  top: -10px
+  top: 10px
   overflow: hidden
   font-size: 14px
   color: #000
@@ -186,7 +277,7 @@
 
 .kf-library-share-search
   .library-share-contact-button
-    @extend .library-share-button
+    @extend .kf-keep-lib-footer-button
     display: inline-block
     position: absolute
     top: 5px

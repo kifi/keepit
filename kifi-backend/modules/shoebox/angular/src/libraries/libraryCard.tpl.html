@@ -1,44 +1,53 @@
-<div class="kf-keep">
+<div class="kf-keep library-card">
   <div class="kf-keep-body">
-    <div class="kf-keep-contents">
-      <div class="kf-keep-title">
-        <a class="kf-keep-title-link" ng-href="{{library.url}}" target="_blank" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
-      </div>
+    <div ng-switch="library.visibility">
+      <div ng-switch-when="published" class="kf-keep-lib-icon svg-green-card-with-globe"></div>
+      <div ng-switch-when="secret" class="kf-keep-lib-icon svg-red-card-with-lock"></div>
+      <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
+    </div>
 
-      <div class="kf-keep-content-line">
-        <div class="kf-keep-info-wrap">
-          <div class="kf-keep-info">
-            <div class="kf-keep-subtitle">
-              <!-- stats -->
-              <div>
-                Keeps: {{library.numKeeps}} Followers: {{library.numFollowers}}
-              </div>
-              <!-- owner -->
-              <div>
-                Curator:
-                <img ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic">
-                {{library.owner.firstName}} {{library.owner.lastName}}
-              </div>
-              <!-- followers -->
-              <div> Followers:
-                <span ng-repeat="follower in library.followers">
-                  <img ng-src="{{follower.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-who-pic" title="{{follower.firstName + ' ' + follower.lastName}}">
-                </span>
-              </div>
-            </div>
-            <div class="kf-keep-description">{{library.description}}</div>
+    <div class="kf-keep-lib-info">
+      <div class="kf-keep-lib-name" ng-bind-html="library.name"></div>
 
-          </div>
+      <div class="kf-keep-lib-owner">
+        <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image">
+        <div class="kf-keep-lib-owner-text">
+          <div class="kf-keep-lib-curator">Curator:</div>
         </div>
       </div>
+
+      <div ng-switch="clippedDescription">
+        <p ng-switch-when="true" class="kf-keep-lib-description">
+          {{library.shortDescription}}&hellip;
+          <a href="javascript:" ng-click="showLongDescription()">More</a>
+        </p>
+        <p ng-switch-when="false" class="kf-keep-lib-description">{{library.description}}</p>
+      </div>
+
+      <div class="kf-keep-lib-stats">
+        <div class="kf-keep-lib-keeps-followers-stats">
+          <span class="kf-keep-lib-stats-heading">Keeps</span>
+          <span class="kf-keep-lib-stats-number">{{library.keeps.length || library.numKeeps}}</span>
+        </div>
+
+        <div class="kf-keep-lib-keeps-followers-stats">
+          <span class="kf-keep-lib-stats-heading">Followers</span>
+          <span class="kf-keep-lib-stats-number">{{library.followers.length}}</span>
+        </div>
+      </div>
+
+      <div class="kf-keep-lib-image"></div>
     </div>
   </div>
-  <div class="kf-keep-footer">
-    <span ng-if="!followed()" class="kf-keep-footer-link" ng-click="follow()">
-      <a ng-click="follow()" href="javascript:"> Follow </a>
-    </span>
-    <span ng-if="followed()" class="kf-keep-footer-link">
-      <a ng-click="unfollow()" href="javascript:"> Unfollow </a>
-    </div>
+  <div ng-if="isUserLibrary(library) || recommendation" class="kf-keep-footer">
+    <button ng-if="isMyLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="manageLibrary()">Edit</button>
+    <button ng-if="followingLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="followLibrary(library)">Follow</button>
+    <button ng-if="!followingLibrary(library) && !isMyLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="unfollowLibrary(library)">Unfollow</button>
+
+    <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
+    <!-- TODO(yiping): implement social sharing!
+    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button" ng-click="shareLibraryOnTwitter()">Share</button>
+    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button" ng-click="shareLibraryOnFacebook()">Share</button>
+    -->
   </div>
 </div>
