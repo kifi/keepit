@@ -24,11 +24,8 @@ angular.module('util', [])
       },
       replaceArrayInPlace: function (oldArray, newArray) {
         // empties oldArray, loads newArray values into it, keeping the same reference.
-        oldArray = oldArray || [];
         oldArray.length = 0;
-        // returning the array in case it was undefined before
-        Array.prototype.push.apply(oldArray, newArray);
-        return oldArray;
+        oldArray.push.apply(oldArray, newArray);
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
@@ -93,14 +90,17 @@ angular.module('util', [])
           return map;
         }, {});
 
-        var that = this;
         _.forEach(keeps, function (keep) {
           var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
             return idMap[tagId] || null;
           }).filter(function (tag) {
             return tag != null;
           });
-          keep.tagList = that.replaceArrayInPlace(keep.tagList, newTagList);
+          if (keep.tagList) {
+            util.replaceArrayInPlace(keep.tagList, newTagList);
+          } else {
+            keep.tagList = newTagList;
+          }
         });
       },
       validateUrl: function (keepUrl) {
