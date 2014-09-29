@@ -17,9 +17,9 @@ final class TaggedScorer(tag: Int, scorer: Scorer) extends DataBuffer.FloatTagge
 final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer](coreSize) {
   override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
 
-  private val dependentScores: ArrayBuffer[TaggedScorer] = ArrayBuffer()
+  private val boosterScorers: ArrayBuffer[TaggedScorer] = ArrayBuffer()
 
-  def addDependentScorer(scorer: TaggedScorer): Unit = { dependentScores += scorer }
+  def addDependentScorer(scorer: TaggedScorer): Unit = { boosterScorers += scorer }
 
   def getTaggedScores(taggedScores: Array[Int], boost: Float = 1.0f): Int = {
     var scorer = top()
@@ -34,9 +34,9 @@ final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer]
 
     if (size > 0) {
       var i = 0
-      val len = dependentScores.size
+      val len = boosterScorers.size
       while (i < len) {
-        val scorer = dependentScores(i)
+        val scorer = boosterScorers(i)
         if (scorer.doc < docId) {
           if (scorer.advance(docId) == docId) {
             taggedScores(size) = scorer.taggedScore()
@@ -53,7 +53,7 @@ final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer]
     size
   }
 
-  def addScores(scoreContext: ScoreContext): Unit = {
+  def addCoreScores(scoreContext: ScoreContext): Int = {
     var scorer = top()
     val docId = scorer.doc
     var size: Int = 0
@@ -63,21 +63,22 @@ final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer]
       scorer.next
       scorer = updateTop()
     }
+    if (size > 0) docId else -1
+  }
 
-    if (size > 0) {
-      var i = 0
-      val len = dependentScores.size
-      while (i < len) {
-        val scorer = dependentScores(i)
-        if (scorer.doc < docId) {
-          if (scorer.advance(docId) == docId) {
-            scorer.addScore(scoreContext)
-          }
-        } else if (scorer.doc == docId) {
+  def addBoostScores(scoreContext: ScoreContext, docId: Int): Unit = {
+    var i = 0
+    val len = boosterScorers.size
+    while (i < len) {
+      val scorer = boosterScorers(i)
+      if (scorer.doc < docId) {
+        if (scorer.advance(docId) == docId) {
           scorer.addScore(scoreContext)
         }
-        i += 1
+      } else if (scorer.doc == docId) {
+        scorer.addScore(scoreContext)
       }
+      i += 1
     }
   }
 
@@ -91,5 +92,5 @@ final class TaggedScorerQueue(coreSize: Int) extends PriorityQueue[TaggedScorer]
     scorer.doc
   }
 
-  def createScoreArray: Array[Int] = new Array[Int](size() + dependentScores.size)
+  def createScoreArray: Array[Int] = new Array[Int](size() + boosterScorers.size)
 }

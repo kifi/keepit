@@ -21,21 +21,23 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait ScoreVectorSource {
-  def createWeights(query: Query): IndexedSeq[(Weight, Float)]
-  def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer, directScoreContext: ScoreContext): Unit
+  def weights: IndexedSeq[(Weight, Float)]
+  def prepare(query: Query): Unit
+  def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
-  def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
-    val weights = new ArrayBuffer[(Weight, Float)]
+  val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
+
+  def prepare(query: Query): Unit = {
+    weights.clear()
     val weight = searcher.createWeight(query)
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }
-    weights
   }
 
-  def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer, directScoreContext: ScoreContext): Unit = {
+  def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val scorers = new Array[Scorer](weights.size)
     indexReaderContexts.foreach { readerContext =>
       var i = 0
@@ -51,7 +53,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   protected def indexReaderContexts: Seq[AtomicReaderContext] = { searcher.indexReader.getContext.leaves }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: ScoreContext)
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext)
 
   protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = {
     val pq = new TaggedScorerQueue(coreSize)
@@ -184,7 +186,7 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
 
 class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: ScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
@@ -223,8 +225,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // write directly to the collector through directScoreContext
             directScoreContext.set(uriId)
             directScoreContext.addVisibility(Visibility.OTHERS)
-            pq.addScores(directScoreContext)
-            directScoreContext.flush()
+            directScoreContext.flushDirectly(pq)
           }
           docId = pq.top.doc // next doc
         } else {
@@ -252,7 +253,7 @@ class UriFromKeepsScoreVectorSource(
   private[this] var authorizedLibraryKeepCount = 0
   private[this] var discoverableKeepCount = 0
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: ScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
@@ -387,7 +388,7 @@ class LibraryScoreVectorSource(
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with VisibilityEvaluator {
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: ScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
@@ -437,7 +438,7 @@ class LibraryFromKeepsScoreVectorSource(
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: ScoreContext): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
