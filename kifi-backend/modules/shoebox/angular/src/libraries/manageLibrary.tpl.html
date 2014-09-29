@@ -27,20 +27,26 @@
             <div class="manage-lib-visibility">
               <div class="manage-lib-choice-card">
                 <div class="manage-lib-choice-card-img svg-green-card-with-globe"></div>
-                <input type="radio" id="manage-lib-radio-published" class="manage-lib-choice-input" ng-model="library.visibility" value="published">
-                <label for="manage-lib-radio-published" class="manage-lib-custom-radio"><span class="manage-lib-custom-radio-check"></span>L</label>
+                <label class="manage-lib-custom-radio">
+                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="published">
+                  <span class="manage-lib-custom-radio-check"></span>
+                </label>
                 <span class="manage-lib-choice-card-text">Published</span>
               </div>
               <div class="manage-lib-choice-card">
                 <div class="manage-lib-choice-card-img svg-red-card-with-lock"></div>
-                <input type="radio" id="manage-lib-radio-secret" class="manage-lib-choice-input" ng-model="library.visibility" value="secret">
-                <label for="manage-lib-radio-secret" class="manage-lib-custom-radio"><span class="manage-lib-custom-radio-check"></span>L</label>
+                <label class="manage-lib-custom-radio">
+                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="secret">
+                  <span class="manage-lib-custom-radio-check"></span>
+                </label>
                 <span class="manage-lib-choice-card-text">Secret</span>
               </div>
               <div class="manage-lib-choice-card">
                 <div class="manage-lib-choice-card-img svg-yellow-card-with-globe"></div>
-                <input type="radio" id="manage-lib-radio-discoverable" class="manage-lib-choice-input" ng-model="library.visibility" value="discoverable">
-                <label for="manage-lib-radio-discoverable" class="manage-lib-custom-radio"><span class="manage-lib-custom-radio-check"></span>L</label>
+                <label class="manage-lib-custom-radio">
+                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="discoverable">
+                  <span class="manage-lib-custom-radio-check"></span>
+                </label>
                 <span class="manage-lib-choice-card-text">Discoverable</span>
               </div>
               <div class="manage-lib-visibility-description">

@@ -252,7 +252,7 @@ angular.module('kifi')
                 picHeight: positioning.imageHeight,
                 cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
                 cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
-                cropSize: Math.floor(Math.min(scaling * maskSize, scaling * maskSize))
+                cropSize: Math.floor(scaling * maskSize)
               };
               $http.post(PHOTO_CROP_UPLOAD_URL, data)
               .then(function () {
