@@ -11,11 +11,11 @@ import com.keepit.model.{ Collection, NormalizedURI, User }
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
-import com.keepit.search.sharding.{ DistributedSearchRouter, Shard }
+import com.keepit.search.sharding.{ DistributedSearchRouter }
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ Future }
 import scala.concurrent.duration._
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ BasicUser, TypeaheadUserHit }
@@ -125,34 +125,20 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) {
-    case (userId, uriId) =>
-      distRouter.call(userId, uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
-      }
+    case (userId, uriId) => sharingUserInfo(userId, Seq(uriId)).map(_.head)
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (uriIds.isEmpty) {
-      Promise.successful(Seq[SharingUserInfo]()).future
+      Future.successful(Seq.empty)
     } else {
-      val route = Search.internal.sharingUserInfo(userId)
-      val plan = distRouter.planRemoteOnly(userId)
-
-      val result = new ListBuffer[Future[Map[Id[NormalizedURI], SharingUserInfo]]]
-      plan.foreach {
-        case (instance, shards) =>
-          val filteredUriIds = uriIds.filter { id => shards.exists(_.contains(id)) }
-          if (filteredUriIds.nonEmpty) {
-            val future = call(instance, route, Json.toJson(filteredUriIds.map(_.id))) map { r =>
-              (filteredUriIds zip Json.fromJson[Seq[SharingUserInfo]](r.json).get).toMap
-            }
-            result += future
-          }
-      }
-
-      Future.sequence(result).map { infos =>
-        val mapping = infos.reduce(_ ++ _)
-        uriIds.map(mapping)
+      val items = uriIds.map(AugmentableItem(_))
+      val request = ItemAugmentationRequest.uniform(userId, items: _*)
+      augmentation(request).map { response =>
+        items.map { item =>
+          val info = response.infos(item)
+          SharingUserInfo(info.keeps.map(_.keptBy).flatten.toSet, info.keeps.size + info.otherDiscoverableKeeps + info.otherDiscoverableKeeps)
+        }
       }
     }
   }
