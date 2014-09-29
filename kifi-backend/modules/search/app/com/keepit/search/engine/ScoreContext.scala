@@ -78,3 +78,29 @@ class ScoreContext(
     scoreSum(idx) += scr
   }
 }
+
+class DirectScoreContext(
+    scoreExpr: ScoreExpr,
+    scoreArraySize: Int,
+    matchWeight: Array[Float],
+    collector: ResultCollector[ScoreContext]) extends ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector) {
+
+  private[this] var docId = -1
+  private[this] var pq: TaggedScorerQueue = null
+
+  override def score(): Float = {
+    require(pq != null, "score invoked out of context")
+    pq.addBoostScores(this, docId)
+    super.score()
+  }
+
+  def flushDirectly(taggedScorerQueue: TaggedScorerQueue): Unit = {
+    pq = taggedScorerQueue
+    docId = pq.addCoreScores(this)
+    super.flush()
+    pq = null
+  }
+
+  override def flush(): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support flush()")
+  override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
+}
