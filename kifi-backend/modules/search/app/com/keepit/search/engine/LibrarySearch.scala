@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{ Keep, User }
 import com.keepit.search.{ Searcher, SearchConfig, SearchFilter }
 import com.keepit.search.engine.result.KifiResultCollector.HitQueue
 import com.keepit.search.engine.result.{ LibraryShardHit, LibraryResultCollector, LibraryShardResult }
@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
+import com.keepit.search.graph.keep.KeepRecord
 
 class LibrarySearch(
     userId: Id[User],
@@ -27,15 +28,12 @@ class LibrarySearch(
 
   def execute(): LibraryShardResult = {
     val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
-    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)
+    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
 
     timeLogs.processHits()
     timeLogs.done()
 
-    //todo(Léo): DRY with KifiSearch
-    SafeFuture {
-      timeLogs.send()
-    }
+    SafeFuture { timeLogs.send() }
     debugLog(timeLogs.toString)
 
     libraryShardResult
@@ -64,7 +62,7 @@ class LibrarySearch(
 }
 
 object LibrarySearch extends Logging {
-  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, numHitsToReturn: Int, filter: SearchFilter, config: SearchConfig): LibraryShardResult = {
+  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, numHitsToReturn: Int, filter: SearchFilter, config: SearchConfig)(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
 
     val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
     val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
@@ -128,18 +126,23 @@ object LibrarySearch extends Logging {
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
 
     val libraryShardHits = hits.toSortedList.map { h =>
-      LibraryShardHit(Id(h.id), h.score, h.visibility, if (h.secondaryId > 0) Some(Id(h.secondaryId)) else None)
+      val keep = if (h.secondaryId > 0) {
+        val keepId = Id[Keep](h.secondaryId)
+        val keepRecord = keepsRecords(keepId)
+        Some((keepId, keepRecord))
+      } else None
+      LibraryShardHit(Id(h.id), h.score, h.visibility, keep)
     }
 
     LibraryShardResult(libraryShardHits, show)
   }
 
-  def partition(libraryShardHits: Seq[LibraryShardHit], maxHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
+  def partition(libraryShardHits: Seq[LibraryShardHit], maxHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
     val myHits = KifiSearch.createQueue(maxHitsPerCategory)
     val friendsHits = KifiSearch.createQueue(maxHitsPerCategory)
     val othersHits = KifiSearch.createQueue(maxHitsPerCategory)
 
-    libraryShardHits.foreach { hit =>
+    val keepRecords = libraryShardHits.map { hit =>
       val visibility = hit.visibility
       val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
         myHits
@@ -148,8 +151,9 @@ object LibrarySearch extends Logging {
       } else {
         othersHits
       }
-      relevantQueue.insert(hit.id.id, hit.score, visibility, hit.keepId.map(_.id).getOrElse(-1))
-    }
-    (myHits, friendsHits, othersHits)
+      relevantQueue.insert(hit.id.id, hit.score, visibility, hit.keep.map(_._1.id).getOrElse(-1))
+      hit.keep
+    }.flatten.toMap
+    (myHits, friendsHits, othersHits, keepRecords)
   }
 }

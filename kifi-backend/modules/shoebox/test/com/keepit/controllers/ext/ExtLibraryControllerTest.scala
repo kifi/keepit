@@ -10,7 +10,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.{ FakeSliderHistoryTrackerModule, Keep, KeepSource }
-import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryVisibility }
+import com.keepit.model.{ Library, LibraryAccess, LibraryMembership, LibraryMembershipStates, LibrarySlug, LibraryStates, LibraryVisibility }
 import com.keepit.model.{ NormalizedURI, URLFactory, User, Username }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -114,6 +114,35 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         db.readOnlyMaster { implicit s =>
           libraryRepo.count === 1
+        }
+      }
+    }
+
+    "delete library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
+          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
+          (user1, user2, lib, mem1, mem2)
+        }
+
+        implicit val config = inject[PublicIdConfiguration]
+        val libPubId = Library.publicId(lib.id.get)
+
+        status(deleteLibrary(user2, libPubId)) === FORBIDDEN
+
+        db.readOnlyMaster { implicit s =>
+          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
+        }
+
+        status(deleteLibrary(user1, libPubId)) === NO_CONTENT
+
+        db.readOnlyMaster { implicit s =>
+          libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.INACTIVE))
         }
       }
     }
@@ -326,6 +355,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.createLibrary()(request(routes.ExtLibraryController.createLibrary()).withBody(body))
+  }
+
+  private def deleteLibrary(user: User, libraryId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.deleteLibrary(libraryId)(request(routes.ExtLibraryController.deleteLibrary(libraryId)))
   }
 
   private def addKeep(user: User, libraryId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {

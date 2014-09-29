@@ -2,6 +2,7 @@ package com.keepit.controllers
 
 import com.google.inject.Inject
 import com.keepit.commander.HelpRankEventTrackingCommander
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
@@ -33,7 +34,7 @@ class EventTrackingController @Inject() (
   }
 
   private def handleUserEvent(userEvent: UserEvent) = {
-    userEventLoggingRepo.persist(userEvent)
+    SafeFuture { userEventLoggingRepo.persist(userEvent) }
     userEvent.eventType match {
       case UserEventTypes.RECOMMENDATION_USER_ACTION =>
         log.info(s"[handleUserEvent] reco event=$userEvent")

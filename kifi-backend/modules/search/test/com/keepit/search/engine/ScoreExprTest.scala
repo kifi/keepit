@@ -43,6 +43,7 @@ class ScoreExprTest extends Specification {
       val idx = rnd.nextInt(size)
       val ctx = mkCtx(NullExpr, idx)
       ctx.set(100L)
+      ctx.addVisibility(Visibility.OWNER)
       for (i <- 0 until size) ctx.addScore(i, 1.0f)
       ctx.flush
       collector.id === -1L
@@ -53,6 +54,7 @@ class ScoreExprTest extends Specification {
       val idx = rnd.nextInt(size)
       val ctx = mkCtx(MaxExpr(idx), idx)
       ctx.set(200L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx, 1.0f)
       ctx.addScore(idx, 2.0f)
       ctx.flush
@@ -64,6 +66,7 @@ class ScoreExprTest extends Specification {
       val idx = rnd.nextInt(size)
       val ctx = mkCtx(SumExpr(idx), idx)
       ctx.set(200L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx, 1.0f)
       ctx.addScore(idx, 2.0f)
       ctx.flush
@@ -75,6 +78,7 @@ class ScoreExprTest extends Specification {
       val idx = rnd.nextInt(size)
       val ctx = mkCtx(MaxWithTieBreakerExpr(idx, 0.2f), idx)
       ctx.set(300L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx, 2.0f)
       ctx.addScore(idx, 3.0f)
       ctx.flush
@@ -84,6 +88,7 @@ class ScoreExprTest extends Specification {
       val referenceScore = collector.score
 
       ctx.set(301L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx, 1.0f)
       ctx.addScore(idx, 2.0f)
       ctx.addScore(idx, 3.0f)
@@ -99,6 +104,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(DisjunctiveSumExpr(Seq(MaxExpr(idx1(0)), MaxExpr(idx1(1)), MaxExpr(idx1(2)))), idx1: _*)
       ctx.set(400L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 1.0f)
       ctx.addScore(idx1(1), 2.0f)
       ctx.addScore(idx1(2), 3.0f)
@@ -107,6 +113,7 @@ class ScoreExprTest extends Specification {
       collector.score === 6.0f
 
       ctx.set(401L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 1.0f)
       ctx.addScore(idx1(1), 2.0f)
       ctx.addScore(idx2(0), 3.0f)
@@ -122,6 +129,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(ConjunctiveSumExpr(Seq(MaxExpr(idx1(0)), MaxExpr(idx1(1)), MaxExpr(idx1(2)))), idx1: _*)
       ctx.set(500L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 1.0f)
       ctx.addScore(idx1(1), 2.0f)
       ctx.addScore(idx1(2), 3.0f)
@@ -131,6 +139,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(501L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 1.0f)
       ctx.addScore(idx1(1), 2.0f)
       ctx.addScore(idx2(0), 3.0f)
@@ -146,6 +155,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(ExistsExpr(Seq(MaxExpr(idx1(0)), MaxExpr(idx1(1)), MaxExpr(idx1(2)))), idx1: _*)
       ctx.set(600L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 2.0f)
       ctx.addScore(idx1(1), 3.0f)
       ctx.addScore(idx1(2), 4.0f)
@@ -154,6 +164,7 @@ class ScoreExprTest extends Specification {
       collector.score === 1.0f
 
       ctx.set(601L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 2.0f)
       ctx.addScore(idx1(1), 3.0f)
       ctx.flush
@@ -161,6 +172,7 @@ class ScoreExprTest extends Specification {
       collector.score === 1.0f
 
       ctx.set(602L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 2.0f)
       ctx.flush
       collector.id === 602L
@@ -168,6 +180,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(603L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx2(0), 1.0f)
       ctx.addScore(idx2(1), 2.0f)
       ctx.flush
@@ -182,6 +195,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(ForAllExpr(Seq(MaxExpr(idx1(0)), MaxExpr(idx1(1)), MaxExpr(idx1(2)))), idx1: _*)
       ctx.set(700L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 2.0f)
       ctx.addScore(idx1(1), 3.0f)
       ctx.addScore(idx1(2), 4.0f)
@@ -191,6 +205,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(701L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1(0), 2.0f)
       ctx.addScore(idx1(1), 3.0f)
       ctx.addScore(idx2(0), 5.0f)
@@ -208,6 +223,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(BooleanExpr(optional = MaxExpr(idx1), required = MaxExpr(idx2)), idx1, idx2)
       ctx.set(800L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
@@ -217,6 +233,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(801L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
@@ -225,6 +242,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(802L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
@@ -240,6 +258,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(FilterExpr(expr = MaxExpr(idx1), filter = MaxExpr(idx2)), idx1)
       ctx.set(900L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
@@ -249,6 +268,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(901L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
@@ -257,6 +277,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(902L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
@@ -272,6 +293,7 @@ class ScoreExprTest extends Specification {
 
       val ctx = mkCtx(FilterOutExpr(expr = MaxExpr(idx1), filter = MaxExpr(idx2)), idx1)
       ctx.set(1000L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
@@ -281,6 +303,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(1001L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx1, 2.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
@@ -289,6 +312,7 @@ class ScoreExprTest extends Specification {
 
       collector.clear()
       ctx.set(1002L)
+      ctx.addVisibility(Visibility.OWNER)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush

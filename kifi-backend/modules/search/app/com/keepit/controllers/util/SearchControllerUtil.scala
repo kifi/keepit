@@ -23,6 +23,7 @@ import play.api.libs.json.JsObject
 import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
 
 import scala.util.{ Failure, Success }
+import com.keepit.search.graph.keep.{ KeepRecord, KeepFields }
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -111,7 +112,7 @@ trait SearchControllerUtil {
 
   def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
     libraryIds.map { libId =>
-      libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
+      libId -> LibraryRecord.retrieve(librarySearcher, libId).get.name
     }.toMap
   }
 

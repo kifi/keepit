@@ -59,6 +59,7 @@ class KifiSearchImpl(
     if (debugFlags != 0) {
       engine.debug(this)
       keepScoreSource.debug(this)
+      articleScoreSource.debug(this)
     }
 
     engine.execute(collector, keepScoreSource, articleScoreSource)

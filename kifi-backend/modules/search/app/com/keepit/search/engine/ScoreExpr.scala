@@ -51,7 +51,7 @@ object MaxWithTieBreakerExpr {
       if (scoreMax == scoreSum) {
         scoreMax
       } else {
-        scoreMax + (1.0f - (scoreMax / scoreSum)) * tieBreakerMultiplier
+        scoreMax * (tieBreakerMultiplier * (1.0f - (scoreMax / scoreSum)) + 1.0f)
       }
     }
     override def isLeafExpr: Boolean = true

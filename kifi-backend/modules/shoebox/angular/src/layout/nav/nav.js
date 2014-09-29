@@ -18,8 +18,8 @@ angular.module('kifi')
         scope.librariesEnabled = false;
         scope.mainLib = {};
         scope.secretLib = {};
-        scope.userLibs = [];
-        scope.invitedLibs = [];
+        scope.userLibs = libraryService.userLibsToShow;
+        scope.invitedLibs = libraryService.invitedLibsToShow;
 
         scope.$watch(function () {
           return libraryService.isAllowed();
@@ -34,10 +34,6 @@ angular.module('kifi')
               scope.secretLib = _.find(libraries, function (lib) {
                   return lib.kind === 'system_secret';
               });
-              scope.userLibs = _.filter(libraries, function (lib) {
-                return lib.kind === 'user_created';
-              });
-              scope.invitedLibs = libraryService.invitedSummaries;
             });
           }
         });
@@ -69,7 +65,45 @@ angular.module('kifi')
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
 
-        // SCROLL-BAR STUFF
+        // Filter Box Stuff
+        scope.filter = {};
+        scope.isFilterFocused = false;
+        var preventClearFilter = false;
+        scope.filter.name = '';
+        scope.focusFilter = function () {
+          scope.isFilterFocused = true;
+        };
+
+        scope.disableClearFilter = function () {
+          preventClearFilter = true;
+        };
+
+        scope.enableClearFilter = function () {
+          preventClearFilter = false;
+        };
+
+        scope.blurFilter = function () {
+          scope.isFilterFocused = false;
+          if (!preventClearFilter) {
+            scope.clearFilter();
+          }
+        };
+
+        scope.clearFilter = function () {
+          scope.filter.name = '';
+          scope.onFilterChange();
+        };
+
+        /*
+        function getFilterValue() {
+          return scope.filter && scope.filter.name || '';
+        }*/
+
+        scope.onFilterChange = function () {
+          libraryService.filterLibraries(scope.filter.name);
+        };
+
+        // Scroll-Bar Stuff
         scope.scrollAround = function() {
           $anchorScroll();
         };

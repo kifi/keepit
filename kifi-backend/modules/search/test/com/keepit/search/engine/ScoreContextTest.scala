@@ -62,7 +62,7 @@ class ScoreContextTest extends Specification {
 
       computeScore(buf, reader, new ScoreContext(MaxExpr(idx1), numTerms, weights, collector))
 
-      collector.result === Map(123L -> 3.0f)
+      collector.result.mapValues(DataBuffer.clearTag(_)) === Map(123L -> DataBuffer.clearTag(3.0f))
 
       collector.clear()
       computeScore(buf, reader, new ScoreContext(MaxExpr(idx2), numTerms, weights, collector))
@@ -94,7 +94,7 @@ class ScoreContextTest extends Specification {
 
     computeScore(buf, reader, new ScoreContext(SumExpr(idx1), numTerms, weights, collector))
 
-    collector.result === Map(123L -> 6.0f)
+    collector.result.mapValues(DataBuffer.clearTag(_)) === Map(123L -> DataBuffer.clearTag(6.0f))
 
     collector.clear()
     computeScore(buf, reader, new ScoreContext(SumExpr(idx2), numTerms, weights, collector))

@@ -10,9 +10,11 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.Play.current
 
+import scala.concurrent.Future
+
 class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 
-  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]) = {
+  def track[E <: HeimdalEvent](event: E)(implicit companion: HeimdalEventCompanion[E]): Future[Unit] = {
     val eventName = s"${companion.typeCode}_${event.eventType.name}"
     val properties = new HeimdalContextBuilder()
     properties.data ++= event.context.data
@@ -21,7 +23,7 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     properties += ("time", event.time.getMillis / 1000)
     if (!properties.data.contains("token")) { properties += ("token", projectToken) }
     val data = Json.obj("event" -> JsString(eventName), "properties" -> Json.toJson(properties.build))
-    sendData("http://api.mixpanel.com/track", data)
+    sendData("http://api.mixpanel.com/track", data) map (_ => ())
   }
 
   private def getDistinctId(id: Id[User]): String = s"${UserEvent.typeCode}_${id.toString}"

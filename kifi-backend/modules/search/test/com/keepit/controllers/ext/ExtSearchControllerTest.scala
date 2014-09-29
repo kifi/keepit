@@ -13,10 +13,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
 import com.keepit.search._
-import com.keepit.search.index.{ IndexStore, VolatileIndexDirectory, IndexDirectory }
+import com.keepit.search.index._
 import com.keepit.social.BasicUser
 import com.keepit.search.sharding.Shard
-import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import org.apache.lucene.search.{ Explanation, Query }
@@ -108,7 +107,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
