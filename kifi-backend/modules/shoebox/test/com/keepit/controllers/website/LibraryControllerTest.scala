@@ -138,6 +138,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
+        val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(
           s"""
              |{
@@ -146,7 +147,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"visibility":"published",
              |"shortDescription":"asdf",
              |"url":"/ahsu/lib2",
-             |"ownerId":"${user1.externalId}",
+             |"owner":{
+             |  "id":"${basicUser1.externalId}",
+             |  "firstName":"${basicUser1.firstName}",
+             |  "lastName":"${basicUser1.lastName}",
+             |  "pictureName":"${basicUser1.pictureName}",
+             |  "username":"${basicUser1.username.get.value}"
+             |  },
              |"numKeeps":0,
              |"numFollowers":0,
              |"kind":"user_created"
@@ -195,13 +202,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1) = db.readWrite { implicit s =>
+        val (user1, lib1) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu"))))
-          val user2 = userRepo.save(User(firstName = "AyAy", lastName = "Ron", createdAt = t1, username = Some(Username("ayayron"))))
 
           val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          (user1, user2, library)
+          (user1, library)
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
@@ -324,6 +330,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
+        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
+
         val expected = Json.parse(
           s"""
             |{"libraries":
@@ -333,7 +341,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"name":"Library1",
                   |"visibility":"secret",
                   |"url":"/ahsu/lib1",
-                  |"ownerId":"${user1.externalId}",
+                  |"owner":{
+                  |  "id":"${basicUser1.externalId}",
+                  |  "firstName":"${basicUser1.firstName}",
+                  |  "lastName":"${basicUser1.lastName}",
+                  |  "pictureName":"${basicUser1.pictureName}",
+                  |  "username":"${basicUser1.username.get.value}"
+                  |  },
                   |"numKeeps":0,
                   |"numFollowers":0,
                   |"kind":"user_created",
@@ -347,7 +361,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"name":"Library2",
                     |"visibility":"published",
                     |"url":"/bhsu/lib2",
-                    |"ownerId":"${user2.externalId}",
+                    |"owner":{
+                    |  "id":"${basicUser2.externalId}",
+                    |  "firstName":"${basicUser2.firstName}",
+                    |  "lastName":"${basicUser2.lastName}",
+                    |  "pictureName":"${basicUser2.pictureName}",
+                    |  "username":"${basicUser2.username.get.value}"
+                    |  },
                     |"numKeeps":0,
                     |"numFollowers":0,
                     |"kind":"user_created",
@@ -452,6 +472,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
+        val basicUser2 = db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }
+
         val expected = Json.parse(
           s"""
              |{
@@ -459,7 +481,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"name":"Library1",
              |"visibility":"discoverable",
              |"url":"/bulbasaur/lib1",
-             |"ownerId":"${user2.externalId}",
+             |"owner":{
+             |  "id":"${basicUser2.externalId}",
+             |  "firstName":"${basicUser2.firstName}",
+             |  "lastName":"${basicUser2.lastName}",
+             |  "pictureName":"${basicUser2.pictureName}",
+             |  "username":"${basicUser2.username.get.value}"
+             |  },
              |"numKeeps":0,
              |"numFollowers":1,
              |"kind":"user_created"

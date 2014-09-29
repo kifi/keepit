@@ -66,7 +66,7 @@ class LibraryController @Inject() (
           case Left(fail) =>
             BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) =>
-            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(id)) }
+            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(id)) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
         }
     }
@@ -156,16 +156,17 @@ class LibraryController @Inject() (
 
     val libsFollowing = for ((access, library) <- librariesWithAccess) yield {
       val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
-        (userRepo.get(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
+        (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
       val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> access)
     }
-    val libsInvitedTo = for (invite <- invitesToShow) yield {
-      val lib = invite._2
-      val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
-      val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
-      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite._1.access)
+    val libsInvitedTo = for (invitePair <- invitesToShow) yield {
+      val invite = invitePair._1
+      val lib = invitePair._2
+      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, inviteOwner, numKeeps)
+      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
@@ -217,7 +218,7 @@ class LibraryController @Inject() (
           case Left(fail) =>
             BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) =>
-            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
+            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
         }
     }
