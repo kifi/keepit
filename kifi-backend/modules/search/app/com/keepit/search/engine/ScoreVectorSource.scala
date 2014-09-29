@@ -213,22 +213,24 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
       val uriId = idMapper.getId(docId)
 
       if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
-        // An article hit may or may not be visible according to the restriction
-        if (articleVisibility.isVisible(docId)) {
+        if (bloomFilter(uriId)) {
+          // An article hit may or may not be visible according to the restriction
+          val visibility = if (articleVisibility.isVisible(docId)) Visibility.OTHERS else Visibility.RESTRICTED
 
-          if (bloomFilter(uriId)) {
-            // get all scores and write to the buffer
-            val size = pq.getTaggedScores(taggedScores)
-            output.alloc(writer, Visibility.OTHERS, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-            writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
-          } else {
-            // this uriId is not in the buffer
-            // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
-            // write directly to the collector through directScoreContext
-            directScoreContext.set(uriId)
-            directScoreContext.setVisibility(Visibility.OTHERS)
-            directScoreContext.flush()
-          }
+          // get all scores and write to the buffer
+          val size = pq.getTaggedScores(taggedScores)
+          output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
+
+          docId = pq.top.doc // next doc
+        } else if (articleVisibility.isVisible(docId)) {
+          // this uriId is not in the buffer
+          // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
+          // write directly to the collector through directScoreContext
+          directScoreContext.set(uriId)
+          directScoreContext.setVisibility(Visibility.OTHERS)
+          directScoreContext.flush()
+
           docId = pq.top.doc // next doc
         } else {
           docId = pq.skipCurrentDoc() // skip this doc
