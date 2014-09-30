@@ -302,6 +302,8 @@ class MainSearcher(
     timeLogs.done()
     timing()
 
+    debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
+
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, show)
   }
 
