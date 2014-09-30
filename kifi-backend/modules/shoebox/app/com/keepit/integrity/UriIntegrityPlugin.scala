@@ -61,12 +61,11 @@ class UriIntegrityActor @Inject() (
         airbrake.notify(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
-        val userId = oldBm.userId
         val libId = oldBm.libraryId.get // fail if there's no library
         val newUriId = newUri.id.get
         keepRepo.getPrimaryByUriAndLibrary(newUriId, libId) match {
           case None => {
-            log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
+            log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
