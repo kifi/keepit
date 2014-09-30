@@ -259,7 +259,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val lib2 = libraryRepo.save(Library(name = "shoes", ownerId = user1.id.get, slug = LibrarySlug("shoes"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
 
-          // coach has RW access to kaep's football library
+          // coach has RW access to keep's football library
           val user2 = userRepo.save(User(firstName = "Jim", lastName = "Harbaugh", username = Some(Username("coach")), createdAt = t1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1))
 
@@ -324,7 +324,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(updateKeep(user1, libPubId, ExternalId(), Json.obj("title" -> "Cat"))) === NOT_FOUND
         db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Bar" }
 
-        // other user with read-only library access cannout update keep
+        // other user with read-only library access cannot update keep
         status(updateKeep(user2, libPubId, keep.externalId, Json.obj("title" -> "pwned"))) === FORBIDDEN
         db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Bar" }
 
@@ -372,14 +372,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         // invalid keep ID
         status(tagKeep(user1, libPubId, ExternalId(), "zzz")) === NOT_FOUND
 
-        // other user with read-only library access cannout update keep
+        // other user with read-only library access cannot tag or untag keep
         status(tagKeep(user2, libPubId, keep1.externalId, "pwned")) === FORBIDDEN
+        status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
         db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
 
-        // other user with write access can update keep
+        // other user with write access cannot yet tag or untag keep. TODO: fix when tags are in libraries
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
-        status(tagKeep(user2, libPubId, keep1.externalId, "collab")) === OK
-        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("collab")) }
+        status(tagKeep(user2, libPubId, keep1.externalId, "collab")) === FORBIDDEN
+        status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
+        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
       }
     }
   }
@@ -431,9 +433,9 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
-    val url_ = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
+    val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = keepRepo.save(Keep(
-      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = url_.id.get, url = uri.url,
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url,
       source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
