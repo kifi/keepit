@@ -102,9 +102,26 @@
     padding: 15px 20px
     background-color: #fff
 
-  .library-action-button
+  .kf-keep-lib-footer-button-right
     float: right
     margin-right: 0
+
+  .kf-keep-lib-footer-button-follow-unfollow
+    padding-left: 17px
+
+  .kf-keep-lib-footer-button-follow
+    background: kifiBlack
+    color: white
+
+  .kf-keep-lib-footer-button-unfollow
+    color: #7eac4e
+
+    &::after
+      content: 'Following'
+
+    &:hover::after
+      content: 'Unfollow'
+      color: redColor
 
   .kf-subtitle
     margin-top: 15px
