@@ -5,6 +5,7 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
+// @require scripts/lib/q.min.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper.js
@@ -351,25 +352,35 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }
     var $card = $slider.find('.kifi-keep-card');
     beginStickyKeepBox();
+
+    var deferreds = [Q.defer(), Q.defer(), Q.defer()];
     keeper.moveToBottom(function () {
-      api.require('scripts/keep_box.js', function () {
+      deferreds[0].resolve();
+    });
+    api.require('scripts/keep_box.js', function () {
+      deferreds[1].resolve();
+    });
+    api.port.emit('keeps_and_libraries', function (data) {
+      deferreds[2].resolve(data);
+    });
+    Q.all(deferreds.map(getPromise)).done(function (vals) {
+      if (keepBox.showing()) return;
+      if (window.pane) {
+        pane.shade();
+      }
+      var howKept = $card.hasClass('kifi-public') ? 'public' : $card.hasClass('kifi-private') ? 'private' : null;
+      keepBox.show($slider, vals[2], howKept, keepPage, unkeepPage);
+      keepBox.onHide.add(function () {
+        endStickyKeepBox();
         if (window.pane) {
-          pane.shade();
+          pane.unshade();
         }
-        var howKept = $card.hasClass('kifi-public') ? 'public' : $card.hasClass('kifi-private') ? 'private' : null;
-        keepBox.show($slider, howKept, keepPage, unkeepPage);
-        keepBox.onHide.add(function () {
-          endStickyKeepBox();
-          if (window.pane) {
-            pane.unshade();
-          }
-        });
-        keepBox.onHidden.add(function (trigger) {
-          keeper.moveBackFromBottom();
-          if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
-            hideSlider('keepBox');
-          }
-        });
+      });
+      keepBox.onHidden.add(function (trigger) {
+        keeper.moveBackFromBottom();
+        if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
+          hideSlider('keepBox');
+        }
       });
     });
   }
@@ -443,6 +454,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function idIs(id) {
     return function (o) {return o.id == id};
+  }
+  function getPromise(o) {
+    return o.promise;
   }
 
   api.port.on({

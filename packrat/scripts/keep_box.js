@@ -32,14 +32,12 @@ var keepBox = keepBox || (function () {
   var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
-    show: function ($parent, howKept, keepPage, unkeepPage) {
+    show: function ($parent, data, howKept, keepPage, unkeepPage) {
       log('[keepBox.show]');
       if ($box) {
         hide();
       }
-      api.port.emit('keeps_and_libraries', function (data) {
-        show($parent, data, howKept, keepPage, unkeepPage);
-      });
+      show($parent, data, howKept, keepPage, unkeepPage);
     },
     hide: function () {
       if ($box) {
