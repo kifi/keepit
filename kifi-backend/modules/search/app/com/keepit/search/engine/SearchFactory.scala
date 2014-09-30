@@ -56,8 +56,8 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
+    val clickBoostsFuture = resultClickTracker.getBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
-    val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getFriendIdsFuture(userId)
