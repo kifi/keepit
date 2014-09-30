@@ -164,11 +164,11 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.hasWriteAccess =>
+        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-              val coll = keepsCommander.getOrCreateTag(request.userId, tag)
+              val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
               keepsCommander.addToCollection(coll.id.get, Seq(keep))
               Ok(Json.obj("tag" -> coll.name))
             case Left((status, code)) =>
@@ -185,11 +185,11 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.hasWriteAccess =>
+        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               db.readOnlyReplica { implicit s =>
-                collectionRepo.getByUserAndName(request.userId, Hashtag(tag))
+                collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) // TODO: library ID, not user ID
               } foreach { coll =>
                 implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
                 keepsCommander.removeFromCollection(coll, Seq(keep))
