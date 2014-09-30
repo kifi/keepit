@@ -159,6 +159,51 @@ class ExtLibraryController @Inject() (
     }
   }
 
+  def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+      } match {
+        case Some(mem) if mem.hasWriteAccess =>
+          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) =>
+              implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+              val coll = keepsCommander.getOrCreateTag(request.userId, tag)
+              keepsCommander.addToCollection(coll.id.get, Seq(keep))
+              Ok(Json.obj("tag" -> coll.name))
+            case Left((status, code)) =>
+              Status(status)(Json.obj("error" -> code))
+          }
+        case _ =>
+          Forbidden(Json.obj("error" -> "permission_denied"))
+      }
+    }
+  }
+
+  def untagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+      } match {
+        case Some(mem) if mem.hasWriteAccess =>
+          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) =>
+              db.readOnlyReplica { implicit s =>
+                collectionRepo.getByUserAndName(request.userId, Hashtag(tag))
+              } foreach { coll =>
+                implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+                keepsCommander.removeFromCollection(coll, Seq(keep))
+              }
+              NoContent
+            case Left((status, code)) =>
+              Status(status)(Json.obj("error" -> code))
+          }
+        case _ =>
+          Forbidden(Json.obj("error" -> "permission_denied"))
+      }
+    }
+  }
+
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
     Library.decodePublicId(publicId) match {
       case Failure(_) => BadRequest(Json.obj("error" -> "invalid_library_id"))

@@ -6,6 +6,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
@@ -129,9 +130,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           libraryRepo.all.map { l => (l.id, l.state) } === Seq((lib.id, LibraryStates.ACTIVE))
           (user1, user2, lib, mem1, mem2)
         }
-
-        implicit val config = inject[PublicIdConfiguration]
-        val libPubId = Library.publicId(lib.id.get)
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
 
         status(deleteLibrary(user2, libPubId)) === FORBIDDEN
 
@@ -210,25 +209,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
     "get keep in library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib, mem1, mem2, keep, tags) = db.readWrite { implicit s =>
+        val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-
-          val uri = uriRepo.save(NormalizedURI(url = "http://foo.com", urlHash = UrlHash("foohash")))
-          val url_ = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
-          val keep = keepRepo.save(Keep(title = Some("Foo"), userId = user1.id.get, uriId = uri.id.get, urlId = url_.id.get, url = uri.url, source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
-          val tags = Seq("Bar", "Baz").map { tag =>
-            val coll = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag(tag)))
-            keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))
-            coll
-          }
-          (user1, user2, lib, mem1, mem2, keep, tags)
+          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo", Seq("Bar", "Baz"))
+          (user1, user2, lib, mem1, mem2, keep)
         }
-        implicit val config = inject[PublicIdConfiguration]
-        val libPubId = Library.publicId(lib.id.get)
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
 
         // user can get own keep in own library
         val result1 = getKeep(user1, libPubId, keep.externalId)
@@ -315,40 +305,81 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
     "update keep in library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
+        val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
           val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
-          (user1, user2, lib, mem1, mem2)
+          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          (user1, user2, lib, mem1, mem2, keep)
         }
-        implicit val config = inject[PublicIdConfiguration]
-        val libPubId = Library.publicId(lib.id.get)
-
-        status(addKeep(user1, libPubId, Json.obj("url" -> "http://www.foo.com", "title" -> "Foo"))) === OK
-        val (keepId, keepExtId) = db.readOnlyMaster { implicit s =>
-          val keep = keepRepo.getByLibrary(lib.id.get, 1, 0).head
-          keep.title === Some("Foo")
-          (keep.id.get, keep.externalId)
-        }
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
 
         // user can update own keep in own library
-        status(updateKeep(user1, libPubId, keepExtId, Json.obj("title" -> "Bar"))) === NO_CONTENT
-        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+        status(updateKeep(user1, libPubId, keep.externalId, Json.obj("title" -> "Bar"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Bar" }
 
         // invalid keep ID
         status(updateKeep(user1, libPubId, ExternalId(), Json.obj("title" -> "Cat"))) === NOT_FOUND
-        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+        db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Bar" }
 
         // other user with read-only library access cannout update keep
-        status(updateKeep(user2, libPubId, keepExtId, Json.obj("title" -> "pwned"))) === FORBIDDEN
-        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Bar" }
+        status(updateKeep(user2, libPubId, keep.externalId, Json.obj("title" -> "pwned"))) === FORBIDDEN
+        db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Bar" }
 
         // other user with write access can update keep
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
-        status(updateKeep(user2, libPubId, keepExtId, Json.obj("title" -> "Dat"))) === NO_CONTENT
-        db.readOnlyMaster { implicit s => keepRepo.get(keepId).title.get === "Dat" }
+        status(updateKeep(user2, libPubId, keep.externalId, Json.obj("title" -> "Dat"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s => keepRepo.get(keep.id.get).title.get === "Dat" }
+      }
+    }
+
+    "tag and untag keep in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2, keep1, keep2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar", Seq("aa aa", "b b"))
+          (user1, user2, lib, mem1, mem2, keep1, keep2)
+        }
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
+
+        // user can tag own keeps in own library
+        status(tagKeep(user1, libPubId, keep1.externalId, "c")) === OK
+        status(tagKeep(user1, libPubId, keep1.externalId, "c")) === OK // idempotent
+        status(tagKeep(user1, libPubId, keep1.externalId, "dd")) === OK
+        status(tagKeep(user1, libPubId, keep2.externalId, "e e e")) === OK
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("dd"))
+          collectionRepo.getTagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("b b"), Hashtag("e e e"))
+        }
+
+        // user can untag own keeps in own library
+        status(untagKeep(user1, libPubId, keep1.externalId, "dd")) === NO_CONTENT
+        status(untagKeep(user1, libPubId, keep1.externalId, "dd")) === NO_CONTENT // idempotent
+        status(untagKeep(user1, libPubId, keep1.externalId, "xyz")) === NO_CONTENT // succeeds when a no-op
+        status(untagKeep(user1, libPubId, keep2.externalId, "b b")) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"))
+          collectionRepo.getTagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("e e e"))
+        }
+
+        // invalid keep ID
+        status(tagKeep(user1, libPubId, ExternalId(), "zzz")) === NOT_FOUND
+
+        // other user with read-only library access cannout update keep
+        status(tagKeep(user2, libPubId, keep1.externalId, "pwned")) === FORBIDDEN
+        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
+
+        // other user with write access can update keep
+        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
+        status(tagKeep(user2, libPubId, keep1.externalId, "collab")) === OK
+        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("collab")) }
       }
     }
   }
@@ -386,6 +417,29 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def updateKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.updateKeep(libraryId, keepId)(request(routes.ExtLibraryController.updateKeep(libraryId, keepId)).withBody(body))
+  }
+
+  private def tagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.tagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.tagKeep(libraryId, keepId, tag)))
+  }
+
+  private def untagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.untagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.untagKeep(libraryId, keepId, tag)))
+  }
+
+  private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
+    val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
+    val url_ = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
+    val keep = keepRepo.save(Keep(
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = url_.id.get, url = uri.url,
+      source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
+    tags.foreach { tag =>
+      val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))
+    }
+    keep
   }
 
   private def controller(implicit injector: Injector) = inject[ExtLibraryController]
