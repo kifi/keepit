@@ -1,14 +1,15 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.EmailTrackingParam
+import com.keepit.common.mail.template.EmailTip.toContextData
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
-import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.heimdal.{ HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
+import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,7 +22,8 @@ class SendgridCommander @Inject() (
     electronicMailRepo: ElectronicMailRepo,
     emailOptOutRepo: EmailOptOutRepo,
     recoCommander: RecommendationsCommander,
-    heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import SendgridEventTypes._
 
@@ -58,6 +60,7 @@ class SendgridCommander @Inject() (
 
   private def sendHeimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
     log.info(s"sendgrid heimdalEvent eventType(${event.event}}) mailId(${event.mailId}}) ")
+
     for {
       eventType <- event.event
       rawAddress <- event.email
@@ -68,7 +71,10 @@ class SendgridCommander @Inject() (
       lazy val context = {
         val contextBuilder = heimdalContextBuilder()
         contextBuilder += ("action", eventType.name)
-        event.url.foreach { url => contextBuilder += ("clicked", clicked(url)) }
+        event.url.foreach { url =>
+          contextBuilder += ("clicked", clicked(url))
+          addTrackingFromUrlParam(url, contextBuilder)
+        }
         contextBuilder.addEmailInfo(email)
         contextBuilder.build
       }
@@ -127,7 +133,7 @@ class SendgridCommander @Inject() (
         emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
         if !emailAddr.verified
       } yield {
-        log.info(s"verifying email(${userEmail}) from SendGrid event(${event})")
+        log.info(s"verifying email($userEmail) from SendGrid event($event)")
 
         emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED,
           verifiedAt = Some(currentDateTime)))
@@ -140,9 +146,35 @@ class SendgridCommander @Inject() (
         email <- emailOpt
         userEmail <- email.to.headOption
       } yield {
-        log.info(s"SendGrid unsubscribe email(${userEmail} from SendGrid event(${event})")
+        log.info(s"SendGrid unsubscribe email($userEmail from SendGrid event($event)")
         emailOptOutRepo.optOut(userEmail, NotificationCategory.ALL)
       }
     }
+
+  private def addTrackingFromUrlParam(url: String, contextBuilder: HeimdalContextBuilder): Unit = {
+    try {
+      val uri = new java.net.URI(url)
+      val keyValues = uri.getQuery.split('&').map(str => str.splitAt(str.indexOf('=')))
+      val datParamOpt = keyValues find (_._1 == EmailTrackingParam.paramName) map (_._2.drop(1))
+
+      datParamOpt.foreach { encodedEmailTrackingParam =>
+        EmailTrackingParam.decode(encodedEmailTrackingParam) match {
+          case Right(param) =>
+            param.subAction.foreach(v => contextBuilder += ("subaction", v))
+            if (param.tips.nonEmpty) contextBuilder += ("emailTips", param.tips)
+            if (param.variableComponents.nonEmpty) contextBuilder += ("emailComponents", param.variableComponents)
+
+            param.auxiliaryData.foreach { ctx =>
+              ctx.data.foreach { case (key, value) => contextBuilder.data(key) = value }
+            }
+          case Left(errors) =>
+            val errMsg = errors.mkString("; ")
+            airbrake.notify(s"failed to decode EmailTrackingParam: $errMsg")
+        }
+      }
+    } catch {
+      case e: Throwable => airbrake.notify(s"could not parse Sendgrid event.url($url)", e)
+    }
+  }
 }
 
