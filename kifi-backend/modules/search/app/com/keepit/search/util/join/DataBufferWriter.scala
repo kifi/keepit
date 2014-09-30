@@ -86,9 +86,9 @@ class DataBufferWriter {
       val bits = bitsArray(i)
       _page(_current) = (bits >>> 16).toShort
       _page(_current + 1) = bits.toShort
-      _current += 2
       i += 1
     }
+    _current += (2 * size)
     this
   }
 }

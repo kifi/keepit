@@ -55,23 +55,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext)
 
-  protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = {
-    val pq = new TaggedScorerQueue(coreSize)
-    var i = 0
-    while (i < scorers.length) {
-      val sc = scorers(i)
-      if (sc != null && sc.nextDoc() < NO_MORE_DOCS) {
-        val taggedScorer = new TaggedScorer(i, sc)
-        if (i < coreSize) {
-          pq.insertWithOverflow(taggedScorer)
-        } else {
-          pq.addDependentScorer(taggedScorer)
-        }
-      }
-      i += 1
-    }
-    pq
-  }
+  protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = TaggedScorerQueue(scorers, coreSize)
 }
 
 trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
