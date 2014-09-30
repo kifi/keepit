@@ -112,6 +112,12 @@
           case "default" => {
             <span class="label label-info">Default</span>
           }
+          case "emailReco" => {
+            <span class="label label-success">Email Reco</span>
+          }
+          case _ => {
+            <span class="label label-info">Unknown</span>
+          }
         }}
       </td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
