@@ -107,7 +107,9 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
