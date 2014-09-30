@@ -41,8 +41,8 @@ class UriIntegrityActor @Inject() (
     centralConfig: CentralConfig,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession) = {
+  /** tricky point: make sure (library, uri) pair is unique.  */
+  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
 
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
@@ -57,14 +57,14 @@ class UriIntegrityActor @Inject() (
 
       if (newUri.state == NormalizedURIStates.REDIRECTED) {
         // skipping due to double redirects. this should not happen.
-        log.error(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
-        airbrake.notify(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
+        log.error(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
+        airbrake.notify(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
         val userId = oldBm.userId
+        val libId = oldBm.libraryId.get // fail if there's no library
         val newUriId = newUri.id.get
-
-        keepRepo.getPrimaryByUriAndUser(newUriId, userId) match {
+        keepRepo.getPrimaryByUriAndLibrary(newUriId, libId) match {
           case None => {
             log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
@@ -72,14 +72,13 @@ class UriIntegrityActor @Inject() (
             (Some(oldBm), None)
           }
           case Some(currentPrimary) => {
-
             def save(duplicate: Keep, primary: Keep, libraryId: Option[Id[Library]], visibility: LibraryVisibility): (Option[Keep], Option[Keep]) = {
               val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
               val deadBm = keepRepo.save(
-                duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
+                duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
               val liveBm = keepRepo.save(
-                primary.copy(visibility = visibility, libraryId = libraryId).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+                primary.copy(visibility = visibility, libraryId = libraryId, uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
               )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))
@@ -296,28 +295,19 @@ class UriIntegrityActor @Inject() (
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3) { (session, keep) =>
-          normalizedURIInterner.getByUri(keep.url)(session) match {
-            case Some(uri) =>
-              if (keep.uriId != uri.id.get) {
-                log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${uri.id.get}]")
-
-                handleBookmarks(Seq(keep))(session)
-                dedupedSuccessCount += 1
-              }
-            case None =>
-              log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=missing]")
-
-              handleBookmarks(Seq(keep))(session)
-              dedupedSuccessCount += 1
+          val newUriOpt = normalizedURIInterner.getByUri(keep.url)(session)
+          if (newUriOpt.forall(_.id.get != keep.uriId)) {
+            log.info(s"fix keep [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${newUriOpt.map(_.toShortString).getOrElse("missing")}]")
+            handleBookmarks(Seq(keep))(session)
+            dedupedSuccessCount += 1
           }
         }
         log.info(s"keeps deduped [count=$dedupedSuccessCount/${keeps.size}]")
-
         if (seq == centralConfig(FixDuplicateKeepsSeqNumKey).getOrElse(SequenceNumber.ZERO)) {
           centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
         }
       }
-      log.info(s"total $dedupedSuccessCount keeps deduplicated")
+      log.info(s"total $dedupedSuccessCount keeps deduped")
     } catch {
       case e: Throwable => log.error("deduping keeps failed", e)
     }

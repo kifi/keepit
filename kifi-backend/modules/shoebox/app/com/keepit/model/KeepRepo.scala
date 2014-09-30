@@ -17,6 +17,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
   def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
@@ -70,6 +71,7 @@ class KeepRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Boolean]("is_primary", O.Nullable) // trueOrNull
+    def mainOrSecret = column[Boolean]("main_or_secret", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
@@ -79,7 +81,7 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, mainOrSecret.?, urlId, url, bookmarkPath.?, isPrivate,
       userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
@@ -100,6 +102,7 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
+      mainOrSecret = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       bookmarkPath = r.<<[Option[String]],
@@ -170,6 +173,10 @@ class KeepRepoImpl @Inject() (
 
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
+  }
+
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
   }
 
   def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
