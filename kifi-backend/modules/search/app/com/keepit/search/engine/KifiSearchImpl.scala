@@ -40,6 +40,7 @@ class KifiSearchImpl(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val percentMatch = config.asFloat("percentMatch")
+  private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
 
   private[this] val clickBoostsProvider: () => ResultClickBoosts = { () =>
     val ret = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts")
@@ -52,7 +53,7 @@ class KifiSearchImpl(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
-    val collector = new KifiResultCollector(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f)
+    val collector = new KifiResultCollector(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
