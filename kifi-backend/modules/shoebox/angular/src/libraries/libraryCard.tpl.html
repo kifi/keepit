@@ -49,7 +49,7 @@
       <div class="kf-keep-lib-image"></div>
     </div>
   </div>
-  <div ng-if="isUserLibrary(library) || recommendation" class="kf-keep-footer">
+  <div ng-if="isUserLibrary(library) || recommendation" class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="manageLibrary()">Edit</button>
     <button ng-if="followingLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="followLibrary(library)">Follow</button>
     <button ng-if="!followingLibrary(library) && !isMyLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="unfollowLibrary(library)">Unfollow</button>
