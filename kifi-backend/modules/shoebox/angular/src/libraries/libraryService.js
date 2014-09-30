@@ -3,40 +3,62 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q',
-  function ($http, util, profileService, routeService, Clutch, $q) {
+  '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
+  function ($http, util, profileService, routeService, Clutch, $q, friendService) {
     var librarySummaries = [],
         invitedSummaries = [],
         userLibsToShow = [],
-        invitedLibsToShow = [];
+        invitedLibsToShow = [],
+        mainLib = {},
+        secretLib = {};
 
     var fuseOptions = {
        keys: ['name'],
-       threshold: 0.3
+       threshold: 0.3 // 0 means exact match, 1 means match with anything
     };
-    var fuseSearch1 = new Fuse(librarySummaries, fuseOptions);
-    var fuseSearch2 = new Fuse(invitedSummaries, fuseOptions);
+    var librarySummarySearch = new Fuse(librarySummaries, fuseOptions);
+    var invitedSummarySearch = new Fuse(invitedSummaries, fuseOptions);
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
+
+        var main = _.find(libs, function (lib) {
+            return lib.kind === 'system_main';
+        });
+        var secret = _.find(libs, function (lib) {
+            return lib.kind === 'system_secret';
+        });
+        util.replaceObjectInPlace(mainLib, main);
+        util.replaceObjectInPlace(secretLib, secret);
+        libs = _.filter(libs, function (lib) {
+          return lib.kind === 'user_created';
+        });
+        
+        var lines;
+        libs.forEach( function(lib) {
+          lines = shortenLibName(lib.name);
+          lib.firstLine = lines[0];
+          lib.secondLine = lines[1];
+          if (lib.owner) {
+            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
+          }
+          lib.isMine = lib.owner.id === profileService.me.id;
+        });
+
         var invites = res.data.invited || [];
-        var i, lines;
-        for (i = 0; i < libs.length; i++) {
-          lines = shortenLibName(libs[i].name);
-          libs[i].firstLine = lines[0];
-          libs[i].secondLine = lines[1];
-        }
-        for (i = 0; i < invites.length; i++) {
-          lines = shortenLibName(invites[i].name);
-          invites[i].firstLine = lines[0];
-          invites[i].secondLine = lines[1];
-        }
+        invites.forEach( function(lib) {
+          lines = shortenLibName(lib.name);
+          lib.firstLine = lines[0];
+          lib.secondLine = lines[1];
+          if (lib.owner) {
+            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
+          } 
+        });
+
         util.replaceArrayInPlace(librarySummaries, libs);
         util.replaceArrayInPlace(invitedSummaries, invites);
-        util.replaceArrayInPlace(userLibsToShow, _.filter(librarySummaries, function (lib) {
-          return lib.kind === 'user_created';
-        }));
+        util.replaceArrayInPlace(userLibsToShow, librarySummaries);
         util.replaceArrayInPlace(invitedLibsToShow, invitedSummaries);
         return res.data;
       });
@@ -80,9 +102,9 @@ angular.module('kifi')
       return candidate;
     };
 
-    var maxLength = 22;
+    var maxLength = 25;
 
-    function shortenLibName (fullName) {
+    function shortenLibName(fullName) {
       var firstLine = fullName;
       var secondLine = '';
       if (fullName.length > maxLength) {
@@ -116,6 +138,8 @@ angular.module('kifi')
       userLibsToShow: userLibsToShow,
       invitedLibsToShow: invitedLibsToShow,
       librarySlugSuggestion: librarySlugSuggestion,
+      mainLib: mainLib,
+      secretLib: secretLib,
 
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
@@ -243,16 +267,58 @@ angular.module('kifi')
         });
       },
 
-      filterLibraries: function(term) {
+      deleteLibrary: function (libraryId) {
+        return $http.post(routeService.deleteLibrary(libraryId)).then( function () {
+          _.remove(librarySummaries, function (library) {
+            return library.id === libraryId;
+          });
+        });
+      },
+
+      sortLibrariesByName: function (order) {
+        var sorting = function(a,b) {
+          if (a.name > b.name) {
+            return 1;
+          } else if (a.name < b.name) {
+            return -1;
+          } else {
+            return 0;
+          }
+        };
+
+        var libs = librarySummaries.sort(sorting);
+        var invited = invitedSummaries.sort(sorting);
+        if (order < 0) {
+          libs = libs.reverse();
+          invited = invited.reverse();
+        }
+        util.replaceArrayInPlace(userLibsToShow, libs);
+        util.replaceArrayInPlace(invitedLibsToShow, invited);
+      },
+      
+      sortLibrariesByNumKeeps: function () {
+        var sorting = function(a,b) {
+          if (a.numKeeps > b.numKeeps) {
+            return -1;
+          } else if (a.numKeeps < b.numKeeps) {
+            return 1;
+          } else {
+            return 0;
+          }
+        };
+        var libs = librarySummaries.sort(sorting);
+        var invited = invitedSummaries.sort(sorting);
+        util.replaceArrayInPlace(userLibsToShow, libs);
+        util.replaceArrayInPlace(invitedLibsToShow, invited);
+      },
+
+      filterLibraries: function (term) {
         var newMyLibs = librarySummaries;
         var newMyInvited = invitedSummaries;
         if (term.length) {
-          newMyLibs = fuseSearch1.search(term);
-          newMyInvited = fuseSearch2.search(term);
+          newMyLibs = librarySummarySearch.search(term);
+          newMyInvited = invitedSummarySearch.search(term);
         }
-        newMyLibs = _.filter(newMyLibs, function (lib) {
-          return lib.kind === 'user_created';
-        });
 
         util.replaceArrayInPlace(userLibsToShow, newMyLibs);
         util.replaceArrayInPlace(invitedLibsToShow, newMyInvited);
@@ -260,15 +326,7 @@ angular.module('kifi')
         return userLibsToShow.concat(invitedLibsToShow);
       },
 
-      deleteLibrary: function (libraryId) {
-        return $http.post(routeService.deleteLibrary(libraryId)).then( function () {
-          _.remove(librarySummaries, function (library) {
-            return library.id === libraryId;
-          });
-        });
-      }
-
-    };
+    }
 
     return api;
   }

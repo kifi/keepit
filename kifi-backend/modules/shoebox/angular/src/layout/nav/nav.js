@@ -9,15 +9,15 @@ angular.module('kifi')
       //replace: true,
       restrict: 'A',
       templateUrl: 'layout/nav/nav.tpl.html',
-      link: function (scope /*, element, attrs*/ ) {
+      link: function (scope) {
         scope.counts = {
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
 
         scope.librariesEnabled = false;
-        scope.mainLib = {};
-        scope.secretLib = {};
+        scope.mainLib = libraryService.mainLib;
+        scope.secretLib = libraryService.secretLib;
         scope.userLibs = libraryService.userLibsToShow;
         scope.invitedLibs = libraryService.invitedLibsToShow;
 
@@ -26,15 +26,7 @@ angular.module('kifi')
         }, function (newVal) {
           scope.librariesEnabled = newVal;
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function () {
-              var libraries = libraryService.librarySummaries;
-              scope.mainLib = _.find(libraries, function (lib) {
-                  return lib.kind === 'system_main';
-              });
-              scope.secretLib = _.find(libraries, function (lib) {
-                  return lib.kind === 'system_secret';
-              });
-            });
+            libraryService.fetchLibrarySummaries();
           }
         });
 
@@ -76,6 +68,27 @@ angular.module('kifi')
         };
 
         // Filter Box Stuff
+        scope.orders = {
+          options: ['A-Z','Z-A','# Keeps'],
+          currentOrder: ''
+        };
+
+        scope.sortLibsBy = function () {
+          switch (scope.orders.currentOrder) {
+            case 'A-Z':
+              libraryService.sortLibrariesByName(1);
+              break;
+            case 'Z-A':
+              libraryService.sortLibrariesByName(-1);
+              break;
+            case '# Keeps':
+              libraryService.sortLibrariesByNumKeeps();
+              break;
+            default:
+              break;
+          }
+        };
+
         scope.filter = {};
         scope.isFilterFocused = false;
         var preventClearFilter = false;
