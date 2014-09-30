@@ -134,6 +134,7 @@ class DirectScoreContext(
 
   override def flush(): Unit = {
     if (visibility != Visibility.RESTRICTED) {
+      degree = 1
       docId = pq.addCoreScores(this)
       collector.collect(this)
       docId = -1
