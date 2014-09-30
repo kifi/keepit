@@ -89,21 +89,26 @@ class ScoreContextWithDebug(
     scoreArraySize: Int,
     matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector) with Logging with DebugOption {
-  override def set(id: Long) = {
+  override def set(id: Long): Joiner = {
     if (debugTracedIds.contains(id)) debugLog(s"scorectx-set id=$id")
     super.set(id)
+  }
+  override def computeMatching(minThreshold: Float): Float = {
+    val matching = super.computeMatching(minThreshold)
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-matching id=${id} matching=${matching} weights=(${matchWeight.mkString(",")})")
+    matching
   }
   override def score(): Float = {
     val scr = super.score()
     if (debugTracedIds.contains(id)) debugLog(s"scorectx-score id=${id} score=${scr}")
     scr
   }
-  override def join(reader: DataBufferReader) = {
+  override def join(reader: DataBufferReader): Unit = {
     if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
     super.join(reader)
   }
-  override def flush() = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree vis=$visibility")
+  override def flush(): Unit = {
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree vis=$visibility scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")}})")
     super.flush()
   }
 }
