@@ -7,13 +7,18 @@ import com.keepit.model.{ User, NormalizedURI }
 import scala.concurrent.Future
 import com.keepit.search.engine.result.LibraryShardResult
 import com.keepit.common.db.Id
-import play.api.libs.json.{ JsArray, Json, JsNumber, JsValue }
+import play.api.libs.json._
 import com.keepit.common.routes.{ Search, ServiceRoute }
 import com.keepit.common.net.{ HttpClient, ClientResponse }
 import com.google.inject.Inject
 import scala.collection.mutable.ListBuffer
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import com.keepit.search.sharding.Shard
+import com.keepit.common.routes.ServiceRoute
+import play.api.templates.Html
 
 trait DistributedSearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -56,15 +61,20 @@ trait DistributedSearchServiceClient extends ServiceClient {
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
+
+  def call(userId: Id[User], uriId: Id[NormalizedURI], url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
 class DistributedSearchServiceClientImpl @Inject() (
-    searchClient: SearchServiceClient,
     val serviceCluster: ServiceCluster,
     val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends DistributedSearchServiceClient {
 
-  private lazy val distRouter = searchClient.distRouter
+  private lazy val distRouter = {
+    val router = new DistributedSearchRouter(this)
+    serviceCluster.setCustomRouter(Some(router))
+    router
+  }
 
   def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
     distRouter.plan(userId, shards, maxShardsPerInstance)
@@ -173,5 +183,9 @@ class DistributedSearchServiceClientImpl @Inject() (
   // for DistributedSearchRouter
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
+  }
+
+  def call(userId: Id[User], uriId: Id[NormalizedURI], url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
+    distRouter.call(userId, uriId, url, body)
   }
 }

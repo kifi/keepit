@@ -83,9 +83,7 @@ trait SearchCommander {
     uriId: Id[NormalizedURI],
     lang: Option[String],
     experiments: Set[ExperimentType],
-    query: String): Option[(Query, Explanation)]
-
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo]
+    query: String): Future[Option[(Query, Explanation)]]
 
   def warmUp(userId: Id[User]): Unit
 }
@@ -423,30 +421,18 @@ class SearchCommanderImpl @Inject() (
     monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = {
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments)
-    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = {
+    mainSearcherFactory.getConfigFuture(userId, experiments).map {
+      case (config, _) =>
+        val langs = lang match {
+          case Some(str) => str.split(",").toSeq.map(Lang(_))
+          case None => Seq(DefaultAnalyzer.defaultLang)
+        }
 
-    val langs = lang match {
-      case Some(str) => str.split(",").toSeq.map(Lang(_))
-      case None => Seq(DefaultAnalyzer.defaultLang)
-    }
-
-    shards.find(uriId).flatMap { shard =>
-      val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
-      searcher.explain(uriId)
-    }
-  }
-
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    uriIds.map { uriId =>
-      shards.find(uriId) match {
-        case Some(shard) =>
-          val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-          searcher.getSharingUserInfo(uriId)
-        case None =>
-          throw new Exception("shard not found")
-      }
+        shards.find(uriId).flatMap { shard =>
+          val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
+          searcher.explain(uriId)
+        }
     }
   }
 

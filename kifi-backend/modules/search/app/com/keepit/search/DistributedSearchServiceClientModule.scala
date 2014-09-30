@@ -15,12 +15,10 @@ case class ProdDistributedSearchServiceClientModule() extends DistributedSearchS
 
   @Provides @Singleton
   def distributedSearchServiceClient(
-    searchClient: SearchServiceClient,
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier): DistributedSearchServiceClient = {
     new DistributedSearchServiceClientImpl(
-      searchClient,
       serviceDiscovery.serviceCluster(ServiceType.SEARCH),
       client,
       airbrakeNotifier
