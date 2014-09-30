@@ -71,7 +71,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         parse1.slug.value === "lib1"
         parse1.visibility.value === "secret"
         parse1.keeps.size === 0
-        parse1.ownerId === user.externalId
+        parse1.owner.externalId === user.externalId
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
@@ -219,6 +219,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
+        val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(
           s"""{
              |"library":{
@@ -228,7 +229,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"slug":"lib1",
                |"url":"/ahsu/lib1",
                |"kind":"user_created",
-               |"ownerId":"${user1.externalId}",
+               |"owner":{
+               |  "id":"${basicUser1.externalId}",
+               |  "firstName":"${basicUser1.firstName}",
+               |  "lastName":"${basicUser1.lastName}",
+               |  "pictureName":"${basicUser1.pictureName}",
+               |  "username":"${basicUser1.username.get.value}"
+               |  },
                |"collaborators":[],
                |"followers":[],
                |"keeps":[],
@@ -278,6 +285,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
+        val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(
           s"""{
              |"library":{
@@ -287,7 +295,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"slug":"lib1",
                |"url":"/ahsu/lib1",
                |"kind":"user_created",
-               |"ownerId":"${user1.externalId}",
+               |"owner":{
+               |  "id":"${basicUser1.externalId}",
+               |  "firstName":"${basicUser1.firstName}",
+               |  "lastName":"${basicUser1.lastName}",
+               |  "pictureName":"${basicUser1.pictureName}",
+               |  "username":"${basicUser1.username.get.value}"
+               |  },
                |"collaborators":[],
                |"followers":[],
                |"keeps":[],
