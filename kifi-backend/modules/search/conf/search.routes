@@ -41,7 +41,6 @@ GET         /site/search/library                @com.keepit.controllers.website.
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
 POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
-POST        /internal/search/dist/langFreqs2      @com.keepit.controllers.search.SearchController.distLangFreqs()
 POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
 POST        /internal/search/dist/librarySearch   @com.keepit.controllers.search.SearchController.distLibrarySearch()
 
