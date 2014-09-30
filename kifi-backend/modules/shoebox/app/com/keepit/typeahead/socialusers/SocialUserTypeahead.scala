@@ -30,7 +30,7 @@ class SocialUserTypeahead @Inject() (
     store: SocialUserTypeaheadStore,
     cache: SocialUserTypeaheadCache,
     socialConnRepo: SocialConnectionRepo,
-    socialUserRepo: SocialUserInfoRepo) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
+    socialUserRepo: SocialUserInfoRepo) extends Typeahead[User, SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   implicit val fj = ExecutionContext.fj
 
