@@ -133,22 +133,22 @@ class LDACommander @Inject() (
     }
   }
 
-  private def computeCosineInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
+  private def computeCosineInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests], shouldScale: Boolean = false): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeCosineInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
-        val recencyScore = computeCosineInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
+        val globalScore = computeCosineInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false, shouldScale = shouldScale)
+        val recencyScore = computeCosineInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true, shouldScale = shouldScale)
         LDAUserURIInterestScores(globalScore, recencyScore, None)
       case _ => LDAUserURIInterestScores(None, None, None)
     }
   }
 
-  private def computeCosineInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
+  private def computeCosineInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeat: URILDATopic, isRecent: Boolean, shouldScale: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeat.feature) match {
       case (Some(userFeat), Some(uriFeatVec)) =>
         val userVec = getUserLDAStats(ldaVersion) match {
-          case None => userFeat.mean
-          case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
+          case Some(stat) if shouldScale => scale(userFeat.mean, stat.mean, stat.std)
+          case _ => userFeat.mean
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeatVec.value))
         val confidence = computeURIConfidence(uriFeat.numOfWords, uriFeat.timesFirstTopicChanged)
