@@ -56,7 +56,12 @@ trait IndexModule extends ScalaModule with Logging {
     }
   }
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory
+  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit
+
+  protected def constructIndexDirName(conf: Configuration, configName: String, shard: Shard[_], version: IndexerVersion): Option[String] = {
+    conf.getString(configName).map(_ + indexNameSuffix(shard, version))
+  }
 
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
@@ -107,7 +112,7 @@ trait IndexModule extends ScalaModule with Logging {
   def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedArticleIndexer = {
     val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDisovery)
     def articleIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
       log.info(s"storing ArticleIndex${indexNameSuffix(shard, version)} in $dir")
       new ArticleIndexer(dir, articleStore, airbrake)
     }
@@ -121,12 +126,12 @@ trait IndexModule extends ScalaModule with Logging {
   def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedURIGraphIndexer = {
     val version = IndexerVersionProviders.URIGraph.getVersionByStatus(serviceDisovery)
     def bookmarkStore(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.bookmarkStore.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.bookmarkStore.directory", shard, version, backup, conf, IndexerVersionProviders.URIGraph.getVersionsForCleanup())
       log.info(s"storing BookmarkStore${indexNameSuffix(shard, version)} in $dir")
       new BookmarkStore(dir, airbrake)
     }
     def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
-      val dir = getIndexDirectory("index.urigraph.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.urigraph.directory", shard, version, backup, conf, IndexerVersionProviders.URIGraph.getVersionsForCleanup())
       log.info(s"storing URIGraphIndex${indexNameSuffix(shard, version)} in $dir")
       new URIGraphIndexer(dir, store, airbrake)
     }
@@ -140,12 +145,12 @@ trait IndexModule extends ScalaModule with Logging {
   def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedCollectionIndexer = {
     val version = IndexerVersionProviders.Collection.getVersionByStatus(serviceDisovery)
     def collectionNameIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.collectionName.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.collectionName.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
       log.info(s"storing CollectionNameIndex${indexNameSuffix(shard, version)} in $dir")
       new CollectionNameIndexer(dir, airbrake)
     }
     def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
-      val dir = getIndexDirectory("index.collection.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.collection.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
       log.info(s"storing CollectionIndex${indexNameSuffix(shard, version)} in $dir")
       new CollectionIndexer(dir, collectionNameIndexer, airbrake)
     }
@@ -158,7 +163,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def userIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): UserIndexer = {
     val version = IndexerVersionProviders.User.getVersionByStatus(serviceDisovery)
-    val dir = getIndexDirectory("index.user.directory", noShard, version, backup, conf)
+    val dir = getIndexDirectory("index.user.directory", noShard, version, backup, conf, IndexerVersionProviders.User.getVersionsForCleanup())
     log.info(s"storing user index ${indexNameSuffix(noShard, version)} in $dir")
     new UserIndexer(dir, airbrake, shoeboxClient)
   }
@@ -167,7 +172,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): UserGraphIndexer = {
     val version = IndexerVersionProviders.UserGraph.getVersionByStatus(serviceDisovery)
-    val dir = getIndexDirectory("index.userGraph.directory", noShard, version, backup, conf)
+    val dir = getIndexDirectory("index.userGraph.directory", noShard, version, backup, conf, IndexerVersionProviders.UserGraph.getVersionsForCleanup())
     log.info(s"storing user graph index ${indexNameSuffix(noShard, version)} in $dir")
     new UserGraphIndexer(dir, airbrake, shoeboxClient)
   }
@@ -176,7 +181,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def searchFriendIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): SearchFriendIndexer = {
     val version = IndexerVersionProviders.SearchFriend.getVersionByStatus(serviceDisovery)
-    val dir = getIndexDirectory("index.searchFriend.directory", noShard, version, backup, conf)
+    val dir = getIndexDirectory("index.searchFriend.directory", noShard, version, backup, conf, IndexerVersionProviders.SearchFriend.getVersionsForCleanup())
     log.info(s"storing searchFriend index ${indexNameSuffix(noShard, version)} in $dir")
     new SearchFriendIndexer(dir, airbrake, shoeboxClient)
   }
@@ -185,7 +190,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def messageIndexer(backup: IndexStore, eliza: ElizaServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): MessageIndexer = {
     val version = IndexerVersionProviders.Message.getVersionByStatus(serviceDisovery)
-    val dir = getIndexDirectory("index.message.directory", noShard, version, backup, conf)
+    val dir = getIndexDirectory("index.message.directory", noShard, version, backup, conf, IndexerVersionProviders.Message.getVersionsForCleanup())
     log.info(s"storing message index ${indexNameSuffix(noShard, version)} in $dir")
     new MessageIndexer(dir, eliza, airbrake)
   }
@@ -194,7 +199,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def phraseIndexer(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): PhraseIndexer = {
     val version = IndexerVersionProviders.Phrase.getVersionByStatus(serviceDisovery)
-    val dir = getIndexDirectory("index.phrase.directory", noShard, version, backup, conf)
+    val dir = getIndexDirectory("index.phrase.directory", noShard, version, backup, conf, IndexerVersionProviders.Phrase.getVersionsForCleanup())
     val dataDir = conf.getString("index.config").map { path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
@@ -206,14 +211,14 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer, conf: Configuration, serviceDisovery: ServiceDiscovery): SpellIndexer = {
     val version = IndexerVersionProviders.Spell.getVersionByStatus(serviceDisovery)
-    val spellDir = getIndexDirectory("index.spell.directory", noShard, version, backup, conf)
+    val spellDir = getIndexDirectory("index.spell.directory", noShard, version, backup, conf, IndexerVersionProviders.Spell.getVersionsForCleanup())
     SpellIndexer(spellDir, shardedArticleIndexer)
   }
 
   @Provides @Singleton
   def libraryIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): LibraryIndexer = {
     val version = IndexerVersionProviders.Library.getVersionByStatus(serviceDisovery)
-    val libraryDir = getIndexDirectory("index.library.directory", noShard, version, backup, conf)
+    val libraryDir = getIndexDirectory("index.library.directory", noShard, version, backup, conf, IndexerVersionProviders.Library.getVersionsForCleanup())
     log.info(s"storing library index ${indexNameSuffix(noShard, version)} in $libraryDir")
     new LibraryIndexer(libraryDir, shoebox, airbrake)
   }
@@ -222,7 +227,7 @@ trait IndexModule extends ScalaModule with Logging {
   def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedKeepIndexer = {
     val version = IndexerVersionProviders.Keep.getVersionByStatus(serviceDisovery)
     def keepIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.keep.directory", shard, version, backup, conf)
+      val dir = getIndexDirectory("index.keep.directory", shard, version, backup, conf, IndexerVersionProviders.Keep.getVersionsForCleanup())
       log.info(s"storing KeepIndex ${indexNameSuffix(shard, version)} in $dir")
       new KeepIndexer(dir, shard, airbrake)
     }
@@ -234,15 +239,29 @@ trait IndexModule extends ScalaModule with Logging {
 
 case class ProdIndexModule() extends IndexModule {
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory =
-    getArchivedIndexDirectory(conf.getString(configName).map(_ + indexNameSuffix(shard, version)), indexStore, conf).get
+  def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {
+    versionsToClean.foreach { version =>
+      constructIndexDirName(conf, configName, shard, version).foreach { dir =>
+        log.info(s"deleting directory ${dir} if it exists")
+        FileUtils.deleteDirectory(new File(dir))
+      }
+    }
+  }
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
+    removeOldIndexDirs(conf, configName, shard, versionsToClean)
+    getArchivedIndexDirectory(constructIndexDirName(conf, configName, shard, version), indexStore, conf).get
+  }
+
 }
 
 case class DevIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory =
-    getArchivedIndexDirectory(conf.getString(configName).map(_ + indexNameSuffix(shard, version)), indexStore, conf).getOrElse {
+  def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory =
+    getArchivedIndexDirectory(constructIndexDirName(conf, configName, shard, version), indexStore, conf).getOrElse {
       volatileDirMap.getOrElse((configName, shard), {
         val newdir = new VolatileIndexDirectory()
         volatileDirMap += (configName, shard) -> newdir
