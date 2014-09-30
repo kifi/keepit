@@ -73,8 +73,17 @@ object KeepData {
 }
 
 // The extension uses this object to augment `KeepData` only when needed. It's useless by itself.
-@json
-case class LateLoadKeepData(title: Option[String], image: Option[String])
+case class MoarKeepData(
+  title: Option[String],
+  image: Option[String],
+  tags: Seq[String])
+object MoarKeepData {
+  implicit val writes: Writes[MoarKeepData] = (
+    (__ \ 'title).writeNullable[String] and
+    (__ \ 'image).writeNullable[String] and
+    (__ \ 'tags).writeNullable[Seq[String]].contramap[Seq[String]](Some(_).filter(_.nonEmpty))
+  )(unlift(MoarKeepData.unapply))
+}
 
 case class LibraryData(
   id: PublicId[Library],

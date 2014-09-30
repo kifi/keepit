@@ -28,6 +28,7 @@ class ExtLibraryController @Inject() (
   keepImageCommander: KeepImageCommander,
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
+  collectionRepo: CollectionRepo,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -127,7 +128,10 @@ class ExtLibraryController @Inject() (
         case Right(keep) =>
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
           val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)
-          Ok(Json.toJson(LateLoadKeepData(keep.title, keepImageUrl)))
+          val tags = db.readOnlyReplica { implicit s =>
+            collectionRepo.getTagsByKeepId(keep.id.get)
+          }
+          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, tags.map(_.tag).toSeq)))
       }
     }
   }
