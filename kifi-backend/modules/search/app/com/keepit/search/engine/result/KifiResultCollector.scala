@@ -88,7 +88,7 @@ object KifiResultCollector {
   def createQueue(sz: Int) = new HitQueue(sz)
 }
 
-class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float) extends ResultCollector[ScoreContext] with Logging {
+class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends ResultCollector[ScoreContext] with Logging {
 
   import KifiResultCollector._
 
@@ -121,8 +121,10 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
       if (score > 0.0f) {
         val visibility = ctx.visibility
         if ((visibility & Visibility.OWNER) != 0) {
+          score = score * (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
           myHits.insert(id, score, visibility, ctx.secondaryId)
         } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+          score = score * (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
           friendsHits.insert(id, score, visibility, ctx.secondaryId)
         } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)

@@ -16,6 +16,8 @@ class ScoreContext(
   private[engine] var secondaryId: Long = -1 // secondary id (keep id for kifi search)
   private[this] var secondaryIdScore: Float = -1.0f
 
+  private[engine] var degree: Int = 0
+
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
@@ -39,6 +41,7 @@ class ScoreContext(
     visibility = Visibility.RESTRICTED
     secondaryId = -1L
     secondaryIdScore = -1.0f
+    degree = 0
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
@@ -63,6 +66,7 @@ class ScoreContext(
     }
 
     visibility = visibility | theVisibility
+    degree += 1
   }
 
   def flush(): Unit = {
@@ -74,8 +78,8 @@ class ScoreContext(
   }
 
   private[engine] def addScore(idx: Int, scr: Float) = {
-    if (scoreMax(idx) < scr) scoreMax(idx) = scr
     scoreSum(idx) += scr
+    if (scoreMax(idx) < scr) scoreMax(idx) = scr
   }
 }
 
