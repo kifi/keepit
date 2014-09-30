@@ -13,10 +13,11 @@
         <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image">
         <div class="kf-keep-lib-owner-text">
           <div class="kf-keep-lib-curator">Curator:</div>
+          <div class="kf-keep-lib-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
         </div>
       </div>
 
-      <div ng-switch="clippedDescription">
+      <div ng-switch="clippedDescription" class="kf-keep-lib-description-container">
         <p ng-switch-when="true" class="kf-keep-lib-description">
           {{library.shortDescription}}&hellip;
           <a href="javascript:" ng-click="showLongDescription()">More</a>
@@ -24,7 +25,7 @@
         <p ng-switch-when="false" class="kf-keep-lib-description">{{library.description}}</p>
       </div>
 
-      <div class="kf-keep-lib-stats">
+      <div class="kf-keep-lib-stats-and-followers">
         <div class="kf-keep-lib-keeps-followers-stats">
           <span class="kf-keep-lib-stats-heading">Keeps</span>
           <span class="kf-keep-lib-stats-number">{{library.keeps.length || library.numKeeps}}</span>
@@ -33,6 +34,15 @@
         <div class="kf-keep-lib-keeps-followers-stats">
           <span class="kf-keep-lib-stats-heading">Followers</span>
           <span class="kf-keep-lib-stats-number">{{library.followers.length}}</span>
+        </div>
+
+        <div class="kf-keep-lib-follower-pics">
+          <span ng-repeat="follower in followersToShow">
+            <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" title="{{follower.firstName + ' ' + follower.lastName}}">
+          </span>
+        </div>
+        <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers">
+          <span class="kf-keep-lib-additional-followers-text">+ {{numAdditionalFollowers}}</span>
         </div>
       </div>
 
@@ -45,9 +55,9 @@
     <button ng-if="!followingLibrary(library) && !isMyLibrary(library)" class="kf-keep-lib-footer-button library-action-button" ng-click="unfollowLibrary(library)">Unfollow</button>
 
     <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
-    <!-- TODO(yiping): implement social sharing!
-    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button" ng-click="shareLibraryOnTwitter()">Share</button>
-    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button" ng-click="shareLibraryOnFacebook()">Share</button>
+    <!-- TODO(yiping): really implement this completely. :)
+    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button"><a href="https://twitter.com/share?url={{library.shareUrl}}" target="_blank">Share</a></button>
+    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button"><a href="https://www.facebook.com/dialog/share?app_id=145634995501895&display=popup&href={{library.shareUrl}}&redirect_uri={{library.shareUrl}}" target="_blank">Share</a></button>
     -->
   </div>
 </div>
