@@ -10,8 +10,6 @@
     border-top: 1px solid #fff
 
 .library-card
-
-
   .kf-keep-lib-icon
     float: left
     display: block
@@ -128,25 +126,22 @@
   a
     color: #666
 
-.kf-keep-lib-footer-button::before
+.kf-keep-lib-footer-button-icon
   position: absolute
-  top: 4px
-  left: 10px
-  width: 22px
-  height: 22px
-  background-size: 100% 100%
-  background-position: 0px 0px
-  content: ''
-  {share-button-image}  // Migrate this to use new svg "sprite" classes.
-
+  top: 6px
+  left: 13px
+  width: 18px
+  height: 18px
+  background-repeat: no-repeat
+  background-position: center center
+  background-size: contain
 
 .kf-library-share-search
   position: relative
   display: inline-block
 
-  [contenteditable]:empty::before{
+  [contenteditable]:empty::before
     color: secondaryTextGray
-  }
 
 .library-share-menu
   display: none
@@ -324,13 +319,7 @@
     padding: 7px 10px 5px 30px
     font-size: 12px
 
-  .library-share-contact-button::before
-    position: absolute
-    top: 5px
-    left: 8px
-    width: 16px
-    height: 16px
-    {share-button-image}
-    background-size: 100% 100%
-    background-position: 0px 0px
-    content: ''
+    .kf-keep-lib-footer-button-icon
+      left: 10px
+      width: 15px
+      height: 15px
