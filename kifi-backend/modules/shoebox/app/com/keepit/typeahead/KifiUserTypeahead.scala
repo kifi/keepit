@@ -1,15 +1,13 @@
-package com.keepit.typeahead.socialusers
+package com.keepit.typeahead
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.typeahead._
 import com.keepit.model._
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.db.Id
-import scala.concurrent.{ Promise, Future }
-import com.keepit.common.store.S3Bucket
+import scala.concurrent.Future
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
