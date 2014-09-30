@@ -320,7 +320,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
+        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "A", createdAt = t1, username = Some(Username("ahsu"))))
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "B", createdAt = t1, username = Some(Username("bhsu"))))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
@@ -328,15 +328,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
+          val library3 = libraryRepo.save(Library(name = "Library3", ownerId = user2.id.get, slug = LibrarySlug("lib3"), memberCount = 2, visibility = LibraryVisibility.DISCOVERABLE))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library3.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY, state = LibraryInviteStates.ACCEPTED))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+
           // send invites to same library with different access levels (only want highest access level)
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE))
-          (user1, user2, library1, library2)
+          (user1, user2, library1, library2, library3)
         }
 
-        val pubId = Library.publicId(lib1.id.get)
+        val pubId1 = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
+        val pubId3 = Library.publicId(lib3.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrarySummariesByUser.url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
@@ -351,7 +357,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |{"libraries":
               |[
                 |{
-                  |"id":"${pubId.id}",
+                  |"id":"${pubId1.id}",
                   |"name":"Library1",
                   |"visibility":"secret",
                   |"url":"/ahsu/lib1",
@@ -366,6 +372,23 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"numFollowers":0,
                   |"kind":"user_created",
                   |"access":"owner"
+                },
+                |{
+                  |"id":"${pubId3.id}",
+                  |"name":"Library3",
+                  |"visibility":"discoverable",
+                  |"url":"/bhsu/lib3",
+                  |"owner":{
+                  |  "id":"${basicUser2.externalId}",
+                  |  "firstName":"${basicUser2.firstName}",
+                  |  "lastName":"${basicUser2.lastName}",
+                  |  "pictureName":"${basicUser2.pictureName}",
+                  |  "username":"${basicUser2.username.get.value}"
+                  |  },
+                  |"numKeeps":0,
+                  |"numFollowers":1,
+                  |"kind":"user_created",
+                  |"access":"read_only"
                 |}
               |],
               |"invited":
