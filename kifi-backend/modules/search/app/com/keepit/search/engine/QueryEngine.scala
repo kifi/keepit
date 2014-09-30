@@ -19,7 +19,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       i += 1
     }
   }
-  private def normalizeMatchWeight(): Unit = {
+  private[this] def normalizeMatchWeight(): Unit = {
     var sum = 0.0f
     var i = 0
     while (i < totalSize) {
@@ -37,10 +37,10 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
 
-    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
-
     sources.foreach { source => prepare(source) }
     normalizeMatchWeight()
+
+    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
 
     sources.foldLeft(0) { (total, source) =>
       val startTime = System.currentTimeMillis()
@@ -103,25 +103,17 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeights(): Array[Float] = matchWeights
 
   private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+    val debugOption = this
     if (debugTracedIds == null) {
       new JoinerManager(32) {
         def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
       }
     } else {
       new JoinerManager(32) {
-        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector) {
-          override def set(id: Long) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-set id=$id")
-            super.set(id)
-          }
-          override def join(reader: DataBufferReader) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
-            super.join(reader)
-          }
-          override def flush() = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-flush id=$id")
-            super.flush()
-          }
+        def create() = {
+          val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeights, collector)
+          ctx.debug(debugOption)
+          ctx
         }
       }
     }
