@@ -47,16 +47,16 @@ class KifiUserTypeahead @Inject() (
 
   protected def extractId(info: User): Id[User] = info.id.get
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[User]] = {
+  protected def getAllInfos(id: Id[User]): Future[Seq[User]] = {
     db.readOnlyMasterAsync { implicit ro =>
       userConnectionRepo.getConnectedUsers(id)
     } flatMap { ids =>
       log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
-      getInfos(ids.toSeq)
+      getInfos(id, ids.toSeq)
     }
   }
 
-  protected def getInfos(ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
+  protected def getInfos(userId: Id[User], ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
     if (ids.isEmpty) Seq.empty
     else {
       db.readOnlyMaster { implicit ro =>

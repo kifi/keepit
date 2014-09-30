@@ -74,13 +74,13 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[EContact]] = {
+  protected def getAllInfos(id: Id[User]): Future[Seq[EContact]] = {
     db.readOnlyMasterAsync { implicit ro =>
       econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email))
     }
   }
 
-  protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
+  protected def getInfos(userId: Id[User], ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[EContact]) else {
       db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq

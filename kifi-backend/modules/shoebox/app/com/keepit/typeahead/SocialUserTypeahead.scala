@@ -46,7 +46,7 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
+  protected def getInfos(userId: Id[User], ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
     else {
       db.readOnlyMasterAsync { implicit session =>
@@ -55,7 +55,7 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
+  protected def getAllInfos(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
     db.readOnlyMaster { implicit session =>
       socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq
     }

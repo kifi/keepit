@@ -19,9 +19,9 @@ trait Typeahead[T, E, I] extends Logging {
 
   protected def getOrCreatePrefixFilter(ownerId: Id[T]): Future[PrefixFilter[E]]
 
-  protected def getInfos(ids: Seq[Id[E]]): Future[Seq[I]]
+  protected def getInfos(ownerId: Id[T], infoIds: Seq[Id[E]]): Future[Seq[I]]
 
-  protected def getAllInfosForUser(id: Id[T]): Future[Seq[I]]
+  protected def getAllInfos(ownerId: Id[T]): Future[Seq[I]]
 
   protected def extractId(info: I): Id[E]
 
@@ -41,7 +41,7 @@ trait Typeahead[T, E, I] extends Logging {
               Future.successful(Seq.empty)
             } else {
               val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-              getInfos(filter.filterBy(queryTerms)).map { infos =>
+              getInfos(ownerId, filter.filterBy(queryTerms)).map { infos =>
                 topNWithInfos(infos, queryTerms, limit)
               }
             }
@@ -80,7 +80,7 @@ trait Typeahead[T, E, I] extends Logging {
     consolidateBuildReq(id) { id =>
       timing(s"buildFilter($id)") {
         val builder = new PrefixFilterBuilder[E]
-        getAllInfosForUser(id).map { allInfos =>
+        getAllInfos(id).map { allInfos =>
           allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
           val filter = builder.build
           log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
