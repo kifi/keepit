@@ -8,25 +8,16 @@ import java.nio.ByteBuffer
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.keepit.common.store.S3Bucket
 
-trait PrefixFilterStore[T] extends ObjectStore[Id[T], Array[Long]] with MetadataAccess[Id[T], Array[Long]]
+trait PrefixFilterStore[T, E] extends ObjectStore[Id[T], PrefixFilter[E]] with MetadataAccess[Id[T], PrefixFilter[E]]
 
-class S3PrefixFilterStoreImpl[T](val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3BlobStore[Id[T], Array[Long]] with PrefixFilterStore[T] {
+class S3PrefixFilterStoreImpl[T, E](val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog) extends S3BlobStore[Id[T], PrefixFilter[E]] with PrefixFilterStore[T, E] {
 
   protected def idToKey(id: Id[T]) = "id_" + id.toString
 
-  protected def encodeValue(value: Array[Long]): Array[Byte] = {
-    val byteBuffer = ByteBuffer.allocate(value.length * 8)
-    byteBuffer.asLongBuffer.put(value)
-    byteBuffer.array
-  }
+  protected def encodeValue(value: PrefixFilter[E]): Array[Byte] = PrefixFilter.toByteArray(value)
 
-  protected def decodeValue(data: Array[Byte]): Array[Long] = {
-    val intBuffer = ByteBuffer.wrap(data).asLongBuffer
-    val outArray = new Array[Long](data.length / 8)
-    intBuffer.get(outArray)
-    outArray
-  }
+  protected def decodeValue(data: Array[Byte]): PrefixFilter[E] = PrefixFilter.fromByteArray(data)
 }
 
-class InMemoryPrefixFilterStoreImpl[T] extends InMemoryObjectStore[Id[T], Array[Long]] with PrefixFilterStore[T]
+class InMemoryPrefixFilterStoreImpl[T, E] extends InMemoryObjectStore[Id[T], PrefixFilter[E]] with PrefixFilterStore[T, E]
 

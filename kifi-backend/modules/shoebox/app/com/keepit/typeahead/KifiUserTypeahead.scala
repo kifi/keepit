@@ -12,7 +12,6 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import scala.concurrent.duration.Duration
-import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.time._
 import org.joda.time.Minutes
@@ -37,8 +36,8 @@ class KifiUserTypeahead @Inject() (
 
   def refresh(userId: Id[User]): Future[PrefixFilter[User]] = {
     build(userId).map { filter =>
-      cache.set(KifiUserTypeaheadKey(userId), filter.data)
-      store += (userId -> filter.data)
+      cache.set(KifiUserTypeaheadKey(userId), filter)
+      store += (userId -> filter)
       log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
       filter
     }(ExecutionContext.fj)
@@ -76,22 +75,22 @@ class KifiUserTypeahead @Inject() (
             refresh(userId)
           }
           Future.successful(filter)
-        case None => refresh(userId).map(_.data)
+        case None => refresh(userId)
       }
-    }.map { new PrefixFilter[User](_) }
+    }
   }
 }
 
-trait KifiUserTypeaheadStore extends PrefixFilterStore[User]
+trait KifiUserTypeaheadStore extends PrefixFilterStore[User, User]
 
-class S3KifiUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: AmazonS3, accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with KifiUserTypeaheadStore
+class S3KifiUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: AmazonS3, accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User, User](bucket, amazonS3Client, accessLog) with KifiUserTypeaheadStore
 
-class InMemoryKifiUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User] with KifiUserTypeaheadStore
+class InMemoryKifiUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User, User] with KifiUserTypeaheadStore
 
 class KifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[KifiUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[KifiUserTypeaheadKey, PrefixFilter[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class KifiUserTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
+case class KifiUserTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[User]] {
   val namespace = "kifi_user_typeahead"
   override val version = 1
   def toKey() = userId.id.toString
