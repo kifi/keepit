@@ -76,8 +76,6 @@ trait SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult
 
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
-
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
@@ -415,10 +413,6 @@ class SearchCommanderImpl @Inject() (
     SafeFuture {
       mainSearcherFactory.warmUp(userId)
     }
-  }
-
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int] = {
-    monitoredAwait.result(mainSearcherFactory.distLangFreqsFuture(shards, userId), 10 seconds, "slow getting lang profile")
   }
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = {
