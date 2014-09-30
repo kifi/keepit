@@ -173,7 +173,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-          keepRepo.getPrimaryByUriAndUser(uri1.id.get, user1.id.get).size === 1
         }
       }
     }
