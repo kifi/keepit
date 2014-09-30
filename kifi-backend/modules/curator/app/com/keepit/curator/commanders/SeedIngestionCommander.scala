@@ -32,7 +32,7 @@ class SeedIngestionCommander @Inject() (
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
-  val MIN_KEEPS_FOR_RECOS = 500 //This will be gradually lowered to 10 or twenty throughout this week
+  val MIN_KEEPS_FOR_RECOS = 400 //This will be gradually lowered to 10 or twenty throughout this week
 
   def usersToIngestGraphDataFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
