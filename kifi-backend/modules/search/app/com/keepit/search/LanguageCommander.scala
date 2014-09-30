@@ -51,7 +51,7 @@ class LanguageCommanderImpl @Inject() (
     val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
 
     if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangFreqs2(dispatchPlan, userId, libraryContext)
+      resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryContext)
     }
     if (localShards.nonEmpty) {
       resultFutures += distLangFreqs2(localShards, userId, libraryContext)

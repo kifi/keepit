@@ -530,7 +530,7 @@ class KeepsCommander @Inject() (
   }
 
   private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
-    val saved = keepRepo.save(keep withActive false)
+    val saved = keepRepo.save(keep withState state)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
     keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
     saved
@@ -613,7 +613,6 @@ class KeepsCommander @Inject() (
   def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
     val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-      val collection = collectionRepo.get(collectionId)
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
       val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
       val newK2C = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
@@ -625,14 +624,14 @@ class KeepsCommander @Inject() (
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
       }
 
-      timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-        collectionRepo.modelChanged(collection, (newK2C.size + activated.size) > 0)
+      val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
+        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0)
       }
       val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
       tagged.foreach { ktc =>
         keepRepo.save(keepsById(ktc.keepId)) // notify keep index
-        keptAnalytics.taggedPage(collection, keepsById(ktc.keepId), context, taggingAt)
+        keptAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
       }
       tagged
     }
@@ -688,7 +687,7 @@ class KeepsCommander @Inject() (
         collection <- collectionRepo.getOpt(id)
       } {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
-        collectionRepo.collectionChanged(collection.id.get)
+        collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
         keptAnalytics.untaggedPage(collection, keep, context)
       }
@@ -706,7 +705,7 @@ class KeepsCommander @Inject() (
       } {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
         keepRepo.save(keep) // notify keep index
-        collectionRepo.collectionChanged(ktc.collectionId)
+        collectionRepo.collectionChanged(ktc.collectionId, inactivateIfEmpty = true)
       }
     }
     searchClient.updateURIGraph()

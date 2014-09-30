@@ -7,12 +7,13 @@ angular.module('kifi')
   '$rootScope',
   '$analytics',
   '$window',
+  'modalService',
   'recoActionService',
   'recoDecoratorService',
   'recoStateService',
   'undoService',
   function ($scope, $rootScope, $analytics, $window,
-    recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
@@ -77,8 +78,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
-        return;
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
@@ -140,8 +143,8 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'recoActionService',
-  function ($scope, recoActionService) {
+  '$scope', 'modalService', 'recoActionService',
+  function ($scope, modalService, recoActionService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
@@ -163,11 +166,13 @@ angular.module('kifi')
       $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
     };
 
-    $scope.showRecoImproveModal = false;
     $scope.improvement = {};
 
     $scope.showImprovementModal = function () {
-      $scope.showRecoImproveModal = true;
+      modalService.open({
+        template: 'recos/recoImproveModal.tpl.html',
+        scope: $scope
+      });
     };
 
     $scope.submitImprovement = function (reco) {

@@ -1,4 +1,4 @@
-<div ng-if="modal == 'import_bookmark_file'" kf-modal show="data.showBookmarkFileModal1" kf-width="590px" class="import-file-modal">
+<div kf-modal kf-width="590px" class="import-file-modal" force-close="forceClose">
   <div kf-basic-modal-content title="Import your links to Kifi" single-action="false" cancel="cancelBookmarkUpload()">
     <div class="file-import-inner">
       <img src="/img/bookmark-to-kifi@2x.png" class="import-kippt-to-kifi">
@@ -31,17 +31,5 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
-<div kf-modal show="data.showBookmarkFileModal2" kf-width="590px" class="import-file-modal">
-  <div kf-basic-modal-content centered="true" title="Importing your bookmarks to Kifi" action-text="Awesome">
-    <img src="/img/bookmark-to-kifi@2x.png" class="import-kippt-to-kifi">
-    <p>This might take a few minutes (especially if you have a lot of bookmarks). Feel free to browse around — we’re syncing in the background.</p>
-  </div>
-</div>
-<div kf-modal show="data.showBookmarkFileError" kf-width="590px" class="import-file-modal">
-  <div kf-basic-modal-content title="Whoops! We're having a problem." action-text="Done">
-    <p>We're having trouble importing your bookmark upload. It could be that we're overloaded, or that the file is invalid.</p>
-    <p>If you think this is an error, <a href="http://support.kifi.com/customer/portal/emails/new">contact support</a> and we'll sort things out. Thanks!</p>
   </div>
 </div>

@@ -24,23 +24,15 @@ angular.module('util', [])
       },
       replaceArrayInPlace: function (oldArray, newArray) {
         // empties oldArray, loads newArray values into it, keeping the same reference.
-        oldArray = oldArray || [];
         oldArray.length = 0;
-        // returning the array in case it was undefined before
-        Array.prototype.push.apply(oldArray, newArray);
-        return oldArray;
-      },
-      completeObjectInPlace: function (oldObj, newObj) {
-        _.forOwn(newObj || {}, function (num, key) {
-          oldObj[key] = newObj[key];
-        });
+        oldArray.push.apply(oldArray, newArray);
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
-        _.forOwn(oldObj || {}, function (num, key) {
+        _.forOwn(oldObj, function (num, key) {
           delete oldObj[key];
         });
-        _.forOwn(newObj || {}, function (num, key) {
+        _.forOwn(newObj, function (num, key) {
           oldObj[key] = newObj[key];
         });
       },
@@ -89,24 +81,6 @@ angular.module('util', [])
         fileName = fileName.replace(fileNameToSpaceRe, ' ').trim();
 
         return domain + (fileName ? ' · ' + fileName : '');
-      },
-      joinTags: function (keeps, tags) {
-        var idMap = _.reduce(tags, function (map, tag) {
-          if (tag && tag.id) {
-            map[tag.id] = tag;
-          }
-          return map;
-        }, {});
-
-        var that = this;
-        _.forEach(keeps, function (keep) {
-          var newTagList = _.map(_.union(keep.collections, keep.tags), function (tagId) {
-            return idMap[tagId] || null;
-          }).filter(function (tag) {
-            return tag != null;
-          });
-          keep.tagList = that.replaceArrayInPlace(keep.tagList, newTagList);
-        });
       },
       validateUrl: function (keepUrl) {
         // Extremely simple for now, can be developed in the future

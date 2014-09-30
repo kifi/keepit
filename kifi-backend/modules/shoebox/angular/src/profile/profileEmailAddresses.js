@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileEmailAddresses', [
-  '$document', 'keyIndices', 'profileService',
-  function ($document, keyIndices, profileService) {
+  '$document', 'keyIndices', 'modalService', 'profileService',
+  function ($document, keyIndices, modalService, profileService) {
     return {
       restrict: 'A',
       scope: {
@@ -18,7 +18,6 @@ angular.module('kifi')
       link: function (scope, element) {
         scope.isOpen = false;
         scope.emailWithActiveDropdown = null;
-        scope.showEmailDeleteDialog = {};
         scope.emailToBeDeleted = null;
 
         scope.toggle = function () {
@@ -51,7 +50,10 @@ angular.module('kifi')
 
         scope.deleteEmail = function (email) {
           scope.emailToBeDeleted = email;
-          scope.showEmailDeleteDialog.value = true;
+          modalService.open({
+            template: 'profile/emailDeleteModal.tpl.html',
+            scope: scope
+          });
         };
 
         scope.confirmDeleteEmail = function () {

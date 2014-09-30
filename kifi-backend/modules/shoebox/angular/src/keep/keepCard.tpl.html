@@ -47,7 +47,7 @@
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link">
       <a kf-min-version="3.0.7" ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a>
-      <a kf-max-version="3.0.7" href="javascript:" ng-click="triggerInstall()">Send</a>
+      <a kf-max-version="3.0.7" href="javascript:" ng-click="showInstallExtensionModal()">Send</a>
     </span>
     <span class="kf-keep-footer-link" ng-if="!hasTag(keep) && keep.isMyBookmark"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
     <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark && !keep.isPrivate"><a ng-click="togglePrivate(keep)" href='javascript:'>Make Private</a></span>

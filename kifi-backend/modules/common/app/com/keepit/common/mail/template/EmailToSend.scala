@@ -18,7 +18,7 @@ case class EmailToSend(
   category: ElectronicMailCategory,
   campaign: Option[String] = None,
   senderUserId: Option[Id[User]] = None,
-  tips: Seq[EmailTips] = Seq.empty,
+  tips: Seq[EmailTip] = Seq.empty,
   extraHeaders: Option[Map[String, String]] = None)
 
 object EmailToSend {
@@ -47,7 +47,7 @@ object EmailToSend {
     (__ \ 'category).format[ElectronicMailCategory] and
     (__ \ 'campaign).format[Option[String]] and
     (__ \ 'senderUserId).formatNullable[Id[User]] and
-    (__ \ 'tips).format[Seq[EmailTips]] and
+    (__ \ 'tips).format[Seq[EmailTip]] and
     (__ \ 'extraHeaders).formatNullable[Map[String, String]]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }

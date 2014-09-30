@@ -6,12 +6,10 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.akka.UnsupportedActorMessage
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.util.RecurringTaskManager
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.common.service.ServiceStatus
 import com.keepit.search.IndexInfo
 import scala.concurrent.duration._
 import java.util.Random
@@ -85,12 +83,11 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
 
     scheduleTaskOnAllMachines(actor.system, (20 + rnd.nextInt(20)) seconds, indexingInterval, actor.ref, UpdateIndex)
 
-    serviceDiscovery.thisInstance.filter(_.remoteService.healthyStatus == ServiceStatus.BACKING_UP) match {
-      case Some(_) => // search_backup
-        scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
-      case None => // regular search instance
-        actor.ref ! WarmUpIndexDirectory
-        scheduleTaskOnAllMachines(actor.system, 6 hours, 6 hours, actor.ref, WarmUpIndexDirectory)
+    if (serviceDiscovery.hasBackupCapability) scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackUpIndex)
+    else {
+      // regular search instance
+      actor.ref ! WarmUpIndexDirectory
+      scheduleTaskOnAllMachines(actor.system, 6 hours, 6 hours, actor.ref, WarmUpIndexDirectory)
     }
   }
 

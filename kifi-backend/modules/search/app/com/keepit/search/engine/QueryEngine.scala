@@ -19,7 +19,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       i += 1
     }
   }
-  private def normalizeMatchWeight(): Unit = {
+  private[this] def normalizeMatchWeight(): Unit = {
     var sum = 0.0f
     var i = 0
     while (i < totalSize) {
@@ -37,7 +37,10 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
 
-    val directScoreContext = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
+    sources.foreach { source => prepare(source) }
+    normalizeMatchWeight()
+
+    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
 
     sources.foldLeft(0) { (total, source) =>
       val startTime = System.currentTimeMillis()
@@ -46,7 +49,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
       val elapsed = System.currentTimeMillis() - startTime
       if ((debugFlags & DebugOption.Log.flag) != 0) {
-        debugLog(s"source executed: class=${source.getClass.getName} rows=${newTotal - total} time=$elapsed")
+        debugLog(s"source executed: class=${source.getClass.getSimpleName} rows=${newTotal - total} time=$elapsed")
       }
       newTotal
     }
@@ -60,18 +63,25 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
   }
 
-  private def execute(source: ScoreVectorSource, directScoreContext: ScoreContext): Int = {
+  private def prepare(source: ScoreVectorSource): Unit = {
+    // if NullExpr, no need to prepare
+    if (scoreExpr.isNullExpr) return
+
+    source.prepare(query)
+    if (source.weights.nonEmpty) {
+      // extract and accumulate information from Weights for later use (percent match)
+      accumulateWeightInfo(source.weights)
+    } else {
+      log.error("no weight created")
+    }
+  }
+
+  private def execute(source: ScoreVectorSource, directScoreContext: DirectScoreContext): Int = {
     // if NullExpr, no need to execute
     if (scoreExpr.isNullExpr) return dataBuffer.size
 
-    val weights = source.createWeights(query)
-    if (weights.nonEmpty) {
-      // extract and accumulate information from Weights for later use (percent match)
-      accumulateWeightInfo(weights)
-
-      source.execute(weights, coreSize, dataBuffer, directScoreContext)
-    } else {
-      log.error("no weight created")
+    if (source.weights.nonEmpty) {
+      source.execute(coreSize, dataBuffer, directScoreContext)
     }
     dataBuffer.size
   }
@@ -81,8 +91,6 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val size = dataBuffer.size
     if (size > 0) {
-      normalizeMatchWeight()
-
       val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createJoinerManager(collector))
       hashJoin.execute()
     }
@@ -95,25 +103,17 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeights(): Array[Float] = matchWeights
 
   private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+    val debugOption = this
     if (debugTracedIds == null) {
       new JoinerManager(32) {
         def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
       }
     } else {
       new JoinerManager(32) {
-        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector) {
-          override def set(id: Long) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-set id=$id")
-            super.set(id)
-          }
-          override def join(reader: DataBufferReader) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
-            super.join(reader)
-          }
-          override def flush() = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-flush id=$id")
-            super.flush()
-          }
+        def create() = {
+          val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeights, collector)
+          ctx.debug(debugOption)
+          ctx
         }
       }
     }

@@ -1,12 +1,12 @@
 <div class="kf-library-share-search">
-  <button class="library-share-button" ng-click="toggleMenu()">Share</button>
+  <button ng-if="!manageLibInvite" class="kf-keep-lib-footer-button library-share-button" ng-click="toggleMenu()">Share</button>
   <div class="library-share-menu">
-    <header class="library-share-menu-header">Send this library</header>
+    <header ng-if="!manageLibInvite" class="library-share-menu-header">Send this library</header>
     <div class="library-share-menu-content">
-      <div contenteditable="true" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></div>
+      <div ng-if="!manageLibInvite" contenteditable="true" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></div>
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">
-        <input type="text" ng-model="search.name" class="library-share-input library-share-search-input" placeholder="Search people" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)">
+        <input type="text" ng-model="search.name" class="library-share-input library-share-search-input" placeholder="Search people" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
       </div>
       <ul class="library-share-contact-list">
         <li class="library-share-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'library-share-selected': result.selected, 'library-share-actionable': result.actionable}">

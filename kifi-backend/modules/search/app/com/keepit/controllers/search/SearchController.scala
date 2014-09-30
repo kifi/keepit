@@ -9,7 +9,7 @@ import com.keepit.search._
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.sharding.ShardSpecParser
@@ -22,6 +22,8 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
+import com.keepit.common.routes.Search
+import play.api.templates.Html
 
 class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
@@ -30,6 +32,7 @@ class SearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,
+    distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -106,15 +109,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distLangFreqs() = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    val shardSpec = (json \ "shards").as[String]
-    val userId = Id[User]((json \ "request").as[Long])
-    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
-  }
-
-  def distLangFreqs2() = Action.async(parse.tolerantJson) { request =>
+  def distLangFreqs() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -212,21 +207,11 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
-    SafeFuture {
-      val uriIds = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      val info = searchCommander.sharingUserInfo(userId, uriIds)
-      Ok(Json.toJson(info))
-    }
-  }
-
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
+  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-    searchCommander.explain(userId, uriId, lang, userExperiments, query) match {
-      case explanation if explanation.isDefined =>
-        Ok(html.admin.explainResult(query, userId, uriId, explanation))
-      case None =>
-        Ok("shard not found")
+    searchCommander.explain(userId, uriId, lang, userExperiments, query) flatMap {
+      case someExplanation if someExplanation.isDefined => Future.successful(Ok(html.admin.explainResult(query, userId, uriId, someExplanation)))
+      case None => distributedSearchClient.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang), JsNull).map(r => Ok(r.body))
     }
   }
 

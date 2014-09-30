@@ -28,6 +28,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import scala.collection.concurrent.TrieMap
+import scala.util.Random
 
 import com.google.inject.{ Inject, Singleton }
 
@@ -49,10 +50,14 @@ class RecommendationGenerationCommander @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(10)
+  val recommendationGenerationLock = new ReactiveLock(12)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
-  private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
+  private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = {
+    experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get)).map { userIds =>
+      Random.shuffle((seedCommander.getUsersWithSufficientData() ++ userIds).toSeq)
+    }
+  }
 
   private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 

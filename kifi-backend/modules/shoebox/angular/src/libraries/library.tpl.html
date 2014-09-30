@@ -1,13 +1,7 @@
 <div class="kf-main-library-keeps">
-  <div class="kf-main-head">
-    <h1 class="kf-main-title">{{library.name}}</h1>
-    <div>{{library.description}} <span ng-if="library.slug" ng-click="manageLibrary()">(edit)</span></div>
-    <div class="kf-library-share" ng-if="canBeShared(library)">
-      <div kf-library-share-search library="library"></div>
-    </div>
-    <div class="kf-library-follow" ng-if="canBeFollowed(library)">
-      <button class="kf-library-follow-btn" ng-click="followLibrary(library.id)">Follow</button>
-    </div>
+  <div class="kf-library-card-header">
+    <div kf-library-card library="library" username="username" library-slug="librarySlug"></div>
+
     <div class="kf-subtitle">
       <div class="kf-edit-keeps" ng-click="toggleEdit()">
         <span class="sprite sprite-edit-pencil-icon"></span>
@@ -16,6 +10,7 @@
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
+
   <div kf-keeps
     keeps="keeps"
     keeps-loading="loading"
@@ -27,4 +22,5 @@
     toggle-edit="toggleEdit"
     update-selected-count="updateSelectedCount(numSelected)"
   ></div>
+
 </div>

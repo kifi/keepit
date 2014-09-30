@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
@@ -20,10 +21,10 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.http.Status.{ FORBIDDEN, BAD_REQUEST }
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.logging.{ AccessLog, Logging }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -176,12 +177,12 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, String] = {
+  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[(Int, String)] = {
     val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (oldLibrary.ownerId != userId) {
-      Left(LibraryFail("permission_denied"))
+      Some((FORBIDDEN, "permission_denied"))
     } else if (oldLibrary.kind == LibraryKind.SYSTEM_MAIN || oldLibrary.kind == LibraryKind.SYSTEM_SECRET) {
-      Left(LibraryFail("cant_delete_system_generated_library"))
+      Some((BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
         val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
@@ -200,7 +201,7 @@ class LibraryCommander @Inject() (
         keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
         searchClient.updateURIGraph()
       }
-      Right("success")
+      None
     }
   }
 
@@ -609,7 +610,7 @@ case class LibraryInfo(
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   url: String,
-  ownerId: ExternalId[User],
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   kind: LibraryKind)
@@ -622,20 +623,20 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: User, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
-      ownerId = owner.externalId,
+      owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind

@@ -9,6 +9,8 @@ import com.keepit.common.db.slick.DBSession.{ RSession }
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.google.common.cache.{ CacheBuilder, Cache }
 
+import scala.slick.jdbc.StaticQuery
+
 import java.util.concurrent.{ TimeUnit, Callable }
 
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
@@ -17,6 +19,7 @@ trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]]
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])]
+  def getUsersWithKeepsCounts()(implicit session: RSession): Seq[(Id[User], Int)]
 }
 
 @Singleton
@@ -64,6 +67,11 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])] = {
     (for (r <- rows if r.userId === userId && r.state === CuratorKeepInfoStates.ACTIVE) yield (r.uriId, r.keepId)).list
+  }
+
+  def getUsersWithKeepsCounts()(implicit session: RSession): Seq[(Id[User], Int)] = {
+    import StaticQuery.interpolation
+    sql"SELECT user_id, COUNT(*) FROM curator_keep_info WHERE state='active' GROUP BY user_id".as[(Id[User], Int)].list
   }
 
 }

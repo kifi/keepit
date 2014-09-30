@@ -8,9 +8,8 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [],
         userLibsToShow = [],
-        invitedLibsToShow = [],
-        libraryState = {}; // This is a variable to pass state from different library components of the system
-    
+        invitedLibsToShow = [];
+
     var fuseOptions = {
        keys: ['name'],
        threshold: 0.3
@@ -82,7 +81,7 @@ angular.module('kifi')
     };
 
     var maxLength = 22;
-    
+
     function shortenLibName (fullName) {
       var firstLine = fullName;
       var secondLine = '';
@@ -91,7 +90,7 @@ angular.module('kifi')
         var line = '';
         while (!full) {
           var pos = fullName.indexOf(' ');
-          if (line.length + pos < maxLength) {
+          if (pos >= 0 && line.length + pos <= maxLength) {
             line = line + fullName.substr(0, pos+1);
             fullName = fullName.slice(pos+1);
           } else {
@@ -112,7 +111,6 @@ angular.module('kifi')
     }
 
     var api = {
-      libraryState: libraryState,
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
       userLibsToShow: userLibsToShow,
@@ -260,6 +258,14 @@ angular.module('kifi')
         util.replaceArrayInPlace(invitedLibsToShow, newMyInvited);
 
         return userLibsToShow.concat(invitedLibsToShow);
+      },
+
+      deleteLibrary: function (libraryId) {
+        return $http.post(routeService.deleteLibrary(libraryId)).then( function () {
+          _.remove(librarySummaries, function (library) {
+            return library.id === libraryId;
+          });
+        });
       }
 
     };

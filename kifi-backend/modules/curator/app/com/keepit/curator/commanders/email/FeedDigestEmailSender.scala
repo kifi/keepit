@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.helpers.toHttpsUrl
-import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
+import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.RecommendationGenerationCommander
@@ -226,7 +226,7 @@ class FeedDigestEmailSender @Inject() (
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
       campaign = Some("digest"),
-      tips = Seq(EmailTips.FriendRecommendations)
+      tips = Seq(EmailTip.FriendRecommendations)
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")

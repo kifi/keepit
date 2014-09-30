@@ -28,6 +28,7 @@ class ExtLibraryController @Inject() (
   keepImageCommander: KeepImageCommander,
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
+  collectionRepo: CollectionRepo,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -43,7 +44,7 @@ class ExtLibraryController @Inject() (
     Ok(Json.obj("libraries" -> datas))
   }
 
-  def createLibrary = UserAction(parse.tolerantJson) { request =>
+  def createLibrary() = UserAction(parse.tolerantJson) { request =>
     val body = request.body.as[JsObject]
     val name = (body \ "name").as[String]
     val visibility = (body \ "visibility").as[LibraryVisibility]
@@ -57,6 +58,16 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
+  }
+
+  def deleteLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+      libraryCommander.removeLibrary(libraryId, request.userId) match {
+        case Some((status, message)) => Status(status)(Json.obj("error" -> message))
+        case _ => NoContent
+      }
     }
   }
 
@@ -117,7 +128,10 @@ class ExtLibraryController @Inject() (
         case Right(keep) =>
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
           val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, idealSize).map(keepImageCommander.getUrl)
-          Ok(Json.toJson(LateLoadKeepData(keep.title, keepImageUrl)))
+          val tags = db.readOnlyReplica { implicit s =>
+            collectionRepo.getTagsByKeepId(keep.id.get)
+          }
+          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, tags.map(_.tag).toSeq)))
       }
     }
   }
@@ -141,6 +155,51 @@ class ExtLibraryController @Inject() (
       keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) => NoContent
+      }
+    }
+  }
+
+  def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+      } match {
+        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) =>
+              implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+              val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
+              keepsCommander.addToCollection(coll.id.get, Seq(keep))
+              Ok(Json.obj("tag" -> coll.name))
+            case Left((status, code)) =>
+              Status(status)(Json.obj("error" -> code))
+          }
+        case _ =>
+          Forbidden(Json.obj("error" -> "permission_denied"))
+      }
+    }
+  }
+
+  def untagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+      } match {
+        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+            case Right(keep) =>
+              db.readOnlyReplica { implicit s =>
+                collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) // TODO: library ID, not user ID
+              } foreach { coll =>
+                implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+                keepsCommander.removeFromCollection(coll, Seq(keep))
+              }
+              NoContent
+            case Left((status, code)) =>
+              Status(status)(Json.obj("error" -> code))
+          }
+        case _ =>
+          Forbidden(Json.obj("error" -> "permission_denied"))
       }
     }
   }
