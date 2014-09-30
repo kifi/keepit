@@ -63,7 +63,7 @@
     </button>
     <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>
-      <a href="https://www.facebook.com/dialog/share?app_id=145634995501895&display=popup&href={{library.shareUrl}}&redirect_uri={{library.shareUrl}}" target="_blank">Share</a>
+      <a href="https://www.facebook.com/dialog/share?app_id={{facebookAppId}}&display=popup&href={{library.shareUrl}}&redirect_uri={{library.shareUrl}}">Share</a>
     </button>
   </div>
 </div>
