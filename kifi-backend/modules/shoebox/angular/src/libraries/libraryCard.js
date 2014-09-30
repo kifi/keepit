@@ -80,7 +80,7 @@ angular.module('kifi')
             scope.clippedDescription = true;
           }
 
-          scope.library.shareUrl = 'http://www.kifi.com' + scope.library.url;
+          scope.library.shareUrl = $location.protocol() + '://' + $location.host() + $location.path();
         }
 
         scope.showLongDescription = function () {
