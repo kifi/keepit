@@ -109,15 +109,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distLangFreqs() = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    val shardSpec = (json \ "shards").as[String]
-    val userId = Id[User]((json \ "request").as[Long])
-    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
-  }
-
-  def distLangFreqs2() = Action.async(parse.tolerantJson) { request =>
+  def distLangFreqs() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
