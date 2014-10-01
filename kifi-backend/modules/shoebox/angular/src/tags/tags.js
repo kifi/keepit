@@ -18,8 +18,8 @@ angular.module('kifi')
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService',
-  function ($timeout, $window, $rootScope, $location, util, dom, tagService) {
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'libraryService', 
+  function ($timeout, $window, $rootScope, $location, util, dom, tagService, libraryService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
       KEY_ENTER = 13,
@@ -42,6 +42,13 @@ angular.module('kifi')
           targetIdx: null
         };
         scope.filter = {};
+        scope.librariesEnabled = false;
+
+        scope.$watch(function () {
+          return libraryService.isAllowed();
+        }, function (newVal) {
+          scope.librariesEnabled = newVal || false;
+        });
 
         var preventClearFilter = false;
         var w = angular.element($window);
@@ -67,7 +74,9 @@ angular.module('kifi')
         });
 
         function setTagListHeight() {
-          scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          if (scrollableTagList.offset()) {
+            scrollableTagList.height(w.height() - (scrollableTagList.offset().top - w[0].pageYOffset));
+          }
         }
         $timeout(setTagListHeight);
 
@@ -276,12 +285,16 @@ angular.module('kifi')
         };
 
         angular.element($window).resize(_.throttle(function () {
-          scope.refreshScroll();
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
         }, 150));
 
         scope.$watch('filter.name', function () {
           $timeout(scope.refreshHighlight);
-          scope.refreshScroll();
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
         });
 
         tagService.fetchAll();

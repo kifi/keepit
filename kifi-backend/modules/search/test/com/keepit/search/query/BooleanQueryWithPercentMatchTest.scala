@@ -63,7 +63,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
   val bbbIdf = similarity.idf(indexReader.docFreq(bbb), indexReader.numDocs())
   val cccIdf = similarity.idf(indexReader.docFreq(ccc), indexReader.numDocs())
 
-  println("%f %f %f".format(aaaIdf, bbbIdf, cccIdf))
+  // println("%f %f %f".format(aaaIdf, bbbIdf, cccIdf)) // can be removed?
 
   def doQuery(query: Query) = {
     var weight = searcher.createNormalizedWeight(query)

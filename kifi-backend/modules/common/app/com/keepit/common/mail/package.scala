@@ -51,8 +51,9 @@ package object template {
 
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
-    def acceptFriendUrl(id: Id[User], source: String) =
-      htmlUrl(s"$baseUrl/friends?", source)
+    def findMoreFriendsUrl(source: String) = htmlUrl(s"$baseUrl/friends?", source)
+
+    def acceptFriendUrl(id: Id[User], source: String) = htmlUrl(s"$baseUrl/friends?", source)
 
     def inviteContactUrl(id: Id[User], source: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", source)

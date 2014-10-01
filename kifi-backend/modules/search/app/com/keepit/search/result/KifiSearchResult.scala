@@ -31,8 +31,7 @@ object KifiSearchResult extends Logging {
     show: Boolean,
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String,
-    collections: Seq[ExternalId[Collection]],
-    experts: Seq[JsObject]): KifiSearchResult = {
+    collections: Seq[ExternalId[Collection]]): KifiSearchResult = {
     try {
       new KifiSearchResult(JsObject(List(
         "uuid" -> JsString(uuid.toString),
@@ -45,11 +44,11 @@ object KifiSearchResult extends Logging {
         "show" -> JsBoolean(show),
         "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(context),
-        "experts" -> JsArray(experts)
+        "experts" -> JsArray()
       )))
     } catch {
       case e: Throwable =>
-        log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context][experts=$experts]", e)
+        log.error(s"can't serialize KifiSearchResult [uuid=$uuid][query=$query][hits=$hits][mayHaveMore=$mayHaveMoreHits][show=$show][experimentId=$experimentId][context=$context]", e)
         throw e
     }
   }
@@ -75,7 +74,8 @@ object KifiSearchResult extends Logging {
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
         "show" -> JsBoolean(show),
         "cutPoint" -> JsNumber(cutPoint),
-        "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull)
+        "experimentId" -> experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
+        "context" -> JsString(context)
       )))
     } catch {
       case e: Throwable =>

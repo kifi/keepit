@@ -1,0 +1,14 @@
+@(toUserId: Id[User],
+  otherUserId: Id[User],
+  emailText: com.keepit.commanders.emails.ConnectionMadeEmailValues)
+@import com.keepit.common.mail.template.helpers._
+
+Hi @firstName(toUserId)
+
+@Html(emailText.line1.getOrElse(""))
+@Html(emailText.line2)
+
+Find more friends at @findMoreFriendsUrl("findMoreFriendsBtn")
+
+Have a great day,
+The Kifi team

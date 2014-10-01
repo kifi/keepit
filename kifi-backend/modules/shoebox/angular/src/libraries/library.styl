@@ -1,7 +1,342 @@
-.kf-library-share
-  .social-invite-element
-    &:hover
-      cursor: pointer
+// TODO(yiping): move library card styles to its own .styl file
+.kf-library-card-header
+  padding: 0 25px 0 30px
 
-    &.selected
-      background-color: #eee
+// TODO(yiping): figure out why there is a white space in library cards
+// between the header and the body. The following is a hack to make things
+// a little prettier.
+.kf-reco
+  .kf-keep.library-card
+    border-top: 1px solid #fff
+
+.library-card
+  .kf-keep-lib-icon
+    float: left
+    display: block
+    width: 58px
+    height: 77px
+    background-repeat: no-repeat
+
+  .kf-keep-lib-info
+    margin: 22px 25px 10px 80px
+    color: kifiBlack
+    vertical-align: top
+
+  .kf-keep-lib-owner
+    padding: 10px 0
+
+  .kf-keep-lib-name
+    font-family: "Georgia", Arial, sans-serif
+    font-size: 24px
+    font-weight: 500
+
+  .kf-keep-lib-user-image
+    display: inline-block
+    margin-right: 10px
+    border-radius: 100%
+    width: 42px
+    height: 42px
+
+  .kf-keep-lib-owner-text
+    display: inline-block
+    font-size: 14px
+    line-height: 1.3em
+    vertical-align: middle
+
+  .kf-keep-lib-owner-name
+    color: #939393
+
+  .kf-keep-lib-description-container
+    padding-bottom: 5px
+
+  .kf-keep-lib-description
+    margin: 10px 0
+
+  .kf-keep-lib-stats-and-followers
+    border-top: 1px solid #dadae2
+    padding-top: 15px
+
+  .kf-keep-lib-keeps-followers-stats
+    display: inline-block
+    margin: 0 20px 0 5px
+    font-size: 12px
+
+  .kf-keep-lib-stats-heading
+  .kf-keep-lib-stats-number
+    display: block
+
+  .kf-keep-lib-stats-heading
+    color: textDarkGrey
+    text-transform: uppercase
+
+  .kf-keep-lib-stats-number
+    padding-top: 3px
+    font-size: 16px
+    font-weight: bold
+    text-align: center
+
+  .kf-keep-lib-follower-pics
+    display: inline-block
+    height: 42px
+    vertical-align: top
+
+    .kf-keep-lib-user-image
+      margin-right: 8px
+
+  .kf-keep-lib-additional-followers
+    display: inline-block
+    border-radius: 100%
+    width: 42px
+    height: 42px
+    background-color: kifiBlack
+    color: #fff
+    vertical-align: top
+
+  .kf-keep-lib-additional-followers-text
+    display: block
+    padding-top: 12px
+    text-align: center
+
+  .kf-keep-footer
+    border-top: 2px solid #f5f5f5
+    padding: 15px 20px
+    background-color: #fff
+
+  .kf-keep-lib-footer-button-right
+    float: right
+    margin-right: 0
+
+  .kf-keep-lib-footer-button-follow-unfollow
+    padding-left: 17px
+
+  .kf-keep-lib-footer-button-follow
+    background: kifiBlack
+    color: white
+
+  .kf-keep-lib-footer-button-unfollow
+    color: #7eac4e
+
+    &::after
+      content: 'Following'
+
+    &:hover::after
+      content: 'Unfollow'
+      color: redColor
+
+  .kf-subtitle
+    margin-top: 15px
+
+
+// This should be in common; it's so messy right now.
+.kf-keep-lib-footer-button
+  display: inline-block
+  position: relative
+  margin-right: 15px
+  border: 1px solid #bbb
+  border-radius: 5px
+  padding: 8px 15px 8px 40px
+  background: linear-gradient(to top, #f3f3f3, #fff)
+  font-family: Helvetica, Arial, sans-serif
+  font-size: 13px
+  color: #666
+
+  a
+    color: #666
+
+.kf-keep-lib-footer-button-icon
+  position: absolute
+  top: 6px
+  left: 13px
+  width: 18px
+  height: 18px
+  background-repeat: no-repeat
+  background-position: center center
+  background-size: contain
+
+.kf-library-share-search
+  position: relative
+  display: inline-block
+
+  [contenteditable]:empty::before
+    color: secondaryTextGray
+
+.library-share-menu
+  display: none
+  position: absolute
+  left: 0
+  box-sizing: border-box
+  margin-top: 5px
+  width: 320px
+  line-height: normal
+  z-index: 2
+
+.library-share-menu-content
+  overflow: hidden
+  border: 1px solid #b5b5b5
+  border-top: none
+  border-bottom-left-radius: 5px
+  border-bottom-right-radius: 5px
+  box-shadow: 0px 4px 8px 0px #afafaf
+
+  .library-share-input-box
+    position: relative
+    border-bottom: 1px solid #d2d2d2
+
+  .library-share-input
+    box-sizing: border-box
+    padding: 13px 10px
+    width: 320px
+    background-color: #f8f8f8
+    font-size: 12px
+    placeholder secondaryTextGray
+
+    &.library-share-message-input
+      min-height: 50px
+
+    .manage-lib-invite &
+      padding-left: 35px
+
+  .library-share-search-spinner
+    position: absolute
+    right: 0
+    padding: 3px 15px 0 0
+
+  .kf-query-icon
+    position: absolute;
+    top: 9px;
+    left: 10px;
+    width: 21px;
+    height: 22px;
+    background-image: url("/img/sprites.png");
+    background-position: -108px -141px;
+    background-size: 210px 203px;
+
+.library-share-menu-header
+  padding: 12px 18px
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
+  background-color: kifiBlack
+  font-size: 12px
+  color: #fff
+
+  &::before
+    position: absolute
+    top: -13px
+    left: 51px
+    border-left: 15px solid transparent
+    border-right: 15px solid transparent
+    border-bottom: 15px solid kifiBlack
+    width: 0
+    height: 0
+    content: ''
+
+.library-share-contact-list
+  overflow-y: scroll
+  overflow-x: hidden
+  max-height: 268px
+
+.library-share-contact
+  box-sizing: border-box
+  border-top: 1px solid borderLightGray
+  padding: 8px 12px
+  width: 320px
+  height: 53px
+  background: #fff
+
+  &:first-child
+    border-top: none
+
+  &.library-share-selected
+    background-color: #f8f8f8
+
+.library-share-actionable
+  &:hover
+    cursor: pointer
+
+.library-share-sent
+.library-share-following
+  display: inline-block
+  position: absolute
+  top: 12px
+  color: green  // TODO(yiping): break out following into its own color
+
+.library-share-sent
+  right: 20px
+
+.library-share-following
+  right: 10px
+
+.library-share-contact-container
+  position: relative
+
+.library-share-contact-image
+  display: inline-block
+  margin-right: 15px
+  border-radius: 100%
+  width: 36px
+  height: 36px
+  vertical-align: top
+
+.library-share-contact-email-icon
+  @extend .library-share-contact-image
+  background-image: url(/img/mail.2x.png)
+  background-position: center 9px
+  background-repeat: no-repeat
+  background-size: 62% 48%
+  background-color: #e36766
+
+.library-share-contact-new-email-icon
+  @extend .library-share-contact-email-icon
+  background-color: #32495e
+
+.library-share-contact-gmail-icon
+  @extend .library-share-contact-email-icon
+  border: 1px solid borderLightGray
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 45555 33097%22><path fill=%22%23e75a4d%22 d=%22M41608 250c2030,0 3691,1661 3691,3691l0 1070 -5128 3663 -17458 12026 -17458 -12148 0 24295 -1314 0c-2030,0 -3691,-1661 -3691,-3691l0 -25214c0,-2030 1661,-3691 3691,-3691l18772 13918 18894 -13918z%22/><polygon fill=%22%23e7e4d7%22 points=%225255,8552 5255,32847 40172,32847 40172,8674 22713,20700%22/><polygon fill=%22%23b8b7ae%22 points=%225255,32847 22713,20700 22634,20644 5255,32580%22/><polygon fill=%22%23b7b6ad%22 points=%2240172,8674 40182,32847 22713,20700%22/><path fill=%22%23b2392f%22 d=%22M45299 5011l6 24148c-88,2684 -1251,3642 -5123,3687l-10 -24173 5128 -3663z%22/><polygon fill=%22%23f7f5ed%22 points=%223941,250 22713,14168 41608,250%22/></svg>")
+  background-color: #fff
+
+.library-share-contact-summary
+  display: inline-block
+  margin-top: 3px
+  width: 164px
+  line-height: 1.4em
+
+.library-share-contact-name
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+  .library-share-new-email &
+    font-weight: bold
+
+.library-share-contact-network
+  overflow: hidden
+  font-size: 12px
+  color: secondaryTextGray
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.library-share-contact-import-gmail
+  position: relative
+  top: 10px
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.kf-library-share-search
+  .library-share-contact-button
+    @extend .kf-keep-lib-footer-button
+    display: inline-block
+    position: absolute
+    top: 5px
+    padding: 7px 10px 5px 30px
+    font-size: 12px
+
+    .kf-keep-lib-footer-button-icon
+      left: 10px
+      width: 15px
+      height: 15px

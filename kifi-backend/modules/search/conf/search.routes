@@ -27,10 +27,11 @@ GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMess
 # Search Website API
 ##########################################
 GET         /site/search                        @com.keepit.controllers.website.WebsiteSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String], withUriSummary: Boolean ?= false)
-GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], withUriSummary: Boolean ?= false)
+GET         /site/search2                       @com.keepit.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], debug: Option[String], withUriSummary: Boolean ?= false)
 GET         /site/search/warmUp                 @com.keepit.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.controllers.website.WebsiteSearchEventController.searched()
+GET         /site/search/library                @com.keepit.controllers.website.WebsiteSearchController.librarySearch(q: String, f: Option[String], maxHits: Int, context: Option[String], debug: Option[String])
 
 
 ##########################################
@@ -41,6 +42,7 @@ POST        /internal/search/dist/search          @com.keepit.controllers.search
 POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
 POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
+POST        /internal/search/dist/librarySearch   @com.keepit.controllers.search.SearchController.distLibrarySearch()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
@@ -71,7 +73,6 @@ GET         /internal/search/indexInfo/listAll        @com.keepit.controllers.se
 
 POST        /internal/search/search/users        @com.keepit.controllers.search.SearchController.searchUsers()
 POST        /internal/search/search/userTypeahead        @com.keepit.controllers.search.SearchController.userTypeahead()
-POST        /internal/search/search/sharingUserInfo/:userId        @com.keepit.controllers.search.SearchController.sharingUserInfo(userId: Id[User])
 GET         /internal/search/search/explainResult        @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String])
 POST        /internal/searchWithConfig        @com.keepit.controllers.search.SearchController.searchWithConfig
 

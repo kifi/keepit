@@ -286,9 +286,11 @@
 }
 .kifi-root.kifi-root ::-moz-placeholder {
   font: inherit !important;
+  color: #a9a9a9;
 }
 .kifi-root.kifi-root ::-webkit-input-placeholder {
   font: inherit !important;
+  color: #a9a9a9;
 }
 .kifi-root.kifi-root ::selection {
   background: rgba(128,184,255,.59);

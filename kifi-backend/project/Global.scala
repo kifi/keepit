@@ -86,8 +86,7 @@ object Global {
 
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
-    //updateOptions := updateOptions.value.withConsolidatedResolution(true),
-    offline := true,
+    offline := false, // set to true to do work offline
     scalaVersion := "2.10.4",
     version := Version.appVersion,
     libraryDependencies ++= commonDependencies,
@@ -101,7 +100,10 @@ object Global {
     Keys.fork := false,
     aggregate in update := false,
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DoubleIndentClassDeclaration, true),
+    javaOptions in Test += "-Dlogger.resource=test-logger.xml",
+    updateOptions := updateOptions.value.withConsolidatedResolution(true),
+    updateOptions := updateOptions.value.withLatestSnapshots(false) // sbt 0.13.6 can do a better job with SNAPSHOTS, but it's slower.
   )
 
 }

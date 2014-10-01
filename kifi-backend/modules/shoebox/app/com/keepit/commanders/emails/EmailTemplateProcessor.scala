@@ -1,6 +1,6 @@
 package com.keepit.commanders.emails
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.{ LargeString, Id }
@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTips }
+import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
 import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
@@ -34,7 +34,7 @@ class EmailTemplateProcessorImpl @Inject() (
     userCommander: UserCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
-    peopleRecommendationsTip: FriendRecommendationsEmailTip,
+    peopleRecommendationsTip: Provider[FriendRecommendationsEmailTip],
     emailOptOutCommander: EmailOptOutCommander) extends EmailTemplateProcessor {
 
   /* for the lack of a better name, this is just a trait that encapsulates
@@ -125,12 +125,12 @@ class EmailTemplateProcessorImpl @Inject() (
 
   private def getTipHtml(emailToSend: EmailToSend) = {
     val predicate = (html: Option[Html]) => html.isDefined
-    val transform = (tip: EmailTips) => tip match {
-      case EmailTips.FriendRecommendations => peopleRecommendationsTip.render(emailToSend)
+    val transform = (tip: EmailTip) => tip match {
+      case EmailTip.FriendRecommendations => peopleRecommendationsTip.get().render(emailToSend)
     }
 
     // get the first available Tip for this email that returns Some
-    FutureHelpers.findMatching[EmailTips, Option[Html]](emailToSend.tips, 1, predicate, transform).map { seqOpts =>
+    FutureHelpers.findMatching[EmailTip, Option[Html]](emailToSend.tips, 1, predicate, transform).map { seqOpts =>
       seqOpts.dropWhile(_.isEmpty).headOption.flatten
     }
   }
@@ -154,7 +154,7 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   private def getUsers(userIds: Seq[Id[User]]) = {
-    db.readOnlyReplicaAsync { implicit s => userRepo.getUsers(userIds) }
+    db.readOnlyMasterAsync { implicit s => userRepo.getUsers(userIds) }
   }
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {

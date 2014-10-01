@@ -1,16 +1,16 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.graph.GraphServiceClient
 import views.html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class GraphAdminController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    graphClient: GraphServiceClient) extends AdminController(actionAuthenticator) {
+    val userActionsHelper: UserActionsHelper,
+    graphClient: GraphServiceClient) extends AdminUserActions {
 
-  def statistics() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def statistics() = AdminUserPage.async { implicit request =>
     val futureStatistics = graphClient.getGraphStatistics()
     val futureUpdaterStates = graphClient.getGraphUpdaterStates()
     for {

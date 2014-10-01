@@ -2,10 +2,12 @@ package com.keepit.controllers.email
 
 import java.util.NoSuchElementException
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ FakeActionAuthenticator, ActionAuthenticator }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
@@ -21,6 +23,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule(),
     FakeCuratorServiceClientModule(),
     FakeShoeboxStoreModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeAirbrakeModule()
   )
 
@@ -113,7 +117,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
           val extId = ExternalId[NormalizedURI](java.util.UUID.randomUUID.toString) // another UUID bites the dust
           val controller = inject[EmailRecosController]
-          controller.keepReco(extId)(FakeRequest()) must throwA[NoSuchElementException]
+          val call = controller.keepReco(extId)(FakeRequest())
+          status(call) === BAD_REQUEST
         }
       }
     }

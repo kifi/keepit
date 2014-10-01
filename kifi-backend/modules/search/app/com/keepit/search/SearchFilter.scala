@@ -1,11 +1,8 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.Id
-import com.keepit.model.Library
 import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
 
-abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[String]) {
+abstract class SearchFilter(val libraryContext: LibraryContext, context: Option[String]) {
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
@@ -17,7 +14,7 @@ abstract class SearchFilter(val libraryId: Option[Id[Library]], context: Option[
 
 object SearchFilter {
 
-  def apply(filter: Option[String], library: Option[String], context: Option[String])(implicit publicIdConfig: PublicIdConfiguration): SearchFilter = {
+  def apply(filter: Option[String], library: LibraryContext, context: Option[String]): SearchFilter = {
     filter match {
       case Some("m") =>
         SearchFilter.mine(library, context)
@@ -30,10 +27,8 @@ object SearchFilter {
     }
   }
 
-  def default(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
-    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
-
-    new SearchFilter(libId, context) {
+  def default(library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
+    new SearchFilter(library, context) {
       def includeMine = true
       def includeFriends = true
       def includeOthers = true
@@ -41,30 +36,24 @@ object SearchFilter {
     }
   }
 
-  def all(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
-    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
-
-    new SearchFilter(libId, context) {
+  def all(library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
+    new SearchFilter(library, context) {
       def includeMine = true
       def includeFriends = true
       def includeOthers = false
     }
   }
 
-  def mine(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
-    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
-
-    new SearchFilter(libId, context) {
+  def mine(library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
+    new SearchFilter(library, context) {
       def includeMine = true
       def includeFriends = false
       def includeOthers = false
     }
   }
 
-  def friends(libraryPublicId: Option[String] = None, context: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration) = {
-    val libId: Option[Id[Library]] = libraryPublicId.map { str => Library.decodePublicId(PublicId[Library](str)).get }
-
-    new SearchFilter(libId, context) {
+  def friends(library: LibraryContext = LibraryContext.None, context: Option[String] = None) = {
+    new SearchFilter(library: LibraryContext, context) {
       def includeMine = false
       def includeFriends = true
       def includeOthers = false

@@ -5,7 +5,7 @@ import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeAB
 import com.keepit.common.db.Id
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail._
-import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
+import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -39,7 +39,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
   "EmailTemplateSenderCommander" should {
     import com.keepit.common.mail.template.helpers.fullName
 
-    def sendAndTestEmail(tips: Seq[EmailTips] = Seq.empty)(implicit injector: Injector) = {
+    def sendAndTestEmail(tips: Seq[EmailTip] = Seq.empty)(implicit injector: Injector) = {
       val testFactory = inject[ShoeboxTestFactory]
       val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
         testFactory.createUsers()
@@ -90,7 +90,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abook.addFriendRecommendationsExpectations(Id[User](3), Seq(1L, 2L, 4L).map(id => Id[User](id)))
 
-        val tips = Seq(EmailTips.FriendRecommendations)
+        val tips = Seq(EmailTip.FriendRecommendations)
         sendAndTestEmail(tips)
 
         db.readOnlyMaster { implicit s =>

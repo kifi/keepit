@@ -305,7 +305,7 @@ class InviteCommander @Inject() (
       log.info(s"[sendEmailInvitation(${userId},${c},})] invitation sent")
 
       val basicContact = BasicContact(email = c.email)
-      abookServiceClient.internKifiContact(userId, basicContact)
+      abookServiceClient.internKifiContacts(userId, basicContact)
 
       InviteStatus.sent(savedInvite)
     }
@@ -406,7 +406,7 @@ class InviteCommander @Inject() (
         val friendSocialUserInfo = db.readOnlyReplica { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
         Future.successful(Left(friendSocialUserInfo))
       case Right(emailAddress) => {
-        val friendRichContactFuture = abook.internKifiContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(Right(_))
+        val friendRichContactFuture = abook.internKifiContacts(userId, BasicContact(emailAddress, fullSocialId.name)).map { case Seq(richContact) => Right(richContact) }
         friendRichContactFuture
       }
     }

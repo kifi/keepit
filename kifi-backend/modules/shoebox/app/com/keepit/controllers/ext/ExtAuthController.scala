@@ -45,9 +45,6 @@ class ExtAuthController @Inject() (
 
   def start = JsonAction.authenticatedParseJson { implicit request =>
     val userId = request.userId
-    val identity = request.identity
-    log.info(s"start id: $userId, social id: ${identity.identityId}")
-
     val json = request.body
     val (userAgent, version, installationIdOpt) =
       (UserAgent.fromString(request.headers.get("user-agent").getOrElse("")),

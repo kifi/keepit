@@ -1,8 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
@@ -17,7 +16,7 @@ import scala.concurrent.Future
 import play.api.libs.json.Json
 
 class ScraperAdminController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   uriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
@@ -26,19 +25,19 @@ class ScraperAdminController @Inject() (
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo,
   scraperServiceClient: ScraperServiceClient)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
   val MAX_COUNT_DISPLAY = 25
 
-  def status = AdminJsonAction.authenticatedAsync { implicit request =>
+  def status = AdminUserAction.async { implicit request =>
     Future.sequence(scraperServiceClient.status()).map { res =>
       Ok(Json.toJson(res.map { case (_, jobs) => jobs }.flatten))
     }
   }
 
-  def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
+  def searchScraper = AdminUserPage { implicit request => Ok(html.admin.searchScraper()) }
 
-  def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def scraperRequests(stateFilter: Option[String] = None) = AdminUserPage.async { implicit request =>
     val resultsFuture = db.readOnlyReplicaAsync { implicit ro =>
       (
         scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
@@ -54,7 +53,7 @@ class ScraperAdminController @Inject() (
     } yield Ok(html.admin.scraperRequests(assigned, overdue, assignedCount, overdueCount, threadDetails))
   }
 
-  def scrapeArticle(url: String) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def scrapeArticle(url: String) = AdminUserPage.async { implicit request =>
     scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
       articleOpt match {
         case None => Ok(s"Failed to scrape $url")
@@ -63,7 +62,7 @@ class ScraperAdminController @Inject() (
     }
   }
 
-  def rescrapeByRegex() = AdminHtmlAction.authenticated { implicit request =>
+  def rescrapeByRegex() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     val urlRegex = body.getOrElse("urlRegex", "")
     val withinMinutes = body.getOrElse("withinMinutes", "8").toInt
@@ -75,18 +74,18 @@ class ScraperAdminController @Inject() (
     )
   }
 
-  def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
+  def getScraped(id: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     val articleOption = articleStore.get(id)
     val (uri, scrapeInfoOption) = db.readOnlyReplica { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
     Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
   }
 
-  def getProxies = AdminHtmlAction.authenticated { implicit request =>
+  def getProxies = AdminUserPage { implicit request =>
     val proxies = db.readOnlyReplica { implicit session => httpProxyRepo.all() }
     Ok(html.admin.proxies(proxies))
   }
 
-  def saveProxies = AdminHtmlAction.authenticated { implicit request =>
+  def saveProxies = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
     db.readWrite { implicit session =>
       for (key <- body.keys.filter(_.startsWith("alias_")).map(_.substring(6))) {
@@ -122,7 +121,7 @@ class ScraperAdminController @Inject() (
     Redirect(routes.ScraperAdminController.getProxies)
   }
 
-  def getPornDetectorModel = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def getPornDetectorModel = AdminUserPage.async { implicit request =>
     val modelFuture = scraperServiceClient.getPornDetectorModel()
     for (model <- modelFuture) yield Ok(Json.toJson(model))
   }

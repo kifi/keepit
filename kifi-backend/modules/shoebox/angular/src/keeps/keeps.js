@@ -8,14 +8,37 @@ angular.module('kifi')
     $scope.me = profileService.me;
     $scope.data = {draggedKeeps: []};
 
+    // Whenever new keeps are loaded or when tags have been added or removed,
+    // sync up the keep tags with the current list of tags.
+    function joinTags() {
+      var keeps = $scope.keeps;
+      var tags = tagService.allTags;
+      if (keeps && keeps.length && tags.length) {
+        var tagsById = _.indexBy(tags, 'id');
+        var toTag = function (id) {
+          return tagsById[id];
+        };
+
+        _.forEach(keeps, function (keep) {
+          var newTagList = _(keep.collections).union(keep.tags).map(toTag).compact().value();
+          if (keep.tagList) {
+            util.replaceArrayInPlace(keep.tagList, newTagList);
+          } else {
+            keep.tagList = newTagList;
+          }
+        });
+      }
+    }
     $scope.$watch(function () {
-      // TODO: is this too inefficient? Will this be called too many times?
-      return $scope.keeps.length + ',' + tagService.allTags.length;
-    }, function () {
-      if ($scope.keeps && $scope.keeps.length && tagService.allTags.length) {
-        util.joinTags($scope.keeps, tagService.allTags);
+      return $scope.keepsLoading;
+    }, function (newVal, oldVal) {
+      if (!newVal && oldVal) {
+        joinTags();
       }
     });
+    $scope.$watch(function () {
+      return tagService.allTags.length;
+    }, joinTags);
 
     $scope.dragKeeps = function (keep, event, mouseX, mouseY, selection) {
       var draggedKeeps = selection.getSelected($scope.keeps);
@@ -193,7 +216,7 @@ angular.module('kifi')
         scope.disableEditTags = function () {
           scope.editingTags = false;
         };
-        
+
 
         //
         // Watches and listeners.
@@ -208,8 +231,8 @@ angular.module('kifi')
         scope.$watch(function () {
           return scope.editMode.enabled;
         }, function(enabled) {
-          if (!enabled) { 
-            scope.selection.unselectAll(); 
+          if (!enabled) {
+            scope.selection.unselectAll();
           }
         });
 

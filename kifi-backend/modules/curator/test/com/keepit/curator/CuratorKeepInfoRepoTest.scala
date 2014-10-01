@@ -39,5 +39,31 @@ class CuratorKeepInfoRepoTest extends Specification with CuratorTestInjector {
 
       }
     }
+
+    "get user with keep counts correctly" in {
+      withDb() { implicit injector =>
+        val repo = inject[CuratorKeepInfoRepo]
+        db.readWrite { implicit s =>
+          repo.save(CuratorKeepInfo(
+            uriId = Id[NormalizedURI](1),
+            userId = Id[User](42),
+            keepId = Id[Keep](1),
+            libraryId = Some(Id[Library](1)),
+            state = CuratorKeepInfoStates.ACTIVE,
+            discoverable = false))
+          repo.save(CuratorKeepInfo(
+            uriId = Id[NormalizedURI](2),
+            userId = Id[User](42),
+            keepId = Id[Keep](2),
+            libraryId = Some(Id[Library](2)),
+            state = CuratorKeepInfoStates.INACTIVE,
+            discoverable = false))
+        }
+        db.readOnlyMaster { implicit session =>
+          repo.getUsersWithKeepsCounts()
+        } === Seq((Id[User](42), 1))
+      }
+    }
+
   }
 }

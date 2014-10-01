@@ -1,7 +1,8 @@
 package com.keepit.controllers.ext
 
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.search.engine.result.KifiShardResult
-import com.keepit.test.{ SearchApplication, SearchTestInjector }
+import com.keepit.test.SearchTestInjector
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
@@ -11,12 +12,10 @@ import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthent
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
-import akka.actor.ActorSystem
 import com.keepit.search._
-import com.keepit.search.index.{ IndexStore, VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
+import com.keepit.search.index._
 import com.keepit.social.BasicUser
 import com.keepit.search.sharding.Shard
-import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import org.apache.lucene.search.{ Explanation, Query }
@@ -32,14 +31,15 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
       FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
       FixedResultIndexModule(),
-      PlayAppConfigurationModule()
+      PlayAppConfigurationModule(),
+      FakeCryptoModule()
     )
   }
 
   "ExtSearchController" should {
     "search keeps" in {
       withInjector(modules: _*) { implicit injector =>
-        val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).toString
+        val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
@@ -97,7 +97,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "experts":[]
           }
         """)
-        println(Json.parse(contentAsString(result)).toString)
+        // println(Json.parse(contentAsString(result)).toString) // can be removed?
         Json.parse(contentAsString(result)) === expected
       }
     }
@@ -107,7 +107,9 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
@@ -162,8 +164,7 @@ class FixedResultSearchCommander extends SearchCommander {
       Set(100, 220), // idFilter
       false, // mayHaveMoreHits
       true, //show
-      Some(Id[SearchConfigExperiment](10)), //searchExperimentId
-      Seq.empty[JsObject] // experts
+      Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     ))
   )
 
@@ -201,7 +202,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    libraryContextFuture: Future[LibraryContext],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -216,19 +217,12 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
-    library: Option[String],
+    library: LibraryContext,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult = ???
 
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
-
-  def langDetect(query: String, acceptLangs: Seq[String]): Future[Lang] = ???
-
-  def distLangDetect(shards: Set[Shard[NormalizedURI]], query: String, prior: Map[Lang, Double]): Future[Map[Lang, Double]] = ???
-
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }

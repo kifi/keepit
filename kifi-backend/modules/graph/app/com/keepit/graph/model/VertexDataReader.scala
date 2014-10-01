@@ -176,3 +176,15 @@ case object AddressBookReader extends VertexKind[AddressBookReader] {
   implicit val writes = Writes[AddressBookReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[AddressBookReader]] { json => (json \ "id").validate.map(AddressBookData(_)) }
 }
+
+trait LibraryReader extends VertexDataReader {
+  type V = LibraryReader
+  def kind = LibraryReader
+}
+
+case object LibraryReader extends VertexKind[LibraryReader] {
+  val header = 11.toByte
+  def apply(rawDataReader: RawDataReader): LibraryReader = ???
+  implicit val writes = Writes[LibraryReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[LibraryReader]] { json => (json \ "id").validate.map(LibraryData(_)) }
+}

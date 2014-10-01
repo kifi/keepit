@@ -30,8 +30,6 @@ case class Keep(
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,isPrimary:$isPrimary,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
-
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
@@ -75,7 +73,7 @@ object Keep {
     }
   }
 
-  def visibilityToIsPrivate(visibility: LibraryVisibility) = {
+  private def visibilityToIsPrivate(visibility: LibraryVisibility) = {
     visibility match {
       case LibraryVisibility.PUBLISHED | LibraryVisibility.DISCOVERABLE => false
       case LibraryVisibility.SECRET => true

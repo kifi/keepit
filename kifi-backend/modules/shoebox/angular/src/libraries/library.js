@@ -3,19 +3,22 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', 'keepDecoratorService','$routeParams', 'libraryService', 'util', '$location',
-  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util, $location) {
+  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
+  'modalService', 'profileService', 'util',
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
+            modalService, profileService, util) {
     //
     // Internal data.
     //
-    var username = $routeParams.username;
-    var librarySlug = $routeParams.librarySlug;
     var selectedCount = 0;
-    
+    var prePopulated = false;
+
 
     //
     // Scope data.
     //
+    $scope.username = $routeParams.username;
+    $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
@@ -50,21 +53,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.manageLibrary = function () {
-      libraryService.libraryState = {
-        library: $scope.library,
-        returnAction: function () {
-          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
-            if (data.library.slug !== librarySlug) {
-              $location.path('/' + username + '/' + data.library.slug);
-            }
-          });
-        }
-      };
-      $rootScope.$emit('showGlobalModal', 'manageLibrary');
-    };
-
     $scope.getSubtitle = function () {
       if ($scope.loading || !$scope.library) {
         return 'Loading...';
@@ -97,7 +85,7 @@ angular.module('kifi')
     // Watches and listeners.
     //
     $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if (libSlug === librarySlug) {
+      if (libSlug === $scope.librarySlug) {
         $scope.keeps.unshift(keep);
       }
     });
@@ -110,19 +98,26 @@ angular.module('kifi')
     // librarySummaries has a few of the fields we need to draw the library.
     // Attempt to pre-populate the library object while we wait
     if (libraryService.librarySummaries) {
-      var path = '/' + username + '/' + librarySlug;
+      var path = '/' + $scope.username + '/' + $scope.librarySlug;
       var lib = _.find(libraryService.librarySummaries, function (elem) {
         return elem.url === path;
       });
 
       if (lib) {
         util.replaceObjectInPlace($scope.library, lib);
+        prePopulated = true;
       }
     }
 
     // Request for library object also retrieves an initial set of keeps in the library.
-    libraryService.getLibraryByUserSlug(username, librarySlug).then(function (library) {
-      util.replaceObjectInPlace($scope.library, library);
+    libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug).then(function (library) {
+      // If library information has already been prepopulated, extend the library object.
+      // Otherwise, replace library object completely with the newly fetched object.
+      if (prePopulated) {
+        _.assign($scope.library, library);
+      } else {
+        util.replaceObjectInPlace($scope.library, library);
+      }
 
       library.keeps.forEach(function (rawKeep) {
         var keep = new keepDecoratorService.Keep(rawKeep);
@@ -135,158 +130,5 @@ angular.module('kifi')
       $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
       $scope.loading = false;
     });
-  }
-])
-
-.directive('kfLibraryShareSearch', ['$document', 'friendService', 'keyIndices', 'libraryService',
-  function ($document, friendService, keyIndices, libraryService) {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        library: '='
-      },
-      templateUrl: 'libraries/libraryShareSearch.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        //
-        // Internal data.
-        //
-        var resultIndex = -1;
-
-        //
-        // Scope data.
-        //
-        scope.results = [];
-        scope.search = {};
-        scope.showDropdown = false;
-
-
-        //
-        // Internal methods.
-        //
-        function showDropdown() {
-          scope.showDropdown = true;
-          $document.on('click', onClick);
-          resultIndex = -1;
-          clearSelection();
-          element.on('keydown', processKeyEvent);
-        }
-
-        function hideDropdown() {
-          scope.showDropdown = false;
-          $document.off('click', onClick);
-          element.off('keydown', processKeyEvent);
-        }
-
-        function onClick(e) {
-          // Clicking outside the dropdown menu will close the menu.
-          if (!element.find(e.target)[0]) {
-            scope.$apply(function () {
-              scope.search.name = '';
-              hideDropdown();
-            });
-          }
-        }
-
-        function clearSelection () {
-          scope.results.forEach(function (result) {
-            result.selected = false;
-          });
-        }
-
-        function processKeyEvent (event) {
-          clearSelection();
-
-          function getNextIndex(index, direction) {
-            var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.results.length - 1) ? index : nextIndex;
-          }
-
-          switch (event.which) {
-            case keyIndices.KEY_UP:
-              resultIndex = getNextIndex(resultIndex, -1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_DOWN:
-              resultIndex = getNextIndex(resultIndex, 1);
-              scope.results[resultIndex].selected = true;
-              break;
-            case keyIndices.KEY_ENTER:
-              scope.shareLibrary(scope.results[resultIndex]);
-
-              // After sharing, reset index.
-              resultIndex = -1;
-              break;
-            case keyIndices.KEY_ESC:
-              hideDropdown();
-              break;
-          }
-        }
-
-        function populateDropDown(opt_query) {
-          libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
-            if (contacts && contacts.length) {
-              scope.results = contacts;
-
-              scope.results.forEach(function (result) {
-                if (result.id) {
-                  result.image = friendService.getPictureUrlForUser(result);
-                }
-              });
-
-              if (scope.results.length > 0) {
-                showDropdown();
-              } else {
-                hideDropdown();
-              }
-            } else {
-              // TODO(yiping): show backfill cards when length is less than 5.
-              scope.results = [];
-            }
-          });
-        }
-
-
-        //
-        // Scope methods.
-        //
-        scope.onInputFocus = function () {
-          // For empty state (when user has not inputted a query), show the contacts
-          // that the user has most recently sent messages to.
-          if (!scope.search.name) {
-            populateDropDown();
-          }
-        };
-
-        scope.change = _.debounce(function () {
-          populateDropDown(scope.search.name);
-        }, 200);
-
-        scope.shareLibrary = function (result) {
-          // For now, we are only supporting inviting one person at a time.
-          var invitees = [
-            {
-              type: result.id ? 'user' : 'email',
-              id: result.id ? result.id : result.email,
-              access: 'read_only'  // Right now, we're only supporting read-only access.
-            }
-          ];
-
-          // console.log('Library ID: ' + scope.library.id + ' Invitee: ' + JSON.stringify(invitees));
-
-          // TODO(yiping): implement error path.
-          libraryService.shareLibrary(scope.library.id, {'invites': invitees}).then(function () {
-            // Show sent indication.
-            // console.log('Library shared!');
-          });
-        };
-
-        scope.onResultHover = function (result) {
-          clearSelection();
-          result.selected = true;
-          resultIndex = _.indexOf(scope.results, result);
-        };
-      }
-    };
   }
 ]);

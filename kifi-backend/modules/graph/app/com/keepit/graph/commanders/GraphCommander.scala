@@ -43,28 +43,16 @@ class GraphCommander @Inject() (
   }
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
-    val result = uriScoreCache.get(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections))
-    result match {
-      case None => {
-        val wanderLust = Wanderlust.discovery(userId)
-        wanderingCommander.wander(wanderLust).map { journal =>
-          updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
-        }
-      }
-      case Some(data) => Future.successful(data)
+    val wanderLust = Wanderlust.discovery(userId).copy(steps = 50000)
+    wanderingCommander.wander(wanderLust).map { journal =>
+      updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
     }
   }
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
-    val result = userScoreCache.get(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections))
-    result match {
-      case None => {
-        val wanderLust = Wanderlust.discovery(userId)
-        wanderingCommander.wander(wanderLust).map { journal =>
-          updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
-        }
-      }
-      case Some(data) => Future.successful(data)
+    val wanderLust = Wanderlust.discovery(userId).copy(steps = 50000)
+    wanderingCommander.wander(wanderLust).map { journal =>
+      updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
     }
   }
 

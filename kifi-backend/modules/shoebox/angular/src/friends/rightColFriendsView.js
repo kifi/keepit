@@ -62,8 +62,8 @@ angular.module('kifi')
 }])
 
 .directive('kfPeopleYouMayKnowView',
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService',
-  function ($log, $q, $rootScope, $timeout, friendService, inviteService, savePymkService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'wtiService',
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -118,7 +118,7 @@ angular.module('kifi')
               });
             });
           });
-          
+
           scope.header = 'Find People to Invite';
         } else {
           scope.header = 'People You May Know';
@@ -177,8 +177,10 @@ angular.module('kifi')
       };
 
       scope.showMutualFriends = function (person) {
-        savePymkService.savePersonYouMayKnow(person);
-        $rootScope.$emit('showGlobalModal', 'seeMutualFriends');
+        modalService.open({
+          template: 'friends/seeMutualFriendsModal.tpl.html',
+          modalData: { savedPymk: person }
+        });
       };
     }
   };

@@ -24,7 +24,7 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
         route === "/internal/graph/getUriAndScorePairs?userId=42&avoidFirstDegreeConnections=true"
         val controller = inject[GraphController] //setup
         val manager = inject[GraphManager]
-        manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+        manager.update(allUpdates: _*)
         val result = controller.getListOfUriAndScorePairs(u42, true)(FakeRequest())
         status(result) must equalTo(OK)
         val content = contentAsString(result)
@@ -38,7 +38,7 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
         route === "/internal/graph/getUserAndScorePairs?userId=42&avoidFirstDegreeConnections=false"
         val controller = inject[GraphController] //setup
         val manager = inject[GraphManager]
-        manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+        manager.update(allUpdates: _*)
         val result = controller.getListOfUserAndScorePairs(u42, false)(FakeRequest())
         status(result) must equalTo(OK)
         val content = contentAsString(result)
@@ -51,7 +51,7 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
           route === "/internal/graph/getSociallyRelatedEntities?userId=42"
           val controller = inject[GraphController] //setup
           val manager = inject[GraphManager]
-          manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+          manager.update(allUpdates: _*)
           val result = controller.getSociallyRelatedEntities(u42)(FakeRequest())
           status(result) must equalTo(OK)
           val content = contentAsString(result)

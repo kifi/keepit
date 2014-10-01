@@ -114,6 +114,14 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
         }
+
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnlyMaster { implicit s =>
+            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+          }
+        }
+
         db.readWrite { implicit s =>
           keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
         }
@@ -121,12 +129,12 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getBookmarkCount(coll1.id.get) === 1
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
         }
-        sessionProvider.doWithoutCreatingSessions {
-          db.readOnlyMaster { implicit s =>
-            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          }
-        }
+
+        coll2.isActive must beTrue
+        db.readWrite { implicit s =>
+          collectionRepo.collectionChanged(coll2.id.get, inactivateIfEmpty = true)
+        }.isActive must beFalse
+
       }
     }
     "separate collections by user" in {

@@ -7,7 +7,7 @@ import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ LDAInfo, LDAInfoRepo }
 import com.keepit.cortex.models.lda._
-import play.api.libs.json.Json
+import com.keepit.cortex.PublishingVersions
 
 import scala.collection.mutable
 
@@ -16,50 +16,20 @@ class LDAInfoCommander @Inject() (
     db: Database,
     wordRep: LDAWordRepresenter,
     topicInfoRepo: LDAInfoRepo,
-    ldaTopicWords: DenseLDATopicWords) {
+    topicWordsStore: LDATopicWordsStore) {
 
-  private var currentConfig = getAllConfigs(wordRep.version)
+  val ldaVersion = PublishingVersions.denseLDAVersion // all queries in this commander should query against this version
+  private val ldaTopicWords = topicWordsStore.get(MiscPrefix.LDA.topicWordsJsonFile, ldaVersion).get
+  private val numOfTopics: Int = ldaTopicWords.topicWords.length
+  def getLDADimension(): Int = numOfTopics
+
+  private var currentConfig = getLDAConfigsFromDB(ldaVersion)
 
   def ldaConfigurations: LDATopicConfigurations = currentConfig
-
-  val numOfTopics: Int = wordRep.lda.dimension
-  val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
 
   def getTopicName(topicId: Int): Option[String] = {
     val conf = currentConfig.configs(topicId.toString)
     if (conf.isNameable && conf.topicName != LDAInfo.DEFUALT_NAME) Some(conf.topicName) else None
-  }
-
-  private def getAllConfigs(version: ModelVersion[DenseLDA]) = {
-    val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
-
-    val updatedInfo = if (info.isEmpty) {
-      val dim = wordRep.lda.dimension
-      db.readWrite { implicit s =>
-        (0 until dim).foreach { i => topicInfoRepo.save(LDAInfo(version = version, dimension = dim, topicId = i)) }
-        topicInfoRepo.getAllByVersion(version)
-      }
-    } else info
-
-    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive, in.isNameable)) }.toMap
-    LDATopicConfigurations(confMap)
-  }
-
-  private def saveConfigs(version: ModelVersion[DenseLDA], config: Map[String, LDATopicConfiguration]): Unit = {
-    db.readWrite { implicit s =>
-      config.foreach {
-        case (topic, conf) =>
-          val model = topicInfoRepo.getByTopicId(version, topic.toInt)
-          topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive, isNameable = conf.isNameable).withUpdateTime(currentDateTime))
-      }
-    }
-  }
-
-  // consumers of lda service might query dim of some previous lda model
-  def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
-    ldaDimMap.getOrElseUpdate(version,
-      db.readOnlyReplica { implicit s => topicInfoRepo.getDimension(version).get }
-    )
   }
 
   val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
@@ -72,20 +42,12 @@ class LDAInfoCommander @Inject() (
     }.toMap
   }
 
-  def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
-    val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
-    currentConfig = newConfig
-    saveConfigs(wordRep.version, config)
-  }
-
-  def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
-    assume(topicId >= 0 && topicId < numOfTopics && topN >= 0)
-
+  private def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
     ldaTopicWords.topicWords(topicId).toArray.sortBy(-1f * _._2).take(topN)
   }
 
   def topicWords(fromId: Int, toId: Int, topN: Int): Map[Int, Seq[(String, Float)]] = {
-    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
+    assume(fromId <= toId && toId < numOfTopics && fromId >= 0 && topN >= 0)
 
     (fromId to toId).map { id =>
       (id, topicWords(id, topN))
@@ -93,8 +55,41 @@ class LDAInfoCommander @Inject() (
   }
 
   def unamedTopics(limit: Int): (Seq[LDAInfo], Seq[Map[String, Float]]) = {
-    val infos = db.readOnlyReplica { implicit s => topicInfoRepo.getUnamed(wordRep.version, limit) }
+    val infos = db.readOnlyReplica { implicit s => topicInfoRepo.getUnamed(ldaVersion, limit) }
     val words = infos.map { info => topicWords(topicId = info.topicId, topN = 50).toMap }
     (infos, words)
+  }
+
+  // edits from admin
+  def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
+
+    def saveConfigsToDB(version: ModelVersion[DenseLDA], config: Map[String, LDATopicConfiguration]): Unit = {
+      db.readWrite { implicit s =>
+        config.foreach {
+          case (topic, conf) =>
+            val model = topicInfoRepo.getByTopicId(version, topic.toInt)
+            topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive, isNameable = conf.isNameable).withUpdateTime(currentDateTime))
+        }
+      }
+    }
+
+    val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
+    currentConfig = newConfig
+    saveConfigsToDB(ldaVersion, config)
+  }
+
+  private def getLDAConfigsFromDB(version: ModelVersion[DenseLDA]) = {
+    val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
+
+    val updatedInfo = if (info.isEmpty) {
+      val dim = numOfTopics
+      db.readWrite { implicit s =>
+        (0 until dim).foreach { i => topicInfoRepo.save(LDAInfo(version = version, dimension = dim, topicId = i)) }
+        topicInfoRepo.getAllByVersion(version)
+      }
+    } else info
+
+    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive, in.isNameable)) }.toMap
+    LDATopicConfigurations(confMap)
   }
 }

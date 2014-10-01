@@ -11,15 +11,16 @@ import org.apache.lucene.index.Term
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 
+object KifiSearch {
+  @inline def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
+  @inline def createQueue(sz: Int) = new HitQueue(sz)
+}
+
 abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends DebugOption { self: Logging =>
 
   def execute(): KifiShardResult
 
-  @inline def createQueue(sz: Int) = new HitQueue(sz)
-
   @inline def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
-
-  @inline def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   def getKeepRecord(keepId: Long)(implicit decode: (Array[Byte], Int, Int) => KeepRecord): Option[KeepRecord] = {
     if (keepId >= 0) keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, keepId) else None
@@ -33,8 +34,8 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
     if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
-      val r = getKeepRecord(h.keepId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.keepId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.keepId, r.title.getOrElse(""), r.url, r.externalId)
+      val r = getKeepRecord(h.secondaryId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.secondaryId}"))
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
       // has a primary id (uri id) only
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
@@ -43,9 +44,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
   }
 
   def timing(): Unit = {
-    SafeFuture {
-      timeLogs.send()
-      if ((debugFlags & DebugOption.Timing.flag) != 0) log.info(timeLogs.toString)
-    }
+    SafeFuture { timeLogs.send() }
+    debugLog(timeLogs.toString)
   }
 }

@@ -23,6 +23,16 @@ class FakeFeedDigestEmailQueue extends FakeSQSQueue[SendFeedDigestToUserMessage]
     }.size
   }
 
+  override def nextWithLock(lockTimeout: FiniteDuration)(implicit ec: ExecutionContext) = synchronized {
+    Future.successful {
+      if (messages.nonEmpty) {
+        val msg = messages.dequeue()
+        lockedMessages(msg.id) = msg
+        Some(msg)
+      } else None
+    }
+  }
+
   override def nextBatchWithLock(maxBatchSize: Int, lockTimeout: FiniteDuration)(implicit ec: ExecutionContext) = synchronized {
     Future.successful(for (i <- 1 to maxBatchSize if messages.nonEmpty) yield {
       val msg = messages.dequeue()
@@ -43,9 +53,7 @@ class FakeFeedDigestEmailQueue extends FakeSQSQueue[SendFeedDigestToUserMessage]
       throw new IllegalStateException(s"cannot consume message that's already been consumed $msgId")
 
     val msgOpt = lockedMessages.remove(msgId)
-    msgOpt.foreach { msg =>
-      consumedMessages(msgId) = msg
-    }
+    msgOpt.foreach { msg => consumedMessages(msgId) = msg }
   }
 
 }

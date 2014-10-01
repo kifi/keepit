@@ -7,14 +7,12 @@ angular.module('kifi')
   '$timeout',
   'friendService',
   'inviteService',
-  'savePymkService',
-  function ($rootScope, $timeout, friendService, inviteService, savePymkService) {
+  function ($rootScope, $timeout, friendService, inviteService) {
     return {
-      scope: {},
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/seeMutualFriends.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope/*, element, attrs*/) {
         scope.actionText = 'Add Friend';
         scope.clickable = true;
 
@@ -50,14 +48,7 @@ angular.module('kifi')
           scope.mutualFriendsPairs = mutualFriendsPairs;
         }
 
-        // Retrieve a person you may know and his mutual friends,
-        // and update the people displayed in the modal.
-        updateScopeValues(savePymkService.getSavedPersonYouMayKnow());
-        scope.$watch(function () {
-          return savePymkService.getSavedPersonYouMayKnow();
-        }, function (newVal/*, oldVal, scope*/) {
-          updateScopeValues(newVal);
-        });
+        updateScopeValues(scope.modalData.savedPymk);
 
         scope.addFriend = function (id) {
           if (!scope.clickable) {
@@ -74,19 +65,6 @@ angular.module('kifi')
             inviteService.expireSocialSearch();
           });
         };
-
-        // Force the modal scroll bar back up to the top.
-        // A 100ms delay is inserted to wait for the Main controller
-        // to respond to the 'showGlobalModal' event and display the
-        // modal (we cannot scroll hidden elements).
-        var mutualFriendsContainer = element.find('.kf-mutual-friends-friends');
-        $rootScope.$on('showGlobalModal', function (e, modal) {
-          if (modal === 'seeMutualFriends') {
-            $timeout(function () {
-              mutualFriendsContainer.scrollTop(0);
-            }, 100);
-          }
-        });
       }
     };
   }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Avocode 0.4.0 - http://avocode.com -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="26.5" height="34.5" view-box="0 0 26.5 34.5">
+    <desc>Created with Avocode</desc>
+    <path d="M 7 3 C 4.79 3, 3 4.79, 3 7 L 3 30 C 3 32.21, 4.79 34, 7 34 L 22 34 C 24.21 34, 26 32.21, 26 30 L 26 7 C 26 4.79, 24.21 3, 22 3 L 7 3 Z" fill="#ffffff" stroke="#ccdffa" stroke-width="1" />
+    <path d="M 4 0 C 1.79 0, 0 1.79, 0 4 L 0 27 C 0 29.21, 1.79 31, 4 31 L 19 31 C 21.21 31, 23 29.21, 23 27 L 23 4 C 23 1.79, 21.21 0, 19 0 L 4 0 Z" fill="#73c785" />
+</svg>

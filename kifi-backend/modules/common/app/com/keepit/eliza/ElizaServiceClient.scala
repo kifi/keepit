@@ -158,6 +158,7 @@ class ElizaServiceClientImpl @Inject() (
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+  var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
 
@@ -171,6 +172,9 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   }
 
   def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory): Future[Id[MessageHandle]] = {
+    userIds.map { id =>
+      inbox = (id, category, linkUrl, imageUrl) +: inbox
+    }
     val p = Promise.successful(Id[MessageHandle](42.toLong))
     p.future
   }

@@ -3,12 +3,12 @@ package com.keepit.search.sharding
 import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.zookeeper.ServiceInstance
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ DistributedSearchServiceClient, SearchServiceClient }
 import com.keepit.common.logging.Logging
 
 trait Sharding { self: Logging =>
 
-  val searchClient: SearchServiceClient
+  val searchClient: DistributedSearchServiceClient
 
   def distributionPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int = Int.MaxValue): (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]) = {
     // NOTE: Remote-only may actually loop back to the current instance. We don't check it for now.

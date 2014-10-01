@@ -2,12 +2,14 @@ package com.keepit.commanders
 
 import java.io.File
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
@@ -46,7 +48,9 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     AbuseControlModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule()
   )
 
   "RawKeepImporter" should {
@@ -67,7 +71,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
-          println(bookmarks)
+          // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get
@@ -97,7 +101,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           val bookmarks = keepRepo.all
           bookmarks.count(k => k.libraryId == lib.id) === 5
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
-          println(bookmarks)
+          // println(bookmarks) // can be removed?
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get

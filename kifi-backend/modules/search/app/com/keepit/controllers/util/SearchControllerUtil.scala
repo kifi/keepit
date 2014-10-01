@@ -1,29 +1,37 @@
 package com.keepit.controllers.util
 
 import com.keepit.common.concurrent.ExecutionContext._
+import com.keepit.common.controller.{ UserRequest, MaybeUserRequest }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.model.{ Library, User, NormalizedURI }
+import com.keepit.controllers.util.SearchControllerUtil._
+import com.keepit.model._
 import com.keepit.search.engine.result.KifiPlainResult
-import com.keepit.search.result.{ ResultUtil, DecoratedResult, KifiSearchResult }
+import com.keepit.search.result.{ ResultUtil, KifiSearchResult }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.search.result.DecoratedResult
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
 import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
+
+import scala.util.{ Failure, Success }
+import com.keepit.search.graph.keep.{ KeepRecord, KeepFields }
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
 }
 
 trait SearchControllerUtil {
+
+  val shoeboxClient: ShoeboxServiceClient
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
 
@@ -35,7 +43,7 @@ trait SearchControllerUtil {
     })
   }
 
-  def uriSummaryInfoFuture(shoeboxClient: ShoeboxServiceClient, plainResultFuture: Future[KifiPlainResult]): Future[String] = {
+  def uriSummaryInfoFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = {
     plainResultFuture.flatMap { r =>
       val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
       if (uriIds.nonEmpty) {
@@ -74,17 +82,16 @@ trait SearchControllerUtil {
       decoratedResult.show,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
+      Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher, shoebox: ShoeboxServiceClient)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
+  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
     augmentationCommander.augmentation(augmentationRequest).flatMap { augmentationResponse =>
-      val futureBasicUsers = shoebox.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
+      val futureBasicUsers = shoeboxClient.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
       val libraryNames = getLibraryNames(librarySearcher, augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptIn).flatten).toSeq)
       val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
       val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
@@ -105,7 +112,39 @@ trait SearchControllerUtil {
 
   def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
     libraryIds.map { libId =>
-      libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
+      libId -> LibraryRecord.retrieve(librarySearcher, libId).get.name
     }.toMap
+  }
+
+  def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
+    request match {
+      case userRequest: UserRequest[_] => (userRequest.userId, userRequest.experiments)
+      case _ => (nonUser, Set.empty[ExperimentType])
+    }
+  }
+
+  def getAcceptLangs(requestHeader: RequestHeader): Seq[String] = requestHeader.acceptLanguages.map(_.code)
+
+  def getLibraryContextFuture(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryContext] = {
+    library match {
+      case Some(libPublicId) =>
+        Library.decodePublicId(PublicId[Library](libPublicId)) match {
+          case Success(libId) =>
+            val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
+            (auth, libraryAccess) match {
+              case (Some(_), Some(Array(libPublicIdInCookie, hashedPassPhrase))) if (libPublicIdInCookie == libPublicId) =>
+                shoeboxClient.canViewLibrary(libId, None, auth, Some(HashedPassPhrase(hashedPassPhrase))).map { authorized =>
+                  if (authorized) LibraryContext.Authorized(libId.id) else LibraryContext.NotAuthorized(libId.id)
+                }
+              case _ =>
+                Future.successful(LibraryContext.NotAuthorized(libId.id))
+            }
+          case Failure(e) =>
+            log.warn(s"invalid library public id: $libPublicId", e)
+            Future.successful(LibraryContext.Invalid)
+        }
+      case _ =>
+        Future.successful(LibraryContext.None)
+    }
   }
 }

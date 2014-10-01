@@ -8,6 +8,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.test.{ FakeRepoWithId, FakeServiceClient }
 import org.joda.time.DateTime
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Future, Promise }
 
 import play.api.libs.json.{ JsArray, Json, JsObject }
@@ -75,10 +76,11 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val keepDiscoveryRepoAccess = new FakeKeepDiscoveryRepoAccess()
   val rekeepRepoAccess = new FakeReKeepRepoAccess()
 
-  var eventsRecorded: Int = 0
+  val trackedEvents = ArrayBuffer[HeimdalEvent]()
+  def eventsRecorded: Int = synchronized(trackedEvents.size)
 
   def trackEvent(event: HeimdalEvent): Unit = synchronized {
-    eventsRecorded = eventsRecorded + 1
+    trackedEvents += event
   }
 
   def eventCount: Int = eventsRecorded

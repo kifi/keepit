@@ -25,7 +25,7 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
         val graphCommander = inject[GraphCommander]
         val manager = inject[GraphManager]
 
-        manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+        manager.update(userUpdate, userConnectionGraphUpdate0, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
         val res1 = Await.result(graphCommander.getConnectedUriScores(u42, true), Duration.Inf)
 
@@ -44,7 +44,7 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
         val graphCommander = inject[GraphCommander]
         val manager = inject[GraphManager]
 
-        manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
+        manager.update(userUpdate, userConnectionGraphUpdate0, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
         val res2 = Await.result(graphCommander.getConnectedUserScores(u42, false), Duration.Inf)
 

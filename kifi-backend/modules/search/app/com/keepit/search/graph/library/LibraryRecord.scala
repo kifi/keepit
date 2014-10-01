@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.Library
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
+import com.keepit.search.Searcher
 
 case class LibraryRecord(name: String, description: Option[String], id: Id[Library])
 
@@ -37,5 +38,9 @@ object LibraryRecord {
     val description = Some(in.readString()).filter(_.nonEmpty)
     val id = Id[Library](in.readLong())
     LibraryRecord(title, description, id)
+  }
+
+  def retrieve(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
+    librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 }

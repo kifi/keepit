@@ -16,6 +16,7 @@ import org.joda.time.DateTime
 object RecoAttributionKind {
   object Keep extends RecoAttributionKind("keep")
   object Topic extends RecoAttributionKind("topic")
+  object Library extends RecoAttributionKind("library")
 }
 
 @json case class RecoKind(value: String)
@@ -38,7 +39,7 @@ object RecoKind {
   url: Option[String],
   when: Option[DateTime])
 
-@json case class RecoMetaData(
+@json case class RecoMetaData( //WARNING, adding another field here will break clients, due to the way the @json macro behaves with classes with only one field
   attribution: Seq[RecoAttributionInfo])
 
 trait RecoItemInfo
@@ -74,7 +75,8 @@ object RecoItemInfo {
 case class FullRecoInfo(
   kind: RecoKind,
   metaData: Option[RecoMetaData],
-  itemInfo: RecoItemInfo)
+  itemInfo: RecoItemInfo,
+  explain: Option[String] = None)
 
 object FullRecoInfo {
   implicit val writes = Json.writes[FullRecoInfo]

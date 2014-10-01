@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
@@ -9,6 +10,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -31,6 +34,8 @@ import scala.concurrent.duration._
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
+    FakeUserActionsModule(),
+    FakeHttpClientModule(),
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
@@ -39,6 +44,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
@@ -124,7 +131,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
         val controller = inject[KeepsController]
-        inject[FakeActionAuthenticator].setUser(user1)
+        inject[FakeUserActionsHelper].setUser(user1)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest()
@@ -183,7 +190,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
 
-        val (user, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
+        val (user1, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
@@ -213,9 +220,11 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         }
 
         val keeps = db.readWrite { implicit s =>
-          keepRepo.getByUser(user.id.get, None, None, 100)
+          keepRepo.getByUser(user1.id.get, None, None, 100)
         }
         keeps.size === 2
+
+        inject[FakeUserActionsHelper].setUser(user1)
 
         val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
@@ -274,7 +283,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
         val controller = inject[KeepsController]
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
@@ -347,7 +356,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
@@ -397,7 +406,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allCollections().toString
         path === "/site/collections/all"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("GET", path)
         val result = controller.allCollections("last_kept")(request)
@@ -458,7 +467,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allCollections().url
         path === "/site/collections/all"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("GET", path)
         val result = controller.allCollections("num_keeps")(request)
@@ -498,7 +507,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withBody(json)
         val result = controller.keepMultiple()(request)
@@ -537,7 +546,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         path === "/site/collections/create"
 
         val json = Json.obj("name" -> JsString("my tag"))
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = inject[KeepsController].saveCollection()(request)
@@ -568,7 +577,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.saveCollection().toString
 
         val json = Json.obj("name" -> JsString("my tag is very very very very very very very very very very very very very very very very very long"))
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
         val result = inject[KeepsController].saveCollection()(request)
@@ -589,7 +598,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val keepJson = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
@@ -651,7 +660,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val controller = inject[KeepsController]
         val keepJson = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
@@ -714,7 +723,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           (user1, collectionIds, tagA, tagB, tagC, tagD)
         }
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
 
         val inputJson1 = Json.obj(
           "tagId" -> tagA.externalId,

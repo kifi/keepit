@@ -1,6 +1,10 @@
 package com.keepit.commanders
 
+import com.keepit.common.performance._
+
 import java.awt.image.BufferedImage
+
+import com.keepit.common.logging.Logging
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
@@ -26,7 +30,7 @@ class ScraperURISummaryCommanderImpl @Inject() (
     embedlyClient: EmbedlyClient,
     uriImageStore: S3URIImageStore,
     airbrake: AirbrakeNotifier,
-    callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander {
+    callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander with Logging {
 
   private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
     val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
@@ -47,17 +51,14 @@ class ScraperURISummaryCommanderImpl @Inject() (
    */
   private def internImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURI): Option[ImageInfo] = {
     uriImageStore.storeImage(info, image, nUri) match {
-      case Success(result) => {
+      case Success(result) =>
         val (url, size) = result
         val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
-
         callback.syncSaveImageInfo(imageInfoWithUrl)
         Some(imageInfoWithUrl)
-      }
-      case Failure(ex) => {
+      case Failure(ex) =>
         airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
         None
-      }
     }
   }
 
@@ -77,42 +78,59 @@ class ScraperURISummaryCommanderImpl @Inject() (
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+    val watch = Stopwatch(s"[embedly] asking for $nUri with minSize $minSize, descriptionOnly $descriptionOnly")
+    val fullEmbedlyInfo = embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+      watch.logTimeWith(s"got info: $embedlyInfoOpt") //this could be lots of logging, should remove it after problems resolved
 
       val summary = for {
         nUriId <- nUri.id
         embedlyInfo <- embedlyInfoOpt
       } yield {
 
-        callback.syncSavePageInfo(embedlyInfo.toPageInfo(nUriId))
+        //here we call back shoebox, in the middle of shoebox calling us, right?
+        timing(s"[embedly] syncSavePageInfo for uri ${nUriId.id}") {
+          callback.syncSavePageInfo(embedlyInfo.toPageInfo(nUriId))
+        }
+        watch.logTimeWith(s"saved page info")
 
         if (descriptionOnly) {
           Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
         } else {
           val images = embedlyInfo.buildImageInfo(nUriId)
-          val nonBlankImages = images.filter { image =>
-            image.url map (ScraperURISummaryCommander.filterImageByUrl(_)) getOrElse false
-          }
+          val nonBlankImages = images.filter { image => image.url.exists(ScraperURISummaryCommander.filterImageByUrl) }
           val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)
 
-          smallImages.foreach { fetchAndInternImage(nUri, _) }
+          timing(s"fetching ${smallImages.size} small images") {
+            //Why are we fetching all those small images? Why do we do in in sync?
+            smallImages.foreach { fetchAndInternImage(nUri, _) }
+          }
+          watch.logTimeWith(s"all ${smallImages.size} small images")
 
           selectedImageOpt match {
-            case None => Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
+            case None =>
+              watch.logTimeWith(s"no selected image")
+              Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
             case Some(image) =>
-              fetchAndInternImage(nUri, image) map { imageInfoOpt =>
+              watch.logTimeWith(s"got a selected image : $image")
+              val future = fetchAndInternImage(nUri, image) map { imageInfoOpt =>
                 val urlOpt = imageInfoOpt.flatMap(getS3URL(_, nUri))
                 val widthOpt = imageInfoOpt.flatMap(_.width)
                 val heightOpt = imageInfoOpt.flatMap(_.height)
                 Some(URISummary(urlOpt, embedlyInfo.title, embedlyInfo.description, widthOpt, heightOpt))
               }
+              future.onComplete { res =>
+                watch.logTimeWith(s"[success = ${res.isSuccess}}] fetched a selected image for : $image")
+              }
+              future
           }
         }
       }
-
       summary getOrElse Future.successful(None)
-
     }
+    fullEmbedlyInfo.onComplete { res =>
+      watch.stop()
+    }
+    fullEmbedlyInfo
   }
 
 }

@@ -63,23 +63,26 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       url = url
     )
 
-  def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float) = {
+  val defaultAllScores = UriScores(socialScore = 1.0f,
+    popularityScore = 1.0f,
+    overallInterestScore = 1.0f,
+    recentInterestScore = 1.0f,
+    recencyScore = 1.0f,
+    priorScore = 1.0f,
+    rekeepScore = 1.0f,
+    curationScore = None,
+    multiplier = Some(1.0f),
+    discoveryScore = 1.0f,
+    libraryInducedScore = Some(0f))
+
+  def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float, allScores: UriScores = defaultAllScores) = {
     val userId = Id[User](userIdInt)
     UriRecommendation(
       uriId = Id[NormalizedURI](uriId),
       userId = userId,
       masterScore = masterScore,
       state = UriRecommendationStates.ACTIVE,
-      allScores = UriScores(socialScore = 1.0f,
-        popularityScore = 1.0f,
-        overallInterestScore = 1.0f,
-        recentInterestScore = 1.0f,
-        recencyScore = 1.0f,
-        priorScore = 1.0f,
-        rekeepScore = 1.0f,
-        curationScore = None,
-        multiplier = Some(1.0f),
-        discoveryScore = 1.0f),
+      allScores = allScores,
       delivered = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId))
   }
@@ -102,7 +105,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         rekeepScore = 1.0f,
         curationScore = None,
         multiplier = Some(1.0f),
-        discoveryScore = 1.0f),
+        discoveryScore = 1.0f,
+        libraryInducedScore = Some(0f)),
       delivered = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId))
   }
@@ -132,7 +136,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeUserAttribution(userId: Id[User]) = {
     UserAttribution(
       friends = Seq.empty,
-      others = 5
+      others = 5,
+      None
     )
   }
 
@@ -141,9 +146,9 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeKeepAttribution() = KeepAttribution(keeps = Seq.empty)
 
   def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String, wc: Int = 250,
-    summaryImageWidth: Option[Int] = Some(700), summaryImageHeight: Option[Int] = Some(500)) = {
+    summaryImageWidth: Option[Int] = Some(700), summaryImageHeight: Option[Int] = Some(500), allScores: UriScores = defaultAllScores) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
-    val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore)
+    val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore, allScores)
     val uriSummary = URISummary(
       title = Some("The Personalized Web is Transforming our Relationship with Tech"),
       description = Some("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc nec augue a erat interdum varius." +

@@ -100,8 +100,8 @@ trait GraphTestHelper extends SearchTestInjector {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
     val (privateEdges, publicEdges) = edges.partition { case (uri, user, _) => (uri.id.get.id + user.id.get.id) % 2 == 0 }
-    val bookmarks = fakeShoeboxServiceClient.saveBookmarksByEdges(privateEdges, isPrivate = mixPrivate && true, source = source) ++
-      fakeShoeboxServiceClient.saveBookmarksByEdges(publicEdges, isPrivate = mixPrivate && false, source = source)
+    val bookmarks = fakeShoeboxServiceClient.saveBookmarksByEdges(privateEdges, isPrivate = mixPrivate, source = source) ++
+      fakeShoeboxServiceClient.saveBookmarksByEdges(publicEdges, isPrivate = false, source = source)
     bookmarks.toList
   }
 
