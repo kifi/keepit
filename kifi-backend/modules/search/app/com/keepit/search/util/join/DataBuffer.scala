@@ -71,15 +71,13 @@ class DataBuffer(maxPages: Int = 10000) {
   }
 
   def scan[T](reader: DataBufferReader)(f: DataBufferReader => T): Unit = {
-    var pageGlobalOffset = 0
-    _dataBuf.foreach { page =>
-      var byteOffset = 0
-      while (byteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + byteOffset, page, byteOffset)) {
-        val next = reader.next
+    _dataBuf.foldLeft(0) { (pageGlobalOffset, page) =>
+      var nextByteOffset = 0
+      while (nextByteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + nextByteOffset, page, nextByteOffset)) {
+        nextByteOffset = reader.next
         f(reader)
-        byteOffset = next
       }
-      pageGlobalOffset += DataBuffer.PAGE_SIZE
+      pageGlobalOffset + DataBuffer.PAGE_SIZE
     }
   }
 
