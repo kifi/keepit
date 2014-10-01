@@ -17,7 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SharingUserInfo, SearchServiceClient }
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -242,8 +242,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserId: Id[User], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
-    val sharingInfosFuture = searchClient.sharingUserInfo(perspectiveUserId, keeps.map(_.uriId))
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
+    val sharingInfosFuture = perspectiveUserIdOpt match {
+      case Some(userId) =>
+        searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+      case None =>
+        Future.successful(Seq[SharingUserInfo]())
+    }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
     })
@@ -314,7 +319,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(userId, keeps).map { keepInfos =>
+        decorateKeepsIntoKeepInfos(Some(userId), keeps).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)

@@ -50,7 +50,7 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def createFullLibraryInfo(userId: Id[User], library: Library): Future[FullLibraryInfo] = {
+  def createFullLibraryInfo(userIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
     val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
@@ -65,7 +65,7 @@ class LibraryCommander @Inject() (
       (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }
 
-    keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(userId, keeps).map { keepInfos =>
+    keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(userIdOpt, keeps).map { keepInfos =>
       FullLibraryInfo(
         id = Library.publicId(lib.id.get),
         name = lib.name,
