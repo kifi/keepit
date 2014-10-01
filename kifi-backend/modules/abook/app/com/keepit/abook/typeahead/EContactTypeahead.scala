@@ -36,28 +36,33 @@ class EContactTypeahead @Inject() (
     s"$name ${info.email.address}"
   }
 
-  def refresh(userId: Id[User]): Future[PrefixFilter[EContact]] = {
-    build(userId).map { filter =>
-      cache.set(EContactTypeaheadKey(userId), filter)
-      store += (userId -> filter)
-      log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
-      filter
+  protected def create(userId: Id[User]) = {
+    getAllInfos(userId).map { allInfos =>
+      val filter = buildFilter(userId, allInfos)
+      log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
+      makeTypeahead(userId, filter)
     }(ExecutionContext.fj)
   }
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
-    cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
-      val res = store.getWithMetadata(userId)
-      res match {
-        case Some((filter, meta)) =>
+  protected def invalidate(typeahead: PersonalTypeahead[User, EContact, EContact]): Unit = {
+    val userId = typeahead.ownerId
+    val filter = typeahead.filter
+    store += (userId -> filter)
+    cache.set(EContactTypeaheadKey(userId), filter)
+  }
+
+  protected def get(userId: Id[User]) = {
+    val filterOpt = cache.getOrElseOpt(EContactTypeaheadKey(userId)) {
+      store.getWithMetadata(userId).map {
+        case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
-            refresh(userId) // async
+            refresh(userId)
           }
-          Future.successful(filter) // return curr one
-        case None => refresh(userId)
+          filter
       }
     }
+    Future.successful(filterOpt.map(makeTypeahead(userId, _)))
   }
 
   def refreshAll(): Future[Unit] = {
@@ -72,13 +77,15 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
+  private def makeTypeahead(userId: Id[User], filter: PrefixFilter[EContact]) = PersonalTypeahead(userId, filter, getInfos)
+
   protected def getAllInfos(id: Id[User]): Future[Seq[(Id[EContact], EContact)]] = {
     db.readOnlyMasterAsync { implicit ro =>
       econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email)).map(contact => contact.id.get -> contact)
     }
   }
 
-  protected def getInfos(userId: Id[User], ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
+  protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
     if (ids.isEmpty) Future.successful(Seq.empty) else {
       db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
