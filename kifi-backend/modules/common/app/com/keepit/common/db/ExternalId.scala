@@ -13,7 +13,7 @@ object ExternalId {
 
   def verifyIdFormat(id: String): Unit = {
     if (!ExternalId.UUIDPattern.pattern.matcher(id).matches()) {
-      throw new Exception("external id [%s] does not match uuid pattern".format(id))
+      throw new Exception(s"external id $id does not match uuid pattern")
     }
   }
 
@@ -62,6 +62,7 @@ object ExternalId {
 
 trait SurrogateExternalId {
   val id: String
+  ExternalId.verifyIdFormat(id)
   override def toString = id
 }
 
@@ -86,9 +87,9 @@ abstract class SurrogateExternalIdCompanion[T <: SurrogateExternalId] {
         case Right(id) =>
           asOpt(id) match {
             case Some(extId) => Right(extId)
-            case None => Left(s"Unable to bind an ExternalId with $id")
+            case None => Left(s"Unable to bind aa SurrogateExternalId with $id")
           }
-        case _ => Left("Unable to bind an ExternalId")
+        case _ => Left("Unable to bind a SurrogateExternalId")
       }
     }
     override def unbind(key: String, id: T): String = {
@@ -100,7 +101,7 @@ abstract class SurrogateExternalIdCompanion[T <: SurrogateExternalId] {
     override def bind(key: String, value: String): Either[String, T] = {
       asOpt(value) match {
         case Some(extId) => Right(extId)
-        case None => Left(s"Unable to bind to ExternalID with $value")
+        case None => Left(s"Unable to bind to SurrogateExternalId with $value")
       }
     }
 
