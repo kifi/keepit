@@ -28,7 +28,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     }
     if (sum != 0.0f) {
       i = 0
-      while (i < totalSize) {
+      while (i < coreSize) {
         matchWeights(i) = matchWeights(i) / sum
         i += 1
       }
