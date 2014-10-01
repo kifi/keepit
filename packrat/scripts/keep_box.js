@@ -265,11 +265,6 @@ var keepBox = keepBox || (function () {
         onKeepEdit($view, 'imageIdx', i);
       }
     })
-    .on('click', '.kifi-keep-box-delete[href]', function (e) {
-      if (e.which === 1) {
-        deleteKeep($view, $(this));
-      }
-    })
     .on('click', '.kifi-keep-box-btn[href]', function (e) {
       if (e.which === 1) {
         if ($view.hasClass('kifi-dirty')) {
@@ -554,19 +549,6 @@ var keepBox = keepBox || (function () {
     } else {
       $title.val($title.attr('value')).focus().select();
     }
-  }
-
-  function deleteKeep($view, $btn) {
-    var libraryId = $view.find('.kifi-keep-box-lib').data('id');
-    var $progress = $btn.find('.kifi-keep-box-progress');
-    $btn.removeAttr('href').addClass('kifi-doing');
-    $box.data('unkeepPage')(libraryId, function (success) {
-      endProgress($progress, success);
-      if (success) {
-        hideAfter(1000);
-      }
-    });
-    updateProgress.call($progress[0], 0);
   }
 
   function createLibrary($view, $btn) {

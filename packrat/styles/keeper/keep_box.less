@@ -467,7 +467,6 @@
   padding: 6px 10px;
   background: #fffaf8;
 }
-.kifi-keep-box-delete,
 .kifi-keep-box-btn,
 .kifi-keep-box-create {
   position: absolute;
@@ -518,36 +517,8 @@
     transition: opacity .16s linear, transform .16s ease-in-out;
   }
 }
-@del-btn-width: 70px;
-.kifi-keep-box-delete {
-  width: @del-btn-width;
-  @bg-color: #c99;
-  background-color: @bg-color;
-  &:hover,
-  &:focus {
-    background-color: tint(@bg-color, 8%);
-    &:active {
-      background-color: shade(@bg-color, 4%);
-    }
-  }
-  &::before {
-    content: 'Delete';
-  }
-  &.kifi-doing::before,
-  &.kifi-done::before {
-    -webkit-transform: translate(30px);
-    transform: translate(30px);
-  }
-  &::after {
-    -webkit-transform: translate(-30px);
-    transform: translate(-30px);
-  }
-}
 .kifi-keep-box-btn {
   right: 0;
-  .kifi-keep-box-delete+& {
-    left: @del-btn-width;
-  }
   @bg-color: #999;
   background-color: @bg-color;
   transition: background-color .1s;
@@ -603,8 +574,7 @@
   bottom: 0;
   width: 0;
   background: #4daf7c;
-  &.kifi-secret,
-  .kifi-keep-box-delete>& {
+  &.kifi-secret {
     background: #e65b45;
   }
   .kifi-done>& {
