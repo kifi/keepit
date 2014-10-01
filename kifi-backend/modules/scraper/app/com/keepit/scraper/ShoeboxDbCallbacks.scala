@@ -52,7 +52,7 @@ class ShoeboxDbCallbackHelper @Inject() (
   }
   def syncSaveScrapeInfo(info: ScrapeInfo): Unit = await(saveScrapeInfo(info))
   def syncSavePageInfo(info: PageInfo): Unit = await(savePageInfo(info))
-  def syncSaveImageInfo(info: ImageInfo): ImageInfo = await(saveImageInfo(info))
+  def syncSaveImageInfo(info: ImageInfo): Unit = await(saveImageInfo(info))
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Seq[Keep] = await(getBookmarksByUriWithoutTitle(uriId))
   def syncGetLatestKeep(url: String): Option[Keep] = await(getLatestKeep(url))
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI = {
@@ -82,7 +82,7 @@ class ShoeboxDbCallbackHelper @Inject() (
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = shoeboxScraperClient.updateNormalizedURIState(uriId, state)
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
   def savePageInfo(info: PageInfo): Future[Unit] = shoeboxScraperClient.savePageInfo(info)
-  def saveImageInfo(info: ImageInfo): Future[ImageInfo] = shoeboxScraperClient.saveImageInfo(info)
+  def saveImageInfo(info: ImageInfo): Future[Unit] = shoeboxScraperClient.saveImageInfo(info)
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = shoeboxScraperClient.getBookmarksByUriWithoutTitle(uriId)
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def saveBookmark(bookmark: Keep): Future[Keep] = shoeboxScraperClient.saveBookmark(bookmark)
@@ -104,7 +104,7 @@ trait SyncShoeboxDbCallbacks {
   def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
   def syncSaveScrapeInfo(info: ScrapeInfo): Unit
   def syncSavePageInfo(info: PageInfo): Unit
-  def syncSaveImageInfo(info: ImageInfo): ImageInfo
+  def syncSaveImageInfo(info: ImageInfo): Unit
   def syncGetBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Seq[Keep]
   def syncGetLatestKeep(url: String): Option[Keep]
   def syncRecordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): NormalizedURI
@@ -120,7 +120,7 @@ trait ShoeboxDbCallbacks {
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def savePageInfo(info: PageInfo): Future[Unit]
-  def saveImageInfo(info: ImageInfo): Future[ImageInfo]
+  def saveImageInfo(info: ImageInfo): Future[Unit]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def getLatestKeep(url: String): Future[Option[Keep]]
   def saveBookmark(bookmark: Keep): Future[Keep]

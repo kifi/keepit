@@ -2,7 +2,8 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -25,7 +26,7 @@ case class LibraryPageInfo(
   pageSize: Int)
 
 class AdminLibraryController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     keepRepo: KeepRepo,
     normalizedURIRepo: NormalizedURIRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -35,9 +36,10 @@ class AdminLibraryController @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
-    db: Database) extends AdminController(actionAuthenticator) {
+    db: Database,
+    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
-  def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
+  def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30
     val (stats, totalCount) = db.readOnlyReplica { implicit session =>
       val stats = libraryRepo.page(page, size = pageSize).filter(_.visibility != LibraryVisibility.SECRET).map { lib =>
@@ -53,7 +55,7 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.libraries(info))
   }
 
-  def libraryView(libraryId: Id[Library]) = AdminHtmlAction.authenticated { implicit request =>
+  def libraryView(libraryId: Id[Library]) = AdminUserPage { implicit request =>
     val (library, owner, keepCount, contributors, followers) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
@@ -65,10 +67,10 @@ class AdminLibraryController @Inject() (
 
       (lib, owner, keepCount, contributors, followers)
     }
-    Ok(html.admin.library(library, owner, keepCount, contributors, followers))
+    Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId)))
   }
 
-  def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+  def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminUserPage { implicit request =>
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
     }
@@ -89,13 +91,13 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.libraryKeeps(library, owner, totalKeepCount, keepInfos, page, pageSize))
   }
 
-  def internUserSystemLibraries(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def internUserSystemLibraries(userId: Id[User]) = AdminUserPage { implicit request =>
     val res = libraryCommander.internSystemGeneratedLibraries(userId)
 
     Ok(res.toString)
   }
 
-  def internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+  def internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User]) = AdminUserPage { implicit request =>
     val ids = (startingUserId.id to endingUserId.id).map(Id[User])
 
     val confirmedIds = db.readOnlyReplica { implicit session =>
@@ -111,7 +113,7 @@ class AdminLibraryController @Inject() (
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
   }
 
-  def changeState(libraryId: Id[Library], state: String) = AdminJsonAction.authenticated { request =>
+  def changeState(libraryId: Id[Library], state: String) = AdminUserAction { request =>
     val libState = state match {
       case LibraryStates.ACTIVE.value => LibraryStates.ACTIVE
       case LibraryStates.INACTIVE.value => LibraryStates.INACTIVE
@@ -121,7 +123,7 @@ class AdminLibraryController @Inject() (
   }
 
   //post request with a list of private/public and active/inactive
-  def updateLibraries() = AdminHtmlAction.authenticated { request =>
+  def updateLibraries() = AdminUserPage { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
     def setToVisibility(id: Id[Library], newVisibility: String)(implicit session: RWSession): Id[User] = {
@@ -161,7 +163,7 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
-  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
+  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminUserPage { implicit request =>
     val PAGE_SIZE = 200
     for (page <- startPage to endPage) {
       db.readWrite { implicit session =>

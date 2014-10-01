@@ -17,7 +17,7 @@ class QueryEngineTest extends Specification {
 
     protected val searcher: Searcher = indexer.getSearcher
 
-    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
+    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
 
       val pq = createScorerQueue(scorers, coreSize)
@@ -80,8 +80,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(new TstScoreVectorSource(indexer1))
-      engine.join(collector)
+      engine.execute(collector, new TstScoreVectorSource(indexer1))
 
       collector.hits === Set(0, 2, 4, 6, 8)
     }
@@ -91,8 +90,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(new TstScoreVectorSource(indexer2))
-      engine.join(collector)
+      engine.execute(collector, new TstScoreVectorSource(indexer2))
 
       collector.hits === Set(0, 3, 6, 9)
     }
@@ -102,9 +100,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(new TstScoreVectorSource(indexer1))
-      engine.execute(new TstScoreVectorSource(indexer2))
-      engine.join(collector)
+      engine.execute(collector, new TstScoreVectorSource(indexer1), new TstScoreVectorSource(indexer2))
 
       collector.hits === Set(0, 2, 3, 4, 6, 8, 9)
     }
@@ -114,9 +110,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(new TstScoreVectorSource(indexer1))
-      engine.execute(new TstScoreVectorSource(indexer2))
-      engine.join(collector)
+      engine.execute(collector, new TstScoreVectorSource(indexer1), new TstScoreVectorSource(indexer2))
 
       collector.hits === Set(0, 6)
     }
@@ -126,9 +120,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(new TstScoreVectorSource(indexer1))
-      engine.execute(new TstScoreVectorSource(indexer2))
-      engine.join(collector)
+      engine.execute(collector, new TstScoreVectorSource(indexer1), new TstScoreVectorSource(indexer2))
 
       engine.getMatchWeights().sum === 1.0f
     }

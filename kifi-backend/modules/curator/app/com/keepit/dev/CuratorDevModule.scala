@@ -1,6 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.common.controller.DevRemoteUserActionsHelperModule
 import com.keepit.curator.queue.DevFeedDigestEmailQueueModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.inject.CommonDevModule
@@ -14,6 +15,7 @@ import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 
 case class CuratorDevModule() extends CuratorModule(
+  userActionsModule = DevRemoteUserActionsHelperModule(),
   cacheModule = CuratorCacheModule(HashMapMemoryCacheModule())
 ) with CommonDevModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

@@ -11,11 +11,10 @@ import com.keepit.model.{ Collection, NormalizedURI, User }
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
-import com.keepit.search.sharding.{ DistributedSearchRouter, Shard }
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ Future }
 import scala.concurrent.duration._
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ BasicUser, TypeaheadUserHit }
@@ -50,7 +49,6 @@ trait SearchServiceClient extends ServiceClient {
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
-  def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def correctSpelling(text: String, enableBoost: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
@@ -77,40 +75,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
-  //
-  // Distributed Search
-  //
-  def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
-
-  def distPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
-
-  def distSearch(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]]
-
-  def distSearch2(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    library: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]]
-
-  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
-
-  def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
-
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
@@ -122,12 +86,6 @@ class SearchServiceClientImpl(
 
   // request consolidation
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
-
-  private lazy val distRouter = {
-    val router = new DistributedSearchRouter(this)
-    serviceCluster.setCustomRouter(Some(router))
-    router
-  }
 
   def warmUpUser(userId: Id[User]): Unit = {
     call(Search.internal.warmUpUser(userId))
@@ -158,34 +116,20 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) {
-    case (userId, uriId) =>
-      distRouter.call(userId, uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
-        Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
-      }
+    case (userId, uriId) => sharingUserInfo(userId, Seq(uriId)).map(_.head)
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (uriIds.isEmpty) {
-      Promise.successful(Seq[SharingUserInfo]()).future
+      Future.successful(Seq.empty)
     } else {
-      val route = Search.internal.sharingUserInfo(userId)
-      val plan = distRouter.planRemoteOnly(userId)
-
-      val result = new ListBuffer[Future[Map[Id[NormalizedURI], SharingUserInfo]]]
-      plan.foreach {
-        case (instance, shards) =>
-          val filteredUriIds = uriIds.filter { id => shards.exists(_.contains(id)) }
-          if (filteredUriIds.nonEmpty) {
-            val future = call(instance, route, Json.toJson(filteredUriIds.map(_.id))) map { r =>
-              (filteredUriIds zip Json.fromJson[Seq[SharingUserInfo]](r.json).get).toMap
-            }
-            result += future
-          }
-      }
-
-      Future.sequence(result).map { infos =>
-        val mapping = infos.reduce(_ ++ _)
-        uriIds.map(mapping)
+      val items = uriIds.map(AugmentableItem(_))
+      val request = ItemAugmentationRequest.uniform(userId, items: _*)
+      augmentation(request).map { response =>
+        items.map { item =>
+          val info = response.infos(item)
+          SharingUserInfo(info.keeps.map(_.keptBy).flatten.toSet - userId, info.keeps.size + info.otherDiscoverableKeeps + info.otherPublishedKeeps)
+        }
       }
     }
   }
@@ -249,12 +193,7 @@ class SearchServiceClientImpl(
   }
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
-    log.info("running explain in distributed mode")
-    distRouter.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
-  }
-
-  def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
-    call(Search.internal.friendMapJson(userId, q, minKeeps)).map(_.json.as[JsArray])
+    call(Search.internal.explain(query, userId, uriId, Some(lang))).map(r => Html(r.body))
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
@@ -375,88 +314,6 @@ class SearchServiceClientImpl(
     call(Search.internal.augmentation(), Json.toJson(request)).map(_.json.as[ItemAugmentationResponse])
   }
 
-  //
-  // Distributed Search
-  //
-  def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
-    distRouter.plan(userId, shards, maxShardsPerInstance)
-  }
-
-  def distPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
-    distRouter.planRemoteOnly(userId, maxShardsPerInstance)
-  }
-
-  def distSearch(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]] = {
-
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, None, maxHits, context, debug)
-  }
-
-  def distSearch2(
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    library: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]] = {
-
-    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug)
-  }
-
-  private def distSearch(
-    path: ServiceRoute,
-    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
-    userId: Id[User],
-    firstLang: Lang,
-    secondLang: Option[Lang],
-    query: String,
-    filter: Option[String],
-    library: Option[String],
-    maxHits: Int,
-    context: Option[String],
-    debug: Option[String]): Seq[Future[JsValue]] = {
-
-    var builder = new SearchRequestBuilder(new ListBuffer)
-    // keep the following in sync with SearchController
-    builder += ("userId", userId.id)
-    builder += ("query", query)
-    builder += ("maxHits", maxHits)
-    builder += ("lang1", firstLang.lang)
-    if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
-    if (filter.isDefined) builder += ("filter", filter.get)
-    if (library.isDefined) builder += ("library", library.get)
-    if (context.isDefined) builder += ("context", context.get)
-    if (debug.isDefined) builder += ("debug", debug.get)
-    val request = builder.build
-
-    distRouter.dispatch(plan, path, request).map { f => f.map(_.json) }
-  }
-
-  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {
-    distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
-      f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
-    }
-  }
-
-  def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]] = {
-    if (plan.isEmpty) Seq.empty else distRouter.dispatch(plan, Search.internal.distAugmentation(), Json.toJson(request)).map { futureClientResponse =>
-      futureClientResponse.map { r => r.json.as[ItemAugmentationResponse] }
-    }
-  }
-
-  // for DistributedSearchRouter
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
@@ -465,6 +322,7 @@ class SearchServiceClientImpl(
 class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
   def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
   def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
   def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
 
   def build: JsObject = JsObject(params)

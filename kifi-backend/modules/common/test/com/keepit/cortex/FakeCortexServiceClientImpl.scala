@@ -34,9 +34,9 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
   override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
-  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores] = Future.successful(LDAUserURIInterestScores(None, None))
+  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores] = Future.successful(LDAUserURIInterestScores(None, None, None))
   override def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]] = {
-    Future.successful((0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None)))
+    Future.successful((0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None, None)))
   }
   override def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = ???
   override def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = ???

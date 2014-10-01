@@ -212,20 +212,8 @@ if (searchUrlRe.test(document.URL)) !function () {
           prefetchMore();
         }
       }
-
-      if (resp.show && resp.hits.length && resp.prefs.showSearchIntro && document.hasFocus()) {
-        setTimeout(api.require.bind(api, 'scripts/search_intro.js', function () {
-          if (tQuery === t1) {
-            searchIntro.show($res);
-          }
-        }), 2000);
-      }
     });
     $kifi[0].search = '?q=' + encodeURIComponent(q);
-
-    if (window.searchIntro) {
-      searchIntro.hide();
-    }
   }
 
   function parseQ(qs) {

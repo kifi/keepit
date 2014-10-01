@@ -45,12 +45,9 @@ class MainQueryParser(
   var collectionIds = Set.empty[Long]
   var parsedQuery: Option[Query] = None
 
-  var totalParseTime: Long = 0L
-
   override def parse(queryText: CharSequence): Option[Query] = parse(queryText, Seq[CollectionSearcherWithUser]())
 
   def parse(queryText: CharSequence, collectionSearchers: Seq[CollectionSearcherWithUser]): Option[Query] = {
-    val tParse = System.currentTimeMillis
 
     parsedQuery = super.parse(queryText).map { query =>
       val numTextQueries = textQueries.size
@@ -95,8 +92,6 @@ class MainQueryParser(
         }
       }
     }
-    totalParseTime = System.currentTimeMillis - tParse
-
     parsedQuery
   }
 

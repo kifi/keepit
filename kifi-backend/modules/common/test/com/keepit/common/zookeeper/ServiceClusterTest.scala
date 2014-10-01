@@ -74,7 +74,7 @@ class ServiceClusterTest extends Specification {
         zk.createChild(basePath, "node_00000002", RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 2
-      println(zk.nodes.mkString(" : "))
+      // println(zk.nodes.mkString(" : ")) // can be removed?
       zk.nodes.size === 2
 
       zk.nodes.exists(n => n == Node(basePath, "node_00000001")) === true
@@ -87,7 +87,7 @@ class ServiceClusterTest extends Specification {
         cluster.update(zk, children)
       }
       zk.registeredCount === 2
-      println(zk.nodes.mkString(" : "))
+      // println(zk.nodes.mkString(" : ")) // can be removed?
       zk.nodes.size === 2
 
       cluster.registered(new ServiceInstance(Node(basePath, "node_00000001"), false, remoteService1)) === true
@@ -114,7 +114,7 @@ class ServiceClusterTest extends Specification {
         zk.createChild(basePath, "node_00000003", RemoteService.toJson(remoteService2))
       }
       zk.registeredCount === 3
-      println(zk.nodes.mkString(" : "))
+      // println(zk.nodes.mkString(" : ")) // can be removed?
       zk.nodes.size === 3
 
       zk.nodes.exists(n => n == Node(basePath, "node_00000001")) === true
@@ -127,7 +127,7 @@ class ServiceClusterTest extends Specification {
         cluster.update(zk, children)
       }
       zk.registeredCount === 2
-      println(zk.nodes.mkString(" : "))
+      // println(zk.nodes.mkString(" : ")) // can be removed?
       zk.nodes.size === 2
 
       cluster.registered(new ServiceInstance(Node(basePath, "node_00000002"), false, remoteService1)) === true

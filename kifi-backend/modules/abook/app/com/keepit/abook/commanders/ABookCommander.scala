@@ -213,9 +213,9 @@ class ABookCommander @Inject() (
     json
   }
 
-  def internKifiContact(userId: Id[User], contact: BasicContact): EContact = {
+  def internKifiContacts(userId: Id[User], contacts: Seq[BasicContact]): Seq[EContact] = {
     val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
-    contactInterner.internContact(userId, kifiAbook.id.get, contact)
+    contacts.map(contactInterner.internContact(userId, kifiAbook.id.get, _))
   }
 
   def getContactsByUserAndEmail(userId: Id[User], email: EmailAddress): Seq[EContact] = {
@@ -237,6 +237,8 @@ class ABookCommander @Inject() (
     relevantContacts getOrElse allContacts
   }
 
-  def getUsersWithContact(email: EmailAddress): Set[Id[User]] =
+  def getUsersWithContact(email: EmailAddress): Set[Id[User]] = {
     db.readOnlyReplica { implicit session => econtactRepo.getUserIdsByEmail(email) }.toSet
+  }
+
 }

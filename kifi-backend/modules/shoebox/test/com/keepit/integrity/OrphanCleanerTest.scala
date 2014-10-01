@@ -1,7 +1,9 @@
 package com.keepit.integrity
 
 import com.google.inject.Module
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.slick.Database
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -12,6 +14,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
   val modules: Seq[Module] = Seq(
     FakeScrapeSchedulerModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeKeepImportsModule()
   )
 
@@ -27,7 +31,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
         val (user, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, lib1)
         }
@@ -136,7 +140,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val (user, other, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
           val other = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, other, lib1)
         }

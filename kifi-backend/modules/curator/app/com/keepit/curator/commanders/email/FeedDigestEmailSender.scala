@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.helpers.toHttpsUrl
-import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
+import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.RecommendationGenerationCommander
@@ -41,13 +41,40 @@ object DigestEmail {
 
   // exclude recommendations with an image less than this
   val MIN_IMAGE_WIDTH_PX = 535
-  val MAX_IMAGE_HEIGHT_PX = 1000
+  val MAX_IMAGE_HEIGHT_PX = 900
 
   // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10
 
   // the minimum masterScore for a URIRecommendation to make the cut
   val RECO_THRESHOLD = 8
+}
+
+trait RecoRankStrategy {
+  def recommendationsToQuery: Int
+  val minRecommendationsToDeliver: Int = 2
+  val maxRecommendationsToDeliver: Int = 3
+  def ordering: Ordering[UriRecommendation]
+}
+
+object GeneralFeedDigestStrategy extends RecoRankStrategy {
+  val recommendationsToQuery = 100
+
+  object ordering extends Ordering[UriRecommendation] {
+    def compare(a: UriRecommendation, b: UriRecommendation) = ((b.masterScore - a.masterScore) * 1000).toInt
+  }
+}
+
+object RecentInterestRankStrategy extends RecoRankStrategy {
+  val recommendationsToQuery = 1000
+
+  object ordering extends Ordering[UriRecommendation] {
+    def compare(a: UriRecommendation, b: UriRecommendation) = {
+      val res = ((b.allScores.recentInterestScore - a.allScores.recentInterestScore) * 1000).toInt
+      if (res == 0) GeneralFeedDigestStrategy.ordering.compare(a, b)
+      else res
+    }
+  }
 }
 
 sealed case class AllDigestRecos(toUser: Id[User], recos: Seq[DigestReco], isFacebookConnected: Boolean = false)
@@ -133,42 +160,39 @@ class FeedDigestEmailSender @Inject() (
   }
 
   def processQueue(): Future[Unit] = {
-    def fetchFromQueue(): Future[Seq[Unit]] = {
-      log.info(s"fetching 5 messages from queue ${queue.queue.name}")
-      queue.nextBatchWithLock(1, 1 minute).flatMap { messages =>
-        log.info(s"locked ${messages.size} messages from queue ${queue.queue.name}")
-        Future.sequence(messages.map { message =>
+    def fetchFromQueue(): Future[Boolean] = {
+      log.info(s"[processQueue] fetching message from queue ${queue.queue.name}")
+      queue.nextWithLock(1 minute).flatMap { messageOpt =>
+        messageOpt map { message =>
           try {
-            sendToUser(message.body.userId).map { digestMail =>
-              if (digestMail.mailSent) log.info(s"consumed digest email for ${digestMail.userId}")
-              else log.warn(s"digest email was not mailed: $digestMail")
+            sendToUser(message.body.userId) map { digestMail =>
+              if (digestMail.mailSent) log.info(s"[processQueue] consumed digest email for ${digestMail.userId}")
+              else log.warn(s"[processQueue] digest email was not mailed: $digestMail")
               message.consume()
             } recover {
-              case e =>
-                airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
-            } map (_ => ())
+              case e => airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
+            } map (_ => true)
           } catch {
             case e: Throwable =>
               airbrake.notify(s"error sending digest email to ${message.body.userId} before future", e)
-              Future.successful(())
+              Future.successful(true)
           }
-        })
+        } getOrElse Future.successful(false)
       }
     }
 
-    val doneF = FutureHelpers.whilef(fetchFromQueue().map(_.size > 0))()
+    val doneF = FutureHelpers.whilef(fetchFromQueue())()
     doneF.onFailure {
-      case e =>
-        airbrake.notify(s"SQS queue(${queue.queue.name}) nextBatchWithLock failed", e)
+      case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextWithLock failed", e)
     }
 
     doneF
   }
 
-  def sendToUser(userId: Id[User]): Future[DigestRecoMail] = {
+  def sendToUser(userId: Id[User], recoRankStrategy: RecoRankStrategy = GeneralFeedDigestStrategy): Future[DigestRecoMail] = {
     log.info(s"sending engagement feed email to $userId")
 
-    val recosF = getDigestRecommendationsForUser(userId)
+    val recosF = getRecommendationsForUser(userId, recoRankStrategy)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
     // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
@@ -192,20 +216,17 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestRecos(toUser = userId, recos = digestRecos, isFacebookConnected = isFacebookConnected)
 
-    // TODO(josh) add textBody
-
-    val mainTemplate = views.html.email.feedDigest(emailData)
-
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.head.title}",
       to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplate = mainTemplate,
+      htmlTemplate = views.html.email.feedDigest(emailData),
+      textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
       campaign = Some("digest"),
-      tips = Seq(EmailTips.FriendRecommendations)
+      tips = Seq(EmailTip.FriendRecommendations)
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
@@ -254,6 +275,7 @@ class FeedDigestEmailSender @Inject() (
       to = Right(SystemEmailAddress.FEED_QA),
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = views.html.email.feedDigest(qaEmailData),
+      textTemplate = Some(views.html.email.feedDigest(qaEmailData)),
       senderUserId = None,
       fromName = Some(Right("Kifi")),
       campaign = Some("digestQA")
@@ -266,10 +288,12 @@ class FeedDigestEmailSender @Inject() (
     }
   }
 
-  private def getDigestRecommendationsForUser(userId: Id[User]) = {
-    getRecommendationsForUser(userId).flatMap { recos =>
-      FutureHelpers.findMatching(recos, MAX_RECOMMENDATIONS_TO_DELIVER, isEmailWorthy, getDigestReco)
-    }.map { seq => seq.flatten }
+  private def getRecommendationsForUser(userId: Id[User], rankStrategy: RecoRankStrategy) = {
+    val uriRecosF = recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, rankStrategy.recommendationsToQuery, RECO_THRESHOLD)
+    uriRecosF flatMap { recos =>
+      val presortedRecos = recos.sorted(rankStrategy.ordering)
+      FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, getDigestReco)
+    } map (_.flatten)
   }
 
   private def isEmailWorthy(recoOpt: Option[DigestReco]) = {
@@ -300,10 +324,6 @@ class FeedDigestEmailSender @Inject() (
     case throwable =>
       airbrake.notify(s"failed to load uri reco details for $reco", throwable)
       None
-  }
-
-  private def getRecommendationsForUser(userId: Id[User]) = {
-    recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, RECOMMENDATIONS_TO_QUERY, RECO_THRESHOLD)
   }
 
   private def getRecommendationSummaries(uriIds: Id[NormalizedURI]*) = {

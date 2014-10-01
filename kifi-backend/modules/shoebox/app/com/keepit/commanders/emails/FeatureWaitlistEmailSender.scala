@@ -16,22 +16,23 @@ class FeatureWaitlistEmailSender @Inject() (
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   val emailTriggers = Map(
-    "mobile_app" -> views.html.email.mobileWaitlistBlack
+    "mobile_app" -> (views.html.email.black.mobileWaitlist, views.html.email.black.mobileWaitlistText)
   )
 
   def sendToUser(email: EmailAddress, feature: String): Future[ElectronicMail] = {
-    emailTriggers.get(feature).map { template =>
-      val emailToSend = EmailToSend(
-        title = "kifi — Boom! You're on the wait list",
-        fromName = Some(Right("Kifi")),
-        from = SystemEmailAddress.NOTIFICATIONS,
-        to = Right(email),
-        subject = "You're on the wait list",
-        category = NotificationCategory.User.WAITLIST,
-        htmlTemplate = template(),
-        campaign = Some(s"${feature}_waitlist")
-      )
-      emailTemplateSender.send(emailToSend)
+    emailTriggers.get(feature).map {
+      case (htmlTpl, textTpl) =>
+        val emailToSend = EmailToSend(
+          title = "kifi — Boom! You're on the wait list",
+          fromName = Some(Right("Kifi")),
+          from = SystemEmailAddress.NOTIFICATIONS,
+          to = Right(email),
+          subject = "You're on the wait list",
+          category = NotificationCategory.User.WAITLIST,
+          htmlTemplate = htmlTpl(),
+          textTemplate = Some(textTpl()),
+          campaign = Some(s"${feature}_waitlist"))
+        emailTemplateSender.send(emailToSend)
     }.getOrElse(Future.failed(new IllegalArgumentException(s"unrecognized feature $feature")))
   }
 }

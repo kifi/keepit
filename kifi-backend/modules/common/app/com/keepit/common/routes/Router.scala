@@ -1,7 +1,8 @@
 package com.keepit.common.routes
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
@@ -40,6 +41,7 @@ object ParamValue {
   implicit def intToParam(i: Int) = ParamValue(Some(i.toString))
   implicit def stateToParam[T](i: State[T]) = ParamValue(Some(i.value))
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(Some(i.id))
+  implicit def externalIdSurrogateToParam[T <: SurrogateExternalId](i: T) = ParamValue(Some(i.id))
   implicit def idToParam[T](i: Id[T]) = ParamValue(Some(i.id.toString))
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = i.map(e) getOrElse ParamValue(None)
   implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(Some(seqNum.value.toString))
@@ -110,8 +112,7 @@ object Shoebox extends Service {
     def saveExperiment = ServiceRoute(POST, "/internal/shoebox/database/saveExperiment")
     def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
-    def getSessionByExternalId(sessionId: ExternalId[UserSession]) = ServiceRoute(GET, "/internal/shoebox/database/sessionByExternalId", Param("sessionId", sessionId))
-    def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
+    def getSessionByExternalId(sessionId: UserSessionExternalId) = ServiceRoute(GET, "/internal/shoebox/database/sessionViewByExternalId", Param("sessionId", sessionId))
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
     def getUnfriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/unfriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
@@ -168,6 +169,7 @@ object Shoebox extends Service {
     def addInteractions(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteractions", Param("userId", userId))
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
   }
 }
 
@@ -175,7 +177,6 @@ object Search extends Service {
   object internal {
     def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def warmUpUser(id: Id[User]) = ServiceRoute(GET, s"/internal/search/warmUp/${id.id}")
-    def sharingUserInfo(id: Id[User]) = ServiceRoute(POST, s"/internal/search/search/sharingUserInfo/${id.id}")
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")
     def uriGraphDumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/dumpDoc/${id.id}")
@@ -191,14 +192,13 @@ object Search extends Service {
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
-    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
+    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def correctSpelling(input: String, enableBoost: Boolean) = ServiceRoute(GET, "/internal/search/spell/suggest", Param("input", input), Param("enableBoost", enableBoost))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
     def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
-    def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
 
     def searchWithConfig() = ServiceRoute(POST, "/internal/searchWithConfig")
 
@@ -221,6 +221,7 @@ object Search extends Service {
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
+    def distLibrarySearch() = ServiceRoute(POST, "/internal/search/dist/librarySearch")
   }
 }
 
@@ -311,7 +312,7 @@ object ABook extends Service {
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
     def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
     def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
-    def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")
+    def internKifiContacts(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContacts")
     def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/prefixQuery", Param("q", query), Param("maxHits", maxHits))
     def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/getContacts", Param("page", page), Param("pageSize", pageSize))
     def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))

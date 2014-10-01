@@ -14,7 +14,8 @@ import com.keepit.model.{
   Keep,
   LibraryRepo,
   Library,
-  ExperimentType
+  ExperimentType,
+  UserRepo
 }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.{
@@ -46,6 +47,7 @@ class RecommendationsCommander @Inject() (
     db: Database,
     nUriRepo: NormalizedURIRepo,
     libRepo: LibraryRepo,
+    userRepo: UserRepo,
     libCommander: LibraryCommander,
     uriSummaryCommander: URISummaryCommander,
     basicUserRepo: BasicUserRepo,
@@ -114,6 +116,22 @@ class RecommendationsCommander @Inject() (
   }
 
   private def contstructAttributionInfos(attr: SeedAttribution): Seq[RecoAttributionInfo] = {
+    val libraryAttrInfos = attr.library.map { libAttrs =>
+      libAttrs.libraries.map { libId =>
+        val (lib, owner): (Library, User) = db.readOnlyReplica { implicit session =>
+          val lib = libRepo.get(libId)
+          val owner = userRepo.get(lib.ownerId)
+          (lib, owner)
+        }
+        RecoAttributionInfo(
+          kind = RecoAttributionKind.Library,
+          name = Some(lib.name),
+          url = Some(Library.formatLibraryPath(owner.username, owner.externalId, lib.slug)),
+          when = None
+        )
+      }
+    } getOrElse Seq.empty
+
     val keepAttrInfos = attr.keep.map { keepAttr =>
       keepAttr.keeps.map { keepId =>
         db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
@@ -129,14 +147,16 @@ class RecommendationsCommander @Inject() (
       }
     } getOrElse Seq.empty
 
-    attr.topic.map { topicAttr =>
-      keepAttrInfos :+ RecoAttributionInfo(
+    val topicAttrInfos = attr.topic.map { topicAttr =>
+      Seq(RecoAttributionInfo(
         kind = RecoAttributionKind.Topic,
         name = Some(topicAttr.topicName),
         url = None,
         when = None
-      )
-    } getOrElse keepAttrInfos
+      ))
+    } getOrElse Seq.empty
+
+    libraryAttrInfos ++ keepAttrInfos ++ topicAttrInfos
   }
 
   def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] = {
@@ -151,7 +171,8 @@ class RecommendationsCommander @Inject() (
           FullRecoInfo(
             kind = RecoKind.Keep,
             metaData = Some(RecoMetaData(attributionInfo)),
-            itemInfo = itemInfo
+            itemInfo = itemInfo,
+            explain = reco.explain
           )
         }
       })
@@ -187,7 +208,7 @@ class RecommendationsCommander @Inject() (
     Future.sequence(db.readOnlyReplica { implicit session =>
       Seq[Id[Library]](Id[Library](24138)).map(libRepo.get)
     }.map { lib =>
-      libCommander.createFullLibraryInfo(userId, lib).map(lib.ownerId -> _)
+      libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
     }).map {
       libInfosWithOwner =>
         libInfosWithOwner.map {

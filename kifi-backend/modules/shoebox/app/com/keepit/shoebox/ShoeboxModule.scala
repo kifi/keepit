@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.social.SecureSocialModule
@@ -35,6 +36,7 @@ case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
 abstract class ShoeboxModule(
     //these are modules that inheriting modules need to provide
     val secureSocialModule: SecureSocialModule,
+    val userActionsModule: UserActionsModule,
     val mailModule: MailModule,
     val reaperModule: ReaperModule,
     val storeModule: ShoeboxDevStoreModule,

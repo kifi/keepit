@@ -1,3 +1,6 @@
+//
+// Mixins and functions.
+//
 long-text()
   white-space: nowrap
   overflow: hidden
@@ -8,3 +11,21 @@ title-text()
   font-style: italic
   font-smoothing: antialiased
   color: textDarkColor
+
+placeholder(color)
+  &::-webkit-input-placeholder
+    font-style: normal
+    color: color
+  &::-moz-placeholder
+    font-style: normal
+    color: color
+  &:-ms-input-placeholder
+    font-style: normal
+    color: color
+
+
+//
+// Styles.
+//
+[contenteditable]:empty::before
+  content: attr(placeholder)

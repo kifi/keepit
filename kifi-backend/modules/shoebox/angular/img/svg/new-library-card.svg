@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Avocode 0.4.0 - http://avocode.com -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="27" height="35" view-box="0 0 27 35">
+    <desc>Created with Avocode</desc>
+    <path d="M 7.5 3.5 C 5.29 3.5, 3.5 5.29, 3.5 7.5 L 3.5 30.5 C 3.5 32.71, 5.29 34.5, 7.5 34.5 L 22.5 34.5 C 24.71 34.5, 26.5 32.71, 26.5 30.5 L 26.5 7.5 C 26.5 5.29, 24.71 3.5, 22.5 3.5 L 7.5 3.5 Z" fill="#ffffff" stroke="#ccdffa" stroke-width="1" />
+    <path d="M 4.5 0.5 C 2.29 0.5, 0.5 2.29, 0.5 4.5 L 0.5 27.5 C 0.5 29.71, 2.29 31.5, 4.5 31.5 L 19.5 31.5 C 21.71 31.5, 23.5 29.71, 23.5 27.5 L 23.5 4.5 C 23.5 2.29, 21.71 0.5, 19.5 0.5 L 4.5 0.5 Z" fill="#f5f5f5" stroke="#7dadef" stroke-width="1" stroke-dasharray="0.5,2" stroke-linecap="round" stroke-linejoin="miter" />
+    <g fill="#7dadef">
+        <path d="M 11.5 10.5 C 10.95 10.5, 10.5 10.95, 10.5 11.5 L 10.5 20.5 C 10.5 21.05, 10.95 21.5, 11.5 21.5 L 12.5 21.5 C 13.05 21.5, 13.5 21.05, 13.5 20.5 L 13.5 11.5 C 13.5 10.95, 13.05 10.5, 12.5 10.5 L 11.5 10.5 Z" />
+        <path d="M 7.5 14.5 C 6.95 14.5, 6.5 14.95, 6.5 15.5 L 6.5 16.5 C 6.5 17.05, 6.95 17.5, 7.5 17.5 L 16.5 17.5 C 17.05 17.5, 17.5 17.05, 17.5 16.5 L 17.5 15.5 C 17.5 14.95, 17.05 14.5, 16.5 14.5 L 7.5 14.5 Z" />
+    </g>
+</svg>

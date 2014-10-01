@@ -8,7 +8,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
 object QueryEngineBuilder {
-  val tieBreakerMultiplier = 1.0f
+  val tieBreakerMultiplier = 1.5f
 }
 
 class QueryEngineBuilder(coreQuery: Query) {

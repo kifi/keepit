@@ -4,7 +4,7 @@ import play.api.libs.json._
 import com.keepit.common.logging.Logging
 import scala.Option
 
-trait BinaryFormat[T] {
+trait BinaryFormat[T] { self =>
   def writes(value: Option[T]): Array[Byte] = {
     value match {
       case Some(obj) => writes(1.toByte, obj)
@@ -19,6 +19,11 @@ trait BinaryFormat[T] {
 
   protected def writes(prefix: Byte, value: T): Array[Byte]
   protected def reads(obj: Array[Byte], offset: Int, length: Int): T
+
+  def map[U](in: U => T, out: T => U): BinaryFormat[U] = new BinaryFormat[U] {
+    protected def reads(obj: Array[Byte], offset: Int, length: Int): U = out(self.reads(obj, offset, length))
+    protected def writes(prefix: Byte, value: U): Array[Byte] = self.writes(prefix, in(value))
+  }
 }
 
 object BinaryFormat {

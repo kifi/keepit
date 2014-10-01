@@ -17,10 +17,10 @@ import scala.slick.jdbc.StaticQuery.interpolation
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
-  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryAccess, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
-  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -97,10 +97,16 @@ class LibraryRepoImpl @Inject() (
     getBySlugAndUserCompiled(userId, slug, excludeState).firstOption
   }
 
-  def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
+  private def getByNameOrSlugCompiled(userId: Column[Id[User]], name: Column[String], slug: Column[LibrarySlug], excludeState: Option[State[Library]]) =
+    Compiled { (for (b <- rows if (b.name === name || b.slug === slug) && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
+  def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    getByNameOrSlugCompiled(userId, name, slug, excludeState).firstOption
+  }
+
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
     val q = for {
       lib <- rows if lib.state =!= excludeState.orNull
-      lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.state === LibraryMembershipStates.ACTIVE
+      lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lm.access, lib)
     q.list
   }
@@ -110,11 +116,6 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
-  }
-
-  def updateMemberCount(libraryId: Id[Library])(implicit session: RWSession): Unit = {
-    sqlu"UPDATE library SET member_count = (SELECT COUNT(id) FROM library_membership WHERE library_id = ${libraryId} and state='active') WHERE id = ${libraryId} AND state='active'".execute()
-    deleteCache(get(libraryId))
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

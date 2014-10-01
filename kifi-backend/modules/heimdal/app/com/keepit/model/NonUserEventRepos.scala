@@ -25,8 +25,8 @@ class ProdNonUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: 
   def toBSON(event: NonUserEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
   def fromBSON(bson: BSONDocument): NonUserEvent = ???
 
-  override def persist(nonUserEvent: NonUserEvent): Unit =
-    EventAugmentor.safelyAugmentContext(nonUserEvent, augmentors: _*).foreach { augmentedContext =>
+  override def persist(nonUserEvent: NonUserEvent): Future[Unit] =
+    EventAugmentor.safelyAugmentContext(nonUserEvent, augmentors: _*).flatMap { augmentedContext =>
       super.persist(nonUserEvent.copy(context = augmentedContext))
     }
 }

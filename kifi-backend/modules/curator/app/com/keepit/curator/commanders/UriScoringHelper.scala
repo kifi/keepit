@@ -27,14 +27,15 @@ class UriScoringHelper @Inject() (
     item.priorScore.getOrElse(0.0f)
   }
 
-  private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
+  private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float], Seq[Float])] = {
     val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
     interestScores.map { scores =>
       scores.map { score =>
-        val (overallOpt, recentOpt) = (score.global, score.recency)
-        (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat,
-          recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat)
-      }.unzip
+        val (overallOpt, recentOpt, libOpt) = (score.global, score.recency, score.libraryInduced)
+        (overallOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+          recentOpt.map(uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f).getOrElse(0f),
+          libOpt.map { uis => if (uis.confidence > 0.2 && uis.score > 0) uis.score else 0f }.getOrElse(0f))
+      }.unzip3
     }
   }
 
@@ -73,7 +74,7 @@ class UriScoringHelper @Inject() (
       val interestScoresFuture = getRawInterestScores(items)
       for {
         socialScores <- socialScoresFuture
-        (overallInterestScores, recentInterestScores) <- interestScoresFuture
+        (overallInterestScores, recentInterestScores, libScores) <- interestScoresFuture
         publicScores <- publicScoresFut
       } yield {
         for (i <- 0 until items.length) yield {
@@ -87,7 +88,8 @@ class UriScoringHelper @Inject() (
             rekeepScore = publicScores(i).publicUriScores.rekeepScore,
             discoveryScore = publicScores(i).publicUriScores.discoveryScore,
             curationScore = publicScores(i).publicUriScores.curationScore,
-            multiplier = Some(items(i).multiplier)
+            multiplier = Some(items(i).multiplier),
+            libraryInducedScore = Some(libScores(i))
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)
         }

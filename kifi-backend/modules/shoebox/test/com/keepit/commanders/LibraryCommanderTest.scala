@@ -1,11 +1,14 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
-import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.mail.{ ElectronicMailRepo, FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
+import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -14,6 +17,8 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
+import scala.concurrent._
+
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
@@ -21,7 +26,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),
-    FakeCryptoModule()
+    FakeCryptoModule(),
+    FakeSocialGraphModule(),
+    FakeABookServiceClientModule(),
+    FakeElizaServiceClientModule()
   )
 
   def setupUsers()(implicit injector: Injector) = {
@@ -118,8 +126,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
-      libraryRepo.updateMemberCount(libMurica.id.get)
-      libraryRepo.updateMemberCount(libScience.id.get)
+      libraryRepo.save(libMurica.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libMurica.id.get)))
+      libraryRepo.save(libScience.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libScience.id.get)))
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
@@ -375,6 +383,41 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "can user view library" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+        val libraryCommander = inject[LibraryCommander]
+
+        val userWidow = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          user
+        }
+        // test can view (permission denied)
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        // test can view if library is published
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libMurica) === true
+
+        // test can view if user has membership
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libShield) === true
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
+
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
+            authToken = "token", passPhrase = "blarg"))
+        }
+        // test can view if user has invite
+        libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
+
+        // test can view if non-user provides correct authtoken & passphrase
+        libraryCommander.canViewLibrary(None, libScience) === false
+        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+      }
+    }
+
     "intern user system libraries" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -463,10 +506,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val thorEmail = EmailAddress("thorishere@gmail.com")
         val inviteList1 = Seq(
-          (Left(userIron.id.get), LibraryAccess.READ_ONLY),
-          (Left(userAgent.id.get), LibraryAccess.READ_ONLY),
-          (Left(userHulk.id.get), LibraryAccess.READ_ONLY),
-          (Right(thorEmail), LibraryAccess.READ_ONLY))
+          (Left(userIron.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
+          (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
+          (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
         res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
@@ -484,7 +527,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE))
+        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
         res2.isRight === false
 
@@ -748,27 +791,25 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "send library invitation notification" in {
+    "send library invitation notification & emails" in {
       withDb(modules: _*) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries()
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
-        val outbox = inject[FakeOutbox]
-        outbox.size === 0
+        val emailRepo = inject[ElectronicMailRepo]
+        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
+        eliza.inbox.size === 0
 
-        libraryCommander.inviteNotification(userIron.id.get, userHulk.id.get, libScience.id.get)
-        outbox.size === 1
-
-        //content check
-        outbox(0).htmlBody.toString.containsSlice("Hey Bruce,") === true
-        outbox(0).to.length === 1
-        outbox(0).to(0).address === "incrediblehulk@gmail.com"
-        outbox(0).subject === "Kifi.com | You've been invited to a library!"
-
-        val emailBody = outbox(0).htmlBody.toString
-        emailBody.containsSlice(s"""<a href="www.kifi.com/${userIron.username.get}/${libScience.slug}?auth=${libScience.universalLink}"><u>Science &amp; Stuff</u></a>""") === true
-        emailBody.containsSlice("Tony Stark would like to share Science &amp; Stuff with you") === true
-        emailBody.containsSlice("www.kifi.com/unsubscribe/") === true
+        val allInvites = db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all
+        }
+        //Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
+        libraryCommander.inviteBulkUsers(allInvites)
+        eliza.inbox.size === 4
+        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
+        eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
+        db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }
     }
+
   }
 }

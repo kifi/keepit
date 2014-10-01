@@ -79,22 +79,23 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
+        val userAddress = EmailAddress("username@42go.com")
+
         outbox.size === 0
-        userCommander.sendWelcomeEmail(user1)
+        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
         outbox.size === 1
-        outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "username@42go.com").length === 1
-        //double seding protection
-        userCommander.sendWelcomeEmail(user1)
+        outbox.all.count(email => email.to.length == 1 && email.to.head == userAddress) === 1
+
+        //double sending protection
+        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
         outbox.size === 1
 
-        //content check
-        outbox(0).htmlBody.toString.containsSlice("Hey " + user1.firstName + ",") === true
-        outbox(0).to.length === 1
-        outbox(0).to(0).address === "username@42go.com"
+        outbox(0).to === Seq(userAddress)
         outbox(0).subject === "Let's get started with Kifi"
 
-        outbox(0).htmlBody.toString.containsSlice("www.kifi.com/unsubscribe/") === true
-
+        val html = outbox(0).htmlBody.value
+        html must contain("Hey " + user1.firstName + ",")
+        html must contain("www.kifi.com/unsubscribe/")
       }
     }
 
@@ -269,17 +270,16 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         mail.subject must beEqualTo("Homer Simpson joined Kifi. Want to connect?")
 
         val htmlBody = mail.htmlBody.value
-        htmlBody must contain("Hey Jane")
-        htmlBody must contain("welcome Homer and add him")
-        htmlBody must contain("Add Homer")
+        htmlBody must contain("Hi Jane")
+        htmlBody must contain("Homer Simpson just joined")
         htmlBody must contain("/invite?friend=" + user1.externalId)
 
         val textBody = mail.textBody.get.value
-        textBody must contain("Hey Jane")
-        textBody must contain("welcome Homer and add him")
+        textBody must contain("Hi Jane")
+        textBody must contain("Homer Simpson just joined")
         textBody must contain("/invite?friend=" + user1.externalId)
 
-        NotificationCategory.fromElectronicMailCategory(mail.category) must beEqualTo(NotificationCategory.User.CONTACT_JOINED)
+        NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }
 
       "do nothing if no users are connected to a user's email" in withDb(modules: _*) { implicit injector =>

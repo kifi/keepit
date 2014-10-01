@@ -45,9 +45,9 @@ class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike
         inject[ImageDataIntegrityPlugin].verifyAll()
 
         val errors = inject[FakeAirbrakeNotifier].errors
-        println("--------------------------")
-        println(errors mkString "\n")
-        println("--------------------------")
+        // println("--------------------------") // can be removed?
+        // println(errors mkString "\n") // can be removed?
+        // println("--------------------------") // can be removed?
         errors.exists {
           _.message.get contains
             "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"

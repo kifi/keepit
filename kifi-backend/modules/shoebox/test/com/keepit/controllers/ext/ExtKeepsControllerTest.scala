@@ -1,6 +1,8 @@
 package com.keepit.controllers.ext
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -42,6 +44,8 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeScraperServiceClientModule(),
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule(),
+    FakeABookServiceClientModule(),
+    FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )
 
@@ -100,11 +104,11 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.unkeep(k1.externalId).toString
+        val path = routes.ExtBookmarksController.unkeep(k1.externalId).url
         path === s"/ext/keeps/${k1.externalId}/unkeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -174,11 +178,11 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.removeTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.removeTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/removeFromKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -243,11 +247,11 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
-          println(uris mkString "\n")
+          // println(uris mkString "\n") // can be removed?
           uris.size === 2
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.addTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -261,7 +265,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         db.readWrite { implicit s =>
           val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-          println(keeps mkString "\n")
+          // println(keeps mkString "\n") // can be removed?
           keeps.size === 2
         }
 
@@ -306,7 +310,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
           uris.size === 0
         }
 
-        val path = com.keepit.controllers.ext.routes.ExtBookmarksController.addTag(collections(0).externalId).toString
+        val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
@@ -320,7 +324,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
 
         db.readWrite { implicit s =>
           val keeps = keepRepo.getByUser(user.id.get, None, None, 100)
-          println(keeps mkString "\n")
+          // println(keeps mkString "\n") // can be removed?
           keeps.size === 1
         }
 

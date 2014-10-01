@@ -3,19 +3,22 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', 'keepDecoratorService','$routeParams', 'libraryService', 'util', '$location',
-  function ($scope, $rootScope, keepDecoratorService, $routeParams, libraryService, util, $location) {
+  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
+  'modalService', 'profileService', 'util',
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
+            modalService, profileService, util) {
     //
     // Internal data.
     //
-    var username = $routeParams.username;
-    var librarySlug = $routeParams.librarySlug;
     var selectedCount = 0;
-    
+    var prePopulated = false;
+
 
     //
     // Scope data.
     //
+    $scope.username = $routeParams.username;
+    $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
@@ -50,21 +53,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.manageLibrary = function () {
-      libraryService.libraryState = {
-        library: $scope.library,
-        returnAction: function () {
-          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
-            if (data.library.slug !== librarySlug) {
-              $location.path('/' + username + '/' + data.library.slug);
-            }
-          });
-        }
-      };
-      $rootScope.$emit('showGlobalModal', 'manageLibrary');
-    };
-
     $scope.getSubtitle = function () {
       if ($scope.loading || !$scope.library) {
         return 'Loading...';
@@ -92,14 +80,16 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+
     //
     // Watches and listeners.
     //
     $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if (libSlug === librarySlug) {
+      if (libSlug === $scope.librarySlug) {
         $scope.keeps.unshift(keep);
       }
     });
+
 
     //
     // On LibraryCtrl initialization.
@@ -108,19 +98,26 @@ angular.module('kifi')
     // librarySummaries has a few of the fields we need to draw the library.
     // Attempt to pre-populate the library object while we wait
     if (libraryService.librarySummaries) {
-      var path = '/' + username + '/' + librarySlug;
+      var path = '/' + $scope.username + '/' + $scope.librarySlug;
       var lib = _.find(libraryService.librarySummaries, function (elem) {
         return elem.url === path;
       });
 
       if (lib) {
         util.replaceObjectInPlace($scope.library, lib);
+        prePopulated = true;
       }
     }
 
     // Request for library object also retrieves an initial set of keeps in the library.
-    libraryService.getLibraryByUserSlug(username, librarySlug).then(function (library) {
-      util.replaceObjectInPlace($scope.library, library);
+    libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug).then(function (library) {
+      // If library information has already been prepopulated, extend the library object.
+      // Otherwise, replace library object completely with the newly fetched object.
+      if (prePopulated) {
+        _.assign($scope.library, library);
+      } else {
+        util.replaceObjectInPlace($scope.library, library);
+      }
 
       library.keeps.forEach(function (rawKeep) {
         var keep = new keepDecoratorService.Keep(rawKeep);

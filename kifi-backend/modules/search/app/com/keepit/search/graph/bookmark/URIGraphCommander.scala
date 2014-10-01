@@ -22,7 +22,6 @@ trait URIGraphCommander {
   val requestingUser: RequestingUser
   def getUserUriList(userId: Id[User], publicOnly: Boolean, shard: Shard[NormalizedURI]): UserURIList
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList]
-  def getSharingUserInfo(uriId: Id[NormalizedURI], shard: Shard[NormalizedURI]): SharingUserInfo
 }
 
 class URIGraphCommanderImpl(
@@ -43,10 +42,5 @@ class URIGraphCommanderImpl(
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList] = {
     val searcher = getURIGraphSearcher(shard)
     userIds.foldLeft(Map.empty[Id[User], UserURIList]) { case (m, userId) => m + (userId -> getURIList(userId, publicOnly, searcher)) }
-  }
-
-  def getSharingUserInfo(uriId: Id[NormalizedURI], shard: Shard[NormalizedURI]): SharingUserInfo = {
-    val searcher = getURIGraphSearcher(shard)
-    searcher.getSharingUserInfo(uriId)
   }
 }

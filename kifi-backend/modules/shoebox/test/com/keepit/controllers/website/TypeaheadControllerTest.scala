@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -30,6 +31,8 @@ import com.keepit.common.core._
 class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
+    FakeHttpClientModule(),
+    FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
@@ -45,7 +48,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
   "TypeaheadController" should {
 
-    "query & sort results" in {
+    "query & sort & limit results" in {
       withDb(modules: _*) { implicit injector =>
         val u1 = inject[Database].readWrite { implicit session =>
 
@@ -69,19 +72,29 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
           val su4 = suiRepo.save(SocialUserInfo(fullName = "郭靖", socialId = SocialId("kwok"), networkType = SocialNetworks.LINKEDIN, userId = None))
 
+          val su5 = suiRepo.save(SocialUserInfo(fullName = "Andrew Ng", socialId = SocialId("andrew"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su6 = suiRepo.save(SocialUserInfo(fullName = "Ng Kar Ho", socialId = SocialId("raymond"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su7 = suiRepo.save(SocialUserInfo(fullName = "Julie Andrews", socialId = SocialId("julie.andrews"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su8 = suiRepo.save(SocialUserInfo(fullName = "Julie Ng", socialId = SocialId("julie.ng"), networkType = SocialNetworks.LINKEDIN, userId = None))
+
           socialConnRepo.save(SocialConnection(socialUser1 = su1a.id.get, socialUser2 = su3a.id.get))
           socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su3b.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su5.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su6.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su7.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su8.id.get))
+
           u1
         }
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "陳家洛", 0, RichContact(EmailAddress("chan@jing.com"), Some("陳家洛 電郵")))))
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("陳")
@@ -100,6 +113,20 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res2(2).networkType === SocialNetworks.EMAIL.name
         res2(2).value === "email/chan@jing.com"
         res2(2).label === "陳家洛 電郵"
+
+        // limit
+
+        val res2a = search("陳家", 2)
+        res2a.length === 2
+
+        val res2b = search("陳家", 1)
+        res2b.length === 1
+
+        val res3 = search("Ng")
+        res3.length === 3
+
+        val res3a = search("Ng", 2)
+        res3a.length === 2
       }
     }
 
@@ -140,13 +167,13 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, contacts)
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("chan") // chan@jing.com
@@ -162,6 +189,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵"
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
       }
     }
 
@@ -205,13 +236,13 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
         abookClient.addTypeaheadHits(u1.id.get, contacts)
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res1 = search("chan") // chan@jing.com (deduped)
@@ -226,6 +257,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵" // email lower priority (& deduped)
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
 
         val res4 = search("kwok") // kwok@jing.com (deduped)
         res4.length === 1
@@ -260,7 +295,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "mrkrabs", 0, RichContact(u5, Some("Krabs")))))
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "sandysquirrel", 0, RichContact(u4, Some("SandySquirrel")))))
 
-        inject[FakeActionAuthenticator].setUser(u1)
+        inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
@@ -271,7 +306,6 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
               case None => j.as[EmailContactResult]
             }
           }
-          println(s"[search($query,$limit)] res(len=${js.length}):$js")
           js
         }
 

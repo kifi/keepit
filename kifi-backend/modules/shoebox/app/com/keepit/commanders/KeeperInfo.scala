@@ -5,7 +5,8 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
-import play.api.libs.json.{ Format, __, JsObject }
+import com.kifi.macros.json
+import play.api.libs.json.{ __, JsObject, Writes }
 import play.api.libs.functional.syntax._
 
 case class KeeperInfo(
@@ -21,7 +22,7 @@ case class KeeperInfo(
   keeps: Int)
 
 object KeeperInfo {
-  implicit val writesKeeperInfo = (
+  implicit val writes: Writes[KeeperInfo] = (
     (__ \ 'normalized).write[String] and
     (__ \ 'kept).writeNullable[String] and
     (__ \ 'keepId).writeNullable[ExternalId[Keep]] and
@@ -44,7 +45,7 @@ case class KeeperPageInfo(
   keepers: Seq[BasicUser],
   keeps: Seq[KeepData])
 object KeeperPageInfo {
-  implicit val writesPageInfo = (
+  implicit val writes: Writes[KeeperPageInfo] = (
     (__ \ 'normalized).write[String] and
     (__ \ 'position).writeNullable[JsObject] and
     (__ \ 'neverOnSite).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
@@ -59,26 +60,41 @@ case class KeepData(
   id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
-  library: LibraryData)
+  secret: Boolean, // i.e. library.visibility == SECRET
+  libraryId: PublicId[Library])
 object KeepData {
-  implicit val format: Format[KeepData] = (
-    (__ \ 'id).format[ExternalId[Keep]] and
-    (__ \ 'mine).format[Boolean] and
-    (__ \ 'removable).format[Boolean] and
-    (__ \ 'library).format[LibraryData]
-  )(KeepData.apply, unlift(KeepData.unapply))
+  implicit val writes: Writes[KeepData] = (
+    (__ \ 'id).write[ExternalId[Keep]] and
+    (__ \ 'mine).write[Boolean] and
+    (__ \ 'removable).write[Boolean] and
+    (__ \ 'secret).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'libraryId).write[PublicId[Library]]
+  )(unlift(KeepData.unapply))
+}
+
+// The extension uses this object to augment `KeepData` only when needed. It's useless by itself.
+case class MoarKeepData(
+  title: Option[String],
+  image: Option[String],
+  tags: Seq[String])
+object MoarKeepData {
+  implicit val writes: Writes[MoarKeepData] = (
+    (__ \ 'title).writeNullable[String] and
+    (__ \ 'image).writeNullable[String] and
+    (__ \ 'tags).writeNullable[Seq[String]].contramap[Seq[String]](Some(_).filter(_.nonEmpty))
+  )(unlift(MoarKeepData.unapply))
 }
 
 case class LibraryData(
   id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
-  url: String)
+  path: String)
 object LibraryData {
-  implicit val format: Format[LibraryData] = (
-    (__ \ 'id).format[PublicId[Library]] and
-    (__ \ 'name).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'url).format[String]
-  )(LibraryData.apply, unlift(LibraryData.unapply))
+  implicit val writes: Writes[LibraryData] = (
+    (__ \ 'id).write[PublicId[Library]] and
+    (__ \ 'name).write[String] and
+    (__ \ 'visibility).write[LibraryVisibility] and
+    (__ \ 'path).write[String]
+  )(unlift(LibraryData.unapply))
 }

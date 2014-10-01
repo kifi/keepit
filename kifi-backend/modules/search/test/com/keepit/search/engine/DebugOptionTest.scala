@@ -1,20 +1,19 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
-import com.keepit.search.engine.DebugOption.DumpBuf
+import com.keepit.search.engine.DebugOption._
 import org.specs2.mutable.Specification
 
 class DebugOptionTest extends Specification {
 
   def debugOption = new DebugOption with Logging {
-    def flags = debugFlags
-    def ids = debugDumpBufIds
+    def ids = debugTracedIds
   }
 
   "DebugOption" should {
-    "parse dumpbuf" in {
-      val ids = "dumpbuf:1:100:1000" match {
-        case DumpBuf(ids) => Some(ids)
+    "parse trace" in {
+      val ids = "trace:1:100:1000" match {
+        case Trace(ids) => Some(ids)
         case _ => None
       }
 
@@ -22,14 +21,23 @@ class DebugOptionTest extends Specification {
       ids.get === Set(1L, 100L, 1000L)
     }
 
+    "parse library" in {
+      val res = "library" match {
+        case Library() => true
+        case _ => false
+      }
+
+      res === true
+    }
+
     "ignore bogus options" in {
       var obj = debugOption
-      obj.debug("foo,dumpbuf, bar")
-      (obj.flags & DumpBuf.flag) === 0
+      obj.debug("foo,trace, bar")
+      (obj.debugFlags & Trace.flag) === 0
 
       obj = debugOption
-      obj.debug("foo, dumpbuf:2:3,bar")
-      ((obj.flags & DumpBuf.flag) != 0) === true
+      obj.debug("foo, trace:2:3,bar")
+      ((obj.debugFlags & Trace.flag) != 0) === true
     }
   }
 }

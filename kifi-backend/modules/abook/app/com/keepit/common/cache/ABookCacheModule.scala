@@ -1,5 +1,7 @@
 package com.keepit.common.cache
 
+import com.keepit.model.cache.UserSessionViewExternalIdCache
+
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
@@ -66,7 +68,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
 
   @Singleton
   @Provides
@@ -76,7 +78,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -150,7 +152,7 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (outerRepo, 1 day))
+    new EContactCache(stats, accessLog, (outerRepo, 30 day))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

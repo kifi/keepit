@@ -1,6 +1,9 @@
 package com.keepit.shoebox
 
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.model.view.UserSessionView
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -9,7 +12,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.net.{ URI, CallTimeouts, HttpClient }
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -51,7 +54,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
-  def internNormalizedURI(url: String, scrapeWanted: Boolean = false): Future[NormalizedURI]
+  def internNormalizedURI(url: URI, scrapeWanted: Boolean = false): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -77,7 +80,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -116,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def processAndSendMail(email: EmailToSend): Future[Boolean]
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -130,7 +134,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
-  userSessionExternalIdCache: UserSessionExternalIdCache,
+  userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
   userValueCache: UserValueCache,
@@ -353,8 +357,8 @@ class ShoeboxServiceClientImpl @Inject() (
       (r.json \ "normalizedURI").asOpt[NormalizedURI].map(Left(_)) getOrElse Right((r.json \ "url").as[String])
     }
 
-  def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val payload = Json.obj("url" -> url, "scrapeWanted" -> scrapeWanted)
+  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
+    val payload = Json.obj("url" -> url.toString(), "scrapeWanted" -> scrapeWanted)
     call(Shoebox.internal.internNormalizedURI, payload).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
@@ -476,13 +480,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
-    cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    cacheProvider.userSessionExternalIdCache.get(UserSessionViewExternalIdKey(sessionId)) match {
       case Some(session) => Promise.successful(Some(session)).future
       case None =>
         call(Shoebox.internal.getSessionByExternalId(sessionId)).map { r =>
           r.json match {
-            case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
+            case jso: JsObject => Json.fromJson[UserSessionView](jso).asOpt
             case _ => None
           }
         }
@@ -730,5 +734,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize)).map { r => (r.json).as[Seq[LibraryMembershipView]] }
+  }
+
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+    val body = Json.obj(
+      "libraryId" -> libraryId,
+      "userId" -> userId,
+      "authToken" -> authToken,
+      "passPhrase" -> Json.toJson(hashedPassPhrase))
+    call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 }

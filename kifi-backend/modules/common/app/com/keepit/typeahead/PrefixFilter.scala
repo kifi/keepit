@@ -5,6 +5,8 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math.min
 import java.text.Normalizer
 import com.keepit.common.logging.Logging
+import java.nio.ByteBuffer
+import com.keepit.serializer.{ BinaryFormat, ArrayBinaryFormat }
 
 object PrefixFilter {
 
@@ -56,9 +58,26 @@ object PrefixFilter {
     }
     filter
   }
+
+  def toByteArray[T](filter: PrefixFilter[T]): Array[Byte] = {
+    val data = filter.data
+    val byteBuffer = ByteBuffer.allocate(data.length * 8)
+    byteBuffer.asLongBuffer.put(data)
+    byteBuffer.array
+  }
+
+  def fromByteArray[T](bytes: Array[Byte]): PrefixFilter[T] = {
+    require(bytes.length % 8 == 0, "Invalid byte array: cannot be converted to PrefixFilter")
+    val intBuffer = ByteBuffer.wrap(bytes).asLongBuffer
+    val outArray = new Array[Long](bytes.length / 8)
+    intBuffer.get(outArray)
+    new PrefixFilter(outArray)
+  }
+
+  implicit def binaryFormat[T]: BinaryFormat[PrefixFilter[T]] = ArrayBinaryFormat.longArrayFormat.map(_.data, new PrefixFilter(_))
 }
 
-class PrefixFilter[T](val data: Array[Long]) extends AnyVal {
+class PrefixFilter[T](val data: Array[Long]) {
   def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
   def isEmpty = (data.length == 1)
   override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map { t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}" }.mkString(",")}"

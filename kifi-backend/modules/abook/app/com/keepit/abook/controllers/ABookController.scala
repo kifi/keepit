@@ -233,13 +233,13 @@ class ABookController @Inject() (
     Ok(Json.toJson(name))
   }
 
-  def internKifiContact(userId: Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internKifiContact] userId=$userId contact=$contact")
+  def internKifiContacts(userId: Id[User]) = Action(parse.json) { request =>
+    val contacts = request.body.as[Seq[BasicContact]]
+    log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
 
-    val eContact = abookCommander.internKifiContact(userId, contact)
-    val richContact = EContact.toRichContact(eContact)
-    Ok(Json.toJson(richContact))
+    val eContacts = abookCommander.internKifiContacts(userId, contacts)
+    val richContacts = eContacts.map(EContact.toRichContact)
+    Ok(Json.toJson(richContacts))
   }
 
   def prefixQuery(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
@@ -262,4 +262,5 @@ class ABookController @Inject() (
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
+
 }

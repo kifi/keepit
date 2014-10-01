@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.engine.SearchTimeLogs
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.user.UserIndexer
@@ -48,7 +49,6 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
-  private[this] val consolidateLangFreqsReq = new RequestConsolidator[Id[User], Map[Lang, Int]](180 seconds)
   private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
   private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
 
@@ -84,6 +84,7 @@ class MainSearcherFactory @Inject() (
     val searchers = shards.toSeq.map { shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
       val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+      val timeLogs = new SearchTimeLogs
 
       new MainSearcher(
         userId,
@@ -97,6 +98,7 @@ class MainSearcherFactory @Inject() (
         socialGraphInfo,
         clickBoostsFuture,
         clickHistoryFuture,
+        timeLogs,
         monitoredAwait
       )
     }
@@ -166,21 +168,6 @@ class MainSearcherFactory @Inject() (
 
   def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
-  }
-
-  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Future[Map[Lang, Int]] = consolidateLangFreqsReq(userId) {
-    case userId =>
-      Future.traverse(shards) { shard =>
-        SafeFuture {
-          val searcher = getURIGraphSearcher(shard, userId)
-          searcher.getLangProfile()
-        }
-      }.map { results =>
-        results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
-          case (m, (lang, count)) =>
-            m + (lang -> (count + m.getOrElse(lang, 0)))
-        }
-      }
   }
 
   def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {

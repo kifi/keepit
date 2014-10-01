@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileImage', [
-  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'profileService', '$analytics', '$location',
-  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, profileService, $analytics, $location) {
+  '$document', '$timeout', '$compile', '$templateCache', '$window', '$q', '$http', 'env', 'modalService', 'profileService', '$analytics', '$location',
+  function ($document, $timeout, $compile, $templateCache, $window, $q, $http, env, modalService, profileService, $analytics, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,16 +13,12 @@ angular.module('kifi')
       },
       templateUrl: 'profile/profileImage.tpl.html',
       link: function (scope, element) {
-        scope.showImageEditDialog = {value: false};
-        scope.showImageUploadingModal = {value: false};
-        scope.showImageUploadFailedDialog = {value: false};
-
         var maskOffset = 40, maskSize;
         var positioning = {};
         var dragging = {};
         var isImageLoaded = false;
         var PHOTO_BINARY_UPLOAD_URL = env.xhrBase + '/user/pic/upload',
-          PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
+            PHOTO_CROP_UPLOAD_URL = env.xhrBase + '/user/pic';
         var photoXhr2;
 
         function refreshZoom() {
@@ -78,11 +74,6 @@ angular.module('kifi')
 
         var fileInput = element.find('.profile-image-file');
         var imageElement, imageMask;
-        $timeout(function () {
-          imageElement = element.find('.kf-profile-image-dialog-image');
-          imageMask = element.find('.kf-profile-image-dialog-mask');
-          setupImageDragging();
-        });
 
         function startImageDragging(e) {
           dragging.initialMouseX = e.pageX;
@@ -181,7 +172,18 @@ angular.module('kifi')
         };
 
         function showImageEditingTool(imageUrl) {
-          scope.$apply(function () {
+          modalService.open({
+            template: 'profile/imageEditModal.tpl.html',
+            scope: scope
+          });
+
+          // Use $timeout here so that the DOM elements in the edit-image modal
+          // can be loaded and found.
+          $timeout(function () {
+            imageElement = $document.find('.kf-profile-image-dialog-image');
+            imageMask = $document.find('.kf-profile-image-dialog-mask');
+            setupImageDragging();
+
             imageElement.css({
               background: 'url(' + imageUrl + ') no-repeat'
             });
@@ -208,13 +210,13 @@ angular.module('kifi')
                 scope.zoomSlider.value = 50;
                 positioning.centerXRatio = 0.5;
                 positioning.centerYRatio = 0.5;
-                scope.showImageEditDialog.value = true;
+                //
                 isImageLoaded = true;
                 refreshZoom();
               });
             };
             image.src = imageUrl;
-          });
+          }, 0);
         }
 
         scope.resetChooseImage = function () {
@@ -222,13 +224,24 @@ angular.module('kifi')
         };
 
         function imageUploadError() {
-          scope.showImageUploadingModal.value = false;
-          scope.showImageUploadFailedDialog.value = true;
-          scope.resetChooseImage();
+          scope.forceClose = true;
+
+          // Use $evalAsync to wait for forceClose to close the currently open modal before
+          // opening the next modal.
+          scope.$evalAsync(function () {
+            modalService.open({
+              template: 'profile/imageUploadFailedModal.tpl.html'
+            });
+            scope.resetChooseImage();
+          });
         }
 
         scope.uploadImage = function () {
-          scope.showImageUploadingModal.value = true;
+          modalService.open({
+            template: 'profile/imageUploadingModal.tpl.html',
+            scope: scope
+          });
+
           var upload = uploadPhotoXhr2(scope.files);
           if (upload) {
             upload.promise.then(function (result) {
@@ -239,12 +252,13 @@ angular.module('kifi')
                 picHeight: positioning.imageHeight,
                 cropX: Math.floor(scaling * (maskOffset - positioning.currentLeft)),
                 cropY: Math.floor(scaling * (maskOffset - positioning.currentTop)),
-                cropSize: Math.floor(Math.min(scaling * maskSize, scaling * maskSize))
+                cropSize: Math.floor(scaling * maskSize)
               };
               $http.post(PHOTO_CROP_UPLOAD_URL, data)
               .then(function () {
                 profileService.fetchMe();
-                scope.showImageUploadingModal.value = false;
+                scope.forceClose = true;
+
                 scope.resetChooseImage();
                 $analytics.eventTrack('user_clicked_page', {
                   'action': 'uploadImage',

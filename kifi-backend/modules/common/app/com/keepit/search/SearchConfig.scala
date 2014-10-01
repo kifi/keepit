@@ -12,6 +12,8 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.usersegment.UserSegment
+import play.api.libs.json._
+import play.api.libs.json.JsObject
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -33,18 +35,17 @@ object SearchConfig {
       "newContentBoost" -> "1.0",
       "tailCutting" -> "0.3",
       "proximityBoost" -> "0.95",
-      "semanticBoost" -> "0.8",
       "dampingHalfDecayMine" -> "6.0",
       "dampingHalfDecayFriends" -> "4.0",
       "dampingHalfDecayOthers" -> "1.5",
-      "showExperts" -> "false",
       "forbidEmptyFriendlyHits" -> "true",
-      "useNonPersonalizedContextVector" -> "false",
-      "useSemanticMatch" -> "false",
       "proximityGapPenalty" -> "0.05",
       "proximityThreshold" -> "0.0",
       "proximityPowerFactor" -> "1.0",
-      "messageHalfLifeHours" -> "24"
+      "messageHalfLifeHours" -> "24",
+      "minMyLibraries" -> "0",
+      "myLibraryBoost" -> "1.5",
+      "newEngine" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -65,18 +66,15 @@ object SearchConfig {
       "newContentBoost" -> "importance of a new content introduced to the network",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
-      "semanticBoost" -> "boosting by semantic vector",
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "showExperts" -> "suggest experts when search returns hits",
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
-      "useNonPersonalizedContextVector" -> "may use non-personalized context semantic vector",
-      "useSemanticMatch" -> "use semantic boolean query",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
-      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search",
+      "newEngine" -> "use new engine"
     )
 
   val empty = new SearchConfig(Map.empty)
@@ -90,6 +88,11 @@ object SearchConfig {
       case 3 => new SearchConfig(Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
       case _ => empty
     }
+  }
+
+  implicit val format = new Format[SearchConfig] {
+    def reads(json: JsValue) = json.validate[JsObject].map { obj => SearchConfig(obj.fields.map { case (key, value) => (key, value.as[String]) }: _*) }
+    def writes(config: SearchConfig) = JsObject(config.params.mapValues(JsString(_)).toSeq)
   }
 }
 

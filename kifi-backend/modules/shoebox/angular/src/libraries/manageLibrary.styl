@@ -1,0 +1,322 @@
+manage-lib-button =
+  background-color: kifiBlack
+    display: block
+    font-size: 16px
+    font-weight: bold
+
+    &:hover
+    &:focus
+      background-color: #aaa
+
+    &:active
+      background-color: #888
+
+
+.manage-library
+  .dialog-content
+    padding-bottom: 0
+
+  .dialog-x
+    top: 15px
+    right: 20px
+    width: 18px
+    height: 18px
+
+    &:hover
+      cursor: pointer
+
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      left: 50%
+      top: 1px
+      bottom: 1px
+      border-radius: 2px
+      width: 3px;
+      background: #c7c7c7
+      font-size: 0
+
+    &::before
+      transform: translate(-1px) rotate(45deg)
+
+    &::after
+      transform: translate(-1px) rotate(-45deg)
+
+    &:hover::before
+    &:hover::after
+    &:focus::before
+    &:focus::after
+      background: #aaa
+
+    &:active::before
+    &:active::after
+      background: #888
+
+  .dialog-body-wrap
+    margin: 0
+    padding: 0
+
+  .dialog-body
+    padding: 0 30px 15px
+    overflow: hidden
+
+  .dialog-header
+    padding: 10px 30px
+    background-color: kifiBlack
+    font-family: Helvetica, Arial, sans-serif
+    font-size: 18px
+    font-style: normal
+    font-weight: bold
+    color: #fff
+    text-align: left
+
+  .manage-lib-input-wrapper
+    margin-bottom: 15px
+    margin-top: 25px
+
+  .manage-lib-heading
+    display: block
+    padding-top: 5px
+    font-size: 15px
+    font-weight: bold
+    color: kifiBlack
+
+  .manage-lib-input-title
+    display: inline-block
+    width: 115px
+
+  .manage-lib-input
+    display: inline-block
+    box-sizing: border-box
+    border: 1px solid #c7c7c7
+    border-radius: 5px
+    padding: 10px 15px
+    width: 405px
+    color: textBlackColor
+    vertical-align: top
+    placeholder secondaryTextGray
+
+    &:focus
+      border: 1px solid blueColor
+
+  .manage-lib-slug
+    display: inline-block
+    margin: 7px 0 0 122px
+
+    .manage-lib-slug-input
+      border-bottom: 1px dotted #c7c7c7
+      width: 70px
+      placeholder secondaryTextGray
+
+      &.slug-edited
+        border-bottom: none
+        width: 275px
+
+        &:focus
+          color: textBlackColor
+
+  .manage-lib-description-title-input
+    padding-top: 10px
+
+  .manage-lib-description-input
+    height: 100px
+    resize: none
+
+  .manage-lib-visibility
+    position: relative
+    margin: 10px 0 20px
+    min-height: 90px
+    overflow: hidden
+
+  .manage-lib-choice-card
+    position: relative
+    display: inline-block
+    margin-right: 15px
+    padding-top: 4px
+    width: 80px
+    text-align: center
+
+  .manage-lib-choice-card-img
+    margin: 0 auto 5px
+    width: 58px
+    height: 77px
+    background-repeat: no-repeat
+
+  .manage-lib-choice-input
+    display: none
+
+  .manage-lib-custom-radio
+    position: absolute
+    top: 52px
+    right: 5px
+    border: 1px solid #c7c7c7
+    border-radius: 100%
+    width: 30px
+    height: 30px
+    background-color: #fff
+    cursor: pointer
+    z-index: 3
+
+  .manage-lib-custom-radio-check
+    display: none
+
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      border-radius: 2px
+      width: 4px;
+      background-color: kifiBlack
+      font-size: 0
+
+    &::before
+      left: 52%
+      top: 7px
+      bottom: 5px
+      transform: translate(-1px) rotate(45deg)
+
+    &::after
+      left: 28%
+      top: 14px
+      bottom: 8px
+      transform: translate(-1px) rotate(-45deg)
+
+  input.manage-lib-choice-input:checked ~ .manage-lib-custom-radio-check
+    display: block
+
+  .manage-lib-visibility-description
+    position: absolute
+    top: 0
+    right: 0
+    margin-left: 30px
+    width: 250px
+
+  .manage-lib-visibility-description-title
+    font-size: 15px
+    color: kifiBlack
+
+  .manage-lib-visibility-description-content
+    padding-top: 8px
+    font-size: 15px
+    line-height: 18px
+    color: secondaryTextGray
+
+  .manage-lib-create-button
+    {manage-lib-button}
+    margin: 0 auto
+
+  .manage-lib-save-button
+    {manage-lib-button}
+    float: right
+
+  .manage-lib-delete-link
+    display: block
+    padding-top: 10px
+    color: kifiBlack
+
+  .manage-lib-error
+    display: block
+    font-size: 16px
+    color: redColor
+
+  .manage-lib-name-error
+    margin-top: -5px
+    font-size: 12px
+
+  .manage-lib-invite
+    box-sizing: border-box
+    min-height: 60px
+
+    .library-share-menu
+      top: 5px
+      display: block
+      width: 540px
+
+    .library-share-menu-content
+      border: none
+      box-shadow: none
+
+      .library-share-input-box
+        border: none
+
+      .library-share-input.library-share-search-input
+        box-sizing: border-box
+        border: 1px solid #c7c7c7
+        border-radius: 5px
+        width: 540px
+        background-color: #fff
+
+      .library-share-contact-list
+        position: relative
+        top: -5px
+        border: 1px solid #c7c7c7
+        border-bottom-left-radius: 5px
+        border-bottom-right-radius: 5px
+
+        &:empty
+          display: none
+
+      .library-share-contact-summary
+        line-height: 1.2em
+
+      .library-share-contact
+        width: 100%
+
+      .library-share-contact-button
+        // Override a bunch of global dialog button styles.
+        width: inherit
+        height: inherit
+        line-height: inherit
+        font-weight: inherit
+
+        right: 3px
+        padding-top: 4px
+        padding-bottom: 4px
+
+        &:hover
+          color: #666
+
+        &::before
+          top: 3px
+
+.manage-lib-followers
+  overflow: auto
+  height: 280px
+
+.manage-lib-follower
+  position: relative
+  box-sizing: border-box
+  padding: 12px 20px
+  border-bottom: 1px solid #c7c7c7
+  width: 540px
+  height: 65px
+  background: #fff
+
+  &.manage-lib-owner
+    background-color: #f8f8f8
+
+.manage-lib-owner
+  font-weight: bold
+
+.manage-lib-follower-image
+  display: inline-block
+  margin-right: 20px
+  border-radius: 100%
+  width: 42px
+  height: 42px
+
+.manage-lib-follower-name
+  display: inline-block
+
+.manage-lib-follower-status
+  position: absolute
+  top: 22px
+  right: 25px
+  color: green
+
+  .manage-lib-owner &
+    color: kifiBlack
+
+
+

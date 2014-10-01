@@ -2,6 +2,8 @@ package com.keepit.model
 
 import com.keepit.heimdal._
 
+import scala.concurrent.Future
+
 class FakeUserEventLoggingRepo extends DevUserEventLoggingRepo {
 
   var events: Vector[UserEvent] = Vector()
@@ -10,7 +12,10 @@ class FakeUserEventLoggingRepo extends DevUserEventLoggingRepo {
 
   def lastEvent(): UserEvent = events.head
 
-  override def persist(obj: UserEvent): Unit = synchronized { events = events :+ obj }
+  override def persist(obj: UserEvent): Future[Unit] = {
+    synchronized { events = events :+ obj }
+    Future.successful(())
+  }
 }
 
 class FakeSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
@@ -21,7 +26,10 @@ class FakeSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
 
   def lastEvent(): SystemEvent = events.head
 
-  override def persist(obj: SystemEvent): Unit = synchronized { events = events :+ obj }
+  override def persist(obj: SystemEvent): Future[Unit] = {
+    synchronized { events = events :+ obj }
+    Future.successful(())
+  }
 }
 
 class FakeAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
@@ -32,7 +40,10 @@ class FakeAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
 
   def lastEvent(): AnonymousEvent = events.head
 
-  override def persist(obj: AnonymousEvent): Unit = synchronized { events = events :+ obj }
+  override def persist(obj: AnonymousEvent): Future[Unit] = {
+    synchronized { events = events :+ obj }
+    Future.successful(())
+  }
 }
 
 class FakeNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
@@ -43,5 +54,8 @@ class FakeNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
 
   def lastEvent(): NonUserEvent = events.head
 
-  override def persist(obj: NonUserEvent): Unit = synchronized { events = events :+ obj }
+  override def persist(obj: NonUserEvent): Future[Unit] = {
+    synchronized { events = events :+ obj }
+    Future.successful(())
+  }
 }

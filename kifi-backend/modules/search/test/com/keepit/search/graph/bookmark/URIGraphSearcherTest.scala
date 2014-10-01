@@ -347,26 +347,5 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
         1 === 1
       }
     }
-
-    "retrieve language profile" in {
-      withInjector(helperModules: _*) { implicit injector =>
-        val (users, uris) = initData
-        val store = setupArticleStore(uris)
-        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
-        saveBookmarksByEdges(edges)
-
-        val indexer = mkURIGraphIndexer()
-        indexer.update() === 1
-
-        addConnections(Map(users(0).id.get -> Set()))
-        val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
-        userGraph.update()
-        userGraphsSearcherFactory.clear()
-
-        val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
-
-        searcher.getLangProfile() === Map(Lang("en") -> 3)
-      }
-    }
   }
 }

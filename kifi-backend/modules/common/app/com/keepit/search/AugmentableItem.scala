@@ -24,7 +24,8 @@ case class AugmentedItem(
   keep: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
   moreKeeps: Seq[(Option[Id[Library]], Option[Id[User]])],
   moreTags: Seq[Hashtag],
-  otherPublishedKeeps: Int)
+  otherPublishedKeeps: Int,
+  otherDiscoverableKeeps: Int)
 
 object AugmentedItem {
   def withScores(augmentationScores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo): AugmentedItem = {
@@ -52,7 +53,7 @@ object AugmentedItem {
       )
     }
     val moreSortedTags = moreTags.toSeq.sortBy(-augmentationScores.tagScores.getOrElse(_, 0f))
-    AugmentedItem(item.uri, keep, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps)
+    AugmentedItem(item.uri, keep, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps, info.otherDiscoverableKeeps)
   }
 }
 
@@ -62,7 +63,7 @@ object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int)
+case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int)
 object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }

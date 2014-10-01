@@ -4,30 +4,47 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.{ EmailTips, EmailToSend }
-import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ NotificationCategory, PasswordResetRepo, User }
+import com.keepit.common.mail.SystemEmailAddress
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.helpers.{ fullName, firstName }
+import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.social.SocialNetworkType
+import com.keepit.social.SocialNetworks.{ FACEBOOK, LINKEDIN }
 
-import scala.concurrent.Future
+sealed case class ConnectionMadeEmailValues(line1: Option[String], line2: String)
 
 class FriendConnectionMadeEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    passwordResetRepo: PasswordResetRepo,
-    basicUserRepo: BasicUserRepo,
-    config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendToUser(toUserId: Id[User], friendUserId: Id[User], category: NotificationCategory): Future[ElectronicMail] = {
-    val (subject, campaign) = category match {
-      case NotificationCategory.User.CONNECTION_MADE =>
-        val subject = s"You are now friends with ${fullName(friendUserId)} on Kifi!"
-        (subject, Some("connectionMade"))
+  def apply(toUserId: Id[User], friendUserId: Id[User], category: NotificationCategory, networkTypeOpt: Option[SocialNetworkType] = None) =
+    sendToUser(toUserId, friendUserId, category, networkTypeOpt)
+
+  def sendToUser(toUserId: Id[User], friendUserId: Id[User], category: NotificationCategory, networkTypeOpt: Option[SocialNetworkType] = None) = {
+    def friendSourceName = networkTypeOpt collect {
+      case FACEBOOK => FACEBOOK.displayName + " friend"
+      case LINKEDIN => LINKEDIN.displayName + " connection"
+    } getOrElse "friend"
+
+    val (emailText, subject, campaign) = category match {
       case NotificationCategory.User.FRIEND_ACCEPTED =>
+        val emailText = ConnectionMadeEmailValues(
+          line1 = None,
+          line2 = s"${fullName(friendUserId)} accepted your Kifi friend request")
         val subject = s"${fullName(friendUserId)} accepted your Kifi friend request"
-        (subject, Some("friendRequestAccepted"))
+        (emailText, subject, Some("friendRequestAccepted"))
+      case NotificationCategory.User.SOCIAL_FRIEND_JOINED if networkTypeOpt.isDefined =>
+        val emailText = ConnectionMadeEmailValues(
+          line1 = Some(s"Your $friendSourceName, ${fullName(friendUserId)}, joined Kifi"),
+          line2 = s"You and ${firstName(friendUserId)} are now connected on Kifi")
+        val subject = s"Your $friendSourceName ${firstName(friendUserId)} just joined Kifi"
+        (emailText, subject, Some("socialFriendJoined"))
+      case NotificationCategory.User.CONNECTION_MADE =>
+        val emailText = ConnectionMadeEmailValues(
+          line1 = Some("You have a new connection on Kifi"),
+          line2 = s"Your $friendSourceName, ${fullName(friendUserId)}, is now connected to you on Kifi")
+        val subject = s"You are now friends with ${fullName(friendUserId)} on Kifi!"
+        (emailText, subject, Some("connectionMade"))
     }
 
     val emailToSend = EmailToSend(
@@ -36,9 +53,10 @@ class FriendConnectionMadeEmailSender @Inject() (
       subject = subject,
       to = Left(toUserId),
       category = category,
-      htmlTemplate = views.html.email.friendConnectionMadeBlack(toUserId, friendUserId, category),
+      htmlTemplate = views.html.email.black.friendConnectionMade(toUserId, friendUserId, emailText),
+      textTemplate = Some(views.html.email.black.friendConnectionMadeText(toUserId, friendUserId, emailText)),
       campaign = campaign,
-      tips = Seq(EmailTips.FriendRecommendations)
+      tips = Seq()
     )
     emailTemplateSender.send(emailToSend)
   }

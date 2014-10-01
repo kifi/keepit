@@ -65,7 +65,7 @@
   </form>
   <p id = "user_topic_mean_result">
 
-  <br><bt>
+  <br><br>
   <div>Library topic</div>
   <form id = "library_topic">
     <input id = "libId_for_library_topic" type = "text" placeholder = "library Id">
@@ -98,9 +98,7 @@
         ).done(done).fail(fail);
 
         function done(data) {
-          var x = JSON.parse(data)
-
-          var fromId = parseInt($('#fromId').val())
+          x = data
           var topicIds = x.ids
           var topicWords = x.topicWords
           var topicNames = x.topicNames

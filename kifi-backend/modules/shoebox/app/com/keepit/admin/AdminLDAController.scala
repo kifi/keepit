@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json._
@@ -16,15 +16,15 @@ import views.html
 class AdminLDAController @Inject() (
     cortex: CortexServiceClient,
     shoebox: ShoeboxServiceClient,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,
     uriRepo: NormalizedURIRepo,
-    keepRepo: KeepRepo) extends AdminController(actionAuthenticator) {
+    keepRepo: KeepRepo) extends AdminUserActions {
 
   val MAX_WIDTH = 15
 
-  def index() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def index() = AdminUserPage.async { implicit request =>
     cortex.ldaNumOfTopics.map { n =>
       Ok(html.admin.lda(n))
     }
@@ -42,7 +42,7 @@ class AdminLDAController @Inject() (
     }.mkString("\n")
   }
 
-  def showTopics() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def showTopics() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val fromId = body.get("fromId").get.toInt
     val toId = body.get("toId").get.toInt
@@ -68,7 +68,7 @@ class AdminLDAController @Inject() (
     }
   }
 
-  def wordTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def wordTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
     val futureMsg = cortex.ldaWordTopic(word).flatMap {
@@ -78,7 +78,7 @@ class AdminLDAController @Inject() (
     futureMsg.map(msg => Ok(JsString(msg)))
   }
 
-  def saveEdits() = AdminHtmlAction.authenticated(parse.tolerantJson) { implicit request =>
+  def saveEdits() = AdminUserPage(parse.tolerantJson) { implicit request =>
     val js = request.body
 
     val ids = (js \ "topic_ids").as[JsArray].value.map { _.as[String] }
@@ -95,7 +95,7 @@ class AdminLDAController @Inject() (
     Ok
   }
 
-  def docTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def docTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val doc = body.get("doc").get
     val futureMsg = cortex.ldaDocTopic(doc).flatMap {
@@ -105,20 +105,22 @@ class AdminLDAController @Inject() (
     futureMsg.map(msg => Ok(JsString(msg)))
   }
 
-  def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def userUriInterest() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
     score.map { score =>
-      val (globalScore, recencyScore) = (score.global, score.recency)
+      val (globalScore, recencyScore, libScore) = (score.global, score.recency, score.libraryInduced)
       val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
       val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
-      Ok(globalMsg + "; " + recencyMsg)
+      val libMsg = "libScore: " + libScore.map { _.toString }.getOrElse("n/a")
+      val msg = List(globalMsg, recencyMsg, libMsg).mkString("\n")
+      Ok(msg.replaceAll("\n", "\n<br>"))
     }
   }
 
-  def userTopicMean() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def userTopicMean() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
 
@@ -145,7 +147,7 @@ class AdminLDAController @Inject() (
 
   }
 
-  def topicDetail(topicId: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def topicDetail(topicId: Int) = AdminUserPage.async { implicit request =>
     cortex.sampleURIsForTopic(topicId).map {
       case (uriIds, scores) =>
         val uris = db.readOnlyReplica { implicit s =>
@@ -155,17 +157,17 @@ class AdminLDAController @Inject() (
     }
   }
 
-  def peopleLikeYou(topK: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def peopleLikeYou(topK: Int) = AdminUserPage.async { implicit request =>
     val user = request.userId
     cortex.getSimilarUsers(user, topK).map {
       case (userIds, scores) =>
-        val users = db.readOnlyReplica { implicit s => userIds.map { id => userRepo.get(id) } }
+        val users = db.readOnlyMaster { implicit s => userIds.map { id => userRepo.get(id) } }
         Ok(html.admin.peopleLikeYou(users, scores))
     }
 
   }
 
-  def unamedTopics(limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def unamedTopics(limit: Int) = AdminUserPage.async { implicit request =>
     cortex.unamedTopics(limit).map {
       case (topicInfo, topicWords) =>
         val words = topicWords.map { case words => getFormatted(words) }
@@ -173,7 +175,7 @@ class AdminLDAController @Inject() (
     }
   }
 
-  def libraryTopic() = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def libraryTopic() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val libId = Id[Library](body.get("libId").get.toLong)
 

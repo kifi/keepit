@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.cache.CacheModule
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.helprank.ReKeepStatsUpdaterModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
@@ -16,6 +17,7 @@ case class HeimdalServiceTypeModule() extends ServiceTypeModule {
 
 abstract class HeimdalModule(
     // Common Functional Modules
+    val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val mongoModule: MongoModule,
     val heimdalQueueModule: HeimdalQueueModule,

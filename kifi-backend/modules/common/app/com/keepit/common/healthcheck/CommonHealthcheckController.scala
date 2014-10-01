@@ -14,7 +14,7 @@ import com.keepit.common.service._
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.cache.FortyTwoCachePlugin
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 
 case class BenchmarkResults(cpu: Long, cpuPar: Long, memcacheRead: Double)
@@ -24,10 +24,10 @@ object BenchmarkResultsJson {
 }
 
 class CommonBenchmarkController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   benchmarkRunner: BenchmarkRunner,
   fortyTwoServices: FortyTwoServices)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
   import BenchmarkResultsJson._
 
   def benchmarksResults = Action { implicit request =>

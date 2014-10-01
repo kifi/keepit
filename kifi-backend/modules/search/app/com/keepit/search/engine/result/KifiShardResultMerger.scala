@@ -12,7 +12,6 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
-  private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
@@ -41,9 +40,9 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
   private def mergeHits(results: Seq[KifiShardResult], maxHits: Int, withFinalScores: Boolean): Seq[KifiShardHit] = {
 
-    val myHits = createQueue(maxHits * 5)
-    val friendsHits = createQueue(maxHits * 5)
-    val othersHits = createQueue(maxHits * 5)
+    val myHits = createQueue(maxHits)
+    val friendsHits = createQueue(maxHits)
+    val othersHits = createQueue(maxHits)
 
     results.foreach { res =>
       res.hits.foreach { hit =>
@@ -73,7 +72,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     if (myHits.size > 0) {
       myHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          var score = hit.score * dampFunc(rank, dampingHalfDecayMine) / highScore // damping the scores by rank
+          var score = (hit.score / highScore) * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
           hits.insert(score, null, hit.hit)
       }
     }
@@ -92,13 +91,12 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     if (hits.size < maxHits && othersHits.size > 0) {
       val othersNorm = max(highScore, othersHits.highScore)
-      val queue = createQueue(maxHits - hits.size)
-      othersHits.toRankedIterator.foreach {
+      othersHits.toRankedIterator.forall {
         case (hit, rank) =>
           val score = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-          queue.insert(score, null, hit.hit)
+          hits.insert(score, null, hit.hit)
+          hits.size < maxHits // until we fill up the queue
       }
-      queue.foreach { h => hits.insert(h) }
     }
 
     if (withFinalScores) {
@@ -108,7 +106,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     }
   }
 
-  @inline private def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
+  @inline private[this] def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {

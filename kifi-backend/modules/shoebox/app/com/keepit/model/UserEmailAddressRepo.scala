@@ -54,14 +54,10 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    if (emailAddress.verified) {
-      verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
-    }
+    verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
   }
   override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    if (emailAddress.verified) {
-      verifiedEmailUserIdCache.set(VerifiedEmailUserIdKey(emailAddress.address), emailAddress.userId)
-    }
+    deleteCache(emailAddress)
   }
 
   def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress] =

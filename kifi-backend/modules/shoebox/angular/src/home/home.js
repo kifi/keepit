@@ -3,13 +3,13 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepDecoratorService', 'keepActionService', '$q', '$timeout', '$window', 'installService', '$rootScope',
-  function ($scope, tagService, keepDecoratorService, keepActionService, $q, $timeout, $window, installService, $rootScope) {
+  '$scope', 'tagService', 'keepDecoratorService', 'keepActionService', '$q', '$timeout', '$window', 'installService', '$rootScope', 'modalService',
+  function ($scope, tagService, keepDecoratorService, keepActionService, $q, $timeout, $window, installService, $rootScope, modalService) {
     //
     // Internal data.
     //
     var selectedCount = 0;
-    
+
 
     //
     // Scope data.
@@ -40,7 +40,7 @@ angular.module('kifi')
           keep.makeKept();
 
           $scope.keeps.push(keep);
-        });        
+        });
 
         $scope.hasMore = !!result.mayHaveMore;
         $scope.loading = false;
@@ -87,7 +87,9 @@ angular.module('kifi')
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal', 'installExtensionError');
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
       });
     };
 
@@ -95,8 +97,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
-        return;
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
@@ -107,7 +111,9 @@ angular.module('kifi')
     };
 
     $scope.addKeeps = function () {
-      $rootScope.$emit('showGlobalModal', 'addKeeps');
+      modalService.open({
+        template: 'keeps/addKeepsModal.tpl.html'
+      });
     };
 
 
@@ -118,10 +124,18 @@ angular.module('kifi')
       $scope.keeps.unshift(keep);
     });
 
+
     //
     // On HomeCtrl initialization.
     //
     $window.document.title = 'Kifi • Your Keeps';
+
+    if ($scope.showEmailVerifiedModal) {
+      modalService.open({
+        template: 'home/emailVerifiedModal.tpl.html'
+      });
+    }
+
     $scope.enableSearch();
     $scope.getNextKeeps();
   }

@@ -68,7 +68,7 @@ class ExtUserSearchControllerTest extends Specification with SearchTestInjector 
         val indexer = inject[UserIndexer]
         indexer.update()
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
+        val path = routes.ExtUserSearchController.search("woody", None, None, 3).url
         path === "/search/users/search?query=woody&maxHits=3"
 
         val request = FakeRequest("GET", path)
@@ -106,7 +106,7 @@ class ExtUserSearchControllerTest extends Specification with SearchTestInjector 
         val indexer = inject[UserIndexer]
         indexer.update()
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
+        val path = routes.ExtUserSearchController.page("firstNa", None, 0, 10).url
         path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
         val request = FakeRequest("GET", path)
@@ -158,7 +158,7 @@ class ExtUserSearchControllerTest extends Specification with SearchTestInjector 
         val indexer = inject[UserIndexer]
         indexer.update()
 
-        val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
+        val path = routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).url
         path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
         val request = FakeRequest("GET", path)

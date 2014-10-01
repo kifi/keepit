@@ -14,6 +14,6 @@ case class ElizaUrbanAirshipModule() extends UrbanAirshipModule {
 
   @Provides @Singleton def urbanAirshipConfig(app: play.api.Application): UrbanAirshipConfig = {
     val config = app.configuration.getConfig("urban-airship").get
-    UrbanAirshipConfig(config.getString("key").get, config.getString("secret").get)
+    UrbanAirshipConfig(config.getString("key").get, config.getString("secret").get, config.getString("dev_key").get, config.getString("dev_secret").get)
   }
 }

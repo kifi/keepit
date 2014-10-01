@@ -55,8 +55,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 
-  override def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = ???
-
   override def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = ???
 
   override def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = ???

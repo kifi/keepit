@@ -87,6 +87,10 @@ object LibrarySlug {
   def isValidSlug(slug: String): Boolean = {
     slug != "" && !slug.contains(' ') && slug.length < maxSlugLength
   }
+
+  def generateFromName(name: String): String = {
+    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "").replaceAll("^-", "") // taken from generateSlug() in  manageLibrary.js
+  }
 }
 
 sealed abstract class LibraryVisibility(val value: String)

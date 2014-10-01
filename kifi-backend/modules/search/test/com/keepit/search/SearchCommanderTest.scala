@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
@@ -13,7 +12,6 @@ import com.keepit.search.sharding.ShardSpecParser
 class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
-  private val publicIdConfig = PublicIdConfiguration("secret key")
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
@@ -23,7 +21,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory) = initIndexes(store)
+        val (graph, _, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
 
@@ -34,16 +32,19 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
 
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 
+        val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
+
         val searchCommander = new SearchCommanderImpl(
           activeShards,
           searchFactory,
+          languageCommander,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
+          inject[SearchBackwardCompatibilitySupport],
           inject[AirbrakeNotifier],
-          inject[SearchServiceClient],
+          inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],
-          inject[MonitoredAwait],
-          publicIdConfig)
+          inject[MonitoredAwait])
 
         val res = searchCommander.search(
           userId = users(0).id.get,

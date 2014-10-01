@@ -129,22 +129,18 @@ class PageCommander @Inject() (
             val (keepId, (keeperId, libId)) = key
 
             // get keeper info (if exists, otherwise just None)
-            val keeperOpt = keeperId.map(basicUserRepo.load(_))
+            val keeperOpt = keeperId.map(basicUserRepo.load)
 
             // get keep info which is based on library info (if exists, otherwise just None)
             val keepDataOpt = libId.map { libId =>
               val lib = libraryRepo.get(libId)
-              val owner = basicUserRepo.load(lib.ownerId)
-              val libData = LibraryData(
-                id = Library.publicId(lib.id.get),
-                name = lib.name,
-                visibility = lib.visibility,
-                url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug))
               val mine = userId == keeperId.get
-              val removable = (mine || userId == lib.ownerId)
-              // right now assumes keep is "removable" if I own keep or I own library
-              // todo: for collaborators, users may have RW access so they can remove keeps that they don't own
-              KeepData(keepId, mine, removable, libData)
+              KeepData(
+                id = keepId,
+                mine = mine,
+                removable = mine || userId == lib.ownerId, // TODO: also make removable true if user has RW lib access
+                secret = lib.visibility == LibraryVisibility.SECRET,
+                libraryId = Library.publicId(lib.id.get))
             }
             (keeperOpt, keepDataOpt)
           }.toSeq.unzip // separate & flatten to keepers & kept in which libraries

@@ -7,12 +7,13 @@ angular.module('kifi')
   '$rootScope',
   '$analytics',
   '$window',
+  'modalService',
   'recoActionService',
   'recoDecoratorService',
   'recoStateService',
   'undoService',
   function ($scope, $rootScope, $analytics, $window,
-    recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
@@ -21,7 +22,7 @@ angular.module('kifi')
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
-     
+
       recoStateService.empty();
       recoActionService.getMore(opt_recency).then(function (rawRecos) {
         if (rawRecos.length > 0) {
@@ -42,7 +43,7 @@ angular.module('kifi')
 
     $scope.trash = function (reco) {
       recoActionService.trash(reco.recoKeep);
-      
+
       var trashedRecoIndex = _.findIndex($scope.recos, reco);
       var trashedReco = $scope.recos.splice(trashedRecoIndex, 1)[0];
 
@@ -77,8 +78,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
-        return;
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
@@ -89,6 +92,20 @@ angular.module('kifi')
 
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
+    };
+
+
+    /*
+    This is intended be called from the console only, for debugging.
+    Specifically, running `$(".recos-view").scope().toggleExplain(); $(".recos-view").scope().$digest();`
+    in the bowser console while on the recommendations page will toggle between showing the page description and the score breakdown in the card.
+    */
+    $scope.toggleExplain = function () {
+      $scope.recos.forEach(function (reco) {
+        var temp = reco.recoKeep.summary.description;
+        reco.recoKeep.summary.description = reco.recoData.explain;
+        reco.recoData.explain = temp;
+      });
     };
 
     // Load a new set of recommendations only on page refresh.
@@ -104,7 +121,9 @@ angular.module('kifi')
           rawRecos.forEach(function (rawReco) {
             recos.push(recoDecoratorService.newUserRecommendation(rawReco));
           });
+          recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
+          $scope.loading = false;
         } else {
           // If the user has no recommendations, show some popular
           // keeps/libraries as recommendations.
@@ -112,12 +131,11 @@ angular.module('kifi')
             rawRecos.forEach(function (rawReco) {
               recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
             });
+            recoStateService.populate(recos);
+            $scope.recosState = 'noRecos';
+            $scope.loading = false;
           });
-          $scope.recosState = 'noRecos';
         }
-
-        recoStateService.populate(recos);
-        $scope.loading = false;
       });
     }
   }
@@ -125,8 +143,8 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'recoActionService',
-  function ($scope, recoActionService) {
+  '$scope', 'modalService', 'recoActionService',
+  function ($scope, modalService, recoActionService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
 
@@ -148,11 +166,13 @@ angular.module('kifi')
       $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
     };
 
-    $scope.showRecoImproveModal = false;
     $scope.improvement = {};
 
     $scope.showImprovementModal = function () {
-      $scope.showRecoImproveModal = true;
+      modalService.open({
+        template: 'recos/recoImproveModal.tpl.html',
+        scope: $scope
+      });
     };
 
     $scope.submitImprovement = function (reco) {
