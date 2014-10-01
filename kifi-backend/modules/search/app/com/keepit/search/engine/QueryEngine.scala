@@ -10,11 +10,11 @@ import scala.collection.mutable.ListBuffer
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging with DebugOption {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-  private[this] val matchWeights: Array[Float] = new Array[Float](totalSize)
+  private[this] val matchWeights: Array[Float] = new Array[Float](coreSize)
 
   private[this] def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = {
     var i = 0
-    while (i < totalSize) {
+    while (i < coreSize) {
       matchWeights(i) += weights(i)._2
       i += 1
     }
@@ -22,13 +22,13 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   private[this] def normalizeMatchWeight(): Unit = {
     var sum = 0.0f
     var i = 0
-    while (i < totalSize) {
+    while (i < coreSize) {
       sum += matchWeights(i)
       i += 1
     }
     if (sum != 0.0f) {
       i = 0
-      while (i < totalSize) {
+      while (i < coreSize) {
         matchWeights(i) = matchWeights(i) / sum
         i += 1
       }

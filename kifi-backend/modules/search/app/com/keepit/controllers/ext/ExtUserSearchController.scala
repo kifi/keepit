@@ -12,7 +12,6 @@ import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.model.FriendRequestStates
 import play.api.libs.json.JsArray
 import com.keepit.typeahead.PrefixFilter
 
@@ -35,9 +34,9 @@ class ExtUserSearchController @Inject() (
   def page(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val userId = request.userId
     val userExps = request.experiments.map { _.value }
-    log.info(s"user search: userId = ${userId}, userExps = ${userExps.mkString(" ")}")
+    log.info(s"user search: userId = $userId, userExps = ${userExps.mkString(" ")}")
     val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
-    val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
+    val friendRequests = shoeboxClient.getFriendRequestsRecipientIdBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
@@ -47,7 +46,7 @@ class ExtUserSearchController @Inject() (
       case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize, queryTerms)
     }
 
-    val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map { _.recipientId }.toSet
+    val requestedUsers = Await.result(friendRequests, 5 seconds).toSet
 
     val jsVals = res.hits.map {
       case UserHit(id, basicUser, isFriend) =>

@@ -19,10 +19,10 @@ angular.module('kifi')
 
     return {
       disconnectNetwork: function (network) {
-        return env.origin + '/disconnect/' + network;
+        return env.navBase + '/disconnect/' + network;
       },
       linkNetwork: function (network) {
-        return env.origin + '/link/' + network;
+        return env.navBase + '/link/' + network;
       },
       uploadBookmarkFile: function(makePublic) {
         var path = '/keeps/file-import';
@@ -31,11 +31,11 @@ angular.module('kifi')
         }
         return route(path);
       },
-      refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
+      refreshNetworks: env.navBase + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
       importGmail: function () {
-        return env.origin + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
+        return env.navBase + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
