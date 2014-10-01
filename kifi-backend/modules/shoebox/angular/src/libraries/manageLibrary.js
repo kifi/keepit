@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManageLibrary', ['$location', '$rootScope', 'friendService', 'libraryService', 'profileService',
-  function ($location, $rootScope, friendService, libraryService, profileService) {
+.directive('kfManageLibrary', ['$location', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService',
+  function ($location, $window, $rootScope, friendService, libraryService, profileService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -119,13 +119,17 @@ angular.module('kifi')
             return;
           }
 
-          submitting = true;
+          var confirmDelete = $window.confirm('Are you sure you want to delete this library? This action cannot be undone.');
 
-          libraryService.deleteLibrary(scope.library.id).then(function () {
-            $rootScope.$emit('changedLibrary');
-            scope.close();
-            $location.path('/');
-          });
+          if (confirmDelete) {
+            submitting = true;
+
+            libraryService.deleteLibrary(scope.library.id).then(function () {
+              $rootScope.$emit('changedLibrary');
+              scope.close();
+              $location.path('/');
+            });
+          }
         };
 
 

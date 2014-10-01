@@ -131,7 +131,7 @@ class DirectScoreContext(
     matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) = {
     // scoreMax and scoreSum share the same array
-    // this is ok since there shouldn't be more than one call per index in direct path mode
+    // this is ok since there shouldn't be more than one call per term, thus max = sum, in the direct path mode
     this(scoreExpr, new Array[Float](scoreArraySize), matchWeight, collector)
   }
 
@@ -153,20 +153,21 @@ class DirectScoreContext(
     scoreArray(idx) = scr
   }
 
-  override def clear(): Unit = {
-    visibility = Visibility.RESTRICTED
-    secondaryId = -1L
-    degree = 0
-    Arrays.fill(scoreArray, 0.0f)
-  }
+  override def set(id: Long): Joiner = throw new UnsupportedOperationException("DirectScoreContext does not support set")
 
-  override def flush(): Unit = {
-    if (visibility != Visibility.RESTRICTED) {
-      degree = 1
-      docId = pq.addCoreScores(this)
-      collector.collect(this)
-      docId = -1
-    }
+  override def clear(): Unit = {}
+
+  override def flush(): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support flush")
+
+  def put(id: Long, theVisibility: Int): Unit = {
+    super.set(id)
+    visibility = theVisibility
+    secondaryId = -1L
+    degree = 1
+    Arrays.fill(scoreArray, 0.0f)
+    docId = pq.addCoreScores(this)
+    collector.collect(this)
+    docId = -1
   }
 
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
