@@ -87,7 +87,7 @@ abstract class SurrogateExternalIdCompanion[T <: SurrogateExternalId] {
         case Right(id) =>
           asOpt(id) match {
             case Some(extId) => Right(extId)
-            case None => Left(s"Unable to bind aa SurrogateExternalId with $id")
+            case None => Left(s"Unable to bind a SurrogateExternalId with $id")
           }
         case _ => Left("Unable to bind a SurrogateExternalId")
       }

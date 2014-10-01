@@ -334,14 +334,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  @deprecated(message = "use getSessionViewByExternalId", since = "Sept 12, 2014")
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
-    val res = db.readOnlyMaster { implicit session =>
-      sessionRepo.getOpt(sessionId)
-    }
-    Ok(Json.toJson(res))
-  }
-
   def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>
     val res = db.readOnlyMaster { implicit session => //using cache
       sessionRepo.getViewOpt(sessionId)
@@ -361,9 +353,17 @@ class ShoeboxController @Inject() (
     }
   }
 
+  @deprecated(message = "use getFriendRequestsRecipientIdBySender")
   def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
     val requests = db.readOnlyReplica(2) { implicit s =>
       friendRequestRepo.getBySender(senderId)
+    }
+    Ok(JsArray(requests.map { x => Json.toJson(x) }))
+  }
+
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]) = Action { request =>
+    val requests = db.readOnlyReplica(2) { implicit s =>
+      friendRequestRepo.getBySender(senderId).map(_.recipientId)
     }
     Ok(JsArray(requests.map { x => Json.toJson(x) }))
   }

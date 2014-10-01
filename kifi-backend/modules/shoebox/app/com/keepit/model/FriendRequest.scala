@@ -1,12 +1,11 @@
 package com.keepit.model
 
-import com.keepit.eliza.model.MessageHandle
-import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.eliza.model.MessageHandle
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.Some
 
 case class FriendRequest(
     id: Option[Id[FriendRequest]] = None,
@@ -25,6 +24,7 @@ object FriendRequestStates extends States[FriendRequest] {
   val IGNORED = State[FriendRequest]("ignored")
 }
 
+@deprecated(message = "kill json serialization when getFriendRequestsBySender is dead")
 object FriendRequest {
   implicit val friendRequestIdFormat = Id.format[FriendRequest]
   implicit val userIdFormat = Id.format[User]

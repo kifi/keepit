@@ -41,7 +41,7 @@ class ExtUserSearchControllerTest extends Specification with SearchTestInjector 
 
     client.addEmails(emails: _*)
 
-    val friendRequests = Seq(FriendRequest(senderId = Id[User](1), recipientId = Id[User](2), messageHandle = None))
+    val friendRequests = Seq(Id[User](1) -> Id[User](2))
     client.saveFriendRequests(friendRequests: _*)
 
     val connections = Map(Id[User](1) -> Set(Id[User](3)))
