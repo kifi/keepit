@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', ['$location', '$window', 'friendService', 'libraryService', 'modalService', 'profileService',
-  function ($location, $window, friendService, libraryService, modalService, profileService) {
+.directive('kfLibraryCard', ['$FB', '$location', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
+  function ($FB, $location, $window, env, friendService, libraryService, modalService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,9 +15,12 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
+        scope.facebookAppId = $FB.appId();
+
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
+
 
         //
         // Internal methods.
@@ -80,7 +83,7 @@ angular.module('kifi')
             scope.clippedDescription = true;
           }
 
-          scope.library.shareUrl = $location.protocol() + '://' + $location.host() + $location.path();
+          scope.library.shareUrl = env.originWeb + scope.library.url;
         }
 
         scope.showLongDescription = function () {
