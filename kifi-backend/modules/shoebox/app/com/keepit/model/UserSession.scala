@@ -1,15 +1,13 @@
 package com.keepit.model
 
-import com.keepit.common.cache._
-import com.keepit.common.cache.CacheStatistics
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.model.view.UserSessionView
+import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import scala.concurrent.duration._
-import com.keepit.social.{ SocialNetworkType, SocialId }
 
 case class UserSession(
     id: Option[Id[UserSession]] = None,
@@ -25,14 +23,24 @@ case class UserSession(
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def isValid = state == UserSessionStates.ACTIVE && expires.isAfterNow
   def invalidated = copy(state = UserSessionStates.INACTIVE)
+  def toUserSessionView: UserSessionView =
+    UserSessionView(socialId, provider, expires, isValid, createdAt, updatedAt)
 }
 
 object UserSession {
+  implicit def toUserSessionExternalId(id: ExternalId[UserSession]): UserSessionExternalId = UserSessionExternalId(id.id)
+  implicit def fromUserSessionExternalId(id: UserSessionExternalId): ExternalId[UserSession] = ExternalId[UserSession](id.id)
+
+  @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   private implicit val idFormat = Id.format[UserSession]
+  @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   private implicit val userIdFormat = Id.format[User]
+  @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   private implicit val externalIdFormat = ExternalId.format[UserSession]
+  @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   private implicit val stateFormat = State.format[UserSession]
 
+  @deprecated(message = "remove when ShoeboxController#getSessionByExternalId is removed", since = "Sept 12, 2014")
   implicit val userSessionFormat: Format[UserSession] = (
     (__ \ 'id).formatNullable[Id[UserSession]] and
     (__ \ 'userId).formatNullable[Id[User]] and
@@ -45,14 +53,5 @@ object UserSession {
     (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(UserSession.apply, unlift(UserSession.unapply))
 }
-
-case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends Key[UserSession] {
-  override val version = 3
-  val namespace = "user_session_by_external_id"
-  def toKey(): String = externalId.id
-}
-
-class UserSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object UserSessionStates extends States[UserSession]

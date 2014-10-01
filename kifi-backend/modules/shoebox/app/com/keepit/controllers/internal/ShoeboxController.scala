@@ -16,6 +16,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
@@ -333,9 +334,17 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
+  @deprecated(message = "use getSessionViewByExternalId", since = "Sept 12, 2014")
   def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
-    val res = db.readOnlyMaster { implicit session => //using cache
+    val res = db.readOnlyMaster { implicit session =>
       sessionRepo.getOpt(sessionId)
+    }
+    Ok(Json.toJson(res))
+  }
+
+  def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>
+    val res = db.readOnlyMaster { implicit session => //using cache
+      sessionRepo.getViewOpt(sessionId)
     }
     Ok(Json.toJson(res))
   }
