@@ -19,8 +19,11 @@ class ScoreContext(
 
   private[engine] var degree: Int = 0
 
-  private[engine] val scoreMax = new Array[Float](scoreArraySize)
-  private[engine] val scoreSum = new Array[Float](scoreArraySize)
+  private[engine] val scoreMax = newScoreMaxArray
+  private[engine] val scoreSum = newScoreSumArray
+
+  protected def newScoreMaxArray = new Array[Float](scoreArraySize)
+  protected def newScoreSumArray = new Array[Float](scoreArraySize)
 
   def score(): Float = scoreExpr()(this)
 
@@ -122,6 +125,10 @@ class DirectScoreContext(
   private[this] var docId = -1
   private[this] var pq: TaggedScorerQueue = null
 
+  private[this] val scoreArray = new Array[Float](scoreArraySize)
+  override protected def newScoreMaxArray = scoreArray
+  override protected def newScoreSumArray = scoreArray
+
   def setScorerQueue(taggedScorerQueue: TaggedScorerQueue): Unit = {
     pq = taggedScorerQueue
   }
@@ -132,9 +139,14 @@ class DirectScoreContext(
   }
 
   override private[engine] def addScore(idx: Int, scr: Float) = {
-    // there shouldn't be any duplicate index in the direct path
-    scoreMax(idx) = scr
-    scoreSum(idx) = scr
+    scoreArray(idx) = scr
+  }
+
+  override def clear(): Unit = {
+    visibility = Visibility.RESTRICTED
+    secondaryId = -1L
+    degree = 0
+    Arrays.fill(scoreArray, 0.0f)
   }
 
   override def flush(): Unit = {
