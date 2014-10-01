@@ -208,7 +208,7 @@ class RecommendationsCommander @Inject() (
     Future.sequence(db.readOnlyReplica { implicit session =>
       Seq[Id[Library]](Id[Library](24138)).map(libRepo.get)
     }.map { lib =>
-      libCommander.createFullLibraryInfo(userId, lib).map(lib.ownerId -> _)
+      libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
     }).map {
       libInfosWithOwner =>
         libInfosWithOwner.map {
