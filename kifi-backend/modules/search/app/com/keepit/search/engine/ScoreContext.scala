@@ -125,6 +125,8 @@ class DirectScoreContext(
   private[this] var docId = -1
   private[this] var pq: TaggedScorerQueue = null
 
+  // scoreMax and scoreSum share the same array
+  // this is ok since there shouldn't be more than one call per index in direct path mode
   private[this] val scoreArray = new Array[Float](scoreArraySize)
   override protected def newScoreMaxArray = scoreArray
   override protected def newScoreSumArray = scoreArray
@@ -139,6 +141,8 @@ class DirectScoreContext(
   }
 
   override private[engine] def addScore(idx: Int, scr: Float) = {
+    // this overwrites the score max/sum
+    // this is ok since there shouldn't be more than one call per index in direct path mode
     scoreArray(idx) = scr
   }
 
