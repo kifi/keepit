@@ -19,7 +19,7 @@ case class Keep(
     title: Option[String] = None,
     uriId: Id[NormalizedURI],
     isPrimary: Boolean = true, // trick to let us have multiple inactive Keeps while keeping integrity constraints
-    mainOrSecret: Boolean = true,
+    inDisjointLib: Boolean,
     urlId: Id[URL],
     url: String, // denormalized for efficiency
     bookmarkPath: Option[String] = None,
@@ -85,7 +85,7 @@ object Keep {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), mainOrSecret.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
   }
   def unapplyToDbRow(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, if (k.mainOrSecret) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, Option(k.visibility))
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, Option(k.visibility))
   }
 
   def _bookmarkFormat = (
@@ -123,7 +123,7 @@ object Keep {
         "title" -> k.title,
         "uriId" -> k.uriId,
         "isPrimary" -> k.isPrimary,
-        "mainOrSecret" -> k.mainOrSecret,
+        "mainOrSecret" -> k.inDisjointLib,
         "urlId" -> k.urlId,
         "url" -> k.url,
         "bookmarkPath" -> k.bookmarkPath,

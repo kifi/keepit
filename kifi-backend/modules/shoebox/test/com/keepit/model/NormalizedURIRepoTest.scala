@@ -27,13 +27,13 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
-      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri2.id.get, urlId = url2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri2.id.get, urlId = url2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       //keepRepo.save(KeepFactory(url2.url, uri = uri2, userId = user1.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri1.id.get, urlId = url1.id.get, url = url1.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("my title is short"), userId = user1.id.get, uriId = uri1.id.get, urlId = url1.id.get, url = url1.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       //keepRepo.save(KeepFactory(url1.url, uri = uri1, userId = user1.id.get, title = Some("my title is short"), url = url1, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-      keepRepo.save(Keep(title = Some("my title is long"), userId = user2.id.get, uriId = uri2.id.get, urlId = url2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+      keepRepo.save(Keep(title = Some("my title is long"), userId = user2.id.get, uriId = uri2.id.get, urlId = url2.id.get, url = url2.url, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       //keepRepo.save(KeepFactory(url2.url, uri = uri2, userId = user2.id.get, title = Some("my title is long"), url = url2, source = KeepSource("NA"), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
     }

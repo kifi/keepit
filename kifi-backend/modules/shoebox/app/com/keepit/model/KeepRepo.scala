@@ -70,7 +70,7 @@ class KeepRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Boolean]("is_primary", O.Nullable) // trueOrNull
-    def mainOrSecret = column[Boolean]("main_or_secret", O.Nullable) // trueOrNull
+    def inDisjointLib = column[Boolean]("in_disjoint_lib", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
@@ -80,7 +80,7 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, mainOrSecret.?, urlId, url, bookmarkPath.?, isPrivate,
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
       userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 

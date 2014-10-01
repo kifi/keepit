@@ -72,7 +72,9 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           state = KeepStates.ACTIVE,
           source = KeepSource.keeper,
           visibility = LibraryVisibility.SECRET,
-          libraryId = None))
+          libraryId = Some(Id[Library](1)),
+          inDisjointLib = true
+        ))
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
@@ -103,7 +105,9 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           state = KeepStates.INACTIVE,
           source = KeepSource.keeper,
           visibility = LibraryVisibility.DISCOVERABLE,
-          libraryId = None))
+          libraryId = Some(Id[Library](1)),
+          inDisjointLib = true
+        ))
 
         val keep2 = shoebox.saveBookmarks(Keep(
           uriId = Id[NormalizedURI](1),
@@ -113,7 +117,9 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           state = KeepStates.ACTIVE,
           source = KeepSource.keeper,
           visibility = LibraryVisibility.DISCOVERABLE,
-          libraryId = None))
+          libraryId = Some(Id[Library](1)),
+          inDisjointLib = true
+        ))
 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
