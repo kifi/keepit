@@ -6,6 +6,8 @@
 // @require scripts/html/keeper/keep_box_libs_list.js
 // @require scripts/html/keeper/keep_box_new_lib.js
 // @require scripts/lib/antiscroll.min.js
+// @require scripts/lib/jquery-tokeninput.js
+// @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
 // @require scripts/render.js
@@ -126,12 +128,20 @@ var keepBox = keepBox || (function () {
   }
 
   function swipeTo($new) {
-    var $cart = $box.find('.kifi-keep-box-cart');
+    var $vp = $box.find('.kifi-keep-box-viewport');
+    var $cart = $vp.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view');
     var back = !$new;
+
+    var vpHeightOld = $vp[0].offsetHeight;
+    $vp.css('height', vpHeightOld).removeClass('kifi-height-auto');
+
     $new = $new || $old.data('$prev');
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
-    $new[back ? 'prependTo' : 'appendTo']($cart).layout();
+    $new[back ? 'prependTo' : 'appendTo']($cart);
+
+    var heightDelta = $new[0].offsetHeight - $old[0].offsetHeight;
+
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
     .on('transitionend', function end(e) {
       if (e.target === this) {
@@ -144,11 +154,13 @@ var keepBox = keepBox || (function () {
         }
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        var input = $new.find('textarea')[0] || $new.find('input')[0];
-        input.focus();
-        input.select();
+        $new.find('input').first().focus().select();
+
+        $vp.addClass('kifi-height-auto').css('height', '');
       }
     });
+
+    $vp.css('height', vpHeightOld + heightDelta);
   }
 
   function partitionLibs(libs, keeps) {
@@ -378,6 +390,19 @@ var keepBox = keepBox || (function () {
       keep_box_lib: 'keep_box_lib'
     }));
     $view.find('.kifi-keep-box-keep-image-cart').append(canvases[imageIdx] || newNoImage());
+
+    var $tags = $view.find('.kifi-keep-box-tags')
+    .data('pre', (keep && keep.tags || []).map(function (tag) { return {name: tag}; }))
+    .tokenInput(searchTags.bind(null, library.id), {
+      classPrefix: 'kifi-keep-box-tags-',
+      placeholder: 'Add a tag',
+      tokenValue: 'name',
+      preventDuplicates: true,
+      allowFreeTagging: true,
+      showResults: showTagSuggestions,
+      onAdd: $.proxy(onAddTag, null, library.id),
+      onDelete: $.proxy(onDeleteTag, null, library.id)
+    });
     $view.data({
       images: images,
       canvases: canvases,
@@ -476,6 +501,30 @@ var keepBox = keepBox || (function () {
     return i;
   }
 
+  function searchTags(libraryId, numTokens, query, withResults) {
+    api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, withResults);
+  }
+
+  function showTagSuggestions($dropdown, els, done) {
+    $dropdown
+      .empty().append(els)
+      .position({my: 'left-6 bottom', at: 'left top', of: $dropdown.prev().find('input'), collision: 'fit none'})
+    done();
+  }
+
+  function onAddTag(libraryId, tag) {
+    var $tags = $(this);
+    api.port.emit('tag', {libraryId: libraryId, tag: tag.name}, function (name) {
+      if (name && name !== tag.name) {
+        $tags.tokenInput('replace', {name: tag.name}, {name: name});
+      }
+    });
+  }
+
+  function onDeleteTag(libraryId, tag) {
+    api.port.emit('untag', {libraryId: libraryId, tag: tag.name}, api.noop);
+  }
+
   function onKeepEdit($view, prop, val) {
     var data = $view.data();
     data.shown[prop] = val;
@@ -536,7 +585,7 @@ var keepBox = keepBox || (function () {
       }
       if (promises.length) {
         var $progress = $btn.find('.kifi-keep-box-progress');
-        $view.find('.kifi-keep-box-keep-title,.kifi-keep-box-keep-comment').prop('disabled', true);
+        $view.find('.kifi-keep-box-keep-title,.kifi-keep-box-keep-tags').prop('disabled', true);
         $btn.removeAttr('href').addClass('kifi-doing');
         updateProgress.call($progress[0], 0);
         Q.all(promises).done(function () {

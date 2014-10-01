@@ -703,6 +703,35 @@ api.port.on({
       }, respond.bind(null, false));
     }
   },
+  search_tags: function (data, respond) {
+    respond([]); // TODO
+  },
+  tag: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
+        if (keep.details) {
+          keep.details.tags.push(resp.tag);
+        }
+        respond(resp.tag);
+      }, respond.bind(null, false));
+    }
+  },
+  untag: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
+        if (keep.details) {
+          for (var i; (i = keep.details.tags.indexOf(data.tag)) >= 0;) {
+            keep.details.tags.splice(i, 1);
+          }
+        }
+        respond(true);
+      }, respond.bind(null, false));
+    }
+  },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
     logEvent('slider', 'sliderShown', data);
