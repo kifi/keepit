@@ -51,7 +51,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
 
-    sources.foldLeft(0) { (total, source) =>
+    val numRows = sources.foldLeft(0) { (total, source) =>
       val startTime = System.currentTimeMillis()
 
       val newTotal = execute(source, directScoreContext)
@@ -69,7 +69,9 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val elapsed = System.currentTimeMillis() - startTime
 
-    debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=$numRows bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
+    }
   }
 
   private def prepare(source: ScoreVectorSource): Unit = {

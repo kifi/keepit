@@ -31,22 +31,21 @@ class SocialUserTypeahead @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
-    cache.getOrElseFuture(SocialUserTypeaheadKey(userId)) {
-      val res = store.getWithMetadata(userId)
-      res match {
-        case Some((filter, meta)) =>
+  protected def get(userId: Id[User]) = {
+    val filterOpt = cache.getOrElseOpt(SocialUserTypeaheadKey(userId)) {
+      store.getWithMetadata(userId).map {
+        case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
-            refresh(userId) // async
+            refresh(userId)
           }
-          Future.successful(filter)
-        case None => refresh(userId)
+          filter
       }
     }
+    Future.successful(filterOpt.map(makeTypeahead(userId, _)))
   }
 
-  protected def getInfos(userId: Id[User], ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
+  private def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
     else {
       db.readOnlyMasterAsync { implicit session =>
@@ -55,22 +54,28 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def getAllInfos(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
+  private def makeTypeahead(userId: Id[User], filter: PrefixFilter[SocialUserInfo]) = PersonalTypeahead(userId, filter, getInfos)
+
+  private def getAllInfos(id: Id[User]): Future[Seq[(Id[SocialUserInfo], SocialUserBasicInfo)]] = SafeFuture {
     db.readOnlyMaster { implicit session =>
-      socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq
+      socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq.map(info => info.id -> info)
     }
   }
 
-  override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id
+  protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
-  override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
+  protected def invalidate(typeahead: PersonalTypeahead[User, SocialUserInfo, SocialUserBasicInfo]) = {
+    val userId = typeahead.ownerId
+    val filter = typeahead.filter
+    cache.set(SocialUserTypeaheadKey(userId), filter)
+    store += (userId -> filter)
+  }
 
-  def refresh(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
-    build(userId).map { filter =>
-      cache.set(SocialUserTypeaheadKey(userId), filter)
-      store += (userId -> filter)
-      log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
-      filter
+  protected def create(userId: Id[User]) = {
+    getAllInfos(userId).map { allInfos =>
+      val filter = buildFilter(userId, allInfos)
+      log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
+      makeTypeahead(userId, filter)
     }(ExecutionContext.fj)
   }
 

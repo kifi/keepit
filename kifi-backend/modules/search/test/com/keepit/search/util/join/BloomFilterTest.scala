@@ -5,14 +5,15 @@ import scala.util.Random
 
 class BloomFilterTest extends Specification {
   private[this] val rnd = new Random
-  private[this] val positiveIds = (0 until 1000).map { _ => rnd.nextInt(Int.MaxValue).toLong }.toSet
-  private[this] val negativeIds = {
-    var negativeSet = Set.empty[Long]
-    while (negativeSet.size < 1000) {
+  private[this] def genPositiveIds = (0 until 1000).map { _ => rnd.nextInt(Int.MaxValue).toLong }.toSet
+  private[this] def genIds = {
+    val positiveIds = genPositiveIds
+    var negativeIds = Set.empty[Long]
+    while (negativeIds.size < 1000) {
       val id = rnd.nextInt(Int.MaxValue).toLong
-      if (!positiveIds.contains(id)) negativeSet += id
+      if (!positiveIds.contains(id)) negativeIds += id
     }
-    negativeSet
+    (positiveIds, negativeIds)
   }
 
   "BloomFilter" should {
@@ -20,15 +21,29 @@ class BloomFilterTest extends Specification {
       val buf = new DataBuffer()
       val writer = new DataBufferWriter
 
+      val positiveIds = genPositiveIds
       positiveIds.foreach { id => buf.alloc(writer, 1, 8).putLong(id) }
 
       val bloomFilter = BloomFilter(buf)
 
       positiveIds.forall(bloomFilter(_)) === true
+    }
 
-      val falsePositiveCount = negativeIds.count(bloomFilter(_))
+    "detect existence of ids with a low false positive ratio" in {
+      (0 until 3).exists { _ =>
+        val buf = new DataBuffer()
+        val writer = new DataBufferWriter
 
-      (falsePositiveCount < negativeIds.size / 10) === true
+        val (positiveIds, negativeIds) = genIds
+        positiveIds.foreach { id => buf.alloc(writer, 1, 8).putLong(id) }
+
+        val bloomFilter = BloomFilter(buf)
+        val falsePositiveCount = negativeIds.count(bloomFilter(_))
+
+        //println(s"\n\t\t falsePositiveCount = $falsePositiveCount (${falsePositiveCount.toDouble / negativeIds.size.toDouble})\n")
+
+        positiveIds.forall(bloomFilter(_)) && (falsePositiveCount < negativeIds.size / 20)
+      } === true
     }
   }
 }
