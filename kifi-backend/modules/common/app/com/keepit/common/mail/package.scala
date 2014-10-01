@@ -1,6 +1,7 @@
 package com.keepit.common.mail
 
 import com.keepit.common.db.Id
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.User
 import play.twirl.api.Html
 
@@ -18,6 +19,7 @@ package object template {
     val parentCategory = TagLabel("parentCategory")
     val title = TagLabel("title")
     val baseUrl = TagLabel("baseUrl")
+    val trackingParam = TagLabel("trackingParam")
   }
 
   // val/def that use tags need to return the Html type so certain characters aren't escaped as HTML entities
@@ -41,11 +43,14 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
+    val unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 
     def unsubscribeUrl(id: Id[User]) = Tag1(tags.unsubscribeUserUrl, id).toHtml
 
     def unsubscribeUrl(address: EmailAddress) = Tag1(tags.unsubscribeEmailUrl, address).toHtml
+
+    def trackingParam(content: String, auxData: Option[HeimdalContext] = None) =
+      Tag2(tags.trackingParam, content, auxData).toHtml
 
     val campaign = Tag0(tags.campaign).toHtml
     private val campaignTagStr = campaign.body
@@ -55,29 +60,30 @@ package object template {
 
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
-    def findMoreFriendsUrl(source: String) = htmlUrl(s"$baseUrl/friends?", source)
+    def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content)
 
-    def acceptFriendUrl(id: Id[User], source: String) = htmlUrl(s"$baseUrl/friends?", source)
+    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?", content)
 
-    def inviteContactUrl(id: Id[User], source: String) =
-      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", source)
+    def inviteContactUrl(id: Id[User], content: String) =
+      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", content)
 
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index)
 
     // wrap a url (String) in HTML (so tags aren't escaped)
     private def htmlUrl(url: String, content: String): Html =
-      Html(appendUrlUtmCodes(url = url, content = content))
+      Html(appendTrackingParams(url = url, content = content))
 
     // url param must end with a ? or &
-    private def appendUrlUtmCodes(url: String, content: String, campaign: String = campaignTagStr,
+    private def appendTrackingParams(url: String, content: String, campaign: String = campaignTagStr,
       medium: String = "email", source: String = parentCategoryTagStr): String = {
       val lastUrlChar = url(url.size - 1)
-      require(lastUrlChar == '?' || lastUrlChar == '&', "[appendUrlUtmCodes] url must end with ? or &")
-      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content"
+      require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
+      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content" +
+        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}"
     }
 
-    def kifiUrl(source: String = "unknown") = htmlUrl(s"$baseUrl/?", source)
+    def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content)
 
     val kifiAddress = "883 N Shoreline Blvd, Mountain View, CA 94043, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
