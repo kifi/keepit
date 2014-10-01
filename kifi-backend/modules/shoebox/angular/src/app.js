@@ -49,7 +49,7 @@ angular.module('kifi', [
   '$location',
   function ($location) {
     var host = $location.host();
-    var dev = /^dev\.ezkeep\.com|localhost$/.test(host);
+    var dev = /^dev\.ezkeep\.com|localhost|^protractor\.kifi\.com$/.test(host);
     var origin = $location.protocol() + '://' + host  + (dev ? ':' + $location.port() : '');
     var local = $location.port() === 9000;
     var navOrigin = dev && !local ? 'https://www.kifi.com' : origin;
