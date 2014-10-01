@@ -55,13 +55,11 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def getAllInfos(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
+  protected def getAllInfos(id: Id[User]): Future[Seq[(Id[SocialUserInfo], SocialUserBasicInfo)]] = SafeFuture {
     db.readOnlyMaster { implicit session =>
-      socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq
+      socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq.map(info => info.id -> info)
     }
   }
-
-  override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 

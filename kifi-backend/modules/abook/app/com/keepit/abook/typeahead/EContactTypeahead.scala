@@ -36,8 +36,6 @@ class EContactTypeahead @Inject() (
     s"$name ${info.email.address}"
   }
 
-  override protected def extractId(info: EContact): Id[EContact] = info.id.get
-
   def refresh(userId: Id[User]): Future[PrefixFilter[EContact]] = {
     build(userId).map { filter =>
       cache.set(EContactTypeaheadKey(userId), filter)
@@ -74,14 +72,14 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def getAllInfos(id: Id[User]): Future[Seq[EContact]] = {
+  protected def getAllInfos(id: Id[User]): Future[Seq[(Id[EContact], EContact)]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email))
+      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email)).map(contact => contact.id.get -> contact)
     }
   }
 
   protected def getInfos(userId: Id[User], ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty[EContact]) else {
+    if (ids.isEmpty) Future.successful(Seq.empty) else {
       db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
       }
