@@ -83,7 +83,7 @@ angular.module('kifi')
             scope.clippedDescription = true;
           }
 
-          scope.library.shareUrl = env.originWeb + scope.library.url;
+          scope.library.shareUrl = env.origin + scope.library.url;
         }
 
         scope.showLongDescription = function () {
