@@ -119,7 +119,7 @@ angular.module('kifi')
             return;
           }
 
-          var confirmDelete = $window.confirm("Are you sure you want to delete this library? This action cannot be undone.");
+          var confirmDelete = $window.confirm('Are you sure you want to delete this library? This action cannot be undone.);
 
           if (confirmDelete) {
             submitting = true;
