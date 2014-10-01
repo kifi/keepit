@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document', 'modalService',
-  function ($document, modalService) {
+  '$document', '$rootElement', 'modalService',
+  function ($document, $rootElement, modalService) {
     return {
       restrict: 'A',
       replace: true,
@@ -14,8 +14,24 @@ angular.module('kifi')
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        $scope.close = this.close = function (closeAction) {
+        function escapeModal (event) {
+          if (event.which === 27) {  // Escape key
+            $scope.close();
+          }
+        }
+
+        function onOpen() {
+          $document.on('keydown', escapeModal);
+          $rootElement.find('body').addClass('modal-open');
+        }
+
+        function onCloseOrDestroy() {
           $document.off('keydown', escapeModal);
+          $rootElement.find('body').removeClass('modal-open');
+        }
+
+        $scope.close = this.close = function (closeAction) {
+          onCloseOrDestroy();
           modalService.close();
 
           if (angular.isFunction(closeAction)) {
@@ -23,16 +39,9 @@ angular.module('kifi')
           }
         };
 
-        function escapeModal (event) {
-          if (event.which === 27) {  // Escape key
-            $scope.close();
-          }
-        }
-        $document.on('keydown', escapeModal);
+        $scope.$on('$destroy', onCloseOrDestroy);
 
-        $scope.$on('$destroy', function () {
-          $document.off('keydown', escapeModal);
-        });
+        onOpen();
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
