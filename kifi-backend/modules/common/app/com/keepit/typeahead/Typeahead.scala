@@ -79,7 +79,7 @@ trait Typeahead[T, E, I] extends Logging {
       timing(s"buildFilter($id)") {
         val builder = new PrefixFilterBuilder[E]
         getAllInfos(id).map { allInfos =>
-          allInfos.foreach { case (id, info) => builder.add(id, extractName(info)) }
+          allInfos.foreach { case (infoId, info) => builder.add(infoId, extractName(info)) }
           val filter = builder.build
           log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
