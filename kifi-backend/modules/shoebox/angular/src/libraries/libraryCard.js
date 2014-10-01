@@ -11,7 +11,8 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        recommendation: '='
+        recommendation: '=',
+        loading: '='
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
@@ -159,9 +160,9 @@ angular.module('kifi')
 
         // Wait until library is ready.
         scope.$watch(function () {
-          return scope.library.id;
+          return scope.loading;
         }, function (newVal) {
-          if (newVal) {
+          if (!newVal) {
             // For dev testing.
             // Uncomment the following to get some fake followers into the library.
             // scope.library.followers = [
