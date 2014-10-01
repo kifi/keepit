@@ -52,7 +52,7 @@ angular.module('kifi', [
       dev = /^dev\.ezkeep\.com|localhost$/.test(host),
       local = $location.port() === 9000,
       origin = local ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com',
-      localWeb = $location.port() === 8080,
+      localWeb = ($location.port() === 8080) || ($location.port() === 9000),
       originWeb = localWeb ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com';
 
     return {
