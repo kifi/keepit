@@ -27,12 +27,12 @@ package object performance {
 
     def logTime()(implicit logger: Logger = log) {
       val (sinceStart, lapTime) = recordLap()
-      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms")
+      logger.info(s"lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms; $tag")
     }
 
     def logTimeWith(res: String)(implicit logger: Logger = log) {
       val (sinceStart, lapTime) = recordLap()
-      logger.info(s"[$tag] lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms; $tag - $res")
+      logger.info(s"lap:${lapTime / 1000000d}ms; sinceStart:${sinceStart / 1000000d}ms; $tag - $res")
     }
   }
 
