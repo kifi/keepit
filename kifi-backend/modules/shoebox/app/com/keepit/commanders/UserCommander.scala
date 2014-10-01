@@ -34,7 +34,7 @@ import scala.concurrent.duration._
 import scala.util.Try
 import securesocial.core.{ Identity, UserService, Registry }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
+import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString

@@ -1,4 +1,4 @@
-package com.keepit.typeahead.socialusers
+package com.keepit.typeahead
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.BinaryCacheImpl
@@ -10,14 +10,11 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.model._
-import com.keepit.serializer.ArrayBinaryFormat
-import com.keepit.typeahead._
 import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.store.{ S3Bucket }
-import scala.concurrent.{ Future }
-import scala.collection.mutable
+import com.keepit.common.store.S3Bucket
+import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -30,7 +27,7 @@ class SocialUserTypeahead @Inject() (
     store: SocialUserTypeaheadStore,
     cache: SocialUserTypeaheadCache,
     socialConnRepo: SocialConnectionRepo,
-    socialUserRepo: SocialUserInfoRepo) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
+    socialUserRepo: SocialUserInfoRepo) extends Typeahead[User, SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   implicit val fj = ExecutionContext.fj
 
@@ -44,12 +41,12 @@ class SocialUserTypeahead @Inject() (
             refresh(userId) // async
           }
           Future.successful(filter)
-        case None => refresh(userId).map { _.data }(ExecutionContext.fj)
+        case None => refresh(userId)
       }
-    }.map { new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
+    }
   }
 
-  protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
+  protected def getInfos(userId: Id[User], ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
     else {
       db.readOnlyMasterAsync { implicit session =>
@@ -58,7 +55,7 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
+  protected def getAllInfos(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
     db.readOnlyMaster { implicit session =>
       socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq
     }
@@ -70,8 +67,8 @@ class SocialUserTypeahead @Inject() (
 
   def refresh(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
     build(userId).map { filter =>
-      cache.set(SocialUserTypeaheadKey(userId), filter.data)
-      store += (userId -> filter.data)
+      cache.set(SocialUserTypeaheadKey(userId), filter)
+      store += (userId -> filter)
       log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
       filter
     }(ExecutionContext.fj)
@@ -85,16 +82,16 @@ class SocialUserTypeahead @Inject() (
   }
 }
 
-trait SocialUserTypeaheadStore extends PrefixFilterStore[User]
+trait SocialUserTypeaheadStore extends PrefixFilterStore[User, SocialUserInfo]
 
-class S3SocialUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: AmazonS3, accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with SocialUserTypeaheadStore
+class S3SocialUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: AmazonS3, accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User, SocialUserInfo](bucket, amazonS3Client, accessLog) with SocialUserTypeaheadStore
 
-class InMemorySocialUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User] with SocialUserTypeaheadStore
+class InMemorySocialUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User, SocialUserInfo] with SocialUserTypeaheadStore
 
 class SocialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[SocialUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[SocialUserTypeaheadKey, PrefixFilter[SocialUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class SocialUserTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
+case class SocialUserTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[SocialUserInfo]] {
   val namespace = "social_user_typeahead"
   override val version = 1
   def toKey(): String = userId.id.toString
