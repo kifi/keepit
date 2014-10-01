@@ -34,27 +34,35 @@ class KifiUserTypeahead @Inject() (
     refreshByIds(userIds)
   }
 
-  def refresh(userId: Id[User]): Future[PrefixFilter[User]] = {
-    build(userId).map { filter =>
-      cache.set(KifiUserTypeaheadKey(userId), filter)
-      store += (userId -> filter)
+  protected def create(userId: Id[User]) = {
+    getAllInfos(userId).map { allInfos =>
+      val filter = buildFilter(userId, allInfos)
       log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
-      filter
+      makeTypeahead(userId, filter)
     }(ExecutionContext.fj)
   }
 
   protected def extractName(info: User): String = info.fullName
 
-  protected def getAllInfos(id: Id[User]): Future[Seq[(Id[User], User)]] = {
+  protected def invalidate(typeahead: PersonalTypeahead[User, User, User]): Unit = {
+    val userId = typeahead.ownerId
+    val filter = typeahead.filter
+    store += (userId -> filter)
+    cache.set(KifiUserTypeaheadKey(userId), filter)
+  }
+
+  private def makeTypeahead(userId: Id[User], filter: PrefixFilter[User]) = PersonalTypeahead(userId, filter, getInfos)
+
+  private def getAllInfos(id: Id[User]): Future[Seq[(Id[User], User)]] = {
     db.readOnlyMasterAsync { implicit ro =>
       userConnectionRepo.getConnectedUsers(id)
     } flatMap { ids =>
       log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
-      getInfos(id, ids.toSeq).map(_.map(user => user.id.get -> user))
+      getInfos(ids.toSeq).map(_.map(user => user.id.get -> user))
     }
   }
 
-  protected def getInfos(userId: Id[User], ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
+  private def getInfos(ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
     if (ids.isEmpty) Seq.empty
     else {
       db.readOnlyMaster { implicit ro =>
@@ -63,19 +71,18 @@ class KifiUserTypeahead @Inject() (
     }
   }
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[User]] = {
-    cache.getOrElseFuture(KifiUserTypeaheadKey(userId)) {
-      val res = store.getWithMetadata(userId)
-      res match {
-        case Some((filter, meta)) =>
+  protected def get(userId: Id[User]) = {
+    val filterOpt = cache.getOrElseOpt(KifiUserTypeaheadKey(userId)) {
+      store.getWithMetadata(userId).map {
+        case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
             refresh(userId)
           }
-          Future.successful(filter)
-        case None => refresh(userId)
+          filter
       }
     }
+    Future.successful(filterOpt.map(makeTypeahead(userId, _)))
   }
 }
 
