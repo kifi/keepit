@@ -100,17 +100,17 @@ angular.module('kifi')
           // discoverable/secret libraries can be shared only by the library owner.
           return scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
-                  library.ownerId === profileService.me.id);
+                  library.owner.id === profileService.me.id);
         };
 
         scope.isMyLibrary = function (library) {
-          return library.ownerId === profileService.me.id;
+          return library.owner.id === profileService.me.id;
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
         scope.followingLibrary = function (library) {
           var alreadyFollowing = _.some(scope.library.followers, {id: profileService.me.id});
-          return !alreadyFollowing && library.ownerId !== profileService.me.id;
+          return !alreadyFollowing && library.owner.id !== profileService.me.id;
         };
 
         scope.followLibrary = function (library) {
