@@ -3,7 +3,7 @@ package com.keepit.search.util.join
 object BloomFilter {
   private[this] val ITEMS_PER_ENTRY = 2
   def apply(dataBuffer: DataBuffer): BloomFilter = {
-    val bitMaps = new Array[Int]((dataBuffer.size + ITEMS_PER_ENTRY - 1) / ITEMS_PER_ENTRY) // 4 items per array entry, each array entry is a bloom filter
+    val bitMaps = new Array[Int]((dataBuffer.size + ITEMS_PER_ENTRY - 1) / ITEMS_PER_ENTRY) // each array entry is a bloom filter
     dataBuffer.scan(new DataBufferReader) { reader =>
       val id = reader.nextLong()
       bitMaps((id % bitMaps.length).toInt) |= genBits(id)
@@ -20,8 +20,8 @@ object BloomFilter {
     // it is expected that the average number of bits on is close to 8 bits (1/4 of 32 bits)
     // this makes computation very fast
     // this increases the false positive ratio a little, though
-    val v1 = (id * 0x5DEECE66DL + 0x123456789L)
-    val v2 = (v1 * 0x5DEECE66DL + 0x123456789L)
+    val v1 = ((id / ITEMS_PER_ENTRY) * 0x5DEECE66DL)
+    val v2 = ((v1 + 0x123456789L) * 0x5DEECE66DL)
 
     ((v1 & v2) >> 16).toInt
   }
