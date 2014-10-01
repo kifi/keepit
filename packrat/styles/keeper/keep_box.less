@@ -66,34 +66,28 @@
   }
 }
 
-@view-height: 419px;
 @view-width: @box-width - 2px;
 @view-swipe-duration: .21s;
 .kifi-keep-box-viewport {
-  height: @view-height;
   border: solid rgba(0,0,0,.3);
   border-width: 0 1px 1px;
   border-radius: inherit !important;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
-  background: #fff;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
   position: relative;
   overflow: hidden;
   transition: height @view-swipe-duration;
-  &.kifi-height-auto {
-    height: auto;
-  }
 }
 .kifi-keep-box-cart {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  .kifi-height-auto>& {
-    position: static;
-  }
+  background: linear-gradient(to right, #ddd, #fff 50%, #ddd);
   &.kifi-animated {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: (2 * @view-width);
+    bottom: 0;
     transition: -webkit-transform @view-swipe-duration ease-in-out;
     transition: transform @view-swipe-duration ease-in-out;
   }
@@ -104,12 +98,12 @@
   }
 }
 .kifi-keep-box-view {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  background: #fff;
   width: @view-width;
-  .kifi-height-auto & {
-    position: static;
+  .kifi-animated>& {
+    position: absolute;
+    bottom: 0;
+    left: 0;
   }
   .kifi-back>&:last-child,
   .kifi-forward>&:nth-child(2) {
@@ -134,7 +128,8 @@
   position: relative;
   overflow: hidden;
   &>.kifi-scroll-inner {
-    max-height: (@view-height - @lib-input-height);
+    max-height: 400px;
+    min-height: 300px;
     overflow: hidden !important;
     overflow-y: auto !important;
   }
@@ -223,7 +218,7 @@
 }
 
 .kifi-keep-box-new-lib-h1 {
-  margin: 10px 16px 10px 6px;
+  padding: 10px 16px 10px 6px;
   font-size: 14px;
 }
 .kifi-keep-box-new-lib-head {
@@ -601,6 +596,8 @@
 }
 .kifi-keep-box-btn,
 .kifi-keep-box-create {
+  display: block;
+  position: relative;
   line-height: 35px;
   font-size: 11px;
   color: #fff !important;
@@ -647,8 +644,6 @@
   }
 }
 .kifi-keep-box-btn {
-  display: block;
-  position: relative;
   @bg-color: #999;
   background-color: @bg-color;
   transition: background-color .1s;
@@ -679,10 +674,6 @@
   }
 }
 .kifi-keep-box-create {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   @bg-color: #9bceff;
   background-color: @bg-color;
   &:hover,

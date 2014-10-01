@@ -134,7 +134,7 @@ var keepBox = keepBox || (function () {
     var back = !$new;
 
     var vpHeightOld = $vp[0].offsetHeight;
-    $vp.css('height', vpHeightOld).removeClass('kifi-height-auto');
+    $vp.css('height', vpHeightOld);
 
     $new = $new || $old.data('$prev');
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
@@ -156,7 +156,7 @@ var keepBox = keepBox || (function () {
           .off('transitionend', end);
         $new.find('input').first().focus().select();
 
-        $vp.addClass('kifi-height-auto').css('height', '');
+        $vp.css('height', '');
       }
     });
 
