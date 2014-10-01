@@ -38,7 +38,7 @@ trait LibraryAccessActions {
         if (access) {
           None
         } else {
-          Some(Forbidden)
+          Some(Forbidden(Json.obj("error" -> "permission_denied")))
         }
       case _ =>
         Some(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -52,7 +52,7 @@ trait LibraryAccessActions {
           case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) =>
             None
           case _ =>
-            Some(Forbidden)
+            Some(Forbidden(Json.obj("error" -> "permission_denied")))
         }
       case _ =>
         Some(BadRequest(Json.obj("error" -> "invalid_id")))
