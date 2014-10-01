@@ -17,6 +17,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.scraper.ScrapeScheduler
+import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.util.{ Failure, Random, Success, Try }
@@ -29,6 +30,7 @@ class KeepInterner @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
+  libraryRepo: LibraryRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   urlRepo: URLRepo,
@@ -216,6 +218,7 @@ class KeepInterner @Inject() (
       // A inactive keep may have had tags already. Index them if any.
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
     }
+    libraryRepo.save(library.copy(lastKept = Some(DateTime.now())))
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }

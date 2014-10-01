@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
 
@@ -46,7 +47,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
     def showInSearch = column[Boolean]("show_in_search", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, lastViewed) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)

@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
 import scala.slick.jdbc.StaticQuery.interpolation
@@ -17,7 +18,7 @@ import scala.slick.jdbc.StaticQuery.interpolation
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
-  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryAccess, Library)]
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
@@ -45,8 +46,9 @@ class LibraryRepoImpl @Inject() (
     def kind = column[LibraryKind]("kind", O.NotNull)
     def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
+    def lastKeptTo = column[Option[DateTime]]("last_kept_to", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount) <> ((Library.apply _).tupled, Library.unapply)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKeptTo) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -103,11 +105,11 @@ class LibraryRepoImpl @Inject() (
     getByNameOrSlugCompiled(userId, name, slug, excludeState).firstOption
   }
 
-  def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {
     val q = for {
       lib <- rows if lib.state =!= excludeState.orNull
       lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
-    } yield (lm.access, lib)
+    } yield (lm, lib)
     q.list
   }
 

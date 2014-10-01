@@ -80,7 +80,8 @@ class LibraryCommander @Inject() (
         keeps = keepInfos,
         numKeeps = keepCount,
         numCollaborators = numCollabs,
-        numFollowers = numFollows)
+        numFollowers = numFollows,
+        lastKept = lib.lastKept)
     }
   }
 
@@ -269,7 +270,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
+  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
@@ -613,7 +614,8 @@ case class LibraryInfo(
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
-  kind: LibraryKind)
+  kind: LibraryKind,
+  lastKept: Option[DateTime])
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -626,7 +628,8 @@ object LibraryInfo {
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
-    (__ \ 'kind).format[LibraryKind]
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).format[Option[DateTime]]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -639,7 +642,8 @@ object LibraryInfo {
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
-      kind = lib.kind
+      kind = lib.kind,
+      lastKept = lib.lastKept
     )
   }
 
@@ -676,6 +680,7 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   kind: LibraryKind,
+  lastKept: Option[DateTime],
   owner: BasicUser,
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
@@ -693,6 +698,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).format[Option[DateTime]] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and
