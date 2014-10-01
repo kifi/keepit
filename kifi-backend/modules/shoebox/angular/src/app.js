@@ -52,17 +52,17 @@ angular.module('kifi', [
     var dev = /^dev\.ezkeep\.com|localhost$/.test(host);
     var origin = $location.protocol() + '://' + host  + (dev ? ':' + $location.port() : '');
     var local = $location.port() === 9000;
-    var navBase = dev && !local ? 'https://www.kifi.com' : origin;
+    var navOrigin = dev && !local ? 'https://www.kifi.com' : origin;
 
     return {
       local: local,
       dev: dev,
       production: !dev,
       origin: origin,
-      navBase: navBase,
-      xhrBase: navBase + '/site',
-      xhrBaseEliza: navBase.replace('www', 'eliza') + '/eliza/site',
-      xhrBaseSearch: navBase.replace('www', 'search'),
+      navBase: navOrigin,
+      xhrBase: navOrigin + '/site',
+      xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
+      xhrBaseSearch: navOrigin.replace('www', 'search'),
       picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
     };
   }
