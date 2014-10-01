@@ -353,9 +353,17 @@ class ShoeboxController @Inject() (
     }
   }
 
+  @deprecated(message = "use getFriendRequestsRecipientIdBySender")
   def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
     val requests = db.readOnlyReplica(2) { implicit s =>
       friendRequestRepo.getBySender(senderId)
+    }
+    Ok(JsArray(requests.map { x => Json.toJson(x) }))
+  }
+
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]) = Action { request =>
+    val requests = db.readOnlyReplica(2) { implicit s =>
+      friendRequestRepo.getBySender(senderId).map(_.recipientId)
     }
     Ok(JsArray(requests.map { x => Json.toJson(x) }))
   }
