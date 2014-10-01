@@ -546,7 +546,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]] = {
-    call(Shoebox.internal.getFriendRequestBySender(senderId)).map { r =>
+    call(Shoebox.internal.getFriendRequestRecipientIdBySender(senderId)).map { r =>
       r.json.as[JsArray].value.map { x => Json.fromJson[Id[User]](x).get }
     }
   }
