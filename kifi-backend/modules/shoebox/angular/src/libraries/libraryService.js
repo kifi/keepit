@@ -6,37 +6,15 @@ angular.module('kifi')
   '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
   function ($http, util, profileService, routeService, Clutch, $q, friendService) {
     var librarySummaries = [],
-        invitedSummaries = [],
-        userLibsToShow = [],
-        invitedLibsToShow = [],
-        mainLib = {},
-        secretLib = {};
-
-    var fuseOptions = {
-       keys: ['name'],
-       threshold: 0.3 // 0 means exact match, 1 means match with anything
-    };
-    var librarySummarySearch = new Fuse(librarySummaries, fuseOptions);
-    var invitedSummarySearch = new Fuse(invitedSummaries, fuseOptions);
+        invitedSummaries = [];
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
+        var invites = res.data.invited || [];
 
-        var main = _.find(libs, function (lib) {
-            return lib.kind === 'system_main';
-        });
-        var secret = _.find(libs, function (lib) {
-            return lib.kind === 'system_secret';
-        });
-        util.replaceObjectInPlace(mainLib, main);
-        util.replaceObjectInPlace(secretLib, secret);
-        libs = _.filter(libs, function (lib) {
-          return lib.kind === 'user_created';
-        });
-        
         var lines;
-        libs.forEach( function(lib) {
+        libs.forEach(function(lib) {
           lines = shortenLibName(lib.name);
           lib.firstLine = lines[0];
           lib.secondLine = lines[1];
@@ -46,8 +24,7 @@ angular.module('kifi')
           lib.isMine = lib.owner.id === profileService.me.id;
         });
 
-        var invites = res.data.invited || [];
-        invites.forEach( function(lib) {
+        invites.forEach(function(lib) {
           lines = shortenLibName(lib.name);
           lib.firstLine = lines[0];
           lib.secondLine = lines[1];
@@ -55,11 +32,8 @@ angular.module('kifi')
             lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
           } 
         });
-
         util.replaceArrayInPlace(librarySummaries, libs);
         util.replaceArrayInPlace(invitedSummaries, invites);
-        util.replaceArrayInPlace(userLibsToShow, librarySummaries);
-        util.replaceArrayInPlace(invitedLibsToShow, invitedSummaries);
         return res.data;
       });
     });
@@ -135,11 +109,6 @@ angular.module('kifi')
     var api = {
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
-      userLibsToShow: userLibsToShow,
-      invitedLibsToShow: invitedLibsToShow,
-      librarySlugSuggestion: librarySlugSuggestion,
-      mainLib: mainLib,
-      secretLib: secretLib,
 
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
@@ -274,60 +243,7 @@ angular.module('kifi')
           });
         });
       },
-
-      sortLibrariesByName: function (order) {
-        var sorting = function(a,b) {
-          if (a.name > b.name) {
-            return 1;
-          } else if (a.name < b.name) {
-            return -1;
-          } else {
-            return 0;
-          }
-        };
-
-        var libs = librarySummaries.sort(sorting);
-        var invited = invitedSummaries.sort(sorting);
-        if (order < 0) {
-          libs = libs.reverse();
-          invited = invited.reverse();
-        }
-        util.replaceArrayInPlace(userLibsToShow, libs);
-        util.replaceArrayInPlace(invitedLibsToShow, invited);
-      },
-      
-      sortLibrariesByNumKeeps: function () {
-        var sorting = function(a,b) {
-          if (a.numKeeps > b.numKeeps) {
-            return -1;
-          } else if (a.numKeeps < b.numKeeps) {
-            return 1;
-          } else {
-            return 0;
-          }
-        };
-        var libs = librarySummaries.sort(sorting);
-        var invited = invitedSummaries.sort(sorting);
-        util.replaceArrayInPlace(userLibsToShow, libs);
-        util.replaceArrayInPlace(invitedLibsToShow, invited);
-      },
-
-      filterLibraries: function (term) {
-        var newMyLibs = librarySummaries;
-        var newMyInvited = invitedSummaries;
-        if (term.length) {
-          newMyLibs = librarySummarySearch.search(term);
-          newMyInvited = invitedSummarySearch.search(term);
-        }
-
-        util.replaceArrayInPlace(userLibsToShow, newMyLibs);
-        util.replaceArrayInPlace(invitedLibsToShow, newMyInvited);
-
-        return userLibsToShow.concat(invitedLibsToShow);
-      },
-
     }
-
     return api;
   }
 ]);
