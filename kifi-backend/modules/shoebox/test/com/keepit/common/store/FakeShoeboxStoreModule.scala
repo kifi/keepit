@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.shoebox.FakeKeepImportsModule
-import com.keepit.typeahead.socialusers.{ InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore }
+import com.keepit.typeahead.{ InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore }
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.scraper.embedly.InMemoryEmbedlyStoreImpl
 

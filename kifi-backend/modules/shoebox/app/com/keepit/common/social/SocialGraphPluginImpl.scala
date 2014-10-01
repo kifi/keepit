@@ -13,18 +13,17 @@ import akka.util.Timeout
 import scala.concurrent.{ Promise, Future }
 import scala.concurrent.duration._
 import akka.pattern.ask
-import com.keepit.social.{ SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore }
+import com.keepit.social.{ SocialNetworkType, SocialGraphPlugin, SocialGraph }
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient }
 import com.google.inject.Singleton
 import com.keepit.common.performance.timing
-import com.keepit.common.time.Clock
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.SocialUserTypeahead
 
 private case class FetchUserInfo(socialUserInfoId: Id[SocialUserInfo])
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)

@@ -27,7 +27,6 @@ class BloomFilterTest extends Specification {
       positiveIds.forall(bloomFilter(_)) === true
 
       val falsePositiveCount = negativeIds.count(bloomFilter(_))
-      println(s"\n\t\t falsePositiveCount = $falsePositiveCount (${falsePositiveCount.toDouble / negativeIds.size.toDouble})\n")
 
       (falsePositiveCount < negativeIds.size / 10) === true
     }
