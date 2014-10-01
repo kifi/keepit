@@ -37,7 +37,16 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
 
-    sources.foreach { source => prepare(source) }
+    sources.foreach { source =>
+      val startTime = System.currentTimeMillis()
+
+      prepare(source)
+
+      val elapsed = System.currentTimeMillis() - startTime
+      if ((debugFlags & DebugOption.Log.flag) != 0) {
+        debugLog(s"source prepared: class=${source.getClass.getSimpleName} time=$elapsed")
+      }
+    }
     normalizeMatchWeight()
 
     val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
