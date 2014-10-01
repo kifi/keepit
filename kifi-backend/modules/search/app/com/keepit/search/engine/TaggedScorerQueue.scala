@@ -46,7 +46,7 @@ final class TaggedScorerQueue(coreSize: Int, boosterScorers: Array[TaggedScorer]
   def getTaggedScores(taggedScores: Array[Int], boost: Float = 1.0f): Int = {
     var scorer = top()
     val docId = scorer.doc
-    var size: Int = 0
+    var size = 0
     while (scorer.doc == docId) {
       taggedScores(size) = scorer.taggedScore(boost)
       size += 1
@@ -78,7 +78,7 @@ final class TaggedScorerQueue(coreSize: Int, boosterScorers: Array[TaggedScorer]
   def addCoreScores(scoreContext: ScoreContext): Int = {
     var scorer = top()
     val docId = scorer.doc
-    var size: Int = 0
+    var size = 0
     while (scorer.doc == docId) {
       scorer.addScore(scoreContext)
       size += 1
