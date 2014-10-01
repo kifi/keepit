@@ -169,16 +169,16 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KifiHitCache(stats, accessLog, (outerRepo, 1 hour))
+    new KifiHitCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides
   def uriDiscoveryCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UriDiscoveryCountCache(stats, accessLog, (outerRepo, 1 hour))
+    new UriDiscoveryCountCache(stats, accessLog, (outerRepo, 7 days))
 
   @Singleton
   @Provides
   def uriReKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UriReKeepCountCache(stats, accessLog, (outerRepo, 1 hour))
+    new UriReKeepCountCache(stats, accessLog, (outerRepo, 7 days))
 
 }
