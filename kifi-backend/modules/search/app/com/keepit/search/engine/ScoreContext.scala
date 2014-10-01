@@ -1,16 +1,22 @@
 package com.keepit.search.engine
 
-import java.util.Arrays
-
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
+import java.util.Arrays
 
 class ScoreContext(
     scoreExpr: ScoreExpr,
-    scoreArraySize: Int,
+    scoreMaxArray: Array[Float],
+    scoreSumArray: Array[Float],
     matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
+
+  def this(
+    scoreExpr: ScoreExpr,
+    scoreArraySize: Int,
+    matchWeight: Array[Float],
+    collector: ResultCollector[ScoreContext]) = this(scoreExpr, new Array[Float](scoreArraySize), new Array[Float](scoreArraySize), matchWeight, collector)
 
   private[engine] var visibility: Int = 0
 
@@ -19,20 +25,17 @@ class ScoreContext(
 
   private[engine] var degree: Int = 0
 
-  private[engine] val scoreMax = newScoreMaxArray
-  private[engine] val scoreSum = newScoreSumArray
-
-  protected def newScoreMaxArray = new Array[Float](scoreArraySize)
-  protected def newScoreSumArray = new Array[Float](scoreArraySize)
+  private[engine] val scoreMax = scoreMaxArray
+  private[engine] val scoreSum = scoreSumArray
 
   def score(): Float = scoreExpr()(this)
 
   def computeMatching(minThreshold: Float): Float = {
-    val len = scoreMax.length
+    val len = scoreMaxArray.length
     var matching = 1.0f
     var i = 0
     while (i < len) { // using while for performance
-      if (scoreMax(i) <= 0.0f) {
+      if (scoreMaxArray(i) <= 0.0f) {
         matching -= matchWeight(i)
         if (matching < minThreshold) return 0.0f
       }
@@ -46,8 +49,8 @@ class ScoreContext(
     secondaryId = -1L
     secondaryIdScore = -1.0f
     degree = 0
-    Arrays.fill(scoreMax, 0.0f)
-    Arrays.fill(scoreSum, 0.0f)
+    Arrays.fill(scoreMaxArray, 0.0f)
+    Arrays.fill(scoreSumArray, 0.0f)
   }
 
   def join(reader: DataBufferReader): Unit = {
@@ -60,8 +63,8 @@ class ScoreContext(
       val idx = DataBuffer.getTaggedFloatTag(bits)
       val scr = DataBuffer.getTaggedFloatValue(bits)
       localSum += scr
-      scoreSum(idx) += scr
-      if (scoreMax(idx) < scr) scoreMax(idx) = scr
+      scoreSumArray(idx) += scr
+      if (scoreMaxArray(idx) < scr) scoreMaxArray(idx) = scr
     }
 
     if (id2 >= 0L && localSum > secondaryIdScore) {
@@ -82,8 +85,8 @@ class ScoreContext(
   }
 
   private[engine] def addScore(idx: Int, scr: Float) = {
-    scoreSum(idx) += scr
-    if (scoreMax(idx) < scr) scoreMax(idx) = scr
+    scoreSumArray(idx) += scr
+    if (scoreMaxArray(idx) < scr) scoreMaxArray(idx) = scr
   }
 }
 
@@ -118,18 +121,22 @@ class ScoreContextWithDebug(
 
 class DirectScoreContext(
     scoreExpr: ScoreExpr,
+    scoreArray: Array[Float],
+    matchWeight: Array[Float],
+    collector: ResultCollector[ScoreContext]) extends ScoreContext(scoreExpr, scoreArray, scoreArray, matchWeight, collector) {
+
+  def this(
+    scoreExpr: ScoreExpr,
     scoreArraySize: Int,
     matchWeight: Array[Float],
-    collector: ResultCollector[ScoreContext]) extends ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector) {
+    collector: ResultCollector[ScoreContext]) = {
+    // scoreMax and scoreSum share the same array
+    // this is ok since there shouldn't be more than one call per index in direct path mode
+    this(scoreExpr, new Array[Float](scoreArraySize), matchWeight, collector)
+  }
 
   private[this] var docId = -1
   private[this] var pq: TaggedScorerQueue = null
-
-  // scoreMax and scoreSum share the same array
-  // this is ok since there shouldn't be more than one call per index in direct path mode
-  private[this] val scoreArray = new Array[Float](scoreArraySize)
-  override protected def newScoreMaxArray = scoreArray
-  override protected def newScoreSumArray = scoreArray
 
   def setScorerQueue(taggedScorerQueue: TaggedScorerQueue): Unit = {
     pq = taggedScorerQueue
