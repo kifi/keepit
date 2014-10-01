@@ -69,7 +69,7 @@ class LibraryCommander @Inject() (
       FullLibraryInfo(
         id = Library.publicId(lib.id.get),
         name = lib.name,
-        ownerId = owner.externalId,
+        owner = owner,
         description = lib.description,
         slug = lib.slug,
         url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
@@ -676,7 +676,7 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   kind: LibraryKind,
-  ownerId: ExternalId[User],
+  owner: BasicUser,
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
   keeps: Seq[KeepInfo],
@@ -693,7 +693,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and
     (__ \ 'keeps).format[Seq[KeepInfo]] and
