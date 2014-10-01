@@ -1,5 +1,7 @@
 package com.keepit.common.cache
 
+import com.keepit.model.cache.UserSessionViewExternalIdCache
+
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
@@ -9,7 +11,7 @@ import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
+import com.keepit.typeahead.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
 import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
 import com.keepit.graph.model._
 
@@ -138,7 +140,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
 
   @Singleton
   @Provides

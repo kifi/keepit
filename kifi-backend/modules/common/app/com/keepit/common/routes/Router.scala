@@ -1,7 +1,8 @@
 package com.keepit.common.routes
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
@@ -40,6 +41,7 @@ object ParamValue {
   implicit def intToParam(i: Int) = ParamValue(Some(i.toString))
   implicit def stateToParam[T](i: State[T]) = ParamValue(Some(i.value))
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(Some(i.id))
+  implicit def externalIdSurrogateToParam[T <: SurrogateExternalId](i: T) = ParamValue(Some(i.id))
   implicit def idToParam[T](i: Id[T]) = ParamValue(Some(i.id.toString))
   implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = i.map(e) getOrElse ParamValue(None)
   implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(Some(seqNum.value.toString))
@@ -110,7 +112,7 @@ object Shoebox extends Service {
     def saveExperiment = ServiceRoute(POST, "/internal/shoebox/database/saveExperiment")
     def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
-    def getSessionByExternalId(sessionId: ExternalId[UserSession]) = ServiceRoute(GET, "/internal/shoebox/database/sessionByExternalId", Param("sessionId", sessionId))
+    def getSessionByExternalId(sessionId: UserSessionExternalId) = ServiceRoute(GET, "/internal/shoebox/database/sessionViewByExternalId", Param("sessionId", sessionId))
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
     def getUnfriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/unfriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
@@ -216,7 +218,6 @@ object Search extends Service {
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
-    def distLangFreqs2() = ServiceRoute(POST, "/internal/search/dist/langFreqs2")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
     def distAugmentation() = ServiceRoute(POST, "/internal/search/dist/augmentation")
     def distLibrarySearch() = ServiceRoute(POST, "/internal/search/dist/librarySearch")

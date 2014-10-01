@@ -10,8 +10,6 @@
     border-top: 1px solid #fff
 
 .library-card
-
-
   .kf-keep-lib-icon
     float: left
     display: block
@@ -48,12 +46,15 @@
   .kf-keep-lib-owner-name
     color: #939393
 
+  .kf-keep-lib-description-container
+    padding-bottom: 5px
+
   .kf-keep-lib-description
     margin: 10px 0
 
-  .kf-keep-lib-stats
-    padding-top: 10px
+  .kf-keep-lib-stats-and-followers
     border-top: 1px solid #dadae2
+    padding-top: 15px
 
   .kf-keep-lib-keeps-followers-stats
     display: inline-block
@@ -74,15 +75,53 @@
     font-weight: bold
     text-align: center
 
+  .kf-keep-lib-follower-pics
+    display: inline-block
+    height: 42px
+    vertical-align: top
+
+    .kf-keep-lib-user-image
+      margin-right: 8px
+
+  .kf-keep-lib-additional-followers
+    display: inline-block
+    border-radius: 100%
+    width: 42px
+    height: 42px
+    background-color: kifiBlack
+    color: #fff
+    vertical-align: top
+
+  .kf-keep-lib-additional-followers-text
+    display: block
+    padding-top: 12px
+    text-align: center
+
   .kf-keep-footer
-    overflow: hidden
     border-top: 2px solid #f5f5f5
     padding: 15px 20px
     background-color: #fff
 
-  .library-action-button
+  .kf-keep-lib-footer-button-right
     float: right
     margin-right: 0
+
+  .kf-keep-lib-footer-button-follow-unfollow
+    padding-left: 17px
+
+  .kf-keep-lib-footer-button-follow
+    background: kifiBlack
+    color: white
+
+  .kf-keep-lib-footer-button-unfollow
+    color: #7eac4e
+
+    &::after
+      content: 'Following'
+
+    &:hover::after
+      content: 'Unfollow'
+      color: redColor
 
   .kf-subtitle
     margin-top: 15px
@@ -101,25 +140,25 @@
   font-size: 13px
   color: #666
 
-.kf-keep-lib-footer-button::before
-  position: absolute
-  top: 4px
-  left: 10px
-  width: 22px
-  height: 22px
-  background-size: 100% 100%
-  background-position: 0px 0px
-  content: ''
-  {share-button-image}  // Migrate this to use new svg "sprite" classes.
+  a
+    color: #666
 
+.kf-keep-lib-footer-button-icon
+  position: absolute
+  top: 6px
+  left: 13px
+  width: 18px
+  height: 18px
+  background-repeat: no-repeat
+  background-position: center center
+  background-size: contain
 
 .kf-library-share-search
   position: relative
   display: inline-block
 
-  [contenteditable]:empty::before{
+  [contenteditable]:empty::before
     color: secondaryTextGray
-  }
 
 .library-share-menu
   display: none
@@ -154,10 +193,23 @@
     &.library-share-message-input
       min-height: 50px
 
+    .manage-lib-invite &
+      padding-left: 35px
+
   .library-share-search-spinner
     position: absolute
     right: 0
     padding: 3px 15px 0 0
+
+  .kf-query-icon
+    position: absolute;
+    top: 9px;
+    left: 10px;
+    width: 21px;
+    height: 22px;
+    background-image: url("/img/sprites.png");
+    background-position: -108px -141px;
+    background-size: 210px 203px;
 
 .library-share-menu-header
   padding: 12px 18px
@@ -284,13 +336,7 @@
     padding: 7px 10px 5px 30px
     font-size: 12px
 
-  .library-share-contact-button::before
-    position: absolute
-    top: 5px
-    left: 8px
-    width: 16px
-    height: 16px
-    {share-button-image}
-    background-size: 100% 100%
-    background-position: 0px 0px
-    content: ''
+    .kf-keep-lib-footer-button-icon
+      left: 10px
+      width: 15px
+      height: 15px

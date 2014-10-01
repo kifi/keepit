@@ -8,7 +8,7 @@
   padding: 8px 0 8px 0
 
 .kf-nav-lib-item
-  height: 42px
+  height: 45px
   padding: 12px 0 0 0
   user-select: none
   font-size: 12px
@@ -33,18 +33,41 @@
   border-bottom: 1px solid separatorColor
   padding: 8px 0 8px 0
 
-.kf-nav-library-card
+.library-icon-holder
+  width: 27px
+  height: 35px
+  display: inline-block
+  vertical-align: top
+  padding-right: 8px
+
+.library-icon
   width: 27px
   height: 35px
   display: inline-block
   vertical-align: top
   background-repeat: no-repeat
 
+.library-icon-owner-img
+  position: relative
+  vertical-align: middle
+  left: 13px
+  top: -15px
+  z-index: 1
+  width: 23px
+  height: 23px
+  border-radius: 100% 
+
 .kf-scrollable-libs
   height: 350px
+  width: calc(100% + 40px)
   overflow: auto
 
+.kf-lib-search
+  width: calc(100% + 40px)
+
 .kf-lib-input-box
+  float: left
+  margin-bottom: 8px
   cursor: text
   border-radius: 12px
   border-style: none
@@ -80,3 +103,12 @@
   line-height: 20px
   cursor: pointer
   box-sizing: border-box
+
+.kf-sort-libs-by select
+  display: inline-block
+  width: 27px
+  vertical-align: middle
+  float: right
+  margin-right: 5px
+  font-size: 10px
+  font-weight: 20

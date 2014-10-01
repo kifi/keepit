@@ -107,7 +107,9 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
@@ -220,9 +222,6 @@ class FixedResultSearchCommander extends SearchCommander {
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): KifiShardResult = ???
-
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext) = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
   def warmUp(userId: Id[User]): Unit = {}

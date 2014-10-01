@@ -19,7 +19,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       i += 1
     }
   }
-  private def normalizeMatchWeight(): Unit = {
+  private[this] def normalizeMatchWeight(): Unit = {
     var sum = 0.0f
     var i = 0
     while (i < totalSize) {
@@ -37,12 +37,21 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
 
-    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
+    sources.foreach { source =>
+      val startTime = System.currentTimeMillis()
 
-    sources.foreach { source => prepare(source) }
+      prepare(source)
+
+      val elapsed = System.currentTimeMillis() - startTime
+      if ((debugFlags & DebugOption.Log.flag) != 0) {
+        debugLog(s"source prepared: class=${source.getClass.getSimpleName} time=$elapsed")
+      }
+    }
     normalizeMatchWeight()
 
-    sources.foldLeft(0) { (total, source) =>
+    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
+
+    val numRows = sources.foldLeft(0) { (total, source) =>
       val startTime = System.currentTimeMillis()
 
       val newTotal = execute(source, directScoreContext)
@@ -60,7 +69,9 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val elapsed = System.currentTimeMillis() - startTime
 
-    debugLog(s"engine executed: bufSize=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=$numRows bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
+    }
   }
 
   private def prepare(source: ScoreVectorSource): Unit = {
@@ -103,25 +114,17 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getMatchWeights(): Array[Float] = matchWeights
 
   private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+    val debugOption = this
     if (debugTracedIds == null) {
       new JoinerManager(32) {
         def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
       }
     } else {
       new JoinerManager(32) {
-        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector) {
-          override def set(id: Long) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-set id=$id")
-            super.set(id)
-          }
-          override def join(reader: DataBufferReader) = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
-            super.join(reader)
-          }
-          override def flush() = {
-            if (debugTracedIds.contains(id)) debugLog(s"joiner-flush id=$id")
-            super.flush()
-          }
+        def create() = {
+          val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeights, collector)
+          ctx.debug(debugOption)
+          ctx
         }
       }
     }

@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.model.view.UserSessionView
 import org.joda.time.DateTime
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -12,6 +14,7 @@ import com.keepit.social.{ SocialNetworkType, SocialId }
 
 @ImplementedBy(classOf[UserSessionRepoImpl])
 trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession] {
+  def getViewOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSessionView]
   def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int
 }
 
@@ -19,7 +22,7 @@ trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[Us
 class UserSessionRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    val externalIdCache: UserSessionExternalIdCache) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
+    val externalIdCache: UserSessionViewExternalIdCache) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
 
   import db.Driver.simple._
 
@@ -37,22 +40,22 @@ class UserSessionRepoImpl @Inject() (
   initTable
 
   override def invalidateCache(userSession: UserSession)(implicit session: RSession): Unit = {
-    externalIdCache.set(UserSessionExternalIdKey(userSession.externalId), userSession)
+    externalIdCache.set(UserSessionViewExternalIdKey(userSession.externalId), userSession.toUserSessionView)
   }
 
   override def deleteCache(userSession: UserSession)(implicit session: RSession): Unit = {
-    externalIdCache.remove(UserSessionExternalIdKey(userSession.externalId))
+    externalIdCache.remove(UserSessionViewExternalIdKey(userSession.externalId))
   }
 
-  override def getOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSession] = {
-    externalIdCache.getOrElseOpt(UserSessionExternalIdKey(id)) {
-      (for (f <- rows if f.externalId === id) yield f).firstOption
+  override def getViewOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSessionView] = {
+    externalIdCache.getOrElseOpt(UserSessionViewExternalIdKey(id)) {
+      (for (f <- rows if f.externalId === id) yield f).firstOption.map(_.toUserSessionView)
     }
   }
 
   def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int = {
     (for (s <- rows if s.userId === userId) yield s.externalId).list.foreach { id =>
-      externalIdCache.remove(UserSessionExternalIdKey(id))
+      externalIdCache.remove(UserSessionViewExternalIdKey(id))
     }
     (for (s <- rows if s.userId === userId) yield (s.state, s.updatedAt))
       .update(UserSessionStates.INACTIVE -> clock.now())

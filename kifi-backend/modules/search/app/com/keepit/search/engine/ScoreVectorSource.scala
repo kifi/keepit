@@ -55,23 +55,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext)
 
-  protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = {
-    val pq = new TaggedScorerQueue(coreSize)
-    var i = 0
-    while (i < scorers.length) {
-      val sc = scorers(i)
-      if (sc != null && sc.nextDoc() < NO_MORE_DOCS) {
-        val taggedScorer = new TaggedScorer(i, sc)
-        if (i < coreSize) {
-          pq.insertWithOverflow(taggedScorer)
-        } else {
-          pq.addDependentScorer(taggedScorer)
-        }
-      }
-      i += 1
-    }
-    pq
-  }
+  protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = TaggedScorerQueue(scorers, coreSize)
 }
 
 trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
@@ -214,24 +198,26 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
 
       if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
         // An article hit may or may not be visible according to the restriction
-        if (articleVisibility.isVisible(docId)) {
+        val visibility = if (articleVisibility.isVisible(docId)) Visibility.OTHERS else Visibility.RESTRICTED
 
-          if (bloomFilter(uriId)) {
-            // get all scores and write to the buffer
-            val size = pq.getTaggedScores(taggedScores)
-            output.alloc(writer, Visibility.OTHERS, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-            writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
-          } else {
+        if (bloomFilter(uriId)) {
+          // get all scores and write to the buffer
+          val size = pq.getTaggedScores(taggedScores)
+          output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(uriId).putTaggedFloatBits(taggedScores, size)
+
+          docId = pq.top.doc // next doc
+        } else {
+          if (visibility != Visibility.RESTRICTED) {
             // this uriId is not in the buffer
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
-            directScoreContext.set(uriId)
-            directScoreContext.setVisibility(Visibility.OTHERS)
-            directScoreContext.flush()
+            directScoreContext.put(uriId, Visibility.OTHERS)
+
+            docId = pq.top.doc // next doc
+          } else {
+            docId = pq.skipCurrentDoc() // skip this doc
           }
-          docId = pq.top.doc // next doc
-        } else {
-          docId = pq.skipCurrentDoc() // skip this doc
         }
       } else {
         docId = pq.skipCurrentDoc() // skip this doc

@@ -33,7 +33,7 @@ import play.api.mvc.{ AnyContent, Result }
 
 import views.html
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.SocialUserTypeahead
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.abook.model.RichContact
 

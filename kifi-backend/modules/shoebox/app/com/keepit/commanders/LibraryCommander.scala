@@ -50,7 +50,7 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def createFullLibraryInfo(userId: Id[User], library: Library): Future[FullLibraryInfo] = {
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
     val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
@@ -65,11 +65,11 @@ class LibraryCommander @Inject() (
       (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
     }
 
-    keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(userId, keeps).map { keepInfos =>
+    keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps).map { keepInfos =>
       FullLibraryInfo(
         id = Library.publicId(lib.id.get),
         name = lib.name,
-        ownerId = owner.externalId,
+        owner = owner,
         description = lib.description,
         slug = lib.slug,
         url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
@@ -676,7 +676,7 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   kind: LibraryKind,
-  ownerId: ExternalId[User],
+  owner: BasicUser,
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
   keeps: Seq[KeepInfo],
@@ -693,7 +693,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and
     (__ \ 'keeps).format[Seq[KeepInfo]] and

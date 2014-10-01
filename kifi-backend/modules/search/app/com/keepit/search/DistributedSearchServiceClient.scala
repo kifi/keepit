@@ -54,9 +54,7 @@ trait DistributedSearchServiceClient extends ServiceClient {
 
   def distLibrarySearch(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: LibrarySearchRequest): Seq[Future[Seq[LibraryShardResult]]]
 
-  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
-
-  def distLangFreqs2(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]]
+  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]]
 
   def distAugmentation(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], request: ItemAugmentationRequest): Seq[Future[ItemAugmentationResponse]]
 
@@ -66,12 +64,15 @@ trait DistributedSearchServiceClient extends ServiceClient {
 }
 
 class DistributedSearchServiceClientImpl @Inject() (
-    searchClient: SearchServiceClient,
     val serviceCluster: ServiceCluster,
     val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends DistributedSearchServiceClient {
 
-  private lazy val distRouter = searchClient.distRouter
+  private lazy val distRouter = {
+    val router = new DistributedSearchRouter(this)
+    serviceCluster.setCustomRouter(Some(router))
+    router
+  }
 
   def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
     distRouter.plan(userId, shards, maxShardsPerInstance)
@@ -143,13 +144,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     distRouter.dispatch(plan, path, request).map { f => f.map(_.json) }
   }
 
-  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]] = {
-    distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
-      f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
-    }
-  }
-
-  def distLangFreqs2(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]] = {
+  def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], libraryContext: LibraryContext): Seq[Future[Map[Lang, Int]]] = {
     var builder = new SearchRequestBuilder(new ListBuffer)
     // keep the following in sync with SearchController
     builder += ("userId", userId.id)
@@ -160,7 +155,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     }
     val request = builder.build
 
-    distRouter.dispatch(plan, Search.internal.distLangFreqs2, request).map { f =>
+    distRouter.dispatch(plan, Search.internal.distLangFreqs, request).map { f =>
       f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
     }
   }

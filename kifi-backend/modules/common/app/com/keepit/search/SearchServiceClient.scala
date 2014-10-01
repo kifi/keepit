@@ -11,7 +11,6 @@ import com.keepit.model.{ Collection, NormalizedURI, User }
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
-import com.keepit.search.sharding.{ DistributedSearchRouter }
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -76,8 +75,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
 
-  //todo(Léo): move to DistributedSearchServiceClient once sharing user info has been migrated to the new augmentation logic
-  def distRouter: DistributedSearchRouter
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
@@ -89,12 +86,6 @@ class SearchServiceClientImpl(
 
   // request consolidation
   private[this] val consolidateSharingUserInfoReq = new RequestConsolidator[(Id[User], Id[NormalizedURI]), SharingUserInfo](ttl = 3 seconds)
-
-  lazy val distRouter = {
-    val router = new DistributedSearchRouter(this)
-    serviceCluster.setCustomRouter(Some(router))
-    router
-  }
 
   def warmUpUser(userId: Id[User]): Unit = {
     call(Search.internal.warmUpUser(userId))

@@ -123,11 +123,13 @@ POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryContro
 DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
 GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
+DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
-DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
-POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
 
 ##########################################
 # Mobile
@@ -726,6 +728,7 @@ GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.in
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.internal.ShoeboxController.saveExperiment
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
+GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.internal.ShoeboxController.searchFriends(userId: Id[User])
 GET     /internal/shoebox/database/unfriends     @com.keepit.controllers.internal.ShoeboxController.getUnfriends(userId: Id[User])
