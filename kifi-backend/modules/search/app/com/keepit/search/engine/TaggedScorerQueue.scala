@@ -17,7 +17,7 @@ final class TaggedScorer(tag: Int, scorer: Scorer) extends FloatTagger(tag) {
 
 object TaggedScorerQueue {
   def apply(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = {
-    val boosterScorers: ArrayBuffer[TaggedScorer] = ArrayBuffer()
+    val boosterScorers: ArrayBuffer[TaggedScorer] = new ArrayBuffer()
     var i = coreSize
     while (i < scorers.length) {
       val sc = scorers(i)
@@ -90,7 +90,7 @@ final class TaggedScorerQueue(coreSize: Int, boosterScorers: Array[TaggedScorer]
 
   def addBoostScores(scoreContext: ScoreContext, docId: Int): Unit = {
     var i = 0
-    val len = boosterScorers.size
+    val len = boosterScorers.length
     while (i < len) {
       val scorer = boosterScorers(i)
       if (scorer.doc < docId) {

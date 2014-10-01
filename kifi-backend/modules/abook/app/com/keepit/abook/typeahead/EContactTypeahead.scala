@@ -15,7 +15,6 @@ import com.keepit.common.time._
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.store.S3Bucket
 import com.keepit.abook.model.{ EContactRepo, EContact }
 import com.keepit.common.mail.EmailAddress
@@ -26,7 +25,7 @@ class EContactTypeahead @Inject() (
     cache: EContactTypeaheadCache,
     store: EContactTypeaheadStore,
     abookInfoRepo: ABookInfoRepo,
-    econtactRepo: EContactRepo) extends Typeahead[EContact, EContact] with Logging {
+    econtactRepo: EContactRepo) extends Typeahead[User, EContact, EContact] with Logging {
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -41,8 +40,8 @@ class EContactTypeahead @Inject() (
 
   def refresh(userId: Id[User]): Future[PrefixFilter[EContact]] = {
     build(userId).map { filter =>
-      cache.set(EContactTypeaheadKey(userId), filter.data)
-      store += (userId -> filter.data)
+      cache.set(EContactTypeaheadKey(userId), filter)
+      store += (userId -> filter)
       log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
       filter
     }(ExecutionContext.fj)
@@ -58,9 +57,9 @@ class EContactTypeahead @Inject() (
             refresh(userId) // async
           }
           Future.successful(filter) // return curr one
-        case None => refresh(userId).map { _.data }(ExecutionContext.fj)
+        case None => refresh(userId)
       }
-    }.map { new PrefixFilter[EContact](_) }(ExecutionContext.fj)
+    }
   }
 
   def refreshAll(): Future[Unit] = {
@@ -75,13 +74,13 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[EContact]] = {
+  protected def getAllInfos(id: Id[User]): Future[Seq[EContact]] = {
     db.readOnlyMasterAsync { implicit ro =>
       econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email))
     }
   }
 
-  protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
+  protected def getInfos(userId: Id[User], ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[EContact]) else {
       db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
@@ -90,19 +89,19 @@ class EContactTypeahead @Inject() (
   }
 }
 
-trait EContactTypeaheadStore extends PrefixFilterStore[User]
+trait EContactTypeaheadStore extends PrefixFilterStore[User, EContact]
 
 class S3EContactTypeaheadStore @Inject() (
   bucket: S3Bucket,
   amazonS3Client: AmazonS3,
-  accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
+  accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User, EContact](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
 
-class InMemoryEContactTypeaheadStore extends InMemoryPrefixFilterStoreImpl[User] with EContactTypeaheadStore
+class InMemoryEContactTypeaheadStore extends InMemoryPrefixFilterStoreImpl[User, EContact] with EContactTypeaheadStore
 
 class EContactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[EContactTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[EContactTypeaheadKey, PrefixFilter[EContact]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class EContactTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
+case class EContactTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[EContact]] {
   val namespace = "econtact_typeahead"
   override val version = 1
   def toKey() = userId.id.toString

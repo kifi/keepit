@@ -7,42 +7,41 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.User
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent._
 import scala.concurrent.duration._
 
-trait Typeahead[E, I] extends Logging {
+trait Typeahead[T, E, I] extends Logging {
 
   protected def airbrake: AirbrakeNotifier
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[E]]
+  protected def getOrCreatePrefixFilter(ownerId: Id[T]): Future[PrefixFilter[E]]
 
-  protected def getInfos(ids: Seq[Id[E]]): Future[Seq[I]]
+  protected def getInfos(ownerId: Id[T], infoIds: Seq[Id[E]]): Future[Seq[I]]
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[I]]
+  protected def getAllInfos(ownerId: Id[T]): Future[Seq[I]]
 
   protected def extractId(info: I): Id[E]
 
   protected def extractName(info: I): String
 
-  def topN(userId: Id[User], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
+  def topN(ownerId: Id[T], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
     if (query.trim.length <= 0) Future.successful(Seq.empty) else {
       implicit val fj = ExecutionContext.fj
-      getPrefixFilter(userId) flatMap { prefixFilterOpt =>
+      getPrefixFilter(ownerId) flatMap { prefixFilterOpt =>
         prefixFilterOpt match {
           case None =>
-            log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
+            log.warn(s"[asyncTopN($ownerId,$query)] NO FILTER found")
             Future.successful(Seq.empty)
           case Some(filter) =>
             if (filter.isEmpty) {
-              log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
+              log.info(s"[asyncTopN($ownerId,$query)] filter is EMPTY")
               Future.successful(Seq.empty)
             } else {
               val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-              getInfos(filter.filterBy(queryTerms)).map { infos =>
+              getInfos(ownerId, filter.filterBy(queryTerms)).map { infos =>
                 topNWithInfos(infos, queryTerms, limit)
               }
             }
@@ -51,10 +50,10 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  private[this] val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
+  private[this] val consolidateFetchReq = new RequestConsolidator[Id[T], Option[PrefixFilter[E]]](15 seconds)
 
-  private[this] def getPrefixFilter(userId: Id[User]): Future[Option[PrefixFilter[E]]] = {
-    consolidateFetchReq(userId) { id =>
+  private[this] def getPrefixFilter(ownerId: Id[T]): Future[Option[PrefixFilter[E]]] = {
+    consolidateFetchReq(ownerId) { id =>
       getOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
     }
   }
@@ -75,13 +74,13 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  private[this] val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
+  private[this] val consolidateBuildReq = new RequestConsolidator[Id[T], PrefixFilter[E]](10 minutes)
 
-  protected def build(id: Id[User]): Future[PrefixFilter[E]] = {
+  protected def build(id: Id[T]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id) { id =>
       timing(s"buildFilter($id)") {
         val builder = new PrefixFilterBuilder[E]
-        getAllInfosForUser(id).map { allInfos =>
+        getAllInfos(id).map { allInfos =>
           allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
           val filter = builder.build
           log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
@@ -91,19 +90,19 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
+  def refresh(id: Id[T]): Future[PrefixFilter[E]] // slow
 
-  def refreshByIds(userIds: Seq[Id[User]]): Future[Unit] = { // consider using zk and/or sqs to track progress
-    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${userIds.length})")
+  def refreshByIds(ownerIds: Seq[Id[T]]): Future[Unit] = { // consider using zk and/or sqs to track progress
+    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${ownerIds.length})")
     implicit val fj = ExecutionContext.fj
 
     log.infoP(s"begin re-indexing users ...")
-    FutureHelpers.chunkySequentialExec(userIds) { userId =>
-      refresh(userId) map { filter =>
-        log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+    FutureHelpers.chunkySequentialExec(ownerIds) { ownerId =>
+      refresh(ownerId) map { filter =>
+        log.infoP(s"done with re-indexing ${ownerId}; filter=${filter}")
       }
     } map { _ =>
-      log.infoP(s"done with re-indexing for ${userIds.length} users: ${userIds.take(3).toString} ... ${userIds.takeRight(3).toString}")
+      log.infoP(s"done with re-indexing for ${ownerIds.length} users: ${ownerIds.take(3).toString} ... ${ownerIds.takeRight(3).toString}")
     }
   }
 

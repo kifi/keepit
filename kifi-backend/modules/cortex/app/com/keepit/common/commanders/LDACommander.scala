@@ -100,7 +100,7 @@ class LDACommander @Inject() (
     val uriFeatOpt = uriLDAOpt.flatMap(_.feature)
     val numWords = uriLDAOpt.map { _.numOfWords }.getOrElse(0)
     val numTopicChanges = uriLDAOpt.map { _.timesFirstTopicChanged }.getOrElse(0)
-    if (libFeats.size > 0 && uriFeatOpt.isDefined) {
+    if (!libFeats.isEmpty && uriFeatOpt.isDefined) {
       val uriFeat = uriFeatOpt.get.value
       val libsFeats = libFeats.map { _.value }
       val div = libsFeats.map { v => KL_divergence(v, uriFeat) }.min

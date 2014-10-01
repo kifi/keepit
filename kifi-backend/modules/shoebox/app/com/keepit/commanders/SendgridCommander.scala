@@ -154,8 +154,11 @@ class SendgridCommander @Inject() (
   private def addTrackingFromUrlParam(url: String, contextBuilder: HeimdalContextBuilder): Unit = {
     try {
       val uri = new java.net.URI(url)
-      val keyValues = uri.getQuery.split('&').map(str => str.splitAt(str.indexOf('=')))
-      val datParamOpt = keyValues find (_._1 == EmailTrackingParam.paramName) map (_._2.drop(1))
+      val queryOpt = Option(uri.getQuery)
+      val keyValuesOpt = queryOpt map (_.split('&').map(str => str.splitAt(str.indexOf('='))).toSeq)
+      val datParamOpt = keyValuesOpt flatMap { keyValues =>
+        keyValues.find(_._1 == EmailTrackingParam.paramName) map (_._2.drop(1))
+      }
 
       datParamOpt.foreach { encodedEmailTrackingParam =>
         EmailTrackingParam.decode(encodedEmailTrackingParam) match {
