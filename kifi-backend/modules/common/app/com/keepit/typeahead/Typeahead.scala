@@ -21,9 +21,7 @@ trait Typeahead[T, E, I] extends Logging {
 
   protected def getInfos(ownerId: Id[T], infoIds: Seq[Id[E]]): Future[Seq[I]]
 
-  protected def getAllInfos(ownerId: Id[T]): Future[Seq[I]]
-
-  protected def extractId(info: I): Id[E]
+  protected def getAllInfos(ownerId: Id[T]): Future[Seq[(Id[E], I)]]
 
   protected def extractName(info: I): String
 
@@ -81,7 +79,7 @@ trait Typeahead[T, E, I] extends Logging {
       timing(s"buildFilter($id)") {
         val builder = new PrefixFilterBuilder[E]
         getAllInfos(id).map { allInfos =>
-          allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
+          allInfos.foreach { case (id, info) => builder.add(id, extractName(info)) }
           val filter = builder.build
           log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
