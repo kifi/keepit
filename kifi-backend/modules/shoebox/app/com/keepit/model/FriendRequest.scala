@@ -23,21 +23,3 @@ object FriendRequestStates extends States[FriendRequest] {
   val ACCEPTED = State[FriendRequest]("accepted")
   val IGNORED = State[FriendRequest]("ignored")
 }
-
-@deprecated(message = "kill json serialization when getFriendRequestsBySender is dead")
-object FriendRequest {
-  implicit val friendRequestIdFormat = Id.format[FriendRequest]
-  implicit val userIdFormat = Id.format[User]
-  implicit val messageHandleIdFormat = Id.format[MessageHandle]
-  implicit val stateFormat = State.format[FriendRequest]
-
-  implicit val friendRequestFormat = (
-    (__ \ 'id).format[Option[Id[FriendRequest]]] and
-    (__ \ 'senderId).format[Id[User]] and
-    (__ \ 'recipientId).format[Id[User]] and
-    (__ \ 'createdAt).format(DateTimeJsonFormat) and
-    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'state).format[State[FriendRequest]] and
-    (__ \ 'messageHandle).format[Option[Id[MessageHandle]]]
-  )(FriendRequest.apply, unlift(FriendRequest.unapply))
-}
