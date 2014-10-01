@@ -173,7 +173,7 @@ class UserCommander @Inject() (
         val siteUrl = fortytwoConfig.applicationBaseUrl
         val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
         val user = userRepo.get(userId)
-
+        //todo(eishay): use EmailConfirmationSender
         postOffice.sendMail(ElectronicMail(
           from = SystemEmailAddress.NOTIFICATIONS,
           to = Seq(address),
@@ -663,6 +663,7 @@ class UserCommander @Inject() (
           val siteUrl = fortytwoConfig.applicationBaseUrl
           val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
 
+          //todo(eishay): use EmailConfirmationSender
           postOffice.sendMail(ElectronicMail(
             from = SystemEmailAddress.NOTIFICATIONS,
             to = Seq(address),

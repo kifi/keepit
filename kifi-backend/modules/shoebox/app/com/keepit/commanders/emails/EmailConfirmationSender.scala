@@ -11,7 +11,7 @@ import com.keepit.model.{ User, NotificationCategory }
 
 import scala.concurrent.Future
 
-class EmailVerificationSender @Inject() (
+class EmailConfirmationSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 

@@ -424,6 +424,7 @@ class UserController @Inject() (
   private val url = fortytwoConfig.applicationBaseUrl
   def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
     db.readWrite { implicit s =>
+      //todo(eishay): use EmailConfirmationSender
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
