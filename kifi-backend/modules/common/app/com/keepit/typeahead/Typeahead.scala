@@ -9,6 +9,7 @@ import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.core._
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -74,7 +75,7 @@ trait Typeahead[T, E, I] extends Logging {
     consolidateFetchReq(ownerId) { id =>
       get(id).flatMap {
         case Some(typeahead) => Future.successful(typeahead)
-        case None => refresh(id)
+        case None => doRefresh(id)
       }
     }
   }
@@ -98,7 +99,7 @@ trait Typeahead[T, E, I] extends Logging {
   protected val refreshRequestConsolidationWindow = 10 minutes
   private[this] val consolidateRefreshReq = new RequestConsolidator[Id[T], PersonalTypeahead[T, E, I]](refreshRequestConsolidationWindow)
 
-  def refresh(ownerId: Id[T]): Future[PersonalTypeahead[T, E, I]] = {
+  private def doRefresh(ownerId: Id[T]): Future[PersonalTypeahead[T, E, I]] = {
     implicit val fj = ExecutionContext.fj
     consolidateRefreshReq(ownerId) { id =>
       create(id).map { typeahead =>
@@ -106,6 +107,10 @@ trait Typeahead[T, E, I] extends Logging {
         typeahead
       }
     }
+  }
+
+  def refresh(ownerId: Id[T]): Future[Unit] = {
+    doRefresh(ownerId).imap(_ => Unit)
   }
 
   def refreshByIds(ownerIds: Seq[Id[T]]): Future[Unit] = { // consider using zk and/or sqs to track progress
