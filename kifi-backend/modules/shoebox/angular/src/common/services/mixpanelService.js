@@ -41,7 +41,7 @@
   };
 
   function trackEventThroughProxy(event, properties)  {
-    return $http.post(env.origin + '/site/events', [{
+    return $http.post(env.xhrBase + '/events', [{
       'event': event,
       'properties': properties
     }]);
