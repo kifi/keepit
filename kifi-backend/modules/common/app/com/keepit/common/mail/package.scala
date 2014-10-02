@@ -15,6 +15,7 @@ package object template {
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
     val campaign = TagLabel("campaign")
+    val parentCategory = TagLabel("parentCategory")
     val title = TagLabel("title")
     val baseUrl = TagLabel("baseUrl")
   }
@@ -49,6 +50,9 @@ package object template {
     val campaign = Tag0(tags.campaign).toHtml
     private val campaignTagStr = campaign.body
 
+    val parentCategory = Tag0(tags.parentCategory).toHtml
+    private val parentCategoryTagStr = parentCategory.body
+
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
     def findMoreFriendsUrl(source: String) = htmlUrl(s"$baseUrl/friends?", source)
@@ -62,14 +66,15 @@ package object template {
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index)
 
     // wrap a url (String) in HTML (so tags aren't escaped)
-    private def htmlUrl(url: String, source: String, medium: String = "email"): Html =
-      Html(appendUrlUtmCodes(url, campaignTagStr, source, medium))
+    private def htmlUrl(url: String, content: String): Html =
+      Html(appendUrlUtmCodes(url = url, content = content))
 
     // url param must end with a ? or &
-    private def appendUrlUtmCodes(url: String, campaign: String, source: String, medium: String = "email"): String = {
+    private def appendUrlUtmCodes(url: String, content: String, campaign: String = campaignTagStr,
+      medium: String = "email", source: String = parentCategoryTagStr): String = {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendUrlUtmCodes] url must end with ? or &")
-      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign"
+      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content"
     }
 
     def kifiUrl(source: String = "unknown") = htmlUrl(s"$baseUrl/?", source)
@@ -80,6 +85,9 @@ package object template {
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy")
     val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter")
     val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook")
+
+    val kifiChromeExtensionUrl =
+      "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
   }
 
 }

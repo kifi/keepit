@@ -23,26 +23,18 @@ object FriendRecommendationsEmailTip {
 
 sealed case class FriendReco(userId: Id[User], avatarUrl: String)
 
-@ImplementedBy(classOf[FriendRecommendationsEmailTipImpl])
-trait FriendRecommendationsEmailTip extends TipTemplate {
-  def render(emailToSend: EmailToSend): Future[Option[Html]]
-}
-
-class FriendRecommendationsEmailTipImpl @Inject() (
+class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
     userCommander: UserCommander,
-    private val airbrake: AirbrakeNotifier) extends FriendRecommendationsEmailTip with Logging {
+    private val airbrake: AirbrakeNotifier) extends Logging {
 
   import FriendRecommendationsEmailTip._
 
-  def render(emailToSend: EmailToSend): Future[Option[Html]] = {
-    val userIdOpt = emailToSend.to.fold(id => Some(id), _ => None)
-    userIdOpt map { userId =>
-      getFriendRecommendationsForUser(userId) map { friendRecos =>
-        if (friendRecos.size >= MIN_RECOS_TO_SHOW) Some(views.html.email.tips.friendRecommendations(friendRecos))
-        else None
-      }
-    } getOrElse Future.successful(None)
+  def render(emailToSend: EmailToSend, userId: Id[User]): Future[Option[Html]] = {
+    getFriendRecommendationsForUser(userId) map { friendRecos =>
+      if (friendRecos.size >= MIN_RECOS_TO_SHOW) Some(views.html.email.tips.friendRecommendations(friendRecos))
+      else None
+    }
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
