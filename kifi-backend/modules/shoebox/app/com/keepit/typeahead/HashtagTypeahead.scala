@@ -28,10 +28,16 @@ class HashtagTypeahead @Inject() (
     collectionRepo: CollectionRepo,
     db: Database) extends Typeahead[Library, Hashtag, Hashtag, LibraryHashtagTypeahead] {
 
+  protected val refreshRequestConsolidationWindow = 0 seconds
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
+
+  private val refreshIfOlderThan = 15 minutes
+
   protected def get(libraryId: Id[Library]): Future[Option[LibraryHashtagTypeahead]] = Future.successful {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     cache.get(LibraryHashtagTypeaheadLibraryIdKey(libraryId)).map { typeahead =>
-      if (typeahead.createdAt.isBefore(clock.now.minusHours(24))) refresh(libraryId)
+      if (typeahead.createdAt.isBefore(clock.now.minusMillis(refreshIfOlderThan.toMillis.toInt))) refresh(libraryId)
       typeahead
     }
   }

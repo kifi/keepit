@@ -30,9 +30,9 @@ object PersonalTypeahead {
 
 trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
 
-  protected val refreshRequestConsolidationWindow = 10 minutes
+  protected val refreshRequestConsolidationWindow: Duration
 
-  protected val fetchRequestConsolidationWindow = 15 seconds
+  protected val fetchRequestConsolidationWindow: Duration
 
   protected def airbrake: AirbrakeNotifier
 
@@ -71,7 +71,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
     }
   }
 
-  private[this] val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
+  private[this] lazy val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
 
   private[this] def getOrElseCreate(ownerId: Id[T]): Future[P] = {
     implicit val fj = ExecutionContext.fj
@@ -99,7 +99,7 @@ trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
     }
   }
 
-  private[this] val consolidateRefreshReq = new RequestConsolidator[Id[T], P](refreshRequestConsolidationWindow)
+  private[this] lazy val consolidateRefreshReq = new RequestConsolidator[Id[T], P](refreshRequestConsolidationWindow)
 
   private def doRefresh(ownerId: Id[T]): Future[P] = {
     implicit val fj = ExecutionContext.fj
