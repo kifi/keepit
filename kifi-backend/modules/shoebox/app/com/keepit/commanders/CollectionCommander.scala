@@ -152,7 +152,7 @@ class CollectionCommander @Inject() (
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
           if (existingExternalId.isEmpty) {
-            s.onTransactionSuccess { searchClient.updateURIGraph() }
+            s.onTransactionSuccess { searchClient.updateKeepIndex() }
             val newColl = collectionRepo.save(Collection(userId = userId, name = name))
             updateCollectionOrdering(userId)
             keptAnalytics.createdTag(newColl, context)
@@ -176,7 +176,7 @@ class CollectionCommander @Inject() (
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.deletedTag(collection, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
@@ -185,7 +185,7 @@ class CollectionCommander @Inject() (
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.undeletedTag(collection, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = {

@@ -200,7 +200,7 @@ class LibraryCommander @Inject() (
           keepRepo.save(k.copy(state = KeepStates.INACTIVE))(s)
         }
         keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
-        searchClient.updateURIGraph()
+        searchClient.updateKeepIndex()
       }
       None
     }
