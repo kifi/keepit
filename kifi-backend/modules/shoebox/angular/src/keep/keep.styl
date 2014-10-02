@@ -4,7 +4,7 @@ keepBorderRadius = 3px
   .kf-keep
   .kf-keep-selection-tools
     margin-top: 10px
-    
+
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
@@ -125,7 +125,7 @@ keepBorderRadius = 3px
       display: block
 
 .kf-keep-body
-  padding: 0 20px 5px
+  padding: 0 30px 5px
 
 .kf-keep-contents
   padding: 20px 0 10px
@@ -167,17 +167,6 @@ keepBorderRadius = 3px
 
 .kf-keep-subtitle-element
   display: inline-block
-  margin-right: 13px
-
-.kf-keep-time
-.kf-keep-read-time
-  font-family: "Georgia", Arial, sans-serif
-  font-size: 13px
-  color: #99a3b3
-  white-space: nowrap
-
-.kf-keep-read-time
-  margin-left: -3px
 
 .kf-keep-edit-tools
   display: none
@@ -258,10 +247,11 @@ keepBorderRadius = 3px
   width: 100%
 
 .kf-keep-title
+  font-family: 'Merriweather', serif
   max-width: 100%
-  font-size: 20px
-  font-weight: 500
-  line-height: 24px
+  font-size: 24px
+  font-weight: 700
+  line-height: 30px
   font-smoothing: antialiased
   word-break: break-word
 
@@ -272,13 +262,23 @@ keepBorderRadius = 3px
   padding-right: 5px
 
 .kf-keep-subtitle
-  line-height: 17px
+  line-height: 11px
+  color: #909aa8
+  vertical-align: middle
+  font-smoothing: antialiased
+  font-size: 13px
+
+.kf-keep-dot
+  font-size: 16px
+  top: 2px;
+  position: relative
+  padding: 0 3px
 
 .kf-keep-description
   font-size: 16px
   line-height: 23px
   margin-top: 5px
-  font-family: "Georgia", Arial, sans-serif
+  font-family: "Helvetica", Arial, sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-break: break-word
@@ -294,24 +294,14 @@ keepBorderRadius = 3px
   left: -999px
 
 .kf-keep-url
-  display: inline-block
   font-size: 13px
-  color: #99a3b3
-  vertical-align: middle
-  font-smoothing: antialiased
   font-weight: 500
   long-text()
   max-width: calc(100% - 100px)
-  overflow: hidden
+  vertical-align: middle
 
   .kf-keep.example &
     color: #c6cbd3
-
-  &::after
-    position: absolute
-    top: 2px
-    padding-left: 5px
-    content: '|'
 
 // tag
 .kf-keep-tags

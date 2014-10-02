@@ -154,8 +154,6 @@ class HomeController @Inject() (
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
         .withSession(request.session - AuthController.LinkWithKey)
-    } else if (request.user.state == UserStates.PENDING) {
-      pendingHome()
     } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
@@ -194,14 +192,6 @@ class HomeController @Inject() (
     }
   }
 
-  def kifeeeed = HtmlAction.authenticated { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
-      siteRouter.routeRequest(request)
-    } else {
-      Redirect("/")
-    }
-  }
-
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
@@ -226,26 +216,6 @@ class HomeController @Inject() (
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
-  }
-
-  def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
-    val user = request.user
-
-    val (email, friendsOnKifi) = db.readOnlyMaster { implicit session =>
-      val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
-      val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
-        val user = userRepo.get(u)
-        if (user.state == UserStates.ACTIVE) Some(user.externalId)
-        else None
-      }.flatten
-
-      (email, friendsOnKifi)
-    }
-    Ok(views.html.website.onboarding.userRequestReceived2(
-      user = user,
-      email = email.map(_.address),
-      justVerified = request.queryString.get("m").exists(_.headOption == Some("1")),
-      friendsOnKifi = friendsOnKifi)).discardingCookies(DiscardingCookie("inv"))
   }
 
   def install = HtmlAction.authenticated { implicit request =>

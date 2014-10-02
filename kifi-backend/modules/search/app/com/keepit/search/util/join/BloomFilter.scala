@@ -5,7 +5,8 @@ object BloomFilter {
     val bitMaps = new Array[Long](dataBuffer.size / 4 + 1) // four items per entry (each array entry is a bloom filter)
     dataBuffer.scan(new DataBufferReader) { reader =>
       val id = reader.nextLong()
-      bitMaps((id % bitMaps.length).toInt) |= genBits(id)
+      val seed = (id ^ (id >>> 16))
+      bitMaps((seed % bitMaps.length).toInt) |= genBits(seed)
     }
     new BloomFilter(bitMaps)
   }
@@ -19,9 +20,9 @@ object BloomFilter {
     // it is expected that the average number of bits on is close to 8 bits (1/8 of 64 bits)
     // this makes computation very fast
     // this increases the false positive ratio a little, though
-    val v1 = (value * 6364136223846793005L)
-    val v2 = ((v1 + 1442695040888963407L) * 6364136223846793005L)
-    val v3 = ((v2 + 1442695040888963407L) * 6364136223846793005L)
+    val v1 = value * 6364136223846793005L
+    val v2 = (v1 ^ (v1 >>> 16)) * 6364136223846793005L
+    val v3 = (v2 ^ (v2 >>> 16)) * 6364136223846793005L
 
     (v1 & v2 & v3)
   }
@@ -29,7 +30,8 @@ object BloomFilter {
 
 class BloomFilter(bitMaps: Array[Long]) {
   def apply(id: Long): Boolean = {
-    val bits = BloomFilter.genBits(id)
-    (bits & bitMaps((id % bitMaps.length).toInt)) == bits
+    val seed = (id ^ (id >>> 16))
+    val bits = BloomFilter.genBits(seed)
+    (bits & bitMaps((seed % bitMaps.length).toInt)) == bits
   }
 }

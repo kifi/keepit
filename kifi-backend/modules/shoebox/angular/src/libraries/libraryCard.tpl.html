@@ -1,14 +1,18 @@
 <div class="kf-keep library-card">
   <div class="kf-keep-body">
-    <div ng-switch="library.visibility">
-      <div ng-switch-when="published" class="kf-keep-lib-icon svg-green-card-with-globe"></div>
-      <div ng-switch-when="secret" class="kf-keep-lib-icon svg-red-card-with-lock"></div>
-      <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
+    <div class="kf-keep-lib-header">
+      <div ng-switch="library.visibility" class="kf-keep-lib-icon-container">
+        <div ng-switch-when="published" class="kf-keep-lib-icon svg-green-card-with-globe"></div>
+        <div ng-switch-when="secret" class="kf-keep-lib-icon svg-red-card-with-lock"></div>
+        <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
+      </div>
+
+      <div class="kf-keep-lib-name-container">
+        <span class="kf-keep-lib-name" ng-bind-html="library.name"></span>
+      </div>
     </div>
 
     <div class="kf-keep-lib-info">
-      <div class="kf-keep-lib-name" ng-bind-html="library.name"></div>
-
       <div class="kf-keep-lib-owner">
         <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image">
         <div class="kf-keep-lib-owner-text">
