@@ -35,6 +35,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.typeahead.{ TypeaheadHit, HashtagTypeahead }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -161,6 +162,7 @@ class KeepsCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
+    hashtagTypeahead: HashtagTypeahead,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
@@ -758,6 +760,11 @@ class KeepsCommander @Inject() (
         }
         Right((KeepInfo.fromKeep(keep), tags))
     }
+  }
+
+  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[Hashtag]] = {
+    implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

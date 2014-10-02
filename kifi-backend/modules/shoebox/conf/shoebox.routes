@@ -81,6 +81,7 @@ POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
+GET     /ext/libraries/:id/tags/search     @com.keepit.controllers.ext.ExtBookmarksController.searchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
 
 # Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
