@@ -5,11 +5,11 @@ import scala.util.Random
 
 class BloomFilterTest extends Specification {
   private[this] val rnd = new Random
-  private[this] def genPositiveIds = (0 until 1000).map { _ => rnd.nextInt(Int.MaxValue).toLong }.toSet
-  private[this] def genIds = {
-    val positiveIds = genPositiveIds
+  private[this] def genPositiveIds(n: Int) = (0 until n).map { _ => rnd.nextInt(Int.MaxValue).toLong }.toSet
+  private[this] def genIds(n: Int) = {
+    val positiveIds = genPositiveIds(n)
     var negativeIds = Set.empty[Long]
-    while (negativeIds.size < 1000) {
+    while (negativeIds.size < n) {
       val id = rnd.nextInt(Int.MaxValue).toLong
       if (!positiveIds.contains(id)) negativeIds += id
     }
@@ -21,7 +21,7 @@ class BloomFilterTest extends Specification {
       val buf = new DataBuffer()
       val writer = new DataBufferWriter
 
-      val positiveIds = genPositiveIds
+      val positiveIds = genPositiveIds(1000)
       positiveIds.foreach { id => buf.alloc(writer, 1, 8).putLong(id) }
 
       val bloomFilter = BloomFilter(buf)
@@ -34,7 +34,7 @@ class BloomFilterTest extends Specification {
         val buf = new DataBuffer()
         val writer = new DataBufferWriter
 
-        val (positiveIds, negativeIds) = genIds
+        val (positiveIds, negativeIds) = genIds(10000)
         positiveIds.foreach { id => buf.alloc(writer, 1, 8).putLong(id) }
 
         val bloomFilter = BloomFilter(buf)
