@@ -530,12 +530,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.count === 4
         }
 
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
-        // Scumbag Ironman tries to invite himself for READ_WRITE access (OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2).isRight === true
+        val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
+        val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
+        // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
 
-        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Non-Published Library)
-        libraryCommander.inviteUsersToLibrary(libShield.id.get, userIron.id.get, inviteList2).isRight === false
+        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
       }
     }
 
