@@ -73,7 +73,7 @@
       </div>
     </div>
 
-    <div class="kf-scrollable-libs" ng-click="scrollAround()">
+    <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">

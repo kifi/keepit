@@ -3,13 +3,13 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$rootScope', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$anchorScroll',
-  function ($location, $rootScope, util, friendService, modalService, tagService, profileService, libraryService, $anchorScroll) {
+  '$location', '$window', '$rootScope', '$timeout', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService',
+  function ($location, $window, $rootScope, $timeout, util, friendService, modalService, tagService, profileService, libraryService) {
     return {
       //replace: true,
       restrict: 'A',
       templateUrl: 'layout/nav/nav.tpl.html',
-      link: function (scope /*, element, attrs*/) {
+      link: function (scope , element /*, attrs*/) {
         scope.counts = {
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
@@ -25,6 +25,33 @@ angular.module('kifi')
         scope.allInvitedLibs = libraryService.invitedSummaries;
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
+
+        var w = angular.element($window);
+        var scrollableLibList = element.find('.kf-scrollable-libs');
+        var libList = element.find('.kf-nav-lib-users');
+        var antiscroll = element.find('.antiscroll-inner');
+
+        libList.on('mousewheel', function(e) {
+            var d = e.originalEvent.deltaY;
+            var visibleHeight = scrollableLibList.innerHeight();
+            var totalHeight = libList.innerHeight();
+            var maxScroll = totalHeight - visibleHeight;
+            var scroll = antiscroll.scrollTop();
+            if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
+              e.preventDefault();
+            }
+        });
+        w.bind('resize', function () {
+          scope.$apply(function () {
+            setLibListHeight();
+          });
+        });
+
+        function setLibListHeight() {
+          if (scrollableLibList.offset()) {
+            scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
+          }
+        }
 
         var fuseOptions = {
            keys: ['name'],
@@ -46,6 +73,24 @@ angular.module('kifi')
               util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
               util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
             });
+            
+            $timeout(function() {
+              scope.$apply(function () {
+                scrollableLibList = element.find('.kf-scrollable-libs');
+                setLibListHeight();
+              });
+            }, 1000);
+           
+          }
+        });
+
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.mainLib = _.find(scope.librarySummaries, { 'kind' : 'system_main' });
+            scope.secretLib = _.find(scope.librarySummaries, { 'kind' : 'system_secret' });
+            scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
+            util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
+            util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
           }
         });
 
@@ -186,11 +231,6 @@ angular.module('kifi')
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         }
-
-        // Scroll-Bar Stuff
-        scope.scrollAround = function() {
-          $anchorScroll();
-        };
       }
     };
   }
