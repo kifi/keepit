@@ -51,8 +51,6 @@ angular.module('kifi')
 
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
-            scope.mainLib = _.find(scope.librarySummaries, { 'kind' : 'system_main' });
-            scope.secretLib = _.find(scope.librarySummaries, { 'kind' : 'system_secret' });
             scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
             util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
           }
