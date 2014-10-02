@@ -287,7 +287,7 @@ class SearchCommanderImpl @Inject() (
 
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
-      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, KifiShardResult.empty, Set(), None))
+      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, firstLang, KifiShardResult.empty, Set(), None))
     }
 
     val searchFilter = SearchFilter(filter, libraryContext, context)
@@ -323,7 +323,7 @@ class SearchCommanderImpl @Inject() (
       timing.done
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-      val plainResult = KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+      val plainResult = KifiPlainResult(query, firstLang, mergedResult, idFilter, searchExperimentId)
 
       SafeFuture {
         // stash timing information
