@@ -60,6 +60,7 @@ trait SearchControllerUtil {
     KifiSearchResult.v2(
       kifiPlainResult.uuid,
       kifiPlainResult.query,
+      kifiPlainResult.firstLang,
       kifiPlainResult.hits,
       kifiPlainResult.myTotal,
       kifiPlainResult.friendsTotal,

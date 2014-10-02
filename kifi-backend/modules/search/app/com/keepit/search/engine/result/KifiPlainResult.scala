@@ -1,15 +1,15 @@
 package com.keepit.search.engine.result
 
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.search.{ SearchConfigExperiment, ArticleSearchResult }
+import com.keepit.search.{ Lang, SearchConfigExperiment, ArticleSearchResult }
 
 object KifiPlainResult {
-  def apply(query: String, result: KifiShardResult, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]]): KifiPlainResult = {
-    new KifiPlainResult(ExternalId[ArticleSearchResult](), query, result, idFilter, searchExperimentId)
+  def apply(query: String, firstLang: Lang, result: KifiShardResult, idFilter: Set[Long], searchExperimentId: Option[Id[SearchConfigExperiment]]): KifiPlainResult = {
+    new KifiPlainResult(ExternalId[ArticleSearchResult](), query, firstLang, result, idFilter, searchExperimentId)
   }
 }
 
-class KifiPlainResult(val uuid: ExternalId[ArticleSearchResult], val query: String, val result: KifiShardResult, val idFilter: Set[Long], val searchExperimentId: Option[Id[SearchConfigExperiment]]) {
+class KifiPlainResult(val uuid: ExternalId[ArticleSearchResult], val query: String, val firstLang: Lang, val result: KifiShardResult, val idFilter: Set[Long], val searchExperimentId: Option[Id[SearchConfigExperiment]]) {
   def hits: Seq[KifiShardHit] = result.hits
   def myTotal: Int = result.myTotal
   def friendsTotal: Int = result.friendsTotal
