@@ -193,7 +193,12 @@ class KeepInterner @Inject() (
   private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
     installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
 
-    val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
+    val currentBookmarkOpt = if (library.isDisjoint)
+      keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
+    else
+      keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+
+    val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
         val savedKeep = bookmark.copy(
