@@ -14,9 +14,9 @@ import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 
-class IndexInfoController @Inject() (
+class IndexController @Inject() (
     articleIndexerPlugin: ArticleIndexerPlugin,
-    urlGraphPlugin: URIGraphPlugin,
+    uriGraphPlugin: URIGraphPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
     userGraphPlugin: UserGraphPlugin,
@@ -26,10 +26,20 @@ class IndexInfoController @Inject() (
     libraryIndexerPlugin: LibraryIndexerPlugin,
     phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
-  def listAll() = Action { implicit request =>
+  def updateKeepIndex() = Action { implicit request =>
+    keepIndexerPlugin.update()
+    Ok
+  }
+
+  def updateLibraryIndex() = Action { implicit request =>
+    libraryIndexerPlugin.update()
+    Ok
+  }
+
+  def listIndexInfo() = Action { implicit request =>
     val infos = (
       articleIndexerPlugin.indexInfos ++
-      urlGraphPlugin.indexInfos ++
+      uriGraphPlugin.indexInfos ++
       collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++
       userGraphPlugin.indexInfos ++
