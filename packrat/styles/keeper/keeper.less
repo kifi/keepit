@@ -11,8 +11,10 @@
 @svgHomeDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.5 12"><path fill="%D" d="M13.5,6.7L7,0.1c-0.2-0.2-0.4-0.2-0.6,0L0,6.7h1.5c0,0,0,0,0,0v4.2c0,0.6,0.3,1.1,0.9,1.1h2.5c0.2,0,0.3-0.2,0.3-0.4V8.6c0-0.2,0.2-0.4,0.4-0.4h2.2c0.2,0,0.4,0.2,0.4,0.4v2.9c0,0.2,0.2,0.4,0.4,0.4h2.4c0.6,0,0.9-0.5,0.9-1.1V6.7c0,0,0,0,0,0H13.5z"/></svg>';
 @svgMailDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 10.5"><path fill="%D" d="M10.3,0H1.7C0.7,0,0,0.8,0,1.9v0.7l5.6,4.3C5.8,7,6.2,7,6.4,6.8L12,2.5V1.9C12,0.8,11.3,0,10.3,0z M5.6,8.3L0,3.9v4.7c0,1,0.7,1.9,1.7,1.9h8.5c1,0,1.7-0.8,1.7-1.9V3.9L6.4,8.3C6.2,8.5,5.8,8.5,5.6,8.3z"/></svg>';
 @svgSendDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.7 10.5"><path fill="%D" d="M10.8,0H1.9C0.9,0,0,0.8,0,1.9l0,6.8c0,1,0.9,1.9,1.9,1.9h8.9c1.1,0,1.9-0.8,1.9-1.9V1.9C12.7,0.8,11.9,0,10.8,0z M8.2,6.7c0,0,0-0.8,0-1.9C5.7,4.5,4,7.3,4,7.3c0.5-4.9,4.2-4.4,4.2-4.4v0c0-1,0-1.9,0-1.9l3.5,3.1L8.2,6.7z"/></svg>';
+@svgKeepDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 9.7"><path fill="%D" d="M6,3.3c0-4.4-6-4.5-6,0c0,4.5,6,6.4,6,6.4s6-2,6-6.4C12-1.1,6-1.1,6,3.3z"/></svg>';
+@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7.5 10.5"><path fill="%D" d="M6.9,4.6V3.3C6.9,1.5,5.5,0,3.8,0S0.6,1.5,0.6,3.3v1.3C0.3,4.6,0,4.9,0,5.2v4.6c0,0.4,0.3,0.7,0.6,0.7h6.2c0.3,0,0.6-0.3,0.6-0.7V5.2C7.5,4.9,7.2,4.6,6.9,4.6z M5.6,4.6H1.9V3.3c0-1.1,0.8-2,1.9-2s1.9,0.9,1.9,2V4.6z"/></svg>';
 
-@keeper-transition-duration: 200ms;
+@keeper-transition-duration: .2s;
 @keeper-side-border-width: 7px;
 .kifi-keeper {
   position: absolute;
@@ -104,20 +106,26 @@
 }
 
 @btn-hover-color: #3f9f65;
+@draggable-box-shadow: 0 8px 7px -4px rgba(0,0,0,.6);
+@draggable-box-shadow-transition: box-shadow .2s;
 
-.kifi-keep-card {
+.kifi-keep-btn,
+.kifi-dock-btn {
+  border: 3px solid rgba(0,0,0,.3);
+  border-radius: 24.5px !important;
+  background-clip: padding-box;
+}
+.kifi-keep-btn {
   position: absolute;
   bottom: 0;
   right: 0;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
-  width: 155px;
-  height: 49px;
-  -webkit-perspective: 200px;
-  perspective: 200px;
+  width: 149px;
+  height: 43px;
   transition: width @keeper-transition-duration ease-out;
   .kifi-hidden>& {
-    width: 49px;
+    width: 43px;
   }
   [kifi-pane-parent] & {
     left: 168px;
@@ -128,143 +136,71 @@
     width: 126px;
   }
   .kifi-pane & {
-    left: 153px;
+    left: 155px;  // 153px
+    border-width: 1px;
   }
-}
-.kifi-keep-side,
-.kifi-kept-side {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
-  transition: transform .25s ease-in-out, z-index .25s linear;
-}
-.kifi-keep-card.kifi-private .kifi-keep-side,
-.kifi-keep-card.kifi-public .kifi-keep-side {
-  -webkit-transform: rotateX(-180deg);
-  transform: rotateX(-180deg);
-}
-.kifi-keep-card.kifi-unkept .kifi-kept-side {
-  -webkit-transform: rotateX(180deg);
-  transform: rotateX(180deg);
-}
-.kifi-keep-card.kifi-private .kifi-kept-side,
-.kifi-keep-card.kifi-public .kifi-kept-side,
-.kifi-keep-card.kifi-unkept .kifi-keep-side {
-  z-index: 100;
-}
-.kifi-keep-btn,
-.kifi-dock-btn {
-  border: 3px solid rgba(0,0,0,.3);
-  border-radius: 24.5px !important;
-  background-clip: padding-box;
-}
-
-@draggable-box-shadow: 0 8px 7px -4px rgba(0,0,0,.6);
-@draggable-box-shadow-transition: box-shadow .2s;
-
-.kifi-keep-btn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 0 20px 0 8px;
   line-height: 43px;
-  font-weight: 300;
+  font-weight: bold;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  .kifi-pane & {
-    border-width: 1px;
-    top: 2px;
-    left: 2px;
-    right: 2px;
-    bottom: 2px;
+  background-image: linear-gradient(#fff, #f3f3f3);
+  .kifi-tile.ui-draggable &,
+  .kifi-dragged>& {
+    transition: @draggable-box-shadow-transition;
   }
-  transition: @draggable-box-shadow-transition;
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
-  .kifi-keep-side>& {
-    color: #333 !important;
-    background-image: linear-gradient(#fff, #f3f3f3);
-    &:hover,
-    &:focus {
-      &::before {
-        color: @btn-hover-color;
-      }
-      &:active {
-        background-image: none;
-        background-color: #f3f3f3;
-      }
-    }
-  }
-  .kifi-kept-side>& {
-    color: #fff !important;
-    text-shadow: 0 0 2px rgba(0,0,0,.3);
-    @bg-color: #4daf7c;
+  &:hover:active,
+  &:focus:active {
     background-image: none;
-    background-color: @bg-color;
-    &:hover,
-    &:focus {
-      background-color: tint(@bg-color, 6%);
-      &:active {
-        background-color: shade(@bg-color, 4%);
-      }
-    }
-    .kifi-private & {
-      @bg-color: #e65b45;
-      background-color: @bg-color;
-      &:hover,
-      &:focus {
-        background-color: tint(@bg-color, 6%);
-        &:active {
-          background-color: shade(@bg-color, 4%);
-        }
-      }
-    }
+    background-color: #f3f3f3;
   }
-  &::before {
-    content: 'Keep ';
-    font-weight: bold;
-  }
-}
-.kifi-keep-to {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 24px;
-  border-radius: 0 24px 24px 0;
   &::before {
     content: '';
-    position: absolute;
-    top: 50%;
-    right: 9px;
-    width: 0;
-    height: 0;
-    margin-top: -2px;
-    border: 5px solid transparent;
-    border-top-color: #333;
+    display: inline-block;
+    width: 16px;
+    height: 12px;
+    margin-right: 7px;
+    vertical-align: -2px;
+    background-size: 16px auto;
+    background-repeat: no-repeat;
   }
-  &:hover::before,
-  &:focus::before {
-    border-top-color: @btn-hover-color;
+  &.kifi-unkept {
+    color: #333 !important;
+    &::before {
+      @url: %(@svgKeepDataUrl, #464646);
+      background-image: url(@url);
+    }
+    &::after {
+      content: 'Keep it';
+    }
   }
-  .kifi-kept-side>&::before {
-    border-top-color: #fff;
+  &.kifi-public {
+    color: #4daf7c !important;
+    &::before {
+      @url: %(@svgKeepDataUrl, #4daf7c);
+      background-image: url(@url);
+    }
+    &::after {
+      content: 'Kept';
+    }
   }
-  &:hover:active::before,
-  &:focus:active::before {
-    border-top-color: shade(@btn-hover-color, 20%);
+  &.kifi-private {
+    color: #ed7160 !important;
+    &::before {
+      @url: %(@svgLockDataUrl, #ed7160);
+      background-image: url(@url);
+      width: 10px;
+      height: 13px;
+      margin-right: 7px;
+      vertical-align: -1px;
+      background-size: 10px auto;
+    }
+    &::after {
+      content: 'Kept Private';
+    }
   }
 }
 

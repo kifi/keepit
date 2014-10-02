@@ -35,12 +35,12 @@ var keepBox = keepBox || (function () {
   var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
-    show: function ($parent, data, howKept, keepPage) {
+    show: function ($parent, data, howKept) {
       log('[keepBox.show]');
       if ($box) {
         hide();
       }
-      show($parent, data, howKept, keepPage);
+      show($parent, data, howKept);
     },
     hide: function () {
       if ($box) {
@@ -56,7 +56,7 @@ var keepBox = keepBox || (function () {
     }
   };
 
-  function show($parent, data, howKept, keepPage) {
+  function show($parent, data, howKept) {
     log('[keepBox:show]');
     var partitionedLibs = partitionLibs(data.libraries, data.keeps);
     $box = $(render('html/keeper/keep_box', {
@@ -96,8 +96,7 @@ var keepBox = keepBox || (function () {
 
     $box.layout()
     .on('transitionend', onShown)
-    .removeClass('kifi-down')
-    .data({keepPage: keepPage});
+    .removeClass('kifi-down');
   }
 
   function onShown(e) {
@@ -257,7 +256,7 @@ var keepBox = keepBox || (function () {
       if (e.which === 1) {
         var libraryId = $(this).prev().data('id');
         var library = $view.data('librariesById')[libraryId];
-        log('[unkeepPage]', library, document.URL);
+        log('[unkeep]', libraryId, document.URL);
         api.port.emit('unkeep', {libraryId: libraryId, keepId: library.keep.id});
         hide(e, 'action');
       }
@@ -360,11 +359,12 @@ var keepBox = keepBox || (function () {
       if (library.keep) {
         api.port.emit('get_keep', library.keep.id, showKeep.bind(null, library));
       } else {
-        var title = authoredTitle();
-        $box.data('keepPage')({libraryId: libraryId, title: title}, function (keep) {
+        var data = {libraryId: libraryId, title: authoredTitle()};
+        log('[keep]', data);
+        api.port.emit('keep', withUrls(data), function (keep) {
           if (keep) {
             library.keep = keep;
-            showKeep(library, {title: title, image: null, tags: []}, true);
+            showKeep(library, {title: data.title, image: null, tags: []}, true);
           }
         });
       }

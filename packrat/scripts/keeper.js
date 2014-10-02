@@ -21,7 +21,7 @@ var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 var keeper = keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt, justKept;
+  var $slider, lastCreatedAt, extMsgIntroEligible = !tile.dataset.kept;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -127,11 +127,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        if (this.parentNode.classList.contains('kifi-keep-side')) {
-          keepPage({title: authoredTitle(), guided: e.originalEvent.guided}); // TODO: send library ID
-        } else {
-          showKeepBox();
-        }
+        showKeepBox();
       }
     }, 400, true))
     .hoverfu('.kifi-keep-btn', function (configureHover) {
@@ -166,13 +162,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     })
-    .on('click', '.kifi-keep-to', _.debounce(function (e) {
-      if (e.target === this && e.originalEvent.isTrusted !== false) {
-        showKeepBox();
-      }
-    }, 400, true))
-    // .hoverfu('.kifi-keep-to', function (configureHover) {
-    // })
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
@@ -273,13 +262,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }
     $slider.remove(), $slider = null;
 
-    if (justKept && tile.dataset.kept && !window.guide) {
+    if (extMsgIntroEligible && tile.dataset.kept && !window.guide) {
+      extMsgIntroEligible = false;
       api.port.emit('prefs', function (prefs) {
         if (prefs.showExtMsgIntro) {
           setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
         }
       });
-      justKept = false;
     }
   }
 
@@ -300,6 +289,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
         var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
         var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
         log('[stopDrag] top:', r.top, 'bot:', r.bottom, JSON.stringify(pos));
+        $slider.addClass('kifi-dragged').on('transitionend', function end(e) {
+          if (e.originalEvent.propertyName === 'box-shadow') {
+            $slider.removeClass('kifi-dragged').off('transitionend', end);
+          }
+        });
         $(tile).draggable('destroy');
         data.$dragGlass.remove();
         delete data.$dragGlass;
@@ -308,12 +302,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         api.port.emit('set_keeper_pos', {host: location.hostname, pos: pos});
       }
     });
-  }
-
-  function keepPage(data, callback) {
-    log('[keepPage]', data);
-    justKept = true;
-    api.port.emit('keep', withUrls(data), callback, callback);
   }
 
   function hoverfuFriends($tip, keepers) {
@@ -344,7 +332,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     if (window.toaster && toaster.showing()) {
       toaster.hide();
     }
-    var $card = $slider.find('.kifi-keep-card');
+    var $btn = $slider.find('.kifi-keep-btn');
     beginStickyKeepBox();
 
     var deferreds = [Q.defer(), Q.defer(), Q.defer()];
@@ -362,8 +350,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (window.pane) {
         pane.shade();
       }
-      var howKept = $card.hasClass('kifi-public') ? 'public' : $card.hasClass('kifi-private') ? 'private' : null;
-      keepBox.show($slider, vals[2], howKept, keepPage);
+      var howKept = $btn.hasClass('kifi-public') ? 'public' : $btn.hasClass('kifi-private') ? 'private' : null;
+      keepBox.show($slider, vals[2], howKept);
       keepBox.onHide.add(function () {
         endStickyKeepBox();
         if (window.pane) {
@@ -456,12 +444,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
   api.port.on({
     kept: function (o) {
       if ($slider) {
-        var $card = $slider.find('.kifi-keep-card');
+        var $btn = $slider.find('.kifi-keep-btn');
         if ('kept' in o) {
-          $card.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
+          $btn.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
         }
-        if (o.fail && !$card.hasClass('kifi-shake')) {
-          $card.one('animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($card, 'kifi-shake'))
+        if (o.fail && !$btn.hasClass('kifi-shake')) {
+          $btn.one('animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($btn, 'kifi-shake'))
           .addClass('kifi-shake');
         }
       }
