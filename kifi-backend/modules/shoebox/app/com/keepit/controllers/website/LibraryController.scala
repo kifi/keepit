@@ -145,7 +145,7 @@ class LibraryController @Inject() (
         (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
       val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
-      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed)
+      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> mem.access)
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1

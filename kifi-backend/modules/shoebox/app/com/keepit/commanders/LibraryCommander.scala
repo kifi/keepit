@@ -563,12 +563,12 @@ class LibraryCommander @Inject() (
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession) = {
     val libs = libraryRepo.getByUser(userId)
     val mainOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
     }
     val secretOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
     }
     val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
       // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
@@ -629,7 +629,7 @@ object LibraryInfo {
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'lastKept).format[Option[DateTime]]
+    (__ \ 'lastKept).formatNullable[DateTime]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -698,7 +698,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'lastKept).format[Option[DateTime]] and
+    (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and
