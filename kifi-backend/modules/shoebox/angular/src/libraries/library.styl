@@ -10,25 +10,45 @@
     border-top: 1px solid #fff
 
 .library-card
+  .kf-keep-lib-header
+    padding-top: 20px
+
+  .kf-keep-lib-icon-container
+    display: inline-block
+
   .kf-keep-lib-icon
-    float: left
-    display: block
+    display: inline-block
+    margin-right: 22px
     width: 58px
     height: 77px
     background-repeat: no-repeat
 
+  .kf-keep-lib-name-container
+    display: inline-block
+    width: calc(100% - 80px)
+    height: 77px
+    vertical-align: top
+
+    &::before
+      content: '';
+      display: inline-block;
+      height: 100%;
+      vertical-align: middle;
+
+  .kf-keep-lib-name
+    display: inline-block
+    font-family: "Georgia", Arial, sans-serif
+    font-size: 24px
+    font-weight: 500
+    vertical-align: middle
+
   .kf-keep-lib-info
-    margin: 22px 25px 10px 80px
+    margin: 0 25px 10px 80px
     color: kifiBlack
     vertical-align: top
 
   .kf-keep-lib-owner
-    padding: 10px 0
-
-  .kf-keep-lib-name
-    font-family: "Georgia", Arial, sans-serif
-    font-size: 24px
-    font-weight: 500
+    padding-bottom: 10px
 
   .kf-keep-lib-user-image
     display: inline-block
