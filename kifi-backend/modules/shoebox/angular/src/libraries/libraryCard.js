@@ -63,8 +63,7 @@ angular.module('kifi')
           }
 
           // TODO(yiping): make sure recommended libraries have visibility.
-          // This is just a placeholder for now.
-          if (!scope.library.visibility) {
+          if (!scope.library.visibility && scope.recommendation) {
             scope.library.visibility = 'published';
           }
 
@@ -85,7 +84,7 @@ angular.module('kifi')
           }
 
           scope.library.shareUrl = env.origin + scope.library.url;
-          scope.library.shareText = 'Check this Kifi library about ' + scope.library.name + '!';
+          scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
         }
 
         scope.showLongDescription = function () {
@@ -93,7 +92,8 @@ angular.module('kifi')
         };
 
         scope.isUserLibrary = function (library) {
-          return library.kind === 'user_created';
+          // TODO(yiping): get recommendation libraries to have a "kind" property.
+          return library.kind === 'user_created' || scope.recommendation;
         };
 
         scope.canBeShared = function (library) {

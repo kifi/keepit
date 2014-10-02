@@ -53,6 +53,7 @@
       <div class="kf-keep-lib-image"></div>
     </div>
   </div>
+  <!-- TODO(yiping): once library has "kind" property, remove check for recommendation -->
   <div ng-if="isUserLibrary(library) || recommendation" class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Edit
