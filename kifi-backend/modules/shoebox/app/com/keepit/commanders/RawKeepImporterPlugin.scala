@@ -148,7 +148,7 @@ private class RawKeepImporterActor @Inject() (
           }
 
           //the bookmarks list may be very large!
-          searchClient.updateURIGraph()
+          searchClient.updateKeepIndex()
 
           db.readWriteBatch(successesRawKeep) {
             case (session, rk) =>

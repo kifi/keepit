@@ -165,7 +165,7 @@ abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
   private case class SuccessfulUpdate(done: Boolean)
   private case class FailedUpdate(ex: Throwable)
 
-  private var updating = false
+  @volatile private[this] var updating = false
 
   implicit val executionContext = com.keepit.common.concurrent.ExecutionContext.immediate
 
