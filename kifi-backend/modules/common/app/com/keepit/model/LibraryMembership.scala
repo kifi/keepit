@@ -43,7 +43,7 @@ object LibraryMembership {
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean] and
-    (__ \ 'lastViewed).format[Option[DateTime]]
+    (__ \ 'lastViewed).formatNullable[DateTime]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 
   def toLibraryMembershipView(libMem: LibraryMembership): LibraryMembershipView =
@@ -51,7 +51,7 @@ object LibraryMembership {
 }
 
 case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
-  override val version = 0
+  override val version = 1
   val namespace = "library_membership_by_id"
   def toKey(): String = id.id.toString
 }
