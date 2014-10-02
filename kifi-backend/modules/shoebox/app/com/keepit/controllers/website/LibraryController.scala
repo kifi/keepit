@@ -117,7 +117,7 @@ class LibraryController @Inject() (
               request.userIdOpt.map { userId =>
                 db.readWrite { implicit s =>
                   libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, userId).map { mem =>
-                    libraryMembershipRepo.save(mem.copy(lastViewed = Some(DateTime.now)))
+                    libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
                   }
                 }
               }

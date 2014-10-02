@@ -8,7 +8,7 @@ import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
@@ -22,6 +22,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
+  def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -111,6 +112,12 @@ class LibraryRepoImpl @Inject() (
       lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lm, lib)
     q.list
+  }
+
+  def updateLastKept(libraryId: Id[Library])(implicit session: RWSession) = {
+    val updateTime = Some(clock.now)
+    (for { t <- rows if t.id === libraryId } yield (t.lastKept)).update(updateTime)
+    invalidateCache(get(libraryId).copy(lastKept = updateTime))
   }
 
   private def getOptCompiled(ownerId: Column[Id[User]], slug: Column[LibrarySlug]) = Compiled {

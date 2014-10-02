@@ -112,13 +112,13 @@ class KeepInterner @Inject() (
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source, installationId)
+    if (persistedBookmarksWithUris.nonEmpty) db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
     val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
     }
-
     keptAnalytics.keptPages(userId, createdKeeps, context)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
@@ -133,6 +133,7 @@ class KeepInterner @Inject() (
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
+      db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
       bookmark
     }
   }
@@ -218,7 +219,6 @@ class KeepInterner @Inject() (
       // A inactive keep may have had tags already. Index them if any.
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
     }
-    libraryRepo.save(library.copy(lastKept = Some(DateTime.now())))
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }

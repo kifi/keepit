@@ -2,14 +2,14 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, State, ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
-import com.keepit.common.time.Clock
 import org.joda.time.DateTime
+import com.keepit.common.time._
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
 
@@ -26,6 +26,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
+  def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -100,6 +101,12 @@ class LibraryMembershipRepoImpl @Inject() (
   }
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
     countMembershipsCompiled(libraryId, excludeState).run
+  }
+
+  def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession) = {
+    val updateTime = Some(clock.now)
+    (for { t <- rows if t.id === membershipId } yield (t.lastViewed)).update(updateTime)
+    invalidateCache(get(membershipId).copy(lastViewed = updateTime))
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
