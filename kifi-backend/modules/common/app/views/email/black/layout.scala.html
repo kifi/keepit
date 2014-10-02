@@ -25,9 +25,7 @@
       <tr>
         <td bgcolor="#ffffff">
           <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#ffffff">
-            <tr>
-              <td height="29" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
-            </tr>
+            @email.tags.trSpacer(44)
             <tr>
               <td>
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#ffffff">
@@ -35,7 +33,7 @@
                     <td>
                       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse !important; border-bottom-width: 0px !important; mso-table-lspace: 0pt; mso-table-rspace: 0pt; padding: 0px; border: none;">
                         <tr>
-                          <td width="20" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
+                          <td width="40" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
                           <td style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 16px; line-height: 22px; color: #0c161e; border-collapse: collapse; mso-line-height-rule: exactly;">
                             @for(i <- 0 until closingLines.size) {
                             @if(i != 0){<br/>}
@@ -49,14 +47,12 @@
                 </table>
               </td>
             </tr>
-            <tr>
-              <td height="49" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
-            </tr>
+            @email.tags.trSpacer(59)
           </table>
         </td>
       </tr>
       }
-      <tr><td height="40">&nbsp;</td></tr>
+      @email.tags.trSpacer(49)
       <tr>
           <td valign="top">
               @email.black.footer()

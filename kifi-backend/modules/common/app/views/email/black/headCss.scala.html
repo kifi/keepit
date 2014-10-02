@@ -94,15 +94,26 @@ iPhone 6 Plus: 1920 x 1080px 3x Retina display  => 640px
 */}
 @@media only screen and (max-device-width: 667px)
 {
-  table.main_table {
+
+  table[class=main_table] {
     width: 100% !important;
   }
   .hide {
     display: none !important;
   }
-  td.side1 {
+  td[class=side1] {
     display: none !important;
   }
+  td[class=center1] {
+    text-align: center !important;
+  }
+  td[class=top_space] {
+    padding-top: 20px !important;
+  }
+  table[class=wrapper] {
+    width: 100% !important;
+  }
+
 }
 
 </style>
