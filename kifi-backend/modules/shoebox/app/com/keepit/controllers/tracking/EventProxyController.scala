@@ -1,6 +1,6 @@
 package com.keepit.controllers.tracking
 
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
@@ -42,14 +42,33 @@ class EventProxyController @Inject() (
       rawEvents.foreach { rawEvent =>
         val eventType = (rawEvent \ "event").as[String]
         val eventContext = (rawEvent \ "properties").as[JsObject]
+        val context = jsObject2HeimdalContext(eventContext, request)
         heimdal.trackEvent(UserEvent(
           userId = request.userId,
-          context = jsObject2HeimdalContext(eventContext, request),
+          context = context,
           eventType = EventType(eventType)
         ))
+        optionallySendUserUsedKifiEvent(request, context, eventType)
       }
     }
     NoContent
   }
 
+  // integrate some events into used_kifi events as actions
+  def optionallySendUserUsedKifiEvent(request: AuthenticatedRequest[_], existingContext: HeimdalContext, triggeringEvent: String): Unit = {
+    val validEvents = Set("user_viewed_page", "user_viewed_pane")
+    if (validEvents.contains(triggeringEvent)) {
+      val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
+      builder.addExistingContexts(existingContext)
+      triggeringEvent match {
+        case "user_viewed_page" =>
+          builder += ("action", "viewedSite")
+          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
+        case "user_viewed_pane" =>
+          builder += ("action", "viewedPane")
+          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
+        case _ =>
+      }
+    }
+  }
 }
