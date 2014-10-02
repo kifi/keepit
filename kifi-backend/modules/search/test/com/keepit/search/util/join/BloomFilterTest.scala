@@ -34,7 +34,7 @@ class BloomFilterTest extends Specification {
         val buf = new DataBuffer()
         val writer = new DataBufferWriter
 
-        val (positiveIds, negativeIds) = genIds(10000)
+        val (positiveIds, negativeIds) = genIds(1000)
         positiveIds.foreach { id => buf.alloc(writer, 1, 8).putLong(id) }
 
         val bloomFilter = BloomFilter(buf)
