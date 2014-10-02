@@ -79,7 +79,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
         val (user, emailToSend) = setup()
         val htmlF = inject[ConnectNetworkTip].render(emailToSend, user.id.get)(FACEBOOK)
         val html = Await.result(htmlF, Duration(5, "seconds")).get
-        html.body must contain("Connect to facebook")
+        html.body must contain("Connect to Facebook")
       }
     }
 
@@ -100,7 +100,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
         val (user, emailToSend) = setup()
         val htmlF = inject[ConnectNetworkTip].render(emailToSend, user.id.get)(LINKEDIN)
         val html = Await.result(htmlF, Duration(5, "seconds")).get
-        html.body must contain("Connect with linkedin")
+        html.body must contain("Connect with LinkedIn")
       }
     }
 
