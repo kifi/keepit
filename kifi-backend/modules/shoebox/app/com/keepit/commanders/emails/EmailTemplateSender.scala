@@ -4,8 +4,9 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
+import com.keepit.common.mail.template.{ EmailTrackingParam, EmailTip, EmailToSend }
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, LocalPostOffice }
+import com.keepit.heimdal.{ HeimdalServiceClient, UserEventTypes, UserEvent, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,6 +22,7 @@ trait EmailTemplateSender {
 class EmailTemplateSenderImpl @Inject() (
     db: Database,
     htmlPreProcessor: EmailTemplateProcessor,
+    heimdal: HeimdalServiceClient,
     emailRepo: ElectronicMailRepo,
     postOffice: LocalPostOffice,
     emailAddrRepo: UserEmailAddressRepo,
@@ -47,12 +49,27 @@ class EmailTemplateSenderImpl @Inject() (
 
       db.readWrite(attempts = 3) { implicit rw =>
         result.toUser foreach { userId =>
+          trackUserEvent(userId, result, email)
           result.includedTip foreach { tip => recordSentTip(tip, userId) }
         }
 
         postOffice.sendMail(email)
       }
     }
+  }
+
+  private def trackUserEvent(userId: Id[User], processedResult: ProcessedEmailResult, email: ElectronicMail) = {
+    // todo(josh) track the optional variableComponents and auxiliaryData parameters
+    val param = EmailTrackingParam(tip = processedResult.includedTip)
+    val context = {
+      val ctxBuilder = new HeimdalContextBuilder
+      ctxBuilder += ("action", "prepared")
+      ctxBuilder.addEmailInfo(email)
+      ctxBuilder.addDetailedEmailInfo(param)
+      ctxBuilder.build
+    }
+    val event = UserEvent(userId = userId, context = context, eventType = UserEventTypes.WAS_NOTIFIED)
+    heimdal.trackEvent(event)
   }
 
   private def recordSentTip(tip: EmailTip, userId: Id[User]) = {

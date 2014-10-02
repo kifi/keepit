@@ -4,19 +4,20 @@ import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.db.Id
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail._
+import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.heimdal.{ UserEventTypes, UserEvent, FakeHeimdalServiceClientImpl, HeimdalServiceClient }
 import com.keepit.model.{ UserValueName, UserValueRepo, User, NotificationCategory }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ Json, JsArray }
+import play.api.libs.json.Json
 import play.twirl.api.Html
 
 import scala.concurrent.Await
@@ -37,7 +38,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
     FakeCuratorServiceClientModule()
   )
 
-  "EmailTemplateSenderCommander" should {
+  "EmailTemplateSender" should {
     import com.keepit.common.mail.template.helpers.fullName
 
     def sendAndTestEmail(tips: Seq[EmailTip] = Seq.empty)(implicit injector: Injector) = {
@@ -50,6 +51,7 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
       val html = Html("Hello, " + fullName(id2))
       val commander = inject[EmailTemplateSender]
       val emailRepo = inject[ElectronicMailRepo]
+      val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
 
       val emailToSend = EmailToSend(
         title = "Testing!!!",
@@ -92,6 +94,14 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("<title>Testing!!!</title>")
         html must contain("Hello, Bryan Cranston")
       }
+
+      heimdal.eventCount === 1
+      val event = heimdal.trackedEvents(0).asInstanceOf[UserEvent]
+      event.userId === id3
+      event.eventType === UserEventTypes.WAS_NOTIFIED
+      event.context.get[String]("action").get === "prepared"
+      event.context.get[String]("channel").get === "email"
+      event.context.get[String]("emailId") must beSome
     }
 
     "send the email" in {
@@ -105,6 +115,10 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
 
         val tips = Seq(EmailTip.FriendRecommendations)
         sendAndTestEmail(tips)
+
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+        val event = heimdal.trackedEvents(0)
+        event.context.get[EmailTip]("emailTip").get === EmailTip.FriendRecommendations
 
         db.readOnlyMaster { implicit s =>
           val email = inject[ElectronicMailRepo].all().head

@@ -2,8 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
-import com.keepit.commanders.emails.tips.{ EmailTipProvider, ConnectNetworkTip }
-import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
@@ -15,7 +14,6 @@ import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, UserRepo, 
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -135,7 +133,7 @@ class EmailTemplateProcessorImpl @Inject() (
           EmailTrackingParam(
             subAction = Json.fromJson[String](tagArgs(0)).asOpt,
             variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
-            tips = emailTipOpt.map(Seq(_)) getOrElse Seq.empty,
+            tip = emailTipOpt,
             auxiliaryData = None // todo(josh) this needs to either be set individually for each link in the template or passed in EmailToSend
           ).encode
       }

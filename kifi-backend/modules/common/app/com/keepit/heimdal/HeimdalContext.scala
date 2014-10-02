@@ -1,19 +1,19 @@
 package com.keepit.heimdal
 
+import com.keepit.common.mail.template.EmailTrackingParam
 import org.joda.time.DateTime
 import play.api.libs.json._
-import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.model.{ NotificationCategory, KeepSource, ExperimentType }
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.net.{ Host, URI, UserAgent }
+import com.keepit.common.net.{ URI, UserAgent }
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.social.SocialNetworkType
 import scala.util.Try
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.amazon.{ MyInstanceInfo, AmazonInstanceInfo }
+import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.time._
 
 sealed trait ContextData
@@ -174,6 +174,16 @@ class HeimdalContextBuilder {
     this.addNotificationCategory(email.category)
     email.inReplyTo.foreach { previousEmailId => this += ("inReplyTo", previousEmailId.id) }
     email.senderUserId.foreach { id => this += ("senderUserId", id.id) }
+  }
+
+  def addDetailedEmailInfo(param: EmailTrackingParam): Unit = {
+    param.subAction.foreach(v => this += ("subaction", v))
+    param.tip.foreach { tip => this += ("emailTip", tip) }
+    if (param.variableComponents.nonEmpty) this += ("emailComponents", param.variableComponents)
+
+    param.auxiliaryData.foreach { ctx =>
+      ctx.data.foreach { case (key, value) => data(key) = value }
+    }
   }
 
   def addNotificationCategory(category: NotificationCategory): Unit = {
