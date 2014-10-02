@@ -26,12 +26,19 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
           unverified.size === 1
           unverified.head === address
         }
+        db.readOnlyMaster { implicit s =>
+          val unverified = userEmailAddressRepo.getUnverified(now.minusDays(10), now)
+          unverified.size === 3
+        }
         db.readWrite { implicit s =>
           userEmailAddressRepo.save(address.withState(UserEmailAddressStates.VERIFIED))
         }
         db.readOnlyMaster { implicit s =>
-          val now = inject[FakeClock].now
-          val unverified = userEmailAddressRepo.getUnverified(now.minusDays(1), now)
+          val unverified = userEmailAddressRepo.getUnverified(now.minusDays(10), now)
+          unverified.size === 2
+        }
+        db.readOnlyMaster { implicit s =>
+          val unverified = userEmailAddressRepo.getUnverified(now.minusHours(1), now)
           unverified.isEmpty === true
         }
       }
