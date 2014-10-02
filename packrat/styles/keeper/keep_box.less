@@ -1,4 +1,5 @@
 @box-width: 302px;
+@view-swipe-duration: .21s;
 
 .kifi-keep-box {
   position: absolute;
@@ -23,28 +24,48 @@
   border-radius: inherit !important;
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
-  padding-left: 16px;
+  background: #333;
+}
+.kifi-keep-box-title {
+  margin-left: 6px;
   line-height: 37px;
   font-size: 13px;
-  background: #333;
   color: #fff;
   font-weight: 300;
   letter-spacing: .3px;
+}
+@box-top-btn-diam: 24px;
+.kifi-keep-box-back,
+.kifi-keep-box-x {
+  height: @box-top-btn-diam;
+  width: @box-top-btn-diam;
+  border-radius: 50% !important;
+  &:hover,
+  &:focus {
+    background-color: #555;
+    &:active {
+      background-color: #4b4b4b;
+    }
+  }
+}
+.kifi-keep-box-back {
+  display: inline-block;
+  vertical-align: top;
+  margin: 7px 0 0 7px;
+  background: center/8px 12px no-repeat;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 9"><path fill="%23fff" d="M2,4.5l3.7-3.1c0.3-0.3,0.3-0.8,0-1.1c-0.3-0.3-0.9-0.3-1.2,0L0.2,3.9C0.1,4.1,0,4.3,0,4.5c0,0.2,0.1,0.4,0.2,0.6l4.3,3.7c0.3,0.3,0.9,0.3,1.2,0c0.3-0.3,0.3-0.8,0-1.1L2,4.5z"/></svg>');
+  transition: -webkit-transform @view-swipe-duration, margin-right @view-swipe-duration;
+  transition: transform @view-swipe-duration, margin-right @view-swipe-duration;
+  &.kifi-hidden {
+    -webkit-transform: scale(.0001);
+    transform: scale(.0001);
+    margin-right: -@box-top-btn-diam;
+  }
 }
 .kifi-keep-box-x {
   position: absolute;
   top: 7px;
   right: 7px;
-  height: 24px;
-  width: 24px;
-  border-radius: 50% !important;
-  &:hover,
-  &:focus {
-    background: #555;
-    &:active {
-      background: #444;
-    }
-  }
   &::before,
   &::after {
     content: '';
@@ -67,7 +88,6 @@
 }
 
 @view-width: @box-width - 2px;
-@view-swipe-duration: .21s;
 .kifi-keep-box-viewport {
   border: solid rgba(0,0,0,.3);
   border-width: 0 1px 1px;
@@ -136,8 +156,7 @@
 }
 
 .kifi-keep-box-lib-head,
-.kifi-keep-box-new-lib-head,
-.kifi-keep-box-keep-head {
+.kifi-keep-box-new-lib-head {
   background-color: #fbf5f3;
   line-height: 26px;
   font-size: 12px;
@@ -306,56 +325,6 @@
   display: none;
 }
 
-.kifi-keep-box-keep-head::after {
-  content: 'Keep into';
-  .kifi-kept>& {
-    content: 'Kept in';
-  }
-}
-.kifi-keep-box-back {
-  display: inline-block;
-  line-height: inherit;
-  padding: 0 10px;
-  position: relative;
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    @radius: 9px;
-    width: 2 * @radius;
-    height: 2 * @radius;
-    border-radius: @radius;
-    margin: -@radius 0 0 -@radius;
-  }
-  &:hover::before,
-  &:focus::before {
-    background: rgba(0,0,0,.1);
-  }
-  &:hover:active::before,
-  &:focus:active::before {
-    background: rgba(0,0,0,.16);
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    @half-height: 4px;
-    @half-width: 4px;
-    margin: -@half-height 0 0 -(@half-width + 1px);
-    border-style: solid;
-    border-width: @half-height (2 * @half-width) @half-height 0;
-    border-color: transparent #777;
-    vertical-align: middle;
-  }
-  &:hover::after,
-  &:focus::after {
-    border-right-color: #444;
-  }
-}
 .kifi-keep-box-keep-title {
   display: block;
   width: 100%;

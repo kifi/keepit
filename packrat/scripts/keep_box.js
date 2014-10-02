@@ -67,10 +67,20 @@ var keepBox = keepBox || (function () {
       keep_box_lib: 'keep_box_lib',
       keep_box_libs_list: 'keep_box_libs_list'
     }))
-    .on('click mousedown', '.kifi-keep-box-x', function (e) {
-      if (e.which === 1 && $box) {
+    .on('mousedown', function (e) {
+      if (e.which === 1) {
         e.preventDefault();
+      }
+    })
+    .on('click', '.kifi-keep-box-x', function (e) {
+      if (e.which === 1 && $box) {
         hide(e, 'x');
+      }
+    })
+    .on('click', '.kifi-keep-box-back', function (e) {
+      if (e.which === 1 && $box) {
+        $box.find('.kifi-keep-box-view').first().triggerHandler('kifi-back');
+        swipeTo();
       }
     })
     .appendTo($parent);
@@ -130,7 +140,7 @@ var keepBox = keepBox || (function () {
   function swipeTo($new) {
     var $vp = $box.find('.kifi-keep-box-viewport');
     var $cart = $vp.find('.kifi-keep-box-cart');
-    var $old = $cart.find('.kifi-keep-box-view');
+    var $old = $cart.find('.kifi-keep-box-view').first();
     var back = !$new;
 
     var vpHeightOld = $vp[0].offsetHeight;
@@ -139,6 +149,8 @@ var keepBox = keepBox || (function () {
     $new = $new || $old.data('$prev');
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     $new[back ? 'prependTo' : 'appendTo']($cart);
+
+    $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', back && !$new.data('$prev'));
 
     var heightDelta = $new[0].offsetHeight - $old[0].offsetHeight;
 
@@ -251,21 +263,18 @@ var keepBox = keepBox || (function () {
 
   function addKeepBindings($view) {
     $view
-    .on('click', '.kifi-keep-box-back', function (e) {
-      if (e.which === 1) {
-        var $old = $view.data('$prev');
-        if ($old.hasClass('kifi-keep-box-view-new-lib')) {
-          var libraryId = $view.find('.kifi-keep-box-lib').data('id');
-          api.port.emit('delete_library', libraryId, function (success) {
-            if (success) {
-              var $libView = $old.data('$prev');
-              delete $libView.data('librariesById')[libraryId];
-              $libView.data('$all').add($libView).find('.kifi-keep-box-lib[data-id=' + libraryId + ']').remove();
-            }
-          });
-          $old.find('.kifi-keep-box-progress').css('width', '').parent().removeClass('kifi-done');
-        }
-        swipeTo();
+    .on('kifi-back', function () {
+      var $old = $view.data('$prev');
+      if ($old.hasClass('kifi-keep-box-view-new-lib')) {
+        var libraryId = $view.find('.kifi-keep-box-lib').data('id');
+        api.port.emit('delete_library', libraryId, function (success) {
+          if (success) {
+            var $libView = $old.data('$prev');
+            delete $libView.data('librariesById')[libraryId];
+            $libView.data('$all').add($libView).find('.kifi-keep-box-lib[data-id=' + libraryId + ']').remove();
+          }
+        });
+        $old.find('.kifi-keep-box-progress').css('width', '').parent().removeClass('kifi-done');
       }
     })
     .on('input', '.kifi-keep-box-keep-title', function () {
@@ -290,11 +299,8 @@ var keepBox = keepBox || (function () {
 
   function addCreateLibraryBindings($view) {
     $view
-    .on('click', '.kifi-keep-box-back', function (e) {
-      if (e.which === 1) {
-        $view.data('$prev').find('.kifi-keep-box-lib-input').removeData('q').trigger('input');
-        swipeTo();
-      }
+    .on('kifi-back', function () {
+      $view.data('$prev').find('.kifi-keep-box-lib-input').removeData('q').trigger('input');
     })
     .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
       this.parentNode.classList.toggle('kifi-checked', this.checked);
