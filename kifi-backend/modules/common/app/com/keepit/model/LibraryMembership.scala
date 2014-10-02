@@ -51,7 +51,7 @@ object LibraryMembership {
 }
 
 case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
-  override val version = 0
+  override val version = 1
   val namespace = "library_membership_by_id"
   def toKey(): String = id.id.toString
 }
