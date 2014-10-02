@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTip }
+import com.keepit.common.mail.template.{ EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
 import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
@@ -20,10 +20,12 @@ import play.twirl.api.Html
 import scala.concurrent.Future
 
 case class ProcessedEmailResult(
+  toUser: Option[Id[User]],
   subject: String,
   fromName: Option[String],
   htmlBody: LargeString,
-  textBody: Option[LargeString])
+  textBody: Option[LargeString],
+  includedTip: Option[EmailTip])
 
 @ImplementedBy(classOf[EmailTemplateProcessorImpl])
 trait EmailTemplateProcessor {
@@ -53,7 +55,7 @@ class EmailTemplateProcessorImpl @Inject() (
   def process(emailToSend: EmailToSend) = {
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
 
-    val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt }
+    val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt.map(_._2) }
 
     templatesF.flatMap[ProcessedEmailResult] { templates =>
       val htmlBody = views.html.email.black.layout(templates, emailToSend.closingLines)
@@ -80,19 +82,23 @@ class EmailTemplateProcessorImpl @Inject() (
       for {
         users <- usersF
         userImageUrls <- userImageUrlsF
+        tipHtmlOpt <- tipHtmlF
       } yield {
         val input = DataNeededResult(users = users, imageUrls = userImageUrls)
+        val includedTip = tipHtmlOpt.map(_._1)
         ProcessedEmailResult(
-          subject = evalTemplate(emailToSend.subject, input, emailToSend),
-          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend)),
-          textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend))),
-          fromName = fromName.map(text => evalTemplate(text, input, emailToSend))
+          toUser = emailToSend.to.left.toOption,
+          subject = evalTemplate(emailToSend.subject, input, emailToSend, includedTip),
+          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend, includedTip)),
+          textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend, includedTip))),
+          fromName = fromName.map(text => evalTemplate(text, input, emailToSend, includedTip)),
+          includedTip = includedTip
         )
       }
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend) = {
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]) = {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -124,6 +130,13 @@ class EmailTemplateProcessorImpl @Inject() (
           emailToSend.category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
         }
         case tags.parentCategory => NotificationCategory.ParentCategory.get(emailToSend.category).getOrElse("unknown")
+        case tags.trackingParam =>
+          EmailTrackingParam(
+            subAction = Json.fromJson[String](tagArgs(0)).asOpt,
+            variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
+            tips = emailTipOpt.map(Seq(_)) getOrElse Seq.empty,
+            auxiliaryData = None // todo(josh) this needs to either be set individually for each link in the template or passed in EmailToSend
+          ).encode
       }
     })
   }

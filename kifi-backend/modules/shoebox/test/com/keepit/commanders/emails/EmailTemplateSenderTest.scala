@@ -10,12 +10,13 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.{ User, NotificationCategory }
+import com.keepit.model.{ UserValueName, UserValueRepo, User, NotificationCategory }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
+import play.api.libs.json.{ Json, JsArray }
 import play.twirl.api.Html
 
 import scala.concurrent.Await
@@ -63,10 +64,22 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         tips = tips
       )
 
-      val emailF = commander.send(emailToSend)
-      val email = Await.result(emailF, Duration(5, "seconds"))
-
+      val userValueRepo = inject[UserValueRepo]
       db.readOnlyMaster { implicit s =>
+        userValueRepo.getUserValue(id3, UserValueName.LATEST_EMAIL_TIPS_SENT) must beNone
+
+        val emailF = commander.send(emailToSend)
+        val email = Await.result(emailF, Duration(5, "seconds"))
+
+        val expectedUserValue = {
+          val jsValue = Json.toJson(tips)
+          Json.stringify(jsValue)
+        }
+
+        val userValue = userValueRepo.getUserValue(id3, UserValueName.LATEST_EMAIL_TIPS_SENT)
+        if (tips.nonEmpty) userValue.get.value === expectedUserValue
+        else userValue must beNone
+
         val freshEmail = emailRepo.get(email.id.get)
         freshEmail === email
         email.subject === "hi from Aaron Paul"
