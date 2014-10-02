@@ -11,6 +11,7 @@ import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
 import com.keepit.model.{ UserValueName, UserValueRepo, UserEmailAddressRepo }
 import us.theatr.akka.quartz.QuartzActor
+import com.keepit.common.concurrent.ExecutionContext.singleThread
 
 private[cron] object SendEmailConfirmation
 
@@ -32,11 +33,14 @@ class EmailConfirmationActor @Inject() (
         allEmails.filter { email =>
           userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).isDefined
         }
-      } map { email =>
-        emailConfirmationSender(email)
-        db.readWrite { implicit s =>
-          userValueRepo.setValue(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION, true)
-        }
+      }
+      sentEmails foreach { email =>
+        emailConfirmationSender(email).onSuccess {
+          case e =>
+            db.readWrite { implicit s =>
+              userValueRepo.setValue(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION, true)
+            }
+        }(singleThread)
       }
       log.info(s"sent verification emails to $sentEmails")
   }

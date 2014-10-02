@@ -49,7 +49,7 @@ class UserConnectionCreator @Inject() (
   }
 
   def updateUserConnections(userId: Id[User], networkType: Option[SocialNetworkType] = None): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
-    db.readWrite { implicit s =>
+    val (newConnections, user, newConnectionsObjects, connectionCount, socialConnectionCount) = db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
       val unfriendedConnections = userConnectionRepo.getUnfriendedUsers(userId)
@@ -57,23 +57,25 @@ class UserConnectionCreator @Inject() (
       val newConnections = socialConnections -- existingConnections -- unfriendedConnections
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
-
-      val emailsF = newConnections.map { connId =>
-        log.info(s"Sending new connection to user $connId (to $userId)")
-        eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
-        sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
-      }.toSeq
-
-      if (newConnections.nonEmpty) {
-        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
-        heimdal.setUserProperties(userId,
-          "kifiConnections" -> ContextDoubleData(userConnectionRepo.getConnectionCount(userId)),
-          "socialConnections" -> ContextDoubleData(socialConnectionRepo.getUserConnectionCount(userId))
-        )
-      }
-
-      Future.sequence(emailsF)
+      (newConnections, basicUserRepo.load(userId), newConnections.map(basicUserRepo.load),
+        userConnectionRepo.getConnectionCount(userId), socialConnectionRepo.getUserConnectionCount(userId))
     }
+
+    val emailsF = newConnections.map { connId =>
+      log.info(s"Sending new connection to user $connId (to $userId)")
+      eliza.sendToUser(connId, Json.arr("new_friends", Set(user)))
+      sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
+    }.toSeq
+
+    if (newConnections.nonEmpty) {
+      eliza.sendToUser(userId, Json.arr("new_friends", newConnectionsObjects))
+      heimdal.setUserProperties(userId,
+        "kifiConnections" -> ContextDoubleData(connectionCount),
+        "socialConnections" -> ContextDoubleData(socialConnectionCount)
+      )
+    }
+
+    Future.sequence(emailsF)
   }
 
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId])(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
