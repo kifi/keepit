@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$window', '$rootScope', '$timeout', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService',
-  function ($location, $window, $rootScope, $timeout, util, friendService, modalService, tagService, profileService, libraryService) {
+  '$location', '$window', '$rootScope', '$timeout', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
+  function ($location, $window, $rootScope, $timeout, util, friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
       restrict: 'A',
@@ -28,19 +28,23 @@ angular.module('kifi')
 
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
-        var libList = element.find('.kf-nav-lib-users');
-        var antiscroll = element.find('.antiscroll-inner');
+        //var libList = element.find('.kf-nav-lib-users');
+        //var antiscroll = element.find('.antiscroll-inner');
 
+/*
         libList.on('mousewheel', function(e) {
-            var d = e.originalEvent.deltaY;
-            var visibleHeight = scrollableLibList.innerHeight();
-            var totalHeight = libList.innerHeight();
-            var maxScroll = totalHeight - visibleHeight;
-            var scroll = antiscroll.scrollTop();
-            if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
-              e.preventDefault();
-            }
+          var d = e.originalEvent.deltaY;
+          var visibleHeight = scrollableLibList.innerHeight();
+          var totalHeight = libList.innerHeight();
+          var maxScroll = totalHeight - visibleHeight;
+          var scroll = antiscroll.scrollTop();
+          if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
+            e.preventDefault();
+          }
         });
+        */
+
+        // on resizing window -> trigger new turn -> reset library list height
         w.bind('resize', function () {
           scope.$apply(function () {
             setLibListHeight();
@@ -50,6 +54,9 @@ angular.module('kifi')
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
+          }
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
           }
         }
 
@@ -73,26 +80,29 @@ angular.module('kifi')
               util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
               util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
             });
-            
-            $timeout(function() {
-              scope.$apply(function () {
-                scrollableLibList = element.find('.kf-scrollable-libs');
-                setLibListHeight();
-              });
-            }, 1000);
-           
           }
         });
 
-        $rootScope.$on('changedLibrary', function () {
-          if (scope.librariesEnabled) {
-            scope.mainLib = _.find(scope.librarySummaries, { 'kind' : 'system_main' });
-            scope.secretLib = _.find(scope.librarySummaries, { 'kind' : 'system_secret' });
-            scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
-            util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
-            util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
+        /*
+        var isScrollOffset = _.debounce(function () {
+          scrollableLibList = element.find('.kf-scrollable-libs');
+          var someEle = element.find('.kf-nav-lib-system');
+          return (scrollableLibList.length > 0 && someEle.length > 0) && scrollableLibList.offset();
+        }, 100);
+
+        scope.$watch(isScrollOffset, function () {
+          scrollableLibList = element.find('.kf-scrollable-libs');
+          setLibListHeight();
+        });*/
+
+        var promise = $interval(function() {
+          scrollableLibList = element.find('.kf-scrollable-libs');
+          if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
+            setLibListHeight();
+            $interval.cancel(promise);
           }
-        });
+        }, 100);
+        
 
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
