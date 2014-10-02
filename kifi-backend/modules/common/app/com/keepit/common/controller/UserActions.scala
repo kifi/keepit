@@ -137,7 +137,7 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] = {
-    val resF = userActionsHelper.getImpersonatedUserIdOpt match {
+    userActionsHelper.getImpersonatedUserIdOpt match {
       case Some(impExtId) =>
         impersonate(userId, impExtId).flatMap { userRequest =>
           block(userRequest).map(maybeSetUserIdInSession(userId, _))
@@ -145,7 +145,6 @@ trait UserActions extends Logging { self: Controller =>
       case None =>
         block(buildUserRequest(userId)).map(maybeSetUserIdInSession(userId, _))
     }
-    resF.map(maybeAugmentCORS(_))
   }
 
   protected def PageAction[P[_]] = new ActionFunction[P, P] {
@@ -157,10 +156,11 @@ trait UserActions extends Logging { self: Controller =>
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      userActionsHelper.getUserIdOpt match {
+      val result = userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
         case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
       }
+      result.map(maybeAugmentCORS(_))
     }
   }
   val UserPage = (UserAction andThen PageAction)
@@ -168,10 +168,11 @@ trait UserActions extends Logging { self: Controller =>
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      userActionsHelper.getUserIdOpt match {
+      val result = userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
         case None => block(userActionsHelper.buildNonUserRequest).map(maybeAugmentKcid(_))
       }
+      result.map(maybeAugmentCORS(_))
     }
   }
   val MaybeUserPage = (MaybeUserAction andThen PageAction)
