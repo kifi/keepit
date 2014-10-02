@@ -176,7 +176,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
-    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
+    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true) yield b).firstOption
   }
 
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
