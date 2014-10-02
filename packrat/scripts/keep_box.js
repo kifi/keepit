@@ -410,7 +410,7 @@ var keepBox = keepBox || (function () {
     $view.find('.kifi-keep-box-keep-image-cart').append(canvases[imageIdx] || newNoImage());
 
     var $tags = $view.find('.kifi-keep-box-tags')
-    .data('pre', (keep && keep.tags || []).map(function (tag) { return {name: tag}; }))
+    .data('pre', (keep && keep.tags || []).map(tagToResult))
     .tokenInput(searchTags.bind(null, library.id), {
       classPrefix: 'kifi-keep-box-tags-',
       placeholder: 'Add a tag',
@@ -556,7 +556,9 @@ var keepBox = keepBox || (function () {
   }
 
   function searchTags(libraryId, numTokens, query, withResults) {
-    api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, withResults);
+    api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, function (tags) {
+      withResults(tags.map(tagToResult));
+    });
   }
 
   function showTagSuggestions($dropdown, els, done) {
@@ -653,6 +655,10 @@ var keepBox = keepBox || (function () {
 
   function libraryIdIs(id) {
     return function (o) {return o.libraryId === id};
+  }
+
+  function tagToResult(tag) {
+    return {name: tag};
   }
 
   function getSrc(img) {
