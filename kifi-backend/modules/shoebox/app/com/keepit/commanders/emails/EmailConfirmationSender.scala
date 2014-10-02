@@ -30,7 +30,8 @@ class EmailConfirmationSender @Inject() (
       subject = "Kifi.com | Please confirm your email address",
       to = Right(emailAddr.address),
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
-      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl)
+      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl),
+      textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl))
     )
     emailTemplateSender.send(emailToSend)
   }

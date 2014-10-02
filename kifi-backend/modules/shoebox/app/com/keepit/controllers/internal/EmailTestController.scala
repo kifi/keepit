@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.model.{ UserEmailAddress, Library, NotificationCategory, User }
@@ -83,7 +84,7 @@ class EmailTestController @Inject() (
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
       case "libraryInviteUser" => libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
       case "libraryInviteNonUser" => libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
-      case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo))
+      case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
     }
 
     emailF.map(email => Ok(email.htmlBody.value))
