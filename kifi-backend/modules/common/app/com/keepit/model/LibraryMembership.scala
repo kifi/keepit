@@ -19,7 +19,8 @@ case class LibraryMembership(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
-    showInSearch: Boolean) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    showInSearch: Boolean,
+    lastViewed: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -41,7 +42,8 @@ object LibraryMembership {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
-    (__ \ 'showInSearch).format[Boolean]
+    (__ \ 'showInSearch).format[Boolean] and
+    (__ \ 'lastViewed).formatNullable[DateTime]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 
   def toLibraryMembershipView(libMem: LibraryMembership): LibraryMembershipView =
@@ -49,7 +51,7 @@ object LibraryMembership {
 }
 
 case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
-  override val version = 0
+  override val version = 1
   val namespace = "library_membership_by_id"
   def toKey(): String = id.id.toString
 }

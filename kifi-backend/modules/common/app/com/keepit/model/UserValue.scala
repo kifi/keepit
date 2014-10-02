@@ -69,6 +69,7 @@ object UserValueName {
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
+  val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")

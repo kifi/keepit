@@ -1,0 +1,37 @@
+@()
+@import com.keepit.common.mail.template.helpers._
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+  @email.tags.trSpacer(29)
+  @email.tags.trHorizontalLine()
+  @email.tags.trSpacer(29)
+  <tr>
+    <td align="center" valign="center" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:20px;color:#506DA5;border-collapse:collapse;mso-line-height-rule:exactly;font-weight:bold;">
+      See which of your Facebook friends<br/>are waiting for you on Kifi
+    </td>
+  </tr>
+  @email.tags.trSpacer(29)
+  <tr>
+    <td align="center">
+      @email.tags.roundedContainer(260, 60, 10, "506DA5") {
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+        <tr>
+          <td width="50" height="40" align="center" valign="middle">
+            <a href="@baseUrl/link/facebook" target="_blank" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+              <img src='@assetUrl("fb-letter.png")' width="9" height="20" border="0"/>
+            </a>
+          </td>
+          <td bgcolor="#738BB7" width="2"></td>
+          <td align="center" valign="middle" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;border-collapse:collapse;mso-line-height-rule:exactly;">
+            <a href="@baseUrl/link/facebook" target="_blank" style="display:block;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+              Connect to Facebook
+            </a>
+          </td>
+        </tr>
+      </table>
+      }
+    </td>
+  </tr>
+  @email.tags.trSpacer(44)
+  @email.tags.trHorizontalLine()
+</table>

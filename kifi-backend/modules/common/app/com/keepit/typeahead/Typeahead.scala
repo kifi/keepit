@@ -28,15 +28,19 @@ object PersonalTypeahead {
   }
 }
 
-trait Typeahead[T, E, I] extends Logging {
+trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
+
+  protected val refreshRequestConsolidationWindow = 10 minutes
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
 
   protected def airbrake: AirbrakeNotifier
 
-  protected def get(ownerId: Id[T]): Future[Option[PersonalTypeahead[T, E, I]]]
+  protected def get(ownerId: Id[T]): Future[Option[P]]
 
-  protected def create(ownerId: Id[T]): Future[PersonalTypeahead[T, E, I]]
+  protected def create(ownerId: Id[T]): Future[P]
 
-  protected def invalidate(typeahead: PersonalTypeahead[T, E, I]): Unit
+  protected def invalidate(typeahead: P): Unit
 
   protected def extractName(info: I): String
 
@@ -67,10 +71,9 @@ trait Typeahead[T, E, I] extends Logging {
     }
   }
 
-  protected val fetchRequestConsolidationWindow = 15 seconds
-  private[this] val consolidateFetchReq = new RequestConsolidator[Id[T], PersonalTypeahead[T, E, I]](fetchRequestConsolidationWindow)
+  private[this] val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
 
-  private[this] def getOrElseCreate(ownerId: Id[T]): Future[PersonalTypeahead[T, E, I]] = {
+  private[this] def getOrElseCreate(ownerId: Id[T]): Future[P] = {
     implicit val fj = ExecutionContext.fj
     consolidateFetchReq(ownerId) { id =>
       get(id).flatMap {
@@ -96,10 +99,9 @@ trait Typeahead[T, E, I] extends Logging {
     }
   }
 
-  protected val refreshRequestConsolidationWindow = 10 minutes
-  private[this] val consolidateRefreshReq = new RequestConsolidator[Id[T], PersonalTypeahead[T, E, I]](refreshRequestConsolidationWindow)
+  private[this] val consolidateRefreshReq = new RequestConsolidator[Id[T], P](refreshRequestConsolidationWindow)
 
-  private def doRefresh(ownerId: Id[T]): Future[PersonalTypeahead[T, E, I]] = {
+  private def doRefresh(ownerId: Id[T]): Future[P] = {
     implicit val fj = ExecutionContext.fj
     consolidateRefreshReq(ownerId) { id =>
       create(id).map { typeahead =>

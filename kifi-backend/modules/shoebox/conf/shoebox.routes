@@ -65,6 +65,8 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
+#------ begin pre-library routes (ExtBookmarksController will be deprecated when libraries launch; see /ext/libraries section further down)
+
 POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
 # Note: /bookmarks/add is now for browser bookmark imports only
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
@@ -81,6 +83,8 @@ POST    /tags/add                   @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /tags/:id/removeFromKeep    @com.keepit.controllers.ext.ExtBookmarksController.removeTag(id: ExternalId[Collection])
 POST    /tags/:id/addToKeep         @com.keepit.controllers.ext.ExtBookmarksController.addTag(id: ExternalId[Collection])
 POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksController.clearTags()
+
+#------ end pre-library routes
 
 # Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
@@ -130,6 +134,7 @@ DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.Ext
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.searchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
 
 ##########################################
 # Mobile
@@ -215,7 +220,6 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted

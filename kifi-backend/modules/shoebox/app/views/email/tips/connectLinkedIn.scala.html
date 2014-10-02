@@ -1,0 +1,36 @@
+@()
+@import com.keepit.common.mail.template.helpers._
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+  @email.tags.trSpacer(29)
+  @email.tags.trHorizontalLine()
+  @email.tags.trSpacer(29)
+  <tr>
+    <td align="center" valign="center" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:20px;color:#506DA5;border-collapse:collapse;mso-line-height-rule:exactly;font-weight:bold;">
+      See which of your LinkedIn connections<br/>are waiting for you on Kifi
+    </td>
+  </tr>
+  @email.tags.trSpacer(29)
+  <tr>
+    <td align="center">
+      @email.tags.roundedContainer(260, 60, 10, "1B6E9B") {
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+        <tr>
+          <td width="50" height="40" align="center" valign="middle" style="border-right:2px solid 2px solid #468BAE;">
+            <a href="@baseUrl/link/linkedin" target="_blank" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+              <img src='@assetUrl("lin-letter.png")' width="22" height="21" border="0"/>
+            </a>
+          </td>
+          <td align="center" valign="middle" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;border-collapse:collapse;mso-line-height-rule:exactly;">
+            <a href="@baseUrl/link/linkedin" target="_blank" style="display:block;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+              Connect with LinkedIn
+            </a>
+          </td>
+        </tr>
+      </table>
+      }
+    </td>
+  </tr>
+  @email.tags.trSpacer(44)
+  @email.tags.trHorizontalLine()
+</table>

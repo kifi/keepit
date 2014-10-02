@@ -17,7 +17,7 @@ import scala.concurrent.{ Promise, Await, Future }
 sealed trait MaybeUserRequest[T] extends Request[T]
 
 case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = identityF.apply
+  def identityOpt: Option[Identity] = identityF.apply()
 }
 
 case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
@@ -120,7 +120,7 @@ trait UserActions extends Logging { self: Controller =>
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     userActionsHelper.getUserIdOpt(request) match {
-      case Some(id) if (id == userId) => res
+      case Some(id) if id == userId => res
       case _ => res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     }
   }
@@ -137,7 +137,7 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   private def buildUserAction[A](userId: Id[User], block: (UserRequest[A]) => Future[Result])(implicit request: Request[A]): Future[Result] = {
-    val resF = userActionsHelper.getImpersonatedUserIdOpt match {
+    userActionsHelper.getImpersonatedUserIdOpt match {
       case Some(impExtId) =>
         impersonate(userId, impExtId).flatMap { userRequest =>
           block(userRequest).map(maybeSetUserIdInSession(userId, _))
@@ -145,7 +145,6 @@ trait UserActions extends Logging { self: Controller =>
       case None =>
         block(buildUserRequest(userId)).map(maybeSetUserIdInSession(userId, _))
     }
-    resF.map(maybeAugmentCORS(_))
   }
 
   protected def PageAction[P[_]] = new ActionFunction[P, P] {
@@ -157,10 +156,11 @@ trait UserActions extends Logging { self: Controller =>
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      userActionsHelper.getUserIdOpt match {
+      val result = userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
         case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
       }
+      result.map(maybeAugmentCORS(_))
     }
   }
   val UserPage = (UserAction andThen PageAction)
@@ -168,10 +168,11 @@ trait UserActions extends Logging { self: Controller =>
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      userActionsHelper.getUserIdOpt match {
+      val result = userActionsHelper.getUserIdOpt match {
         case Some(userId) => buildUserAction(userId, block)
         case None => block(userActionsHelper.buildNonUserRequest).map(maybeAugmentKcid(_))
       }
+      result.map(maybeAugmentCORS(_))
     }
   }
   val MaybeUserPage = (MaybeUserAction andThen PageAction)

@@ -8,10 +8,13 @@ import play.api.libs.json.{ JsError, JsSuccess, Json, __ }
 import play.api.libs.functional.syntax._
 
 case class EmailTrackingParam(
-  subAction: Option[String] = None,
-  variableComponents: Seq[String] = Seq.empty,
-  tips: Seq[EmailTip] = Seq.empty,
-  auxiliaryData: Option[HeimdalContext] = None)
+    subAction: Option[String] = None,
+    variableComponents: Seq[String] = Seq.empty,
+    tips: Seq[EmailTip] = Seq.empty,
+    auxiliaryData: Option[HeimdalContext] = None) {
+
+  def encode = EmailTrackingParam.encode(this)
+}
 
 object EmailTrackingParam extends Logging {
   val paramName = "dat"

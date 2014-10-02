@@ -49,6 +49,13 @@ angular.module('kifi')
           }
         });
 
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
+            util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
+          }
+        });
+
         scope.addLibrary = function () {
           modalService.open({
             template: 'libraries/manageLibraryModal.tpl.html'

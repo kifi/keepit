@@ -15,6 +15,7 @@ import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
+import com.keepit.typeahead.HashtagTypeahead
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 

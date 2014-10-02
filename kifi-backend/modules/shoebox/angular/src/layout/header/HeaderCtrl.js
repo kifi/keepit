@@ -18,9 +18,15 @@ angular.module('kifi')
       }
     });
 
+    $scope.showHeader = false;
+
     $scope.me = profileService.me;
     $scope.me.picUrl = '//www.kifi.com/assets/img/ghost.200.png';
-    profileService.getMe();
+    profileService.getMe().then(function () {
+      if (profileService.userLoggedIn() === true) {
+        $scope.showHeader = true;
+      }
+    });
 
     $scope.isActive = function (path) {
       var loc = $location.path();
