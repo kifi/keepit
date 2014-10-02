@@ -65,9 +65,9 @@
       <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
       <a href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareUrl}}">Share</a>
     </button>
-    <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button">
+    <button ng-if="canBeShared(library)" ng-click="shareFB()" class="kf-keep-lib-footer-button">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>
-      <a href="https://www.facebook.com/dialog/share?app_id={{facebookAppId}}&display=popup&href={{library.shareUrl}}&redirect_uri={{library.shareUrl}}">Share</a>
+      <a href="javascript:">Share</a>
     </button>
   </div>
 </div>

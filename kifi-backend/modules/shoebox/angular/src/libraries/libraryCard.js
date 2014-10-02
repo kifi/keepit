@@ -231,6 +231,13 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
+
+        scope.shareFB = function () {
+          $FB.ui({
+            method: 'share',
+            href: scope.library.shareUrl
+          });
+        };
       }
     };
   }
