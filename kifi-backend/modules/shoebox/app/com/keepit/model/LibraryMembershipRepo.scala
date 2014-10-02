@@ -99,6 +99,7 @@ class LibraryMembershipRepoImpl @Inject() (
   private def countMembershipsCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryMembership]]) = Compiled {
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
   }
+
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
     countMembershipsCompiled(libraryId, excludeState).run
   }

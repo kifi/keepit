@@ -147,7 +147,7 @@ class ShoeboxDataPipeController @Inject() (
       val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
       changedLibraries.map { library =>
         val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
-        LibraryAndMemberships(library, memberships)
+        LibraryAndMemberships(library, memberships.map(_.toLibraryMembershipView))
       }
     }
     Ok(Json.toJson(librariesWithMembersChanged))
@@ -167,7 +167,7 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = Action { request =>
-    val mem = db.readOnlyReplica { implicit s => libraryMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map { LibraryMembership.toLibraryMembershipView(_) }
+    val mem = db.readOnlyReplica { implicit s => libraryMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map { _.toLibraryMembershipView }
     Ok(Json.toJson(mem))
   }
 }

@@ -1,9 +1,10 @@
 package com.keepit.cortex.dbmodel
 
 import com.keepit.common.db._
-import com.keepit.model._
-import org.joda.time.DateTime
 import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.model.view.LibraryMembershipView
+import org.joda.time.DateTime
 
 case class CortexLibraryMembership(
     id: Option[Id[CortexLibraryMembership]] = None,
