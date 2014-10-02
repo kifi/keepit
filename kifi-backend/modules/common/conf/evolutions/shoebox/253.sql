@@ -1,16 +1,13 @@
-#Shoebox
+# SHOEBOX
 
 # --- !Ups
-ALTER TABLE bookmark ADD COLUMN in_disjoint_lib BOOLEAN DEFAULT TRUE AFTER is_primary;
 
-ALTER TABLE bookmark ADD CONSTRAINT lib_primary_uri UNIQUE (library_id, is_primary, uri_id);
-ALTER TABLE bookmark ADD CONSTRAINT user_disjoint_primary_uri UNIQUE (user_id, in_disjoint_lib, is_primary, uri_id);
+ALTER TABLE library
+    ADD COLUMN last_kept datetime DEFAULT NULL;
 
--- MySQL:
--- ALTER TABLE bookmark ADD UNIQUE lib_primary_uri (library_id, is_primary, uri_id);
--- ALTER TABLE bookmark ADD UNIQUE user_disjoint_primary_uri (user_id, in_disjoint_lib, is_primary, uri_id);
--- ALTER TABLE bookmark DROP KEY user_id_primary_uri_id;
+ALTER TABLE library_membership
+    ADD COLUMN last_viewed datetime DEFAULT NULL;
 
-insert into evolutions (name, description) values('253.sql', 'drop user_id_primary_uri_id AND add in_disjoint_lib to bookmark');
+insert into evolutions (name, description) values('253.sql', 'last_viewed & last_kept for libraries');
 
 # --- !Downs

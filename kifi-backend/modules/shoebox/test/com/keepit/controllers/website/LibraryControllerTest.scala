@@ -268,11 +268,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val slugInput = "lib1"
         inject[FakeUserActionsHelper].setUser(user1)
 
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.lastViewed.isDefined === false
+        }
+
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(unInput, slugInput).url
         val request1 = FakeRequest("GET", testPath1)
         val result1 = libraryController.getLibraryByPath(unInput, slugInput)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
+
+        val firstTime = db.readOnlyMaster { implicit s =>
+          val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get
+          mem.lastViewed.isDefined === true
+          mem.lastViewed.get
+        }
 
         val testPath1_bad = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(badUserInput, slugInput).url
         val request1_bad = FakeRequest("GET", testPath1_bad)
@@ -284,6 +294,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result2 = libraryController.getLibraryByPath(extInput, slugInput)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
+
+        val secondTime = db.readOnlyMaster { implicit s =>
+          val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get
+          mem.lastViewed.isDefined === true
+          mem.lastViewed.get
+        }
+        firstTime.isBefore(secondTime) === true
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(

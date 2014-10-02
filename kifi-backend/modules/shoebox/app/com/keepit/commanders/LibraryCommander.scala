@@ -80,7 +80,8 @@ class LibraryCommander @Inject() (
         keeps = keepInfos,
         numKeeps = keepCount,
         numCollaborators = numCollabs,
-        numFollowers = numFollows)
+        numFollowers = numFollows,
+        lastKept = lib.lastKept)
     }
   }
 
@@ -269,7 +270,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
+  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
@@ -303,20 +304,26 @@ class LibraryCommander @Inject() (
   }
 
   def inviteBulkUsers(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
-    val emailFutures = db.readWrite { implicit s =>
+    val emailFutures = {
       // save invites
-      invites.map { invite =>
-        libraryInviteRepo.save(invite)
+      db.readWrite { implicit s =>
+        invites.map { invite =>
+          libraryInviteRepo.save(invite)
+        }
       }
 
       invites.groupBy(invite => (invite.ownerId, invite.libraryId))
         .map { key =>
           val (inviterId, libId) = key._1
-          val inviter = basicUserRepo.load(inviterId)
+          val (inviter, lib, libOwner) = db.readOnlyReplica { implicit session =>
+            val inviter = basicUserRepo.load(inviterId)
+            val lib = libraryRepo.get(libId)
+            val libOwner = basicUserRepo.load(lib.ownerId)
+
+            (inviter, lib, libOwner)
+          }
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
-          val lib = libraryRepo.get(libId)
-          val libOwner = basicUserRepo.load(lib.ownerId)
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
 
           // send notifications to kifi users only
@@ -562,12 +569,12 @@ class LibraryCommander @Inject() (
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession) = {
     val libs = libraryRepo.getByUser(userId)
     val mainOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
     }
     val secretOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
     }
     val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
       // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
@@ -613,7 +620,8 @@ case class LibraryInfo(
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
-  kind: LibraryKind)
+  kind: LibraryKind,
+  lastKept: Option[DateTime])
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -626,7 +634,8 @@ object LibraryInfo {
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
-    (__ \ 'kind).format[LibraryKind]
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).formatNullable[DateTime]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -639,7 +648,8 @@ object LibraryInfo {
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
-      kind = lib.kind
+      kind = lib.kind,
+      lastKept = lib.lastKept
     )
   }
 
@@ -676,6 +686,7 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   kind: LibraryKind,
+  lastKept: Option[DateTime],
   owner: BasicUser,
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
@@ -693,6 +704,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and

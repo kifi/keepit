@@ -12,6 +12,7 @@ import com.keepit.common.time.Clock
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.BodyParsers
@@ -107,24 +108,31 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_username")))
       case Some(owner) =>
         db.readOnlyMaster { implicit s =>
-          libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) match {
-            case None =>
-              Future.successful(BadRequest(Json.obj("error" -> "no_library_found")))
-            case Some(lib) =>
-              if (libraryCommander.canViewLibrary(request.userIdOpt, lib, authToken, passPhrase)) {
-                libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { libInfo =>
-                  Ok(Json.obj("library" -> Json.toJson(libInfo)))
+          libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr))
+        } match {
+          case None =>
+            Future.successful(BadRequest(Json.obj("error" -> "no_library_found")))
+          case Some(lib) =>
+            if (libraryCommander.canViewLibrary(request.userIdOpt, lib, authToken, passPhrase)) {
+              request.userIdOpt.map { userId =>
+                db.readWrite { implicit s =>
+                  libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, userId).map { mem =>
+                    libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
+                  }
                 }
-              } else {
-                Future.successful(BadRequest(Json.obj("error" -> "invalid_access")))
               }
-          }
+              libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { libInfo =>
+                Ok(Json.obj("library" -> Json.toJson(libInfo)))
+              }
+            } else {
+              Future.successful(BadRequest(Json.obj("error" -> "invalid_access")))
+            }
         }
     }
   }
 
   def getLibrarySummariesByUser = UserAction { request =>
-    val (librariesWithAccess, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
+    val (librariesWithMemberships, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
       val invites = lib._2.unzip._1
@@ -132,12 +140,12 @@ class LibraryController @Inject() (
       (highestInvite, lib._1)
     }.toSeq
 
-    val libsFollowing = for ((access, library) <- librariesWithAccess) yield {
+    val libsFollowing = for ((mem, library) <- librariesWithMemberships) yield {
       val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
         (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
       val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
-      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> access)
+      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> mem.access)
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
