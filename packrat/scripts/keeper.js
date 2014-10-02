@@ -352,19 +352,34 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
       var howKept = $btn.hasClass('kifi-public') ? 'public' : $btn.hasClass('kifi-private') ? 'private' : null;
       keepBox.show($slider, vals[2], howKept);
-      keepBox.onHide.add(function () {
-        endStickyKeepBox();
-        if (window.pane) {
-          pane.unshade();
-        }
-      });
-      keepBox.onHidden.add(function (trigger) {
-        keeper.moveBackFromBottom();
-        if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
-          hideSlider('keepBox');
-        }
-      });
+      keepBox.onHide.add(onKeepBoxHide);
+      keepBox.onHidden.add(onKeepBoxHidden);
     });
+  }
+
+  function onKeepBoxHide() {
+    endStickyKeepBox();
+    if (window.pane) {
+      pane.unshade();
+    }
+  }
+  function onKeepBoxHidden(trigger) {
+    keeper.moveBackFromBottom();
+    if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
+      hideSlider('keepBox');
+    }
+  }
+  function onToasterHide() {
+    endStickyToaster();
+    if (window.pane) {
+      pane.unshade();
+    }
+  }
+  function onToasterHidden(trigger) {
+    keeper.moveBackFromBottom();
+    if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+      hideSlider('toaster');
+    }
   }
 
   function isSticky() {
@@ -556,18 +571,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
               pane.shade();
             }
             toaster.show($slider, opts.to);
-            toaster.onHide.add(function () {
-              endStickyToaster();
-              if (window.pane) {
-                pane.unshade();
-              }
-            });
-            toaster.onHidden.add(function (trigger) {
-              keeper.moveBackFromBottom();
-              if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
-                hideSlider('toaster');
-              }
-            });
+            toaster.onHide.add(onToasterHide);
+            toaster.onHidden.add(onToasterHidden);
           }
         });
       });
