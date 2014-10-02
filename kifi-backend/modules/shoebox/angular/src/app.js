@@ -123,8 +123,8 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log', '$scope',
-  function (profileService, $window, $rootScope, friendService, $timeout, $log, $scope) {
+  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
       profileService.fetchPrefs();

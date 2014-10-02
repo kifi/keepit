@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('SidebarCtrl', [
-  'profileService', '$scope',
-  function (profileService, $scope) {
+  '$scope', 'profileService',
+  function ($scope, profileService) {
     profileService.getMe().then(function () {
-      $scope.showUserSidebar = profileService.userLoggedIn();
+      $scope.showUserSidebar = profileService.userLoggedIn() === true;
     });
   }
 ]);

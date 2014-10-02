@@ -18,6 +18,7 @@ angular.module('kifi')
 
     var meService = new Clutch(function () {
       return $http.get(routeService.profileUrl).then(function (res) {
+        userLoggedIn = true;
         return updateMe(res.data);
       })['catch'](function (err) {
         if (err.status === 403) {
@@ -29,7 +30,6 @@ angular.module('kifi')
     });
 
     function updateMe(data) {
-      userLoggedIn = true;
       angular.forEach(data, function (val, key) {
         me[key] = val;
       });
