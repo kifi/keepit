@@ -158,6 +158,5 @@ class CollectionRepoImpl @Inject() (
     val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c, bookmark b where b.library_id = ${libraryId} and kc.bookmark_id = b.id and c.id = kc.collection_id and b.state =${KeepStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
     query.as[String].list.map(tag => Hashtag(tag)).toSet
   }
-
 }
 
