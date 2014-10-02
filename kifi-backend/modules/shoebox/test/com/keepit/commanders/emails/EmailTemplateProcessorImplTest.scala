@@ -66,13 +66,12 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val processor = inject[EmailTemplateProcessorImpl]
         val emailToSend = EmailToSend(
           title = "Test Email!!!",
-          campaign = Some("tester"),
           to = Right(SystemEmailAddress.JOSH),
           cc = Seq(SystemEmailAddress.ENG),
           from = SystemEmailAddress.NOTIFICATIONS,
           fromName = Some(Right(firstName(id2) + "!!!")),
           subject = "hi " + firstName(id1) + " and " + firstName(id2),
-          category = NotificationCategory.System.ADMIN,
+          category = NotificationCategory.User.SOCIAL_FRIEND_JOINED,
           htmlTemplate = html1,
           textTemplate = Some(text1)
         )
@@ -84,7 +83,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         processed.fromName === Some("Bryan!!!")
 
         val output = processed.htmlBody.value
-        output must contain("privacy?utm_source=footerPrivacy&utm_medium=email&utm_campaign=tester")
+        output must contain("privacy?utm_source=aboutFriends&utm_medium=email&utm_campaign=socialFriendJoined&utm_content=footerPrivacy")
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
         output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")

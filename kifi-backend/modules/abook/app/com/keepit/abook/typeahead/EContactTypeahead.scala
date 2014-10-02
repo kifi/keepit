@@ -25,7 +25,7 @@ class EContactTypeahead @Inject() (
     cache: EContactTypeaheadCache,
     store: EContactTypeaheadStore,
     abookInfoRepo: ABookInfoRepo,
-    econtactRepo: EContactRepo) extends Typeahead[User, EContact, EContact] with Logging {
+    econtactRepo: EContactRepo) extends Typeahead[User, EContact, EContact, PersonalTypeahead[User, EContact, EContact]] with Logging {
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 

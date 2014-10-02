@@ -31,7 +31,7 @@ class ScoreContext(
   def score(): Float = scoreExpr()(this)
 
   def computeMatching(minThreshold: Float): Float = {
-    val len = scoreMaxArray.length
+    val len = matchWeight.length
     var matching = 1.0f
     var i = 0
     while (i < len) { // using while for performance

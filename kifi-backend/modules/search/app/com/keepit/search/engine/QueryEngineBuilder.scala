@@ -16,8 +16,11 @@ class QueryEngineBuilder(coreQuery: Query) {
   private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] val _core = buildExpr(coreQuery) // (query, expr, size)
+  private[this] lazy val _final = buildFinal()
+  private[this] var built = false
 
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
+    if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
     _boosters = (booster, boostStrength) :: _boosters
     this
   }
@@ -27,12 +30,17 @@ class QueryEngineBuilder(coreQuery: Query) {
   }
 
   def build(): QueryEngine = {
+    new QueryEngine(_final._1, _final._2, _final._3, _core._3)
+  }
+
+  private[this] def buildFinal(): (ScoreExpr, Query, Int) = {
+    built = true
     val (query, expr, totalSize) = _boosters.foldLeft(_core) {
       case ((query, expr, size), (booster, boostStrength)) =>
         val boosterExpr = MaxExpr(size)
         (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1)
     }
-    new QueryEngine(expr, query, totalSize, _core._3)
+    (expr, query, totalSize)
   }
 
   private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int) = {

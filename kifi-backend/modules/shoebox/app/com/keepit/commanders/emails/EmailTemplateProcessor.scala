@@ -2,15 +2,16 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
+import com.keepit.commanders.emails.tips.{ EmailTipProvider, ConnectNetworkTip }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailToSend, TagWrapper, tags, EmailTip }
+import com.keepit.common.mail.template.{ EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
-import com.keepit.model.{ UserEmailAddressRepo, UserRepo, User }
+import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,10 +20,12 @@ import play.twirl.api.Html
 import scala.concurrent.Future
 
 case class ProcessedEmailResult(
+  toUser: Option[Id[User]],
   subject: String,
   fromName: Option[String],
   htmlBody: LargeString,
-  textBody: Option[LargeString])
+  textBody: Option[LargeString],
+  includedTip: Option[EmailTip])
 
 @ImplementedBy(classOf[EmailTemplateProcessorImpl])
 trait EmailTemplateProcessor {
@@ -34,7 +37,7 @@ class EmailTemplateProcessorImpl @Inject() (
     userCommander: UserCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
-    peopleRecommendationsTip: Provider[FriendRecommendationsEmailTip],
+    emailTipProvider: Provider[EmailTipProvider],
     emailOptOutCommander: EmailOptOutCommander) extends EmailTemplateProcessor {
 
   /* for the lack of a better name, this is just a trait that encapsulates
@@ -50,12 +53,12 @@ class EmailTemplateProcessorImpl @Inject() (
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String])
 
   def process(emailToSend: EmailToSend) = {
-    val tipHtmlF = getTipHtml(emailToSend)
+    val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
 
-    val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt }
+    val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt.map(_._2) }
 
     templatesF.flatMap[ProcessedEmailResult] { templates =>
-      val htmlBody = views.html.email.black.layout(templates)
+      val htmlBody = views.html.email.black.layout(templates, emailToSend.closingLines)
       val textBody = emailToSend.textTemplate.map { text =>
         views.html.email.black.layoutText(Seq(text))
       }
@@ -79,19 +82,23 @@ class EmailTemplateProcessorImpl @Inject() (
       for {
         users <- usersF
         userImageUrls <- userImageUrlsF
+        tipHtmlOpt <- tipHtmlF
       } yield {
         val input = DataNeededResult(users = users, imageUrls = userImageUrls)
+        val includedTip = tipHtmlOpt.map(_._1)
         ProcessedEmailResult(
-          subject = evalTemplate(emailToSend.subject, input, emailToSend),
-          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend)),
-          textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend))),
-          fromName = fromName.map(text => evalTemplate(text, input, emailToSend))
+          toUser = emailToSend.to.left.toOption,
+          subject = evalTemplate(emailToSend.subject, input, emailToSend, includedTip),
+          htmlBody = LargeString(evalTemplate(htmlBody.body, input, emailToSend, includedTip)),
+          textBody = textBody.map(text => LargeString(evalTemplate(text.body, input, emailToSend, includedTip))),
+          fromName = fromName.map(text => evalTemplate(text, input, emailToSend, includedTip)),
+          includedTip = includedTip
         )
       }
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend) = {
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]) = {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -118,21 +125,20 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.userExternalId => user.externalId.toString()
         case tags.title => emailToSend.title
         case tags.baseUrl => config.applicationBaseUrl
-        case tags.campaign => emailToSend.campaign.getOrElse("unknown")
+        case tags.campaign => emailToSend.campaign.getOrElse {
+          // converts underscored_categories_like_this to camelCaseCategoryNames
+          emailToSend.category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
+        }
+        case tags.parentCategory => NotificationCategory.ParentCategory.get(emailToSend.category).getOrElse("unknown")
+        case tags.trackingParam =>
+          EmailTrackingParam(
+            subAction = Json.fromJson[String](tagArgs(0)).asOpt,
+            variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
+            tips = emailTipOpt.map(Seq(_)) getOrElse Seq.empty,
+            auxiliaryData = None // todo(josh) this needs to either be set individually for each link in the template or passed in EmailToSend
+          ).encode
       }
     })
-  }
-
-  private def getTipHtml(emailToSend: EmailToSend) = {
-    val predicate = (html: Option[Html]) => html.isDefined
-    val transform = (tip: EmailTip) => tip match {
-      case EmailTip.FriendRecommendations => peopleRecommendationsTip.get().render(emailToSend)
-    }
-
-    // get the first available Tip for this email that returns Some
-    FutureHelpers.findMatching[EmailTip, Option[Html]](emailToSend.tips, 1, predicate, transform).map { seqOpts =>
-      seqOpts.dropWhile(_.isEmpty).headOption.flatten
-    }
   }
 
   // used to gather the types of objects we need to replace the tags with real values

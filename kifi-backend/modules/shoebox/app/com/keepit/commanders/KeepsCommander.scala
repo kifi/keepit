@@ -35,6 +35,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.typeahead.{ TypeaheadHit, HashtagTypeahead }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -161,6 +162,7 @@ class KeepsCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
+    hashtagTypeahead: HashtagTypeahead,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
@@ -418,6 +420,7 @@ class KeepsCommander @Inject() (
     SafeFuture {
       searchClient.updateURIGraph()
       keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
+      hashtagTypeahead.refresh(libraryId)
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
@@ -449,6 +452,7 @@ class KeepsCommander @Inject() (
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
+    hashtagTypeahead.refreshByIds(deactivatedBookmarks.map(_.libraryId).flatten.distinct)
     deactivatedKeepInfos
   }
 
@@ -522,6 +526,7 @@ class KeepsCommander @Inject() (
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -531,6 +536,7 @@ class KeepsCommander @Inject() (
     }
     keptAnalytics.rekeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     keeps.length
   }
 
@@ -642,6 +648,7 @@ class KeepsCommander @Inject() (
     }
     if (updateUriGraph) {
       searchClient.updateURIGraph()
+      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
     result
   }
@@ -661,7 +668,10 @@ class KeepsCommander @Inject() (
         keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
       }
       removed.toSet
-    } tap { _ => searchClient.updateURIGraph() }
+    } tap { _ =>
+      searchClient.updateURIGraph()
+      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    }
   }
 
   def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
@@ -685,34 +695,37 @@ class KeepsCommander @Inject() (
   }
 
   def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit = {
-    db.readWrite { implicit s =>
+    val keep = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url)
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
-      } {
+      } yield {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
         keptAnalytics.untaggedPage(collection, keep, context)
+        keep
       }
     }
+    keep.foreach(_.libraryId.foreach(hashtagTypeahead.refresh))
     searchClient.updateURIGraph()
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
   def clearTags(url: String, userId: Id[User]): Unit = {
-    db.readWrite { implicit s =>
+    val keeps = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url).toSeq
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
-      } {
+      } yield {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-        keepRepo.save(keep) // notify keep index
         collectionRepo.collectionChanged(ktc.collectionId, inactivateIfEmpty = true)
+        keepRepo.save(keep) // notify keep index
       }
     }
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     searchClient.updateURIGraph()
   }
 
@@ -733,7 +746,7 @@ class KeepsCommander @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
+    val keepsWithTags = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
       case Failure(e) => Left(e.getMessage)
       case Success(keep) =>
         val tags = db.readWrite { implicit s =>
@@ -758,6 +771,13 @@ class KeepsCommander @Inject() (
         }
         Right((KeepInfo.fromKeep(keep), tags))
     }
+    hashtagTypeahead.refresh(libraryId)
+    keepsWithTags
+  }
+
+  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[Hashtag]] = {
+    implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

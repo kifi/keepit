@@ -40,7 +40,7 @@ class DataBuffer(maxPages: Int = 10000) {
 
   private[this] def addPage(): Unit = {
     _numPages += 1
-    if (numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
+    if (_numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
 
     _currentPage = new Page(DataBuffer.PAGE_SHORT_ARRAY_SIZE)
     _dataBuf += _currentPage

@@ -384,6 +384,36 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
       }
     }
+
+    "search tags in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          (user1, user2, lib, mem1, mem2, keep)
+        }
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
+        status(tagKeep(user1, libPubId, keep.externalId, "animal")) === OK
+        status(tagKeep(user1, libPubId, keep.externalId, "aardvark")) === OK
+        status(tagKeep(user1, libPubId, keep.externalId, "Awesome")) === OK
+
+        // user can search tags in own library
+        contentAsString(searchTags(user1, libPubId, "a", 2)) === """["animal"]""" //"""["aardvark","animal"]"""
+        contentAsString(searchTags(user1, libPubId, "s", 2)) === """[]"""
+
+        // other user with read access to library can search tags
+        contentAsString(searchTags(user2, libPubId, "a", 3)) === """["animal"]""" //"""["aardvark","animal","Awesome"]"""
+        contentAsString(searchTags(user2, libPubId, "s", 3)) === """[]"""
+
+        // other user without read access to library cannot search tags
+        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(state = LibraryMembershipStates.INACTIVE)) }
+        status(searchTags(user2, libPubId, "a", 3)) === FORBIDDEN
+      }
+    }
   }
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
@@ -429,6 +459,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def untagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.untagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.untagKeep(libraryId, keepId, tag)))
+  }
+
+  private def searchTags(user: User, libraryId: PublicId[Library], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.searchTags(libraryId, q, Some(n))(request(routes.ExtLibraryController.searchTags(libraryId, q, Some(n))))
   }
 
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
