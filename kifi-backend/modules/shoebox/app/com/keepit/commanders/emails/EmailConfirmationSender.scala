@@ -1,17 +1,14 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
-import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.template.helpers.fullName
+import com.keepit.common.mail.{ ElectronicMail, SystemEmailAddress }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ UserEmailAddress, User, NotificationCategory }
+import com.keepit.model.{ NotificationCategory, UserEmailAddress }
 
-import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 
 class EmailConfirmationSender @Inject() (
     emailTemplateSender: EmailTemplateSender,

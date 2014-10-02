@@ -1,16 +1,15 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, Key, StringCacheImpl }
 import com.keepit.common.db._
-import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import com.keepit.common.cache.{ StringCacheImpl, FortyTwoCachePlugin, Key }
-import play.api.libs.json.{ JsArray, Json, JsValue }
+import play.api.libs.json.{ JsArray, JsValue, Json }
 import play.api.mvc.QueryStringBindable
+
 import scala.concurrent.duration.Duration
-import com.keepit.model.UserValues.UserValueStringHandler
 
 case class UserValue(
     id: Option[Id[UserValue]] = None,
