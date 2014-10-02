@@ -28,6 +28,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
+  def getTagsByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[Hashtag]
 }
 
 @Singleton
@@ -147,9 +148,16 @@ class CollectionRepoImpl @Inject() (
 
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
     import StaticQuery.interpolation
-    val query = sql"select c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
+    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
   }
+
+  def getTagsByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[Hashtag] = {
+    import StaticQuery.interpolation
+    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c, bookmark b where b.library_id = ${libraryId} and kc.bookmark_id = b.id and c.id = kc.collection_id and b.state =${KeepStates.ACTIVE} c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
+    query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
+
 }
 
