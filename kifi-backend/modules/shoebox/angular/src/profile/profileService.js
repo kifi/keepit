@@ -10,6 +10,7 @@ angular.module('kifi')
       seqNum: 0
     };
     var prefs = {};
+    var userLoggedIn; // undefined means we don't know the status yet
 
     $rootScope.$on('social.updated', function () {
       fetchMe();
@@ -18,12 +19,17 @@ angular.module('kifi')
     var meService = new Clutch(function () {
       return $http.get(routeService.profileUrl).then(function (res) {
         return updateMe(res.data);
+      })['catch'](function (err) {
+        if (err.status === 403) {
+          userLoggedIn = false;
+        }
       });
     }, {
       cacheDuration: 5000
     });
 
     function updateMe(data) {
+      userLoggedIn = true;
       angular.forEach(data, function (val, key) {
         me[key] = val;
       });
@@ -241,7 +247,12 @@ angular.module('kifi')
       return $http.post(routeService.userCloseAccount, data);
     }
 
+    function getUserLoggedIn() {
+      return userLoggedIn;
+    }
+
     return {
+      userLoggedIn: getUserLoggedIn,
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
       getMe: getMe,

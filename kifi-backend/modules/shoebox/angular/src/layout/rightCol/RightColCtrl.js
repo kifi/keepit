@@ -19,7 +19,7 @@ angular.module('kifi')
     }, 1200);
 
     $scope.readyToDraw = function () {
-      return profileService.me.seqNum > 0 && friendsReady;
+      return profileService.userLoggedIn() === true && profileService.me.seqNum > 0 && friendsReady;
     };
 
     socialService.refresh().then(function () {
