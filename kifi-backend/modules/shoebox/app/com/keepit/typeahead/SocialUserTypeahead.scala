@@ -10,7 +10,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.model._
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
@@ -30,6 +30,10 @@ class SocialUserTypeahead @Inject() (
     socialUserRepo: SocialUserInfoRepo) extends Typeahead[User, SocialUserInfo, SocialUserBasicInfo, PersonalTypeahead[User, SocialUserInfo, SocialUserBasicInfo]] with Logging {
 
   implicit val fj = ExecutionContext.fj
+
+  protected val refreshRequestConsolidationWindow = 10 minutes
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
 
   protected def get(userId: Id[User]) = {
     val filterOpt = cache.getOrElseOpt(SocialUserTypeaheadKey(userId)) {
