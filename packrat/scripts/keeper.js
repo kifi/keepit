@@ -273,7 +273,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }
     $slider.remove(), $slider = null;
 
-    if (justKept && !window.guide) {
+    if (justKept && tile.dataset.kept && !window.guide) {
       api.port.emit('prefs', function (prefs) {
         if (prefs.showExtMsgIntro) {
           setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
@@ -314,12 +314,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[keepPage]', data);
     justKept = true;
     api.port.emit('keep', withUrls(data), callback, callback);
-  }
-
-  function unkeepPage(libraryId, callback) {
-    log('[unkeepPage]', libraryId, document.URL);
-    justKept = false;
-    api.port.emit('unkeep', libraryId, callback, callback);
   }
 
   function hoverfuFriends($tip, keepers) {
@@ -369,7 +363,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         pane.shade();
       }
       var howKept = $card.hasClass('kifi-public') ? 'public' : $card.hasClass('kifi-private') ? 'private' : null;
-      keepBox.show($slider, vals[2], howKept, keepPage, unkeepPage);
+      keepBox.show($slider, vals[2], howKept, keepPage);
       keepBox.onHide.add(function () {
         endStickyKeepBox();
         if (window.pane) {
@@ -551,6 +545,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
             setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
           }
         });
+    },
+    showKeepBox: function () {
+      log('[keeper:showKeepBox]');
+      if (!$slider) {
+        showSlider();
+      }
+      showKeepBox();
     },
     compose: function (opts) {
       log('[keeper:compose]', opts.trigger || '');

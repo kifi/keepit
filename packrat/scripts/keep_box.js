@@ -34,12 +34,12 @@ var keepBox = keepBox || (function () {
   var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
-    show: function ($parent, data, howKept, keepPage, unkeepPage) {
+    show: function ($parent, data, howKept, keepPage) {
       log('[keepBox.show]');
       if ($box) {
         hide();
       }
-      show($parent, data, howKept, keepPage, unkeepPage);
+      show($parent, data, howKept, keepPage);
     },
     hide: function () {
       if ($box) {
@@ -55,7 +55,7 @@ var keepBox = keepBox || (function () {
     }
   };
 
-  function show($parent, data, howKept, keepPage, unkeepPage) {
+  function show($parent, data, howKept, keepPage) {
     log('[keepBox:show]');
     var partitionedLibs = partitionLibs(data.libraries, data.keeps);
     $box = $(render('html/keeper/keep_box', {
@@ -93,12 +93,10 @@ var keepBox = keepBox || (function () {
 
     $(document).data('esc').add(hide);
 
-    // api.port.on(handlers);
-
     $box.layout()
     .on('transitionend', onShown)
     .removeClass('kifi-down')
-    .data({keepPage: keepPage, unkeepPage: unkeepPage});
+    .data({keepPage: keepPage});
   }
 
   function onShown(e) {
@@ -114,7 +112,6 @@ var keepBox = keepBox || (function () {
   function hide(e, trigger) {
     clearTimeout(hideTimeout), hideTimeout = null;
     log('[keepBox:hide]');
-    // api.port.off(handlers);
     $(document).data('esc').remove(hide);
     $box.css('overflow', '')
       .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
@@ -255,7 +252,10 @@ var keepBox = keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
       if (e.which === 1) {
-        $box.data('unkeepPage')($(this).prev().data('id'));
+        var libraryId = $(this).prev().data('id');
+        var library = $view.data('librariesById')[libraryId];
+        log('[unkeepPage]', library, document.URL);
+        api.port.emit('unkeep', {libraryId: libraryId, keepId: library.keep.id});
         hide(e, 'action');
       }
     });

@@ -109,7 +109,7 @@ var tile = tile || function() {  // idempotent for Chrome
           } else if (!me) {
             toggleLoginDialog();
           } else if (tile && tile.dataset.kept) {
-            api.port.emit('unkeep');
+            loadAndDo('keeper', 'showKeepBox');
           } else {
             api.port.emit('keep', withUrls({title: authoredTitle(), secret: e.altKey}));
           }

@@ -588,41 +588,36 @@ api.port.on({
       }
     }
   },
-  unkeep: function (libraryId, respond, tab) {
+  unkeep: function (data, respond, tab) {
     var d = pageData[tab.nUri];
-    if (!d) {
-      log('[unkeep] fail', libraryId || '');
-      api.tabs.emit(tab, 'kept', {fail: true});
-    } else if (d.state) {
-      log('[unkeep] ignoring', libraryId || '', d.state);
+    if (d && d.state) {
+      log('[unkeep] ignoring', data, d.state);
     } else {
-      var keep = d.findKeep(libraryId || libraryIds[0]) || d.findKeep(libraryIds[1]);
-      if (!keep) {
-        log('[unkeep] fail', libraryId || '');
-        api.tabs.emit(tab, 'kept', {fail: true});
-      } else {
-        log('[unkeep] ', libraryId || '', keep);
-        d.state = 'unkeeping';
-        ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function done() {
-          log('[unkeep:done]');
+      log('[unkeep]', data);
+      (d || {}).state = 'unkeeping';
+      ajax('DELETE', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId, function done() {
+        log('[unkeep:done]');
+        respond(true);
+        if (d) {
           delete d.state;
-          d.keeps = d.keeps.filter(idIsNot(keep.id));
-          respond(true);
+          d.keeps = d.keeps.filter(idIsNot(data.keepId));
           var how = d.howKept();
           forEachTabAt(tab.url, tab.nUri, function (tab) {
             setIcon(!!how, tab);
             api.tabs.emit(tab, 'kept', {kept: how});
           });
-          notifyKifiAppTabs({type: 'unkeep', libraryId: keep.libraryId, keepId: keep.id});
-        }, function fail() {
-          log('[unkeep:fail]', d.keepId);
-          delete d.state;
-          respond();
-          api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
-        });
-        if (d.keeps.length === 1) {
-          api.tabs.emit(tab, 'kept', {kept: null});
         }
+        notifyKifiAppTabs({type: 'unkeep', libraryId: data.libraryId, keepId: data.keepId});
+      }, function fail() {
+        log('[unkeep:fail]', data.keepId);
+        respond();
+        if (d) {
+          delete d.state;
+          api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
+        }
+      });
+      if (d && d.keeps.length === 1) {
+        api.tabs.emit(tab, 'kept', {kept: null});
       }
     }
   },
