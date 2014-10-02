@@ -411,7 +411,7 @@ class LibraryCommander @Inject() (
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
-    if (targetLib.ownerId != inviterId)
+    if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
       Left(LibraryFail("permission_denied"))
     else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail("cant_invite_to_system_generated_library"))
