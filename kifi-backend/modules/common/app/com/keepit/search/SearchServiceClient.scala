@@ -27,6 +27,9 @@ trait SearchServiceClient extends ServiceClient {
 
   def warmUpUser(userId: Id[User]): Unit
 
+  def updateKeepIndex(): Unit
+  def updateLibraryIndex(): Unit
+
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
 
@@ -89,6 +92,15 @@ class SearchServiceClientImpl(
 
   def warmUpUser(userId: Id[User]): Unit = {
     call(Search.internal.warmUpUser(userId))
+  }
+
+  def updateKeepIndex(): Unit = {
+    broadcast(Search.internal.updateKeepIndex())
+    broadcast(Search.internal.updateURIGraph())
+  }
+
+  def updateLibraryIndex(): Unit = {
+    broadcast(Search.internal.updateLibraryIndex())
   }
 
   def updateURIGraph(): Unit = {
