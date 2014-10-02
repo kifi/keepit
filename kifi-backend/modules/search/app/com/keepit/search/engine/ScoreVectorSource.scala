@@ -212,7 +212,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
             // this uriId is not in the buffer
             // it is safe to bypass the buffering and joining (assuming all score vector sources other than this are executed already)
             // write directly to the collector through directScoreContext
-            directScoreContext.put(uriId, Visibility.OTHERS)
+            directScoreContext.put(uriId, visibility)
 
             docId = pq.top.doc // next doc
           } else {
