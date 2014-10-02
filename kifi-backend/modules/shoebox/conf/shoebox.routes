@@ -220,7 +220,6 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted

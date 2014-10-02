@@ -17,7 +17,7 @@ import scala.concurrent.{ Promise, Await, Future }
 sealed trait MaybeUserRequest[T] extends Request[T]
 
 case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = identityF.apply
+  def identityOpt: Option[Identity] = identityF.apply()
 }
 
 case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
@@ -120,7 +120,7 @@ trait UserActions extends Logging { self: Controller =>
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     userActionsHelper.getUserIdOpt(request) match {
-      case Some(id) if (id == userId) => res
+      case Some(id) if id == userId => res
       case _ => res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     }
   }
