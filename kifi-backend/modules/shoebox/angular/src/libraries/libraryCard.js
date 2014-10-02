@@ -12,7 +12,8 @@ angular.module('kifi')
         username: '=',
         librarySlug: '=',
         recommendation: '=',
-        loading: '='
+        loading: '=',
+        toggleEdit: '='
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
@@ -23,6 +24,7 @@ angular.module('kifi')
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
+        scope.editKeepsText = 'Edit Keeps';
 
 
         //
@@ -104,7 +106,7 @@ angular.module('kifi')
         };
 
         scope.isMyLibrary = function (library) {
-          return library.owner.id === profileService.me.id;
+          return library.owner && library.owner.id === profileService.me.id;
         };
 
         scope.canBeShared = function (library) {
@@ -177,6 +179,11 @@ angular.module('kifi')
               }
             }
           });
+        };
+
+        scope.toggleEditKeeps = function () {
+          scope.toggleEdit();
+          scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
         };
 
 
