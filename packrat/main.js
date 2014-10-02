@@ -662,10 +662,10 @@ api.port.on({
       notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
     }, respond.bind(null, false));
   },
-  get_keep: function (libraryId, respond, tab) {
+  get_keep: function (keepId, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
-      var details = d.keeps.find(libraryIdIs(libraryId)).details;
+      var details = d.keeps.find(idIs(keepId)).details;
       // TODO: wait if details are not yet loaded
       respond(details);
     }

@@ -1,4 +1,4 @@
-<div class="kifi-keep-box-view kifi-keep-box-view-keep{{#kept}} kifi-kept{{/kept}}{{#dirty}} kifi-dirty{{/dirty}}">
+<div class="kifi-keep-box-view kifi-keep-box-view-keep">
   {{#library}}{{>keep_box_lib}}{{/library}}
   <input class="kifi-keep-box-keep-title" name="keep_title" value="{{title}}"/>
   <div class="kifi-keep-box-page-site">{{site}}</div>
@@ -10,7 +10,5 @@
     {{/hasImages}}
   </div>
   <input class="kifi-keep-box-tags" type="text"/>
-  <a class="kifi-keep-box-btn" href="javascript:">
-    <span class="kifi-keep-box-progress kifi-{{library.visibility}}"></span>
-  </a>
+  <a class="kifi-keep-box-close" href="javascript:">Close</a>
 </div>

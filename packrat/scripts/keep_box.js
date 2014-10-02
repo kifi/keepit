@@ -10,6 +10,7 @@
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/mustache.js
 // @require scripts/lib/q.min.js
+// @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
@@ -113,7 +114,9 @@ var keepBox = keepBox || (function () {
     clearTimeout(hideTimeout), hideTimeout = null;
     log('[keepBox:hide]');
     $(document).data('esc').remove(hide);
-    $box.css('overflow', '')
+    $box.find('.kifi-keep-box-view').triggerHandler('kifi-hide');
+    $box
+      .css('overflow', '')
       .on('transitionend', $.proxy(onHidden, null, trigger || (e && e.keyCode === 27 ? 'esc' : undefined)))
       .addClass('kifi-down');
     $box = null;
@@ -262,6 +265,8 @@ var keepBox = keepBox || (function () {
   }
 
   function addKeepBindings($view) {
+    var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
+    var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 3000);
     $view
     .on('kifi-back', function () {
       var $old = $view.data('$prev');
@@ -277,23 +282,28 @@ var keepBox = keepBox || (function () {
         $old.find('.kifi-keep-box-progress').css('width', '').parent().removeClass('kifi-done');
       }
     })
-    .on('input', '.kifi-keep-box-keep-title', function () {
-      onKeepEdit($view, 'title', this.value.trim());
+    .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, null, $view))
+    .on('blur', '.kifi-keep-box-keep-title', function () {
+      if (!this.value.trim()) {
+        this.value = $view.data().saved.title;
+        saveKeepTitleIfChanged.call(this, $view);
+      }
     })
     .on('click', '.kifi-keep-box-image-prev,.kifi-keep-box-image-next', function (e) {
       if (e.which === 1) {
         var i = swipeImage($view, this.classList.contains('kifi-keep-box-image-prev'));
-        onKeepEdit($view, 'imageIdx', i);
+        $view.data('imageIdx', i);
+        debouncedSaveKeepImageIfChanged($view);
       }
     })
-    .on('click', '.kifi-keep-box-btn[href]', function (e) {
+    .on('click', '.kifi-keep-box-close', function (e) {
       if (e.which === 1) {
-        if ($view.hasClass('kifi-dirty')) {
-          saveKeep($view, $(this));
-        } else {
-          hide(null, 'action');
-        }
+        hide(e, 'action');
       }
+    })
+    .on('kifi-hide', function () {
+      saveKeepTitleIfChanged($view);
+      saveKeepImageIfChanged($view);
     });
   }
 
@@ -347,11 +357,16 @@ var keepBox = keepBox || (function () {
     var libraryId = el.dataset.id;
     if (libraryId) {
       var library = $view.data('librariesById')[libraryId];
-      var kept = el.classList.contains('kifi-kept');
-      if (kept) {
-        api.port.emit('get_keep', libraryId, showKeep.bind(null, library));
+      if (library.keep) {
+        api.port.emit('get_keep', library.keep.id, showKeep.bind(null, library));
       } else {
-        showKeep(library);
+        var title = authoredTitle();
+        $box.data('keepPage')({libraryId: libraryId, title: title}, function (keep) {
+          if (keep) {
+            library.keep = keep;
+            showKeep(library, {title: title, image: null, tags: []}, true);
+          }
+        });
       }
     } else {
       showCreateLibrary();
@@ -364,31 +379,28 @@ var keepBox = keepBox || (function () {
     swipeTo($view);
   }
 
-  function showKeep(library, keep) {
-    var title, images = findImages(), canvases = [], imageIdx;
-    if (keep) {
-      title = keep.title || formatTitleFromUrl(document.URL);
-      if (keep.image) {
-        var img = new Image;
-        img.src = keep.image;
-        images.unshift(img);
-        canvases.unshift(newKeepCanvas(img));
-        imageIdx = 0;
-      } else {
-        imageIdx = images.length;
-      }
-    } else {
-      title = authoredTitle() || formatTitleFromUrl(document.URL);
+  function showKeep(library, keep, justKept) {
+    var title = keep.title || formatTitleFromUrl(document.URL);
+    var images = findImages(), canvases = [], imageIdx;
+    if (keep.image) {
+      var img = new Image;
+      img.src = keep.image;
+      images.unshift(img);
+      canvases.unshift(newKeepCanvas(img));
+      imageIdx = 0;
+    } else if (justKept) {
       if (images.length) {
         canvases.unshift(newKeepCanvas(images[0]));
+        api.port.emit('save_keep_image', {libraryId: library.id, image: images[0].src});
       }
       imageIdx = 0;
+    } else {
+      imageIdx = images.length;
     }
+
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
       static: true,
-      kept: !!keep,
-      dirty: !keep,
       title: title,
       site: document.location.hostname,
       hasImages: images.length > 0
@@ -410,17 +422,15 @@ var keepBox = keepBox || (function () {
       onDelete: $.proxy(onDeleteTag, null, library.id)
     });
     $view.data({
+      library: library,
+      imageIdx: imageIdx,
       images: images,
       canvases: canvases,
       saved: {
-        title: keep ? keep.title : null,
-        imageIdx: keep && keep.image ? 0 : null,
+        title: keep.title,
+        imageIdx: keep.image ? imageIdx : null
       },
-      shown: {
-        title: title,
-        imageIdx: imageIdx
-      },
-      dirty: !keep
+      saving: {}
     });
     addKeepBindings($view);
     swipeTo($view);
@@ -482,13 +492,13 @@ var keepBox = keepBox || (function () {
   function swipeImage($view, back) {
     var data = $view.data();
     var n = data.images.length;
-    var i = data.shown.imageIdx;
+    var i = data.imageIdx;
     var $cart = $view.find('.kifi-keep-box-keep-image-cart');
     if ($cart.hasClass('kifi-animated')) {
       log('[swipeImage] already animated');
       return i;
     }
-    data.shown.imageIdx = i = (i + (back ? n : 1)) % (n + 1);
+    data.imageIdx = i = (i + (back ? n : 1)) % (n + 1);
     var $old = $cart.find('.kifi-keep-box-keep-image');  // TODO: verify new img still qualifies, capture its current src
     var $new = $(i < n ? data.canvases[i] || (data.canvases[i] = newKeepCanvas(data.images[i])) : newNoImage());
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
@@ -505,6 +515,44 @@ var keepBox = keepBox || (function () {
       }
     }).addClass('kifi-roll');
     return i;
+  }
+
+  function saveKeepImageIfChanged($view) {
+    if (!$box) return;  // already removed, no data
+    var data = $view.data();
+    var i = data.imageIdx;
+    if (i !== data['imageIdx' in data.saving ? 'saving' : 'saved'].imageIdx) {
+      data.saving.imageIdx = i;
+      api.port.emit('save_keep_image', {
+        libraryId: data.library.id,
+        image: i < data.images.length ? getSrc(data.images[i]) : null
+      }, function (success) {
+        if (data.saving.imageIdx === i) {
+          delete data.saving.imageIdx;
+        }
+        if (success) {
+          data.saved.imageIdx = i;
+        }
+      });
+    }
+  }
+
+  function saveKeepTitleIfChanged($view) {
+    if (!$box) return;  // already removed, no data
+    var input = this || $view.find('.kifi-keep-box-keep-title')[0];
+    var data = $view.data();
+    var val = input.value.trim();
+    if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
+      data.saving.title = val;
+      api.port.emit('save_keep', {libraryId: data.library.id, updates: {title: val}}, function (success) {
+        if (data.saving.title === val) {
+          delete data.saving.title;
+        }
+        if (success) {
+          data.saved.title = val;
+        }
+      });
+    }
   }
 
   function searchTags(libraryId, numTokens, query, withResults) {
@@ -529,81 +577,6 @@ var keepBox = keepBox || (function () {
 
   function onDeleteTag(libraryId, tag) {
     api.port.emit('untag', {libraryId: libraryId, tag: tag.name}, api.noop);
-  }
-
-  function onKeepEdit($view, prop, val) {
-    var data = $view.data();
-    data.shown[prop] = val;
-    if (Object.keys(data.shown).every(propsEqual.bind(null, data.shown, data.saved))) {
-      if (data.dirty) {
-        data.dirty = false;
-        $view.removeClass('kifi-dirty');
-      }
-    } else if (!data.dirty) {
-      data.dirty = true;
-      $view.addClass('kifi-dirty');
-    }
-  }
-
-  function saveKeep($view, $btn) {
-    var libraryId = $view.find('.kifi-keep-box-lib').data('id');
-    var data = $view.data();
-    var n = data.images.length;
-    var i = data.shown.imageIdx;
-    var title = data.shown.title;
-    if (title) {
-      var imageUrl = i < n ? getSrc(data.images[i]) : null;
-      var promises = [];
-      if ($view.hasClass('kifi-kept')) {
-        if (title !== data.saved.title) {
-          var d1 = Q.defer();
-          api.port.emit('save_keep', {
-            libraryId: libraryId,
-            updates: {title: title}
-          }, function (success) {
-            d1[success ? 'resolve' : 'reject']();
-          });
-          promises.push(d1.promise);
-        }
-        if (i !== data.saved.imageIdx) {
-          var d2 = Q.defer();
-          api.port.emit('save_keep_image', {
-            libraryId: libraryId,
-            image: imageUrl
-          }, function (success) {
-            d2[success ? 'resolve' : 'reject']();
-          });
-          promises.push(d2.promise);
-        }
-      } else {
-        var d3 = Q.defer();
-        $box.data('keepPage')({
-          libraryId: libraryId,
-          title: title,
-          image: imageUrl
-        }, function (keep) {
-          if (keep) {
-            $view.addClass('kifi-kept');
-          }
-          d3[keep ? 'resolve' : 'reject']();
-        });
-        promises.push(d3.promise);
-      }
-      if (promises.length) {
-        var $progress = $btn.find('.kifi-keep-box-progress');
-        $view.find('.kifi-keep-box-keep-title,.kifi-keep-box-keep-tags').prop('disabled', true);
-        $btn.removeAttr('href').addClass('kifi-doing');
-        updateProgress.call($progress[0], 0);
-        Q.all(promises).done(function () {
-          endProgress($progress, true);
-          hideAfter(1000);
-        }, function () {
-          endProgress($progress, false);
-        });
-      }
-    } else {
-      $title.val($title.attr('value')).focus().select();
-    }
   }
 
   function createLibrary($view, $btn) {

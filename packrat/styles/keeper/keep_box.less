@@ -1,5 +1,5 @@
 @box-width: 302px;
-@view-swipe-duration: 6.21s;
+@view-swipe-duration: .21s;
 
 .kifi-keep-box {
   position: absolute;
@@ -565,7 +565,7 @@
     background-color: #f4f4f4;
   }
 }
-.kifi-keep-box-btn,
+.kifi-keep-box-close,
 .kifi-keep-box-create {
   display: block;
   position: relative;
@@ -614,7 +614,7 @@
     transition: opacity .16s linear, transform .16s ease-in-out;
   }
 }
-.kifi-keep-box-btn {
+.kifi-keep-box-close {
   @bg-color: #999;
   background-color: @bg-color;
   transition: background-color .1s;
@@ -624,23 +624,6 @@
     background-color: tint(@bg-color, 8%);
     &:active {
       background-color: shade(@bg-color, 4%);
-    }
-  }
-  &::before {
-    content: 'Close';
-  }
-  .kifi-dirty>& {
-    @bg-color: #9bceff;
-    background-color: @bg-color;
-    &:hover,
-    &:focus {
-      background-color: tint(@bg-color, 8%);
-      &:active {
-        background-color: shade(@bg-color, 4%);
-      }
-    }
-    &::before {
-      content: 'Save';
     }
   }
 }
@@ -669,9 +652,6 @@
   bottom: 0;
   width: 0;
   background: #4daf7c;
-  &.kifi-secret {
-    background: #e65b45;
-  }
   .kifi-done>& {
     width: 100% !important;
     transition: width .16s ease-in-out;
