@@ -303,20 +303,26 @@ class LibraryCommander @Inject() (
   }
 
   def inviteBulkUsers(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
-    val emailFutures = db.readWrite { implicit s =>
+    val emailFutures = {
       // save invites
-      invites.map { invite =>
-        libraryInviteRepo.save(invite)
+      db.readWrite { implicit s =>
+        invites.map { invite =>
+          libraryInviteRepo.save(invite)
+        }
       }
 
       invites.groupBy(invite => (invite.ownerId, invite.libraryId))
         .map { key =>
           val (inviterId, libId) = key._1
-          val inviter = basicUserRepo.load(inviterId)
+          val (inviter, lib, libOwner) = db.readOnlyReplica { implicit session =>
+            val inviter = basicUserRepo.load(inviterId)
+            val lib = libraryRepo.get(libId)
+            val libOwner = basicUserRepo.load(lib.ownerId)
+
+            (inviter, lib, libOwner)
+          }
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
-          val lib = libraryRepo.get(libId)
-          val libOwner = basicUserRepo.load(lib.ownerId)
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
 
           // send notifications to kifi users only
