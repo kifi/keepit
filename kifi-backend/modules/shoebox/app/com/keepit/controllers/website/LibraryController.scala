@@ -99,7 +99,7 @@ class LibraryController @Inject() (
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
         case Some(eid) => userRepo.getOpt(eid)
-        case None => userRepo.getUsername(Username(userStr))
+        case None => userRepo.getByUsername(Username(userStr))
       }
     }
     ownerOpt match {
