@@ -250,14 +250,14 @@ class UserController @Inject() (
     Ok(JsString("success"))
   }
 
-  def addEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def addEmail() = JsonAction.authenticatedParseJsonAsync { implicit request =>
     val newAddress = (request.body \ "email").as[String]
     val isPrimary = (request.body \ "isPrimary").as[Boolean]
     EmailAddress.validate(newAddress) match {
       case Failure(e) =>
-        BadRequest(e.getMessage)
+        Future.successful(BadRequest(e.getMessage))
       case Success(newEmail) =>
-        userCommander.addEmail(request.userId, newEmail, isPrimary) match {
+        userCommander.addEmail(request.userId, newEmail, isPrimary) map {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
@@ -424,18 +424,19 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
+
+  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticatedAsync { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
-          emailSender.confirmation(emailAddr)
-          Ok("0")
+          emailSender.confirmation(emailAddr) map { f =>
+            Ok("0")
+          }
         case _ =>
-          Forbidden("0")
+          Future.successful(Forbidden("0"))
       }
     }
-    Ok
   }
 
   def importStatus() = JsonAction.authenticatedAsync { implicit request =>

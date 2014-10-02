@@ -35,7 +35,6 @@ class EmailConfirmationSender @Inject() (
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
       htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl)
     )
-    //    Await.result(emailTemplateSender.send(emailToSend), Duration.Inf)
     emailTemplateSender.send(emailToSend)
   }
 }

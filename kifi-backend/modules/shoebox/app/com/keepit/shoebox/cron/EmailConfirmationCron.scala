@@ -28,13 +28,14 @@ class EmailConfirmationActor @Inject() (
       val now = clock.now()
       val to = now.minusDays(1)
       val from = to.minusDays(1)
-      val sentEmails = db.readOnlyMaster { implicit s =>
+      val emailsToConfirm = db.readOnlyMaster { implicit s =>
         val allEmails = userEmailAddressRepo.getUnverified(to, from)
         allEmails.filter { email =>
-          userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).isDefined
+          userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).isEmpty
         }
       }
-      sentEmails foreach { email =>
+      log.info(s"sending verification emails to $emailsToConfirm")
+      emailsToConfirm foreach { email =>
         emailConfirmationSender(email).onSuccess {
           case e =>
             db.readWrite { implicit s =>
@@ -42,7 +43,6 @@ class EmailConfirmationActor @Inject() (
             }
         }(singleThread)
       }
-      log.info(s"sent verification emails to $sentEmails")
   }
 
 }
