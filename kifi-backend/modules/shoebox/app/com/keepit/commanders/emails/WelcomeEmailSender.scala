@@ -5,7 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail }
 import com.keepit.model.NotificationCategory
 
@@ -27,7 +27,9 @@ class WelcomeEmailSender @Inject() (
       category = NotificationCategory.User.WELCOME,
       htmlTemplate = views.html.email.black.welcome(userId),
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
-      campaign = Some("welcomeEmail")
+      // TODO(josh) add EmailTip.InstallExtension when it's complete
+      tips = Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn),
+      closingLines = Seq("Happy Keeping!", "The Kifi team")
     )
     emailTemplateSender.send(emailToSend)
   }

@@ -1,6 +1,7 @@
-package com.keepit.commanders.emails
+package com.keepit.commanders.emails.tips
 
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
+import com.keepit.commanders.emails.FriendRecommendationsEmailTip
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
@@ -11,7 +12,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NotificationCategory, UserRepo, User }
+import com.keepit.model.{ NotificationCategory, User, UserRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -70,7 +71,7 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
           category = NotificationCategory.System.ADMIN,
           htmlTemplate = Html("")
         )
-        val htmlOptF: Future[Option[Html]] = tip.render(emailToSend)
+        val htmlOptF: Future[Option[Html]] = tip.render(emailToSend, toUserId)
         val html = Await.result(htmlOptF, Duration(5, "seconds")).get.body
 
         // Friend Recommendations
