@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document', '$rootElement', 'modalService',
-  function ($document, $rootElement, modalService) {
+  '$document', 'modalService',
+  function ($document, modalService) {
     return {
       restrict: 'A',
       replace: true,
@@ -22,12 +22,12 @@ angular.module('kifi')
 
         function onOpen() {
           $document.on('keydown', escapeModal);
-          $rootElement.find('body').addClass('modal-open');
+          $document.find('body').addClass('modal-open');
         }
 
         function onCloseOrDestroy() {
           $document.off('keydown', escapeModal);
-          $rootElement.find('body').removeClass('modal-open');
+          $document.find('body').removeClass('modal-open');
         }
 
         $scope.close = this.close = function (closeAction) {

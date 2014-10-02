@@ -159,9 +159,7 @@ angular.module('kifi')
         };
 
         // Wait until library is ready.
-        scope.$watch(function () {
-          return scope.loading;
-        }, function (newVal) {
+        scope.$watch('loading', function (newVal) {
           if (!newVal) {
             // For dev testing.
             // Uncomment the following to get some fake followers into the library.
