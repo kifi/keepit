@@ -46,7 +46,14 @@
 
         <div class="kf-keep-lib-follower-pics">
           <span ng-repeat="follower in followersToShow">
-            <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="kf-keep-lib-user-image" title="{{follower.firstName + ' ' + follower.lastName}}">
+            <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+              class="kf-keep-lib-user-image"
+              kf-user-tooltip
+              keeper="follower"
+              ng-mouseenter="showTooltip()"
+              ng-mouseleave="hideTooltip()"
+              ng-click="hideTooltip()"
+            >
           </span>
         </div>
         <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers">
