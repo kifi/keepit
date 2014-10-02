@@ -1,16 +1,16 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.common.db.{ Id, LargeString }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
-import com.keepit.common.mail.{ EmailAddress, LocalPostOffice, ElectronicMailRepo, ElectronicMail }
+import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, LocalPostOffice }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ User, UserValueName, UserValueRepo, UserEmailAddressRepo }
-
+import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[EmailTemplateSenderImpl])

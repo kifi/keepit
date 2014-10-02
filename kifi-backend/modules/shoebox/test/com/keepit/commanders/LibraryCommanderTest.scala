@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ ElectronicMailRepo, FakeOutbox, FakeMailModule, EmailAddress }
@@ -15,12 +16,12 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
-import org.specs2.mutable.Specification
+import org.specs2.mutable.{ SpecificationLike, Specification }
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 
-class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
+class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeScrapeSchedulerModule(),

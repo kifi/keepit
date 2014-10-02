@@ -213,11 +213,13 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val email2 = EmailAddress("uncleabe@gmail.com")
 
         // add email 1 & 2
-        userCommander.addEmail(user.id.get, email1, false).isRight === true
-        userCommander.addEmail(user.id.get, email2, true).isRight === true
+        Await.result(userCommander.addEmail(user.id.get, email1, false), Duration(5, "seconds")).isRight === true
+        Await.result(userCommander.addEmail(user.id.get, email2, true), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit session =>
           emailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1, email2)
-          userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).get.value === email2.address
+          val userId = user.id.get
+          val userValueOpt = userValueRepo.getUserValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
+          userValueOpt.get.value === email2.address
         }
 
         // verify all emails

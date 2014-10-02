@@ -1,10 +1,9 @@
-@(name: String, verifyUrl: String)
+@(toUserId: Id[User], verifyUrl: String)
+@import com.keepit.common.mail.template.helpers._
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif">
 
-@if(name.nonEmpty && !name.contains("@")) {
-  <p>Hi @name,</p>
-}
+<p>Hi @firstName(toUserId),</p>
 
 <p>To protect your privacy and security, please confirm your email address by clicking the link below:</p>
 
