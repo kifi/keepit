@@ -63,7 +63,7 @@
     <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
     <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button">
       <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
-      <a href="https://twitter.com/share?url={{library.shareUrl}}" target="_blank">Share</a>
+      <a href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareUrl}}">Share</a>
     </button>
     <button ng-if="canBeShared(library)" class="kf-keep-lib-footer-button">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>

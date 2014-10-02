@@ -85,6 +85,7 @@ angular.module('kifi')
           }
 
           scope.library.shareUrl = env.origin + scope.library.url;
+          scope.library.shareText = 'Check this Kifi library about ' + scope.library.name + '!';
         }
 
         scope.showLongDescription = function () {
@@ -230,7 +231,6 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-
       }
     };
   }
