@@ -10,13 +10,14 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
   "UserEmailAddressRepo" should {
     "persist and load" in {
       withDb() { implicit injector =>
+        val clock = inject[FakeClock]
         val (user, address) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
           val address = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shanee@gmail.com")))
           (user, address)
         }
         db.readOnlyMaster { implicit s =>
-          val now = inject[FakeClock].now
+          val now = clock.now
           val unverified = userEmailAddressRepo.getUnverified(now.minusDays(1), now)
           unverified.size === 1
           unverified.head === address

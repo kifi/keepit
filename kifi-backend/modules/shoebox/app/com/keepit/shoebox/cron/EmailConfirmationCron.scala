@@ -30,8 +30,8 @@ class EmailConfirmationActor @Inject() (
       val from = to.minusDays(1)
       val emailsToConfirm = db.readOnlyMaster { implicit s =>
         val allEmails = userEmailAddressRepo.getUnverified(to, from)
-        allEmails.filter { email =>
-          userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).isEmpty
+        allEmails.filterNot { email =>
+          userValueRepo.getValueStringOpt(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION).exists(_ == true.toString)
         }
       }
       log.info(s"sending verification emails to $emailsToConfirm")
