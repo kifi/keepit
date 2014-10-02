@@ -249,7 +249,7 @@ class KeepsCommander @Inject() (
       case Some(userId) =>
         searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
       case None =>
-        Future.successful(Seq[SharingUserInfo]())
+        Future.successful(Seq.fill(keeps.length)(SharingUserInfo(Set.empty, 0)))
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
