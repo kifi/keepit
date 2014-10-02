@@ -101,7 +101,7 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
-      mainOrSecret = r.<<[Option[Boolean]],
+      inDisjointLib = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       bookmarkPath = r.<<[Option[String]],
