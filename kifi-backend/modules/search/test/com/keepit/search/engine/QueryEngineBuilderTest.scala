@@ -104,13 +104,14 @@ class QueryEngineBuilderTest extends Specification {
       val query = getParser().parse("kifi").get
       query must beAnInstanceOf[KBooleanQuery]
 
-      val builder = new QueryEngineBuilder(query)
+      var builder = new QueryEngineBuilder(query)
 
       Option(builder.build()).map { eng =>
         eng.getTotalSize() === 1
         eng.getCoreSize() === 1
       }.getOrElse(throw new Exception("no engine"))
 
+      builder = new QueryEngineBuilder(query)
       builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
 
       Option(builder.build()).map { eng =>
@@ -118,6 +119,8 @@ class QueryEngineBuilderTest extends Specification {
         eng.getCoreSize() === 1
       }.getOrElse(throw new Exception("no engine"))
 
+      builder = new QueryEngineBuilder(query)
+      builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
       builder.addFilterQuery(new TermQuery(new Term("", "restrict")))
 
       Option(builder.build()).map { eng =>
@@ -130,13 +133,14 @@ class QueryEngineBuilderTest extends Specification {
       val query = getParser().parse("information overload").get
       query must beAnInstanceOf[KBooleanQuery]
 
-      val builder = new QueryEngineBuilder(query)
+      var builder = new QueryEngineBuilder(query)
 
       Some(builder.build()).map { eng =>
         eng.getTotalSize() === 2
         eng.getCoreSize() === 2
       }
 
+      builder = new QueryEngineBuilder(query)
       builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
 
       Some(builder.build()).map { eng =>
@@ -144,6 +148,8 @@ class QueryEngineBuilderTest extends Specification {
         eng.getCoreSize() === 2
       }
 
+      builder = new QueryEngineBuilder(query)
+      builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
       builder.addFilterQuery(new TermQuery(new Term("", "restrict")))
 
       Some(builder.build()).map { eng =>

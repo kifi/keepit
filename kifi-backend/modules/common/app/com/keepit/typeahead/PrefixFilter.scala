@@ -4,9 +4,9 @@ import com.keepit.common.db.Id
 import scala.collection.mutable.ArrayBuffer
 import scala.math.min
 import java.text.Normalizer
-import com.keepit.common.logging.Logging
 import java.nio.ByteBuffer
 import com.keepit.serializer.{ BinaryFormat, ArrayBinaryFormat }
+import play.api.libs.json._
 
 object PrefixFilter {
 
@@ -75,9 +75,14 @@ object PrefixFilter {
   }
 
   implicit def binaryFormat[T]: BinaryFormat[PrefixFilter[T]] = ArrayBinaryFormat.longArrayFormat.map(_.data, new PrefixFilter(_))
+
+  implicit def format[T] = new Format[PrefixFilter[T]] {
+    def reads(json: JsValue) = json.validate[Seq[Long]].map(data => new PrefixFilter(data.toArray))
+    def writes(filter: PrefixFilter[T]) = JsArray(filter.data.map(JsNumber(_)))
+  }
 }
 
-class PrefixFilter[T](val data: Array[Long]) extends AnyVal {
+class PrefixFilter[T](val data: Array[Long]) {
   def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
   def isEmpty = (data.length == 1)
   override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map { t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}" }.mkString(",")}"

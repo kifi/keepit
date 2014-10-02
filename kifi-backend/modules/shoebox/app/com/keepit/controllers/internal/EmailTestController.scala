@@ -70,7 +70,7 @@ class EmailTestController @Inject() (
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
 
     val emailF = name match {
-      case "welcomeEmail" => welcomeEmailSender.sendToUser(userId)
+      case "welcome" => welcomeEmailSender.sendToUser(userId)
       case "resetPassword" => resetPasswordSender.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val feature = request.getQueryString("feature").getOrElse(waitListSender.emailTriggers.keys.head)
