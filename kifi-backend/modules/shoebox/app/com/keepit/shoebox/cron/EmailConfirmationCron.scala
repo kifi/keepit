@@ -35,11 +35,16 @@ class EmailConfirmationActor @Inject() (
         }
       }
       log.info(s"sending verification emails to $emailsToConfirm")
-      emailsToConfirm foreach { email =>
-        emailConfirmationSender(email).onSuccess {
+      emailsToConfirm foreach { maybeVerification =>
+        val withVerification = if (maybeVerification.verificationCode.isEmpty) {
+          db.readWrite { implicit s => userEmailAddressRepo.save(maybeVerification.withVerificationCode(clock.now())) }
+        } else {
+          maybeVerification
+        }
+        emailConfirmationSender(withVerification).onSuccess {
           case e =>
             db.readWrite { implicit s =>
-              userValueRepo.setValue(email.userId, UserValueName.SENT_EMAIL_CONFIRMATION, true)
+              userValueRepo.setValue(withVerification.userId, UserValueName.SENT_EMAIL_CONFIRMATION, true)
             }
         }(singleThread)
       }

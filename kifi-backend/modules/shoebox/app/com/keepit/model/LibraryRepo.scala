@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
@@ -29,7 +29,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val libraryMembershipRepo: LibraryMembershipRepoImpl,
+  val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -109,7 +109,7 @@ class LibraryRepoImpl @Inject() (
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {
     val q = for {
       lib <- rows if lib.state =!= excludeState.orNull
-      lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
+      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lm, lib)
     q.list
   }
