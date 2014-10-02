@@ -1,20 +1,22 @@
-<div class="kf-header-inner" ng-controller="HeaderCtrl">
-  <div class="kf-header-left">
-    <div class="kf-header-toggle-menu closed sprite sprite-burger" ng-click="toggleMenu()"></div>
-    <div class="kf-header-toggle-menu open sprite sprite-burger-open" ng-click="toggleMenu()"></div>
-    <div class="kf-header-left-separator"></div>
-    <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
-    <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
-  </div>
-  <div class="kf-header-right">
-    <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
-    <div class="kf-header-icon-hover-container">
-      <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
-      <menu class="kf-dropdown-menu">
-        <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/friends')}" href="javascript:" ng-click="navigateToFriends()">Your Kifi Friends</a>
-        <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/invite')}" href="javascript:" ng-click="navigateToInvite()">Invite a friend to Kifi</a>
-      </menu>
+<div class="kf-header" ng-controller="HeaderCtrl" ng-show="showHeader">
+  <div class="kf-header-inner">
+    <div class="kf-header-left">
+      <div class="kf-header-toggle-menu closed sprite sprite-burger" ng-click="toggleMenu()"></div>
+      <div class="kf-header-toggle-menu open sprite sprite-burger-open" ng-click="toggleMenu()"></div>
+      <div class="kf-header-left-separator"></div>
+      <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
+      <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
     </div>
-    <a href="/profile" class="sprite sprite-settings">Settings</div>
+    <div class="kf-header-right">
+      <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
+      <div class="kf-header-icon-hover-container">
+        <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
+        <menu class="kf-dropdown-menu">
+          <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/friends')}" href="javascript:" ng-click="navigateToFriends()">Your Kifi Friends</a>
+          <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/invite')}" href="javascript:" ng-click="navigateToInvite()">Invite a friend to Kifi</a>
+        </menu>
+      </div>
+      <a href="/profile" class="sprite sprite-settings">Settings</div>
+    </div>
   </div>
 </div>
