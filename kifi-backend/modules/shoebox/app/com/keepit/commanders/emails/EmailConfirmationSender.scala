@@ -7,28 +7,35 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.model.{ User, NotificationCategory }
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.{ UserEmailAddress, User, NotificationCategory }
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
 
 class EmailConfirmationSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    protected val airbrake: AirbrakeNotifier) extends Logging {
+    protected val airbrake: AirbrakeNotifier,
+    fortytwoConfig: FortyTwoConfig) extends Logging {
 
-  def apply(toUserId: Id[User], contactUserId: Id[User]): Future[ElectronicMail] =
-    sendToUser(toUserId, contactUserId)
+  def apply(emailAddr: UserEmailAddress): Future[ElectronicMail] =
+    sendToUser(emailAddr)
 
-  def sendToUser(toUserId: Id[User], contactUserId: Id[User]): Future[ElectronicMail] = {
+  def sendToUser(emailAddr: UserEmailAddress): Future[ElectronicMail] = {
+
+    val siteUrl = fortytwoConfig.applicationBaseUrl
+    val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+    val toUserId = emailAddr.userId
+
     val emailToSend = EmailToSend(
-      fromName = Some(Left(contactUserId)),
+      fromName = None,
       from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"some title about verifying your email",
-      to = Left(toUserId),
-      category = NotificationCategory.User.CONTACT_JOINED,
-      htmlTemplate = views.html.email.black.contactJoined(toUserId, contactUserId),
-      textTemplate = Some(views.html.email.black.contactJoinedText(toUserId, contactUserId)),
-      campaign = Some("contactJoined")
+      subject = "Kifi.com | Please confirm your email address",
+      to = Right(emailAddr.address),
+      category = NotificationCategory.User.EMAIL_CONFIRMATION,
+      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl)
     )
+    //    Await.result(emailTemplateSender.send(emailToSend), Duration.Inf)
     emailTemplateSender.send(emailToSend)
   }
 }

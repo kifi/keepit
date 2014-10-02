@@ -28,7 +28,7 @@ import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Provider }
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.Try
@@ -48,7 +48,7 @@ import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.commanders.emails.{ EmailSenderProvider, ContactJoinedEmailSender, FriendRequestEmailSender, FriendConnectionMadeEmailSender, EmailOptOutCommander }
+import com.keepit.commanders.emails.{ EmailConfirmationSender, EmailSenderProvider, ContactJoinedEmailSender, FriendRequestEmailSender, FriendConnectionMadeEmailSender, EmailOptOutCommander }
 import com.keepit.common.db.slick.Database.Replica
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -170,17 +170,8 @@ class UserCommander @Inject() (
     db.readWrite { implicit session =>
       if (emailRepo.getByAddressOpt(address).isEmpty) {
         val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
-        val siteUrl = fortytwoConfig.applicationBaseUrl
-        val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        emailSender.confirmation(emailAddr)
         val user = userRepo.get(userId)
-        //todo(eishay): use EmailConfirmationSender
-        postOffice.sendMail(ElectronicMail(
-          from = SystemEmailAddress.NOTIFICATIONS,
-          to = Seq(address),
-          subject = "Kifi.com | Please confirm your email address",
-          htmlBody = views.html.email.verifyEmail(user.firstName, verifyUrl).body,
-          category = NotificationCategory.User.EMAIL_CONFIRMATION
-        ))
         if (user.primaryEmail.isEmpty && isPrimary)
           userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
         Right()
@@ -660,17 +651,7 @@ class UserCommander @Inject() (
       for (address <- uniqueEmails -- existing.map(_.address)) {
         if (emailRepo.getByAddressOpt(address).isEmpty) {
           val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
-          val siteUrl = fortytwoConfig.applicationBaseUrl
-          val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-
-          //todo(eishay): use EmailConfirmationSender
-          postOffice.sendMail(ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(address),
-            subject = "Kifi.com | Please confirm your email address",
-            htmlBody = views.html.email.verifyEmail(firstName, verifyUrl).body,
-            category = NotificationCategory.User.EMAIL_CONFIRMATION
-          ))
+          emailSender.confirmation(emailAddr)
         }
       }
       // Set the correct email as primary

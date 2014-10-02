@@ -1,25 +1,21 @@
 package com.keepit.common.social
 
-import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
-import com.keepit.common.akka.SafeFuture
-import org.joda.time.DateTime
-
 import com.google.inject.Inject
-
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance.timing
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
 import com.keepit.model._
-import com.keepit.social.{ SocialNetworkType, SocialId }
-
+import com.keepit.social.{ SocialId, SocialNetworkType }
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
-import com.keepit.common.performance.timing
 
 import scala.concurrent.Future
 

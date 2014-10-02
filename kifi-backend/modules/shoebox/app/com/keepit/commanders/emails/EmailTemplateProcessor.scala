@@ -30,8 +30,9 @@ trait EmailTemplateProcessor {
 }
 
 class EmailTemplateProcessorImpl @Inject() (
-    db: Database, userRepo: UserRepo,
-    userCommander: UserCommander,
+    db: Database,
+    userRepo: UserRepo,
+    userCommander: Provider[UserCommander],
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
     peopleRecommendationsTip: Provider[FriendRecommendationsEmailTip],
@@ -159,7 +160,7 @@ class EmailTemplateProcessorImpl @Inject() (
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {
     Future.sequence(
-      userIds map (userId => userCommander.getUserImageUrl(userId, width).map(url => (userId, url)))
+      userIds map (userId => userCommander.get.getUserImageUrl(userId, width).map(url => (userId, url)))
     ) map (_.toMap)
   }
 

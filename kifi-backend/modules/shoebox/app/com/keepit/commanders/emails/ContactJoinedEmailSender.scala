@@ -24,9 +24,9 @@ class ContactJoinedEmailSender @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = s"${fullName(contactUserId)} joined Kifi. Want to connect?",
       to = Left(toUserId),
-      category = NotificationCategory.User.EMAIL_CONFIRMATION,
-      htmlTemplate = views.html.email.black.emailConfirmation(userFirstName, verifyUrl),
-      textTemplate = Some(views.html.email.black.emailConfirmationText(userFirstName, verifyUrl)),
+      category = NotificationCategory.User.CONTACT_JOINED,
+      htmlTemplate = views.html.email.black.contactJoined(toUserId, contactUserId),
+      textTemplate = Some(views.html.email.black.contactJoinedText(toUserId, contactUserId)),
       campaign = Some("contactJoined")
     )
     emailTemplateSender.send(emailToSend)
