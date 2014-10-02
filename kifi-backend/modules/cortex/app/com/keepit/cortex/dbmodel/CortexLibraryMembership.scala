@@ -25,5 +25,5 @@ object CortexLibraryMembership {
   implicit def fromLibMemState(state: State[LibraryMembership]) = State[CortexLibraryMembership](state.value)
   implicit def fromLibMemSeq(seq: SequenceNumber[LibraryMembership]) = SequenceNumber[CortexLibraryMembership](seq.value)
   def fromLibraryMembershipView(mem: LibraryMembershipView): CortexLibraryMembership =
-    CortexLibraryMembership(membershipId = mem.id.get, libraryId = mem.libraryId, userId = mem.userId, access = mem.access, memberSince = mem.createdAt, state = mem.state, seq = mem.seq)
+    CortexLibraryMembership(membershipId = mem.id, libraryId = mem.libraryId, userId = mem.userId, access = mem.access, memberSince = mem.createdAt, state = mem.state, seq = mem.seq)
 }

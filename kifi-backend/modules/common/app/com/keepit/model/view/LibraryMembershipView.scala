@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 case class LibraryMembershipView(
-  id: Option[Id[LibraryMembership]],
+  id: Id[LibraryMembership],
   libraryId: Id[Library],
   userId: Id[User],
   access: LibraryAccess,

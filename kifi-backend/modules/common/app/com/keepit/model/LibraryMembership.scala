@@ -28,7 +28,7 @@ case class LibraryMembership(
   def isOwner: Boolean = access == LibraryAccess.OWNER
 
   def toLibraryMembershipView: LibraryMembershipView =
-    LibraryMembershipView(id = id, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
+    LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
 }
 
 object LibraryMembershipStates extends States[LibraryMembership]
