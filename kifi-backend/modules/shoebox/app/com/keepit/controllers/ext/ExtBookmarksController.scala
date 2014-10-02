@@ -134,6 +134,13 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(tags.map(t => SendableTag.from(t.summary))))
   }
 
+  def searchTags(publicLibraryId: PublicId[Library], query: String, limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
+    val libraryId = Library.decodePublicId(publicLibraryId).get
+    bookmarksCommander.searchTags(libraryId, query, limit).map {
+      hashtags => Ok(Json.toJson(hashtags))
+    }
+  }
+
   // deprecated: use unkeep
   def remove() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
