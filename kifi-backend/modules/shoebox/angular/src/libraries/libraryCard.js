@@ -16,8 +16,10 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
+        //
+        // Scope data.
+        //
         scope.facebookAppId = $FB.appId();
-
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
@@ -54,8 +56,9 @@ angular.module('kifi')
           followerPicsDiv.width(maxFollowersToShow * widthPerFollowerPic);
         }
 
-        // Data augmentation. May want to move out to own decorator service
-        // like the keepDecoratorService if this gets too large.
+        // Data augmentation.
+        // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
+        // currently in nav.js too.
         function augmentData() {
           // TODO(yiping): get real owner data when owner is not user.
           if (!scope.library.owner) {
@@ -87,6 +90,10 @@ angular.module('kifi')
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
         }
 
+
+        //
+        // Scope methods.
+        //
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
         };
@@ -94,6 +101,10 @@ angular.module('kifi')
         scope.isUserLibrary = function (library) {
           // TODO(yiping): get recommendation libraries to have a "kind" property.
           return library.kind === 'user_created' || scope.recommendation;
+        };
+
+        scope.isMyLibrary = function (library) {
+          return library.owner.id === profileService.me.id;
         };
 
         scope.canBeShared = function (library) {
@@ -105,17 +116,23 @@ angular.module('kifi')
           // This is not supported in the backend right now (10/1/2014).
           return scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
-                  library.owner.id === profileService.me.id);
+                  scope.isMyLibrary(library));
         };
 
-        scope.isMyLibrary = function (library) {
-          return library.owner.id === profileService.me.id;
+        scope.shareFB = function () {
+          $FB.ui({
+            method: 'share',
+            href: scope.library.shareUrl
+          });
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
-        scope.followingLibrary = function (library) {
-          var alreadyFollowing = _.some(scope.library.followers, {id: profileService.me.id});
-          return !alreadyFollowing && library.owner.id !== profileService.me.id;
+        scope.canFollowLibrary = function (library) {
+          return !scope.alreadyFollowingLibrary(library) && !scope.isMyLibrary(library);
+        };
+
+        scope.alreadyFollowingLibrary = function (library) {
+          return _.some(library.followers, { id: profileService.me.id });
         };
 
         scope.followLibrary = function (library) {
@@ -162,85 +179,26 @@ angular.module('kifi')
           });
         };
 
-        // Wait until library is ready.
+
+        //
+        // Watches and listeners.
+        //
+
+        // Wait until library data is ready before processing information to display the library card.
         scope.$watch('loading', function (newVal) {
           if (!newVal) {
-            // For dev testing.
-            // Uncomment the following to get some fake followers into the library.
-            // scope.library.followers = [
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
-            //     firstName: 'Danny',
-            //     lastName: 'Blumenfeld',
-            //     pictureName: 'VhYUF.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   }
-            // ];
-
             augmentData();
             adjustFollowerPicsSize();
           }
         });
 
+
+        // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
         $window.addEventListener('resize', adjustFollowerPicsSizeOnResize);
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-
-        scope.shareFB = function () {
-          $FB.ui({
-            method: 'share',
-            href: scope.library.shareUrl
-          });
-        };
       }
     };
   }
