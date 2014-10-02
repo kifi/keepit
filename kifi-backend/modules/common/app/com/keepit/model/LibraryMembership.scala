@@ -43,7 +43,7 @@ object LibraryMembership {
     (__ \ 'state).format(State.format[LibraryMembership]) and
     (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
     (__ \ 'showInSearch).format[Boolean] and
-    (__ \ 'lastViewed).format[Option[DateTime]]
+    (__ \ 'lastViewed).formatNullable[DateTime]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 
   def toLibraryMembershipView(libMem: LibraryMembership): LibraryMembershipView =

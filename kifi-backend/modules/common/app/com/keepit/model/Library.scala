@@ -54,7 +54,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'kind).format[LibraryKind] and
     (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int] and
-    (__ \ 'lastKept).format[Option[DateTime]]
+    (__ \ 'lastKept).formatNullable[DateTime]
   )(Library.apply, unlift(Library.unapply))
 
   val maxNameLength = 50
