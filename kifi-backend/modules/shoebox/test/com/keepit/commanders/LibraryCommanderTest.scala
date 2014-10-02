@@ -339,21 +339,21 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
           val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
 
-          val (ironAccesses, ironLibs) = targetLib1._1.unzip
+          val (ironMemberships, ironLibs) = targetLib1._1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")
-          ironAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
+          ironMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (captainAccesses, captainLibs) = targetLib2._1.unzip
+          val (captainMemberships, captainLibs) = targetLib2._1.unzip
           captainLibs.map(_.slug.value) === Seq("murica")
-          captainAccesses === Seq(LibraryAccess.OWNER)
+          captainMemberships.map(_.access) === Seq(LibraryAccess.OWNER)
 
-          val (agentAccesses, agentLibs) = targetLib3._1.unzip
+          val (agentMemberships, agentLibs) = targetLib3._1.unzip
           agentLibs.map(_.slug.value) === Seq("avengers", "murica")
-          agentAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
+          agentMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (hulkAccesses, hulkLibs) = targetLib4._1.unzip
+          val (hulkMemberships, hulkLibs) = targetLib4._1.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
-          hulkAccesses === Seq(LibraryAccess.READ_INSERT)
+          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_INSERT)
           val (hulkInvites, hulkInvitedLibs) = targetLib4._2.unzip
           hulkInvitedLibs.map(_.slug.value) === Seq("murica")
           hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
