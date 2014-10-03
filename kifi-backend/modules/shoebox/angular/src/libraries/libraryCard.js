@@ -118,9 +118,6 @@ angular.module('kifi')
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
-
-          // TODO(yiping): make sure that public libraries can be shared by any Kifi user.
-          // This is not supported in the backend right now (10/1/2014).
           return scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
                   scope.isMyLibrary(library));
