@@ -11,9 +11,10 @@ import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model._
 import com.keepit.common.mail.template.helpers.fullName
+import com.keepit.model.{ NotificationCategory, User, LibraryInvite, LibraryRepo, KeepRepo }
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 class LibraryInviteEmailSender @Inject() (
@@ -24,25 +25,37 @@ class LibraryInviteEmailSender @Inject() (
     libraryRepo: LibraryRepo,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def inviteUserToLibrary(toUserRecipient: Either[Id[User], EmailAddress], fromUserId: Id[User], libraryId: Id[Library], inviteMsg: Option[String] = None)(implicit publicIdConfig: PublicIdConfiguration): Future[ElectronicMail] = {
-    val (library, libraryInfo, libraryOwner) = db.readWrite { implicit session =>
-      val library = libraryRepo.get(libraryId)
-      val libOwner = basicUserRepo.load(library.ownerId)
-      val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-      val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps)
-      (library, libraryInfo, libOwner)
-    }
+  def inviteUserToLibrary(invite: LibraryInvite)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
+    val toUserRecipientOpt: Option[Either[Id[User], EmailAddress]] =
+      if (invite.userId.isDefined) Some(Left(invite.userId.get))
+      else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
+      else None
 
-    val emailToSend = EmailToSend(
-      fromName = Some(Left(fromUserId)),
-      from = SystemEmailAddress.NOTIFICATIONS,
-      subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
-      to = toUserRecipient,
-      category = NotificationCategory.User.LIBRARY_INVITATION,
-      htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, inviteMsg, libraryInfo),
-      textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, inviteMsg, libraryInfo)),
-      templateOptions = Seq(CustomLayout).toMap
-    )
-    emailTemplateSender.send(emailToSend)
+    toUserRecipientOpt map { toUserRecipient =>
+      val (library, libraryInfo) = db.readWrite { implicit session =>
+        val library = libraryRepo.get(invite.libraryId)
+        val libOwner = basicUserRepo.load(library.ownerId)
+        val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps)
+        (library, libraryInfo)
+      }
+
+      val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
+      val fromUserId = invite.ownerId
+      val emailToSend = EmailToSend(
+        fromName = Some(Left(invite.ownerId)),
+        from = SystemEmailAddress.NOTIFICATIONS,
+        subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
+        to = toUserRecipient,
+        category = NotificationCategory.User.LIBRARY_INVITATION,
+        htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase),
+        textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase)),
+        templateOptions = Seq(CustomLayout).toMap
+      )
+      emailTemplateSender.send(emailToSend) map (Some(_))
+    } getOrElse {
+      airbrake.notify(s"LibraryInvite does not have a recipient: $invite")
+      Future.successful(None)
+    }
   }
 }

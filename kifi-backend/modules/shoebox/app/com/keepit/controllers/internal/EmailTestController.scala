@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.model.{ UserEmailAddress, Library, NotificationCategory, User }
+import com.keepit.model.{ LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -71,6 +71,7 @@ class EmailTestController @Inject() (
     def friendId = Id[User](request.getQueryString("friendId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
+    def msg = request.getQueryString("msg")
 
     val emailF = name match {
       case "welcome" => welcomeEmailSender.sendToUser(userId)
@@ -85,11 +86,13 @@ class EmailTestController @Inject() (
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
       case "libraryInviteUser" => {
         implicit val config = PublicIdConfiguration("secret key")
-        libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
+        val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, userId = Some(friendId), access = LibraryAccess.READ_ONLY, message = msg)
+        libraryInviteEmailSender.inviteUserToLibrary(invite).map(_.get)
       }
       case "libraryInviteNonUser" => {
         implicit val config = PublicIdConfiguration("secret key")
-        libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
+        val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
+        libraryInviteEmailSender.inviteUserToLibrary(invite).map(_.get)
       }
       case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
     }

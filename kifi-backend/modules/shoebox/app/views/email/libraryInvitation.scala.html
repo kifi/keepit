@@ -1,10 +1,12 @@
 @(inviteeId: Option[Id[User]],
   inviterId: Id[User],
   inviteMsg: Option[String],
-  libraryInfo: com.keepit.commanders.LibraryInfo)
+  libraryInfo: com.keepit.commanders.LibraryInfo,
+  passPhrase: String)
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = {@{baseUrl}@libraryInfo.url}
+@invitedHeader = {@firstName(inviterId) invited you to follow a library on kifi}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -219,50 +221,67 @@
 <!-- //Header -->
 <!-- Content -->
 <tr>
-  <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-    <tr>
-      <td width="1" bgcolor="#dedddd"></td>
-      <td bgcolor="#FFFFFF"><table width="100%" border="0" cellspacing="0" cellpadding="0">
-        <tr>
-          <td height="30">&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <td>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td width="1" bgcolor="#dedddd"></td>
+        <td bgcolor="#FFFFFF">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            @inviteMsg.map { _ =>
             <tr>
-              <td width="60" class="hide">&nbsp;</td>
-              <td class="grey_link" style="font-family:'HelveticaNeueLT Std Roman', Helvetica, Arial, sans-serif;font-size:18px;color:#333333;line-height:20px;">
-                <a href="@libraryUrl" target="_blank" style="text-decoration:none;color:#333333;">@firstName(inviterId) invited you to follow a library on kifi</a>
+              <td height="30">&nbsp;</td>
+            </tr>
+            <tr>
+              <td class="aside">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td width="60" class="hide">&nbsp;</td>
+                    <td class="grey_link" style="font-family:'HelveticaNeueLT Std Roman',Helvetica,Arial,sans-serif;font-size:18px;color:#333333;line-height:20px;">
+                      <a href="@libraryUrl" target="_blank" style="text-decoration:none;color:#333333;">
+                        @invitedHeader
+                      </a>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
-          </table></td>
-        </tr>
-        <tr>
-          <td height="26">&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="aside"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+            }
             <tr>
-              <td width="40" class="hide">&nbsp;</td>
-              <td><table width="100%" border="0" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td width="54" valign="top"><img src='@avatarUrl(inviterId)' alt="@firstName(inviterId)" width="54" height="55" style="display:block;" border="0" /></td>
-                  <td width="20">&nbsp;</td>
-                  <td valign="top" style="font-family:Arial, sans-serif;font-size:17px;color:#667a90;line-height:21px;">
-                    @inviteMsg.map { msg =>
-                    “@msg”
-                    }
-                  </td>
-                  <td width="10"></td>
-                </tr>
-              </table></td>
+              <td height="26">&nbsp;</td>
             </tr>
-          </table></td>
-        </tr>
-        <tr>
-          <td height="40">&nbsp;</td>
-        </tr>
-      </table></td>
-      <td width="1" bgcolor="#dedddd"></td>
+            <tr>
+              <td class="aside">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td width="40" class="hide">&nbsp;</td>
+                    <td>
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td width="54" valign="top"><img src='@avatarUrl(inviterId)' alt="@firstName(inviterId)" width="54" height="55" style="display:block;" border="0" /></td>
+                          <td width="20">&nbsp;</td>
+                          @inviteMsg.map { msg =>
+                          <td valign="top" style="font-family:Arial,sans-serif;font-size:17px;color:#667a90;line-height:21px;">
+                            “@msg”
+                          </td>
+                          }.getOrElse {
+                          <td valign="middel" style="font-family:Arial,sans-serif;font-size:17px;color:#333333;line-height:21px;">
+                            @invitedHeader
+                          </td>
+                          }
+                          <td width="10"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td height="40">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+        <td width="1" bgcolor="#dedddd"></td>
     </tr>
   </table></td>
 </tr>
@@ -311,6 +330,8 @@
                         <tr>
                           <td style="font-family:'HelveticaNeueLT Std Roman', Helvetica, Arial, sans-serif;font-size:16px;color:#333333;line-height:20px;">
                             @libraryInfo.shortDescription.getOrElse("")
+                            <br/><br/>
+                            You may need to enter the following passphrase to view library: @passPhrase
                           </td>
                         </tr>
                         <tr>

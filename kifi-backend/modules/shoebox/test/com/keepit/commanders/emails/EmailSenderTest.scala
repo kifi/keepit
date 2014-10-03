@@ -19,6 +19,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
+import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
 
 import scala.concurrent.duration.Duration
@@ -315,16 +316,28 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-        (user1, user2, lib1)
+        val invite = LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
+
+        (user1, user2, lib1, invite)
       }
+    }
+
+    def testHtml(html: String): MatchResult[_] = {
+      html must contain("Football")
+      html must contain("Tom invited you to")
+      html must contain("Tom Brady")
+      html must contain("Lorem ipsum")
+      html must contain("TEST_MODE/tom/football")
+      html must contain("check this out!")
     }
 
     "sends invite to user (userId)" in {
       withDb(modules: _*) { implicit injector =>
-        val (user1, user2, lib1) = setup()
+        val (user1, user2, lib1, invite) = setup()
+        val inviteUser = invite.copy(userId = user2.id)
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.inviteUserToLibrary(Left(user2.id.get), user1.id.get, lib1.id.get), Duration(5, "seconds"))
+        val email = Await.result(inviteSender.inviteUserToLibrary(inviteUser), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
@@ -332,20 +345,17 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Tom Brady invited you to follow Football!"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        html must contain("Football")
-        html must contain("Tom invited you to")
-        html must contain("Tom Brady")
-        html must contain("Lorem ipsum")
-        html must contain("TEST_MODE/tom/football")
+        testHtml(html)
       }
     }
 
     "send invite to non-user (email)" in {
       withDb(modules: _*) { implicit injector =>
-        val (user1, user2, lib1) = setup()
+        val (user1, user2, lib1, invite) = setup()
+        val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")))
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.inviteUserToLibrary(Right(EmailAddress("aaronrodgers@gmail.com")), user1.id.get, lib1.id.get), Duration(5, "seconds"))
+        val email = Await.result(inviteSender.inviteUserToLibrary(inviteNonUser), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
@@ -353,11 +363,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Tom Brady invited you to follow Football!"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        html must contain("Football")
-        html must contain("Tom invited you to")
-        html must contain("Tom Brady")
-        html must contain("Lorem ipsum")
-        html must contain("TEST_MODE/tom/football")
+        testHtml(html)
+        html must contain(invite.passPhrase)
       }
     }
   }
