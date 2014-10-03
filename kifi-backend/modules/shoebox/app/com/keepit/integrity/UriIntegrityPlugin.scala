@@ -18,6 +18,7 @@ import akka.pattern.{ ask, pipe }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.core._
 
 trait UriChangeMessage
 
@@ -62,8 +63,14 @@ class UriIntegrityActor @Inject() (
         (None, None)
       } else {
         val libId = oldBm.libraryId.get // fail if there's no library
+        val userId = oldBm.userId
         val newUriId = newUri.id.get
-        keepRepo.getPrimaryByUriAndLibrary(newUriId, libId) match {
+        val currentBookmarkOpt = if (oldBm.inDisjointLib)
+          keepRepo.getPrimaryInDisjointByUriAndUser(oldBm.uriId, userId)
+        else
+          keepRepo.getPrimaryByUriAndLibrary(oldBm.uriId, libId)
+
+        currentBookmarkOpt match {
           case None => {
             log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
