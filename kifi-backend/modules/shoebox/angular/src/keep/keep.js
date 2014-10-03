@@ -278,6 +278,9 @@ angular.module('kifi')
               keepOne(keep);
             });
 
+            // TODO(yiping): investigate why this is not working.
+            // Maybe because we need an unkeep-from-library endpoint?
+            libraryService.fetchLibrarySummaries(true);
             libraryService.addToLibraryCount(keep.libraryId, -1);
             tagService.addToKeepCount(-1);
           });
