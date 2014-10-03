@@ -30,7 +30,7 @@ angular.module('kifi')
           lib.secondLine = lines[1];
           if (lib.owner) {
             lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
-          } 
+          }
         });
         util.replaceArrayInPlace(librarySummaries, libs);
         util.replaceArrayInPlace(invitedSummaries, invites);
@@ -205,26 +205,25 @@ angular.module('kifi')
       },
 
       joinLibrary: function (libraryId) {
-        var alreadyJoined = _.some(librarySummaries, function (library) {
-          return library.id === libraryId;
-        });
+        var alreadyJoined = _.some(librarySummaries, { id: libraryId });
+
         if (!alreadyJoined) {
-          return $http.post(routeService.joinLibrary(libraryId)).then( function (response) {
+          return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
             librarySummaries.push(response.data);
           });
         }
+
+        return $q.when('already_joined');
       },
 
       leaveLibrary: function (libraryId) {
-        return $http.post(routeService.leaveLibrary(libraryId)).then( function () {
-          _.remove(librarySummaries, function (library) {
-            return library.id === libraryId;
-          });
+        return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
+          _.remove(librarySummaries, { id: libraryId });
         });
       },
 
       deleteLibrary: function (libraryId) {
-        return $http.post(routeService.deleteLibrary(libraryId)).then( function () {
+        return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, function (library) {
             return library.id === libraryId;
           });
