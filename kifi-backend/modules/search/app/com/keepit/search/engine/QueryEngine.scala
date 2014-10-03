@@ -70,7 +70,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     val elapsed = System.currentTimeMillis() - startTime
 
     if ((debugFlags & DebugOption.Log.flag) != 0) {
-      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=$numRows bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} joinTime=$elapsed")
+      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=$numRows bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directScoreContext.getCount} joinTime=$elapsed")
     }
   }
 
