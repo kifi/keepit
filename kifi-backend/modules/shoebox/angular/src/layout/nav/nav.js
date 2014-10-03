@@ -172,7 +172,7 @@ angular.module('kifi')
         };
 
         scope.sortLibraries = function (sortBy) {
-          var sorting;
+          var sorting, libs, invited;
           switch (sortBy) {
             case 'A-Z':
               sorting = function(a,b) {
@@ -180,37 +180,68 @@ angular.module('kifi')
                 else if (a.name < b.name) { return -1; } 
                 else { return 0; }
               };
+              libs = scope.allUserLibs.sort(sorting);
+              invited = scope.allInvitedLibs.sort(sorting);
               break;
+
             case 'Z-A':
               sorting = function(a,b) {
                 if (a.name < b.name) { return 1; } 
                 else if (a.name > b.name) { return -1; } 
                 else { return 0; }
               };
+              libs = scope.allUserLibs.sort(sorting);
+              invited = scope.allInvitedLibs.sort(sorting);
               break;
+
             case 'NumKeeps':
               sorting = function(a,b) {
                 if (a.numKeeps < b.numKeeps) { return 1; } 
                 else if (a.numKeeps > b.numKeeps) { return -1; } 
                 else { return 0; }
               };
+              libs = scope.allUserLibs.sort(sorting);
+              invited = scope.allInvitedLibs.sort(sorting);
               break;
+
             case 'NumFollowers':
               sorting = function(a,b) {
                 if (a.numFollowers < b.numFollowers) { return 1; } 
                 else if (a.numFollowers > b.numFollowers) { return -1; } 
                 else { return 0; }
               };
+              libs = scope.allUserLibs.sort(sorting);
+              invited = scope.allInvitedLibs.sort(sorting);
               break;
+
             case 'LastViewed':
               break;
+
             case 'LastKept':
+              sorting = function(a,b) { // assumes lastKept is not undefined
+                if (a.lastKept < b.lastKept) { return 1; } 
+                else if (a.lastKept > b.lastKept) { return -1; } 
+                else { return 0; }
+              };
+              var sortByOptTime = function(libs) {
+                // first partitions lastKept fields that are undefined & adds them after sorted list
+                var partition = _.values(
+                                _.groupBy(libs, function(lib) { 
+                                  return lib.lastKept === undefined;
+                                })
+                              );
+                var libsUndefinedTimes = partition[0];
+                var libsRealTimes = partition[1];
+
+                var order = libsRealTimes.sort(sorting);
+                return order.concat(libsUndefinedTimes);
+              };
+              libs = sortByOptTime(scope.allUserLibs);
+              invited = sortByOptTime(scope.allInvitedLibs);
               break;
             default:
               break;
           }
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
