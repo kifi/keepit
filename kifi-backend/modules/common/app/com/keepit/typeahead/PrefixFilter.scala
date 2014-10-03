@@ -33,10 +33,11 @@ object PrefixFilter {
   }
 
   private[this] val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
+  final val tokenBoundary = "\\s+"
 
   @inline final def normalize(str: String) = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(str.trim, Normalizer.Form.NFD), "").toLowerCase
   @inline final def tokenize(str: String) = tokenizeNormalizedName(normalize(str))
-  @inline final def tokenizeNormalizedName(str: String) = str.split("\\s+").filter(_.length > 0)
+  @inline final def tokenizeNormalizedName(str: String) = str.split(tokenBoundary).filter(_.length > 0)
 
   private[this] val numHashFuncs = Array(8, 4, 2, 1) // asymmetric bloom filter
   @inline private[this] def next(v: Int): Int = (v * 1103515245 + 12345) // linear congruential generator
