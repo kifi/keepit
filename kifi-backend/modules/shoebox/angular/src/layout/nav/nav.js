@@ -172,8 +172,8 @@ angular.module('kifi')
         };
 
         scope.sortLibraries = function (sortBy) {
-          var sortByOptTime;
-          var sortByNameFunc = function(a) {return a.name.toLowerCase() };
+          var sortByOptTime, libs, invited;
+          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
           switch (sortBy) {
             case 'A-Z':
               libs = _.sortBy(scope.allUserLibs, sortByNameFunc);
