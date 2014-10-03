@@ -3,12 +3,12 @@
     Create Library
   </div>
   <div class="kifi-keep-box-new-lib-head">Name Your Library</div>
-  <input class="kifi-keep-box-new-lib-name" name="lib_name" value="{{name}}" placeholder="Inspiring videos, Recipes I love..."/>
+  <input class="kifi-keep-box-new-lib-name" name="lib_name" type="text" value="{{name}}" placeholder="Inspiring videos, Recipes I love..."/>
   <div class="kifi-keep-box-new-lib-head kifi-secret">
     Secret?
   </div>
   <div class="kifi-keep-box-new-lib-visibility">
-    <input class="kifi-keep-box-new-lib-secret" name="lib_secret" type="checkbox"/>
+    <input class="kifi-keep-box-new-lib-secret" name="lib_secret" type="checkbox"{{#secret}} checked=""{{/secret}}/>
     <div class="kifi-keep-box-new-lib-desc-1">Your friends might discover keeps you put in this library.</div>
     <div class="kifi-keep-box-new-lib-desc-2">Only you will be able to see this library.</div>
   </div>

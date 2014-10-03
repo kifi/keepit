@@ -40,7 +40,13 @@ var keepBox = keepBox || (function () {
       if ($box) {
         hide();
       }
-      show($parent, data, howKept);
+      data.libraries.forEach(function (lib) {
+        var keep = data.keeps.find(libraryIdIs(lib.id));
+        if (keep) {
+          lib.keep = keep;
+        }
+      });
+      show($parent, data.libraries, howKept);
     },
     hide: function () {
       if ($box) {
@@ -56,14 +62,9 @@ var keepBox = keepBox || (function () {
     }
   };
 
-  function show($parent, data, howKept) {
+  function show($parent, libraries, howKept) {
     log('[keepBox:show]');
-    var partitionedLibs = partitionLibs(data.libraries, data.keeps);
-    $box = $(render('html/keeper/keep_box', {
-      inLibs: partitionedLibs[0],
-      recentLibs: partitionedLibs[1],
-      otherLibs: partitionedLibs[2]
-    }, {
+    $box = $(render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib',
       keep_box_libs_list: 'keep_box_libs_list'
@@ -80,17 +81,12 @@ var keepBox = keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-back', function (e) {
       if (e.which === 1 && $box) {
-        $box.find('.kifi-keep-box-view').first().triggerHandler('kifi-back');
-        swipeTo();
+        navBack();
       }
     })
-    .appendTo($parent);
-    var $view = $box.find('.kifi-keep-box-view-libs');
-    $view.data({
-      librariesById: data.libraries.reduce(indexById, {}),
-      $all: $view.find('.kifi-keep-box-libs')
-    });
-    addLibrariesBindings($view);
+    .appendTo($parent)
+    .data('libraries', libraries);
+    addLibrariesBindings($box.find('.kifi-keep-box-view-libs'));
 
     $(document).data('esc').add(hide);
 
@@ -104,7 +100,7 @@ var keepBox = keepBox || (function () {
       log('[keepBox:onShown]');
       $box.off('transitionend', onShown);
       $box.find('input').first().focus();
-      makeLibsScrollable($box.find('.kifi-keep-box-libs'));
+      makeScrollable($box);
     }
   }
 
@@ -136,36 +132,32 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  function swipeTo($new) {
+  function swipeTo($new, back) {
     var $vp = $box.find('.kifi-keep-box-viewport');
     var $cart = $vp.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view').first();
-    var back = !$new;
 
     var vpHeightOld = $vp[0].offsetHeight;
     $vp.css('height', vpHeightOld);
 
-    $new = $new || $old.data('$prev');
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     $new[back ? 'prependTo' : 'appendTo']($cart);
+    makeScrollable($new);
 
-    $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', back && !$new.data('$prev'));
+    $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', $new.hasClass('kifi-keep-box-view-libs'));
 
     var heightDelta = $new[0].offsetHeight - $old[0].offsetHeight;
 
     $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
     .on('transitionend', function end(e) {
       if (e.target === this) {
-        if (back) {
-          $old.remove();
-        } else {
+        if (!back) {
           $cart.removeClass('kifi-animated kifi-back kifi-forward');
-          $new.data('$prev', $old);
-          $old.detach();
         }
+        $old.remove();
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        $new.find('input').first().focus().select();
+        $new.find('input[type=text]').last().focus().select();
 
         $vp.css('height', '');
       }
@@ -174,21 +166,44 @@ var keepBox = keepBox || (function () {
     $vp.css('height', vpHeightOld + heightDelta);
   }
 
-  function partitionLibs(libs, keeps) {
+  function navBack() {
+    var $view;
+    var data = $box.data(), lib = data.libraryCreated;
+    if (lib) {
+      data.libraries = data.libraries.filter(idIsNot(lib.id));
+      delete data.libraryCreated;
+      api.port.emit('delete_library', lib.id);
+      var $view = $(render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
+      addCreateLibraryBindings($view);
+    } else {
+      $view = $(render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
+        keep_box_lib: 'keep_box_lib',
+        keep_box_libs_list: 'keep_box_libs_list'
+      }));
+      addLibrariesBindings($view);
+    }
+    swipeTo($view, true);
+  }
+
+  function partitionLibs(libs) {
     var inLibs = [];
-    var recentLibs = [];
     var otherLibs = [];
     for (var i = 0; i < libs.length; i++) {
       var lib = libs[i];
-      var keep = keeps.find(libraryIdIs(lib.id));
-      if (keep) {
-        lib.keep = keep;
+      if (i === 0) {
+        lib = $.extend({highlighted: true}, lib);
+      }
+      if (lib.keep) {
         inLibs.push(lib);
       } else {
         otherLibs.push(lib);
       }
     }
-    return [inLibs, recentLibs, otherLibs];
+    return {
+      inLibs: inLibs,
+      recentLibs: [],
+      otherLibs: otherLibs
+    };
   }
 
   function addLibrariesBindings($view) {
@@ -201,16 +216,16 @@ var keepBox = keepBox || (function () {
         if (q) {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
+              (libs[0] || {}).highlighted = true;
               showLibs($(render('html/keeper/keep_box_libs_list', {filtering: true, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
               })));
             }
           });
         } else {
-          var $all = $view.data('$all');
-          if (!$box[0].contains($all[0])) {
-            showLibs($all);
-          }
+          showLibs($(render('html/keeper/keep_box_libs_list', partitionLibs($box.data('libraries')), {
+            keep_box_lib: 'keep_box_lib'
+          })));
         }
       }
     })
@@ -231,7 +246,7 @@ var keepBox = keepBox || (function () {
         case 108: // numpad enter
           var $item = $view.find('.kifi-highlighted');
           if ($item.length) {
-            chooseLibrary($view, $item[0]);
+            chooseLibrary($item[0]);
           }
           return false;
       }
@@ -249,13 +264,13 @@ var keepBox = keepBox || (function () {
     }, null, $view.data()))
     .on('mousedown', '.kifi-keep-box-lib', function (e) {
       if (e.which === 1) {
-        chooseLibrary($view, this);
+        chooseLibrary(this);
       }
     })
     .on('click', '.kifi-keep-box-lib-remove', function (e) {
       if (e.which === 1) {
         var libraryId = $(this).prev().data('id');
-        var library = $view.data('librariesById')[libraryId];
+        var library = $box.data('libraries').find(idIs(libraryId));
         log('[unkeep]', libraryId, document.URL);
         api.port.emit('unkeep', {libraryId: libraryId, keepId: library.keep.id});
         hide(e, 'action');
@@ -267,20 +282,6 @@ var keepBox = keepBox || (function () {
     var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
     var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 3000);
     $view
-    .on('kifi-back', function () {
-      var $old = $view.data('$prev');
-      if ($old.hasClass('kifi-keep-box-view-new-lib')) {
-        var libraryId = $view.find('.kifi-keep-box-lib').data('id');
-        api.port.emit('delete_library', libraryId, function (success) {
-          if (success) {
-            var $libView = $old.data('$prev');
-            delete $libView.data('librariesById')[libraryId];
-            $libView.data('$all').add($libView).find('.kifi-keep-box-lib[data-id=' + libraryId + ']').remove();
-          }
-        });
-        $old.find('.kifi-keep-box-progress').css('width', '').parent().removeClass('kifi-done');
-      }
-    })
     .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, null, $view))
     .on('blur', '.kifi-keep-box-keep-title', function () {
       if (!this.value.trim()) {
@@ -308,9 +309,6 @@ var keepBox = keepBox || (function () {
 
   function addCreateLibraryBindings($view) {
     $view
-    .on('kifi-back', function () {
-      $view.data('$prev').find('.kifi-keep-box-lib-input').removeData('q').trigger('input');
-    })
     .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
       this.parentNode.classList.toggle('kifi-checked', this.checked);
     })
@@ -327,15 +325,16 @@ var keepBox = keepBox || (function () {
   }
 
   function showLibs($new) {
-    highlightLibrary($new.find('.kifi-keep-box-lib')[0]);
     $box.find('.kifi-keep-box-libs').replaceWith($new);
-    makeLibsScrollable($new);
+    makeScrollable($new);
   }
 
-  function makeLibsScrollable($libs) {
-    $libs.children('.kifi-scrollbar').remove();
-    $libs.antiscroll({x: false});
-    $libs.children('.kifi-scroll-inner').on('mousewheel', onScrollInnerWheel);
+  function makeScrollable($view) {
+    $view.find('.kifi-scroll-inner').each(function () {
+      // $(this).siblings('.kifi-scrollbar').remove();
+      $(this.parentNode).antiscroll({x: false});
+      $(this).on('mousewheel', onScrollInnerWheel);
+    });
   }
 
   function onScrollInnerWheel(e) {
@@ -352,31 +351,31 @@ var keepBox = keepBox || (function () {
     el.classList.add('kifi-highlighted');
   }
 
-  function chooseLibrary($view, el) {
+  function chooseLibrary(el) {
     var libraryId = el.dataset.id;
     if (libraryId) {
-      var library = $view.data('librariesById')[libraryId];
+      var library = $box.data('libraries').find(idIs(libraryId));
       if (library.keep) {
         api.port.emit('get_keep', library.keep.id, showKeep.bind(null, library));
       } else {
-        var data = {libraryId: libraryId, title: authoredTitle()};
-        log('[keep]', data);
-        api.port.emit('keep', withUrls(data), function (keep) {
-          if (keep) {
-            library.keep = keep;
-            showKeep(library, {title: data.title, image: null, tags: []}, true);
-          }
-        });
+        keepTo(library);
       }
     } else {
-      showCreateLibrary();
+      var $view = $(render('html/keeper/keep_box_new_lib'));
+      addCreateLibraryBindings($view);
+      swipeTo($view);
     }
   }
 
-  function showCreateLibrary() {
-    var $view = $(render('html/keeper/keep_box_new_lib'));
-    addCreateLibraryBindings($view);
-    swipeTo($view);
+  function keepTo(library) {
+    var data = {libraryId: library.id, title: authoredTitle()};
+    log('[keep]', data);
+    api.port.emit('keep', withUrls(data), function (keep) {
+      if (keep) {
+        library.keep = keep;
+        showKeep(library, {title: data.title, image: null, tags: []}, true);
+      }
+    });
   }
 
   function showKeep(library, keep, justKept) {
@@ -595,13 +594,9 @@ var keepBox = keepBox || (function () {
       }, function (library) {
         endProgress($progress, !!library);
         if (library) {
-          var $old = $view.data('$prev');
-          $old.data('librariesById')[library.id] = library;
-          $old.data('$all').find('.kifi-keep-box-lib.kifi-create').before(render('html/keeper/keep_box_lib', library));
-          setTimeout(function () {
-            $name.prop('disabled', false);
-            showKeep(library);
-          }, 200);
+          $box.data('libraryCreated', library);
+          $box.data('libraries').push(library);
+          keepTo(library);
         }
       });
       updateProgress.call($progress[0], 0);
@@ -648,9 +643,12 @@ var keepBox = keepBox || (function () {
     return lib;
   }
 
-  function indexById(o, item) {
-    o[item.id] = item;
-    return o;
+  function idIs(id) {
+    return function (o) {return o.id === id};
+  }
+
+  function idIsNot(id) {
+    return function (o) {return o.id !== id};
   }
 
   function libraryIdIs(id) {

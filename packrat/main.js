@@ -540,8 +540,7 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (!d) {
       api.tabs.emit(tab, 'kept', {fail: true});
-    } else if (!d.state) {
-      d.state = 'keeping';
+    } else {
       var libraryId = data.libraryId || libraryIds[data.secret ? 1 : 0];
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
@@ -552,73 +551,53 @@ api.port.on({
         guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
-        delete d.state;
         // main and secret are mutually exclusive
-        // var i = libraryIds.indexOf(libraryId);
-        // if (i >= 0) {
-        //   d.keeps = d.keeps.filter(libraryIdIsNot(libraryIds[1 - i]));
-        // }
-        // TODO: replace line below with code above once server supports keeping into multiple libraries
-        d.keeps = d.keeps.filter(isNotMine);
+        var i = libraryIds.indexOf(libraryId);
+        if (i >= 0) {
+          d.keeps = d.keeps.filter(libraryIdIsNot(libraryIds[1 - i]));
+        }
         var j = d.keeps.findIndex(libraryIdIs(libraryId));
         if (j >= 0) {
           d.keeps[j] = keep;
         } else {
           d.keeps.push(keep);
         }
-        var how = d.howKept();
-        respond(keep);
         delete keep.imageStatusPath;
-        forEachTabAt(tab.url, tab.nUri, function (tab) {
-          setIcon(!!how, tab);
-          api.tabs.emit(tab, 'kept', {kept: how});
-        });
+        respond(keep);
+        updateTabsWithKeptState(tab.url, tab.nUri, d.howKept());
         notifyKifiAppTabs({type: 'keep', libraryId: libraryId, keepId: keep.id});
       }, function fail(o) {
         log('[keep:fail]', data.url, o);
-        delete d.state;
         respond();
-        forEachTabAt(tab.url, tab.nUri, function (tab) {
-          api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
-        });
+        // fix tile on active tab
+        api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
       });
-      var i = libraryIds.indexOf(libraryId);
-      if (i >= 0 && !d.keeps.length) {
-        api.tabs.emit(tab, 'kept', {kept: i === 0 ? 'public' : 'private'});
+      if (!data.libraryId && !d.keeps.length) {
+        // assume success for instant tile flip on active tab
+        api.tabs.emit(tab, 'kept', {kept: libraryId === libraryIds[0] ? 'public' : 'private'});
       }
     }
   },
   unkeep: function (data, respond, tab) {
+    log('[unkeep]', data);
     var d = pageData[tab.nUri];
-    if (d && d.state) {
-      log('[unkeep] ignoring', data, d.state);
-    } else {
-      log('[unkeep]', data);
-      (d || {}).state = 'unkeeping';
-      ajax('DELETE', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId, function done() {
-        log('[unkeep:done]');
-        respond(true);
-        if (d) {
-          delete d.state;
-          d.keeps = d.keeps.filter(idIsNot(data.keepId));
-          var how = d.howKept();
-          forEachTabAt(tab.url, tab.nUri, function (tab) {
-            setIcon(!!how, tab);
-            api.tabs.emit(tab, 'kept', {kept: how});
-          });
-        }
-        notifyKifiAppTabs({type: 'unkeep', libraryId: data.libraryId, keepId: data.keepId});
-      }, function fail() {
-        log('[unkeep:fail]', data.keepId);
-        respond();
-        if (d) {
-          delete d.state;
-          api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
-        }
-      });
-      if (d && d.keeps.length === 1) {
-        api.tabs.emit(tab, 'kept', {kept: null});
+    ajax('DELETE', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId, function done() {
+      log('[unkeep:done]');
+      respond(true);
+      if (d) {
+        d.keeps = d.keeps.filter(idIsNot(data.keepId));
+        updateTabsWithKeptState(tab.url, tab.nUri, d.howKept());
       }
+      notifyKifiAppTabs({type: 'unkeep', libraryId: data.libraryId, keepId: data.keepId});
+    }, function fail() {
+      log('[unkeep:fail]', data.keepId);
+      respond();
+      if (d) {
+        api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
+      }
+    });
+    if (d && d.keeps.length === 1) {
+      api.tabs.emit(tab, 'kept', {kept: null});
     }
   },
   keeps_and_libraries: function (_, respond, tab) {
@@ -653,12 +632,24 @@ api.port.on({
       notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
     }, respond.bind(null, null));
   },
-  delete_library: function (libraryId, respond) {
+  delete_library: function (libraryId, respond, tab) {
     ajax('DELETE', '/ext/libraries/' + libraryId, function () {
       if (libraries) {
         libraries = libraries.filter(idIsNot(libraryId));
       }
       respond(true);
+      for (var nUri in pageData) {
+        var d = pageData[nUri];
+        var i = d.keeps.findIndex(libraryIdIs(libraryId));
+        if (i >= 0) {
+          d.keeps.splice(i, 1);
+          if (nUri === tab.nUri) {
+            updateTabsWithKeptState(nUri, tab.url, d.howKept());
+          } else {
+            updateTabsWithKeptState(nUri, d.howKept());
+          }
+        }
+      }
       notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
     }, respond.bind(null, false));
   },
@@ -1891,6 +1882,16 @@ function paneIsOpen(tabId) {
       return true;
     }
   }
+}
+
+function updateTabsWithKeptState() {
+  var args = Array.prototype.slice.call(arguments);
+  var howKept = args.pop();
+  args.push(function (tab) {
+    setIcon(!!howKept, tab);
+    api.tabs.emit(tab, 'kept', {kept: howKept});
+  });
+  forEachTabAt.apply(null, args);
 }
 
 function setIcon(kept, tab) {
