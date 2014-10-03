@@ -288,27 +288,27 @@ angular.module('kifi')
         };
 
         scope.keepToLibrary = function (keep) {
-          var libraryId = scope.data.selectedLibraryId;
+          scope.data.selectedLibraryIds.forEach(function (libraryId) {
+            keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
+              if (result.failures && result.failures.length) {
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
+              } else {
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
 
-          return keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
-            if (result.failures && result.failures.length) {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            } else {
-              return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                var keep = new keepDecoratorService.Keep(fullKeep);
-                keep.buildKeep(keep);
-                keep.makeKept();
-
-                libraryService.fetchLibrarySummaries(true);
-                libraryService.addToLibraryCount(libraryId, 1);  // This needs to be plural.
-                tagService.addToKeepCount(1);  // Should this be 1 or n?
-
-                scope.keepingToLibrary = false;
-              });
-            }
+                  libraryService.fetchLibrarySummaries(true);
+                  libraryService.addToLibraryCount(libraryId, 1);
+                  tagService.addToKeepCount(1);
+                });
+              }
+            });
           });
+
+          scope.keepingToLibrary = false;
         };
 
         scope.getSingleSelectedKeep = function (keep) {
