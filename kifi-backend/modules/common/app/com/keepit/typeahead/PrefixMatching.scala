@@ -2,6 +2,7 @@ package com.keepit.typeahead
 
 import scala.math.min
 import com.keepit.common.logging.Logging
+import scala.util.matching.Regex
 
 object PrefixMatching extends Logging {
   private[this] def initDistance(numTerms: Int): Array[Int] = {
@@ -75,13 +76,16 @@ object PrefixMatching extends Logging {
       (firstTokens zip secondTokens).forall { case (firstToken, secondToken) => firstToken.length == secondToken.length }
   }
 
-  def highlight(name: String, query: String): List[(Int, Int)] = {
+  def getHighlightingRegex(query: String): Regex = {
+    val queryTerms = PrefixFilter.tokenize(query)
+    ("(^|" + PrefixFilter.tokenBoundary + ")(" + queryTerms.sortBy(-_.length).mkString("|") + ")").r
+  }
+
+  def highlight(name: String, highlightingRegex: Regex): List[(Int, Int)] = {
     // This requires that the normalization does not shift characters (e.g. currently only removes diacritical marks)
     val normalizedName = PrefixFilter.normalize(name)
     if (doTheyAlign(name, normalizedName)) {
-      val queryTerms = PrefixFilter.tokenize(query)
-      val queryRegex = ("(^|" + PrefixFilter.tokenBoundary + ")(" + queryTerms.sortBy(-_.length).mkString("|") + ")").r
-      queryRegex.findAllMatchIn(normalizedName).map { m => (m.start(2), m.group(2).length) }.toList
+      highlightingRegex.findAllMatchIn(normalizedName).map { m => (m.start(2), m.group(2).length) }.toList
     } else {
       log.warn(s"PrefixFilter normalization has not preserved alignment from $name to $normalizedName")
       Nil

@@ -777,9 +777,7 @@ class KeepsCommander @Inject() (
 
   def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
-    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map { hashtags =>
-      hashtags.map { tag => HashtagHit.highlight(tag, query) }
-    }
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

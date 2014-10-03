@@ -74,5 +74,8 @@ object HashtagHit {
     implicit val tupleFormat = TupleFormat.tuple2Format[Int, Int]
     Json.format[HashtagHit]
   }
-  def highlight(tag: Hashtag, query: String): HashtagHit = HashtagHit(tag, PrefixMatching.highlight(tag.tag, query))
+  def highlight(query: String, tags: Seq[Hashtag]): Seq[HashtagHit] = {
+    val queryRegex = PrefixMatching.getHighlightingRegex(query)
+    tags.map { tag => HashtagHit(tag, PrefixMatching.highlight(tag.tag, queryRegex)) }
+  }
 }
