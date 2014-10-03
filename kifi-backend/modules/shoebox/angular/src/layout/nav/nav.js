@@ -78,7 +78,7 @@ angular.module('kifi')
           scrollableLibList = element.find('.kf-scrollable-libs');
           if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
             setLibListHeight();
-            if (lastHeight == scrollableLibList.height()) {
+            if (lastHeight === scrollableLibList.height()) {
               $interval.cancel(promiseLibList);
             }
             lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
