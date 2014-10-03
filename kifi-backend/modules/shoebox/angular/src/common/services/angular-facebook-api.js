@@ -22,7 +22,6 @@ angular.module('jun.facebook', [])
 			authResponse: void 0,
 			frictionlessRequests: false,
 			hideFlashCallback: null,
-			version: 'v2.0',
 
 			// FB.login options
 			// https://developers.facebook.com/docs/reference/javascript/FB.login
@@ -124,13 +123,16 @@ angular.module('jun.facebook', [])
 				});
 			};
 
-			(function(d, s, id){
-	        	var js, fjs = d.getElementsByTagName(s)[0];
-	        	if (d.getElementById(id)) {return;}
-	        	js = d.createElement(s); js.id = id;
-	        	js.src = '//connect.facebook.net/en_US/sdk.js';
-	        	fjs.parentNode.insertBefore(js, fjs);
-	         }(document, 'script', 'facebook-jssdk'));
+			(function (d, s, id) {
+				var js, fjs = d.getElementsByTagName(s)[0];
+				if (d.getElementById(id)) {
+					return;
+				}
+				js = d.createElement(s);
+				js.id = id;
+				js.src = '//connect.facebook.net/en_US/all.js';
+				fjs.parentNode.insertBefore(js, fjs);
+			}(window.document, 'script', 'facebook-jssdk'));
 
 			that.loading = true;
 
@@ -152,8 +154,7 @@ angular.module('jun.facebook', [])
 					xfbml: options.xfbml,
 					authResponse: options.authResponse,
 					frictionlessRequests: options.frictionlessRequests,
-					hideFlashCallback: options.hideFlashCallback,
-					version: options.version
+					hideFlashCallback: options.hideFlashCallback
 				}, params);
 
 				if (!params.appId) {
