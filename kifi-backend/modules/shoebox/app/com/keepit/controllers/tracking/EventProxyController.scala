@@ -59,7 +59,7 @@ class EventProxyController @Inject() (
     val validEvents = Set("user_viewed_page", "user_viewed_pane")
     if (validEvents.contains(triggeringEvent)) {
       val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
-      builder.addExistingContexts(existingContext)
+      builder.addExistingContext(existingContext)
       triggeringEvent match {
         case "user_viewed_page" =>
           builder += ("action", "viewedSite")

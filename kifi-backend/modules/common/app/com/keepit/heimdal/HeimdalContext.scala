@@ -103,7 +103,7 @@ class HeimdalContextBuilder {
   def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = ContextList(values.map(toSimpleContextData))
   def build: HeimdalContext = HeimdalContext(data.toMap)
 
-  def addExistingContexts(context: HeimdalContext): Unit = {
+  def addExistingContext(context: HeimdalContext): Unit = {
     context.data.foreach { case (k, v) => data(k) = v }
   }
 
