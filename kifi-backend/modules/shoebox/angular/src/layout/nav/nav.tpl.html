@@ -68,8 +68,19 @@
         <input class="kf-lib-filter-input" kf-no-drag-input name="filterName" placeholder="Find a library..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-focus="focusFilter()" ng-blur="blurFilter()">
       </div>
       <div class="kf-sort-libs-by">
-          <select id="sortByDropDown" ng-model="orders.currentOrder" ng-change="sortLibsBy()" ng-options="o for o in orders.options">
-          </select>
+        <div class="kf-sort-img sprite sprite-arrow-gray-down"></div>
+        <div class="dropdown-menu">
+          <ul class="dropdown-menu-content">
+            <li class="dropdown-option" ng-click="sortByNumKeeps()">Number of Keeps</li>
+            <li class="dropdown-option" ng-click="sortByNumFollowers()">Number of followers</li>
+            <li class="dropdown-option" ng-click="sortByName()">Alphabetical</li>
+            <!-- <li class="dropdown-option" ng-click="sortByNameReverse()">Z-A</li> -->
+            <li class="dropdown-option" ng-click="sortByLastViewed()">Last Viewed</li>
+            <li class="dropdown-option" ng-click="sortByLastKept()">Last Kept To</li>
+          </ul>
+        </div>
+      </div>
+
       </div>
     </div>
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">

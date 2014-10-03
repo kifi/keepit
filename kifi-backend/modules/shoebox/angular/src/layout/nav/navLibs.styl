@@ -13,6 +13,12 @@
   user-select: none
   font-size: 12px
 
+
+
+////////////////////////////
+////// Library Icons ///////
+////////////////////////////
+
 .kf-nav-lib-info
   display: inline-block
 
@@ -28,11 +34,6 @@
   font-size: 11px
   font-weight: 200
   color: countGreyColor
-
-.kf-nav-lib-bar
-  border-bottom: 1px solid separatorColor
-  padding: 8px 0 8px 0
-
 .library-icon-holder
   width: 27px
   height: 35px
@@ -48,14 +49,20 @@
   background-repeat: no-repeat
 
 .library-icon-owner-img
+  width: 23px
+  height: 23px
   position: relative
   vertical-align: middle
   left: 13px
   top: -15px
   z-index: 1
-  width: 23px
-  height: 23px
   border-radius: 100% 
+
+
+
+//////////////////////////////////////
+////// Scrollable Library Pane ///////
+//////////////////////////////////////
 
 .kf-scrollable-libs
   width: calc(100% + 40px)
@@ -67,21 +74,28 @@
     .kf-nav-lib-users
       width: calc(100%)
 
+
+
+////////////////////////////////////
+////// Library Filtering Box ///////
+////////////////////////////////////
+
 .kf-lib-search
   width: calc(100% + 40px)
 
 .kf-lib-input-box
+  height: 25px
+  width: calc(100% - 42px)
   float: left
   margin-bottom: 8px
-  cursor: text
-  border-radius: 12px
-  border-style: none
-  background: #eeeeee
-  transition: all .16s
-  height: 24px
-  font-weight: 200
   box-sizing: border-box
   border: 1px solid #e6e6e6
+  border-top-left-radius: 4px
+  border-bottom-left-radius: 4px
+  background: #eeeeee
+  font-weight: 200
+  cursor: text
+  transition: all .16s
 
   &.focused
     background: #fff
@@ -89,31 +103,97 @@
 
   input
     width: calc(100% - 20px)
-    white-space: nowrap
     margin: 0
     border: 0
     padding: 3px 10px
+    box-sizing: border-box
     background-color: transparent
     color: textDarkGrey
+    white-space: nowrap
     font-size: 13px
     font-weight: 200
     font-smoothing: antialiased
     line-height: 18px
-    box-sizing: border-box
 
 .kf-lib-input-clear
   float: right
   width: 20px
+  box-sizing: border-box
   font-size: 17px
   line-height: 20px
   cursor: pointer
-  box-sizing: border-box
 
-.kf-sort-libs-by select
-  display: inline-block
-  width: 27px
-  vertical-align: middle
+
+
+////////////////////////////////////////////
+////// Sorting Library Dropdown Menu ///////
+////////////////////////////////////////////
+
+.kf-sort-img
+  position: relative
+  left: 6px
+  top: 3px
+
+.kf-sort-libs-by
+  width: 24px
+  height: 25px
   float: right
-  margin-right: 5px
-  font-size: 10px
-  font-weight: 20
+  margin-right: 14px
+  box-sizing: border-box
+  border: 1px solid #e6e6e6
+  border-radius: 0 4px 4px 0;
+  background: #eeeeee
+
+.kf-sort-libs-by:hover
+  transition: all .16s
+  background-color: #fff
+  border: 1px solid blueColor
+
+.dropdown-menu
+  height: 24px
+  width: 24px
+  position: relative
+  top: -17px
+  left: -6px
+
+.dropdown-menu:hover .dropdown-menu-content
+  visibility: visible
+  transition: all .16s
+  
+.dropdown-menu-content
+  width: 120px
+  position: relative
+  top: 26px
+  left: -58px
+  z-index: 1
+  border: 1px solid #e6e6e6
+  border-radius: 8px;
+  visibility: hidden
+  
+.dropdown-menu-content > li:first-child
+  border-radius: 8px 8px 0 0;
+
+.dropdown-menu-content > li:last-child
+  border-radius: 0 0 8px 8px;
+
+.dropdown-option
+  height: 24px
+  width: 120px
+  padding-top: 10px
+  border-bottom: 1px solid separatorColor
+  background-color: #fff
+  text-align: center
+  font-size: 11px
+  font-weight: 200
+  color: countGreyColor
+  cursor: pointer
+
+.dropdown-option:hover
+  position: relative
+  left: -1px
+  border: 1px solid blueColor
+  background-color: #fff
+
+.dropdown-option:active
+  color: #fff
+  background-color: blueColor

@@ -121,28 +121,6 @@ angular.module('kifi')
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
 
-        // Filter Box Stuff
-        scope.orders = {
-          options: ['A-Z','Z-A','# Keeps'],
-          currentOrder: ''
-        };
-
-        scope.sortLibsBy = function () {
-          switch (scope.orders.currentOrder) {
-            case 'A-Z':
-              sortLibrariesByName(1);
-              break;
-            case 'Z-A':
-              sortLibrariesByName(-1);
-              break;
-            case '# Keeps':
-              sortLibrariesByNumKeeps();
-              break;
-            default:
-              break;
-          }
-        };
-
         scope.filter = {};
         scope.isFilterFocused = false;
         var preventClearFilter = false;
@@ -193,42 +171,66 @@ angular.module('kifi')
           return scope.userLibsToShow.concat(scope.invitedLibsToShow);
         };
 
-        function sortLibrariesByName(order) {
-          var sorting = function(a,b) {
-            if (a.name > b.name) {
-              return 1;
-            } else if (a.name < b.name) {
-              return -1;
-            } else {
-              return 0;
-            }
-          };
+        scope.sortByName = function () {
+          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
+          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc);
+          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc);
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
 
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
-          if (order < 0) {
-            libs = libs.reverse();
-            invited = invited.reverse();
+        scope.sortByNameReverse = function () {
+          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
+          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc).reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc).reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByNumKeeps = function () {
+          var libs = _.sortBy(scope.allUserLibs, 'numKeeps').reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, 'numKeeps').reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByNumFollowers = function () {
+          var libs = _.sortBy(scope.allUserLibs, 'numFollowers').reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, 'numFollowers').reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByLastViewed = function () {
+          function sortByOptTime(libs) {
+            var partition = _.values(
+                              _.groupBy(libs, function(lib) { 
+                                return lib.lastViewed === undefined;
+                              })
+                            );
+            var libsUndefinedTimes = partition[0];
+            var libsRealTimes = partition[1];
+            return _.sortBy(libsRealTimes, 'lastViewed').reverse().concat(libsUndefinedTimes);
           }
-          util.replaceArrayInPlace(scope.userLibsToShow, libs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
-        
-        function sortLibrariesByNumKeeps() {
-          var sorting = function(a,b) {
-            if (a.numKeeps > b.numKeeps) {
-              return -1;
-            } else if (a.numKeeps < b.numKeeps) {
-              return 1;
-            } else {
-              return 0;
-            }
-          };
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
-          util.replaceArrayInPlace(scope.userLibsToShow, libs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+        };
+
+        scope.sortByLastKept = function () {
+          function sortByOptTime(libs) {
+            var partition = _.values(
+                              _.groupBy(libs, function(lib) { 
+                                return lib.lastKept === undefined;
+                              })
+                            );
+            var libsUndefinedTimes = partition[0];
+            var libsRealTimes = partition[1];
+            return _.sortBy(libsRealTimes, 'lastKept').reverse().concat(libsUndefinedTimes);
+          }
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+        };
+
       }
     };
   }
