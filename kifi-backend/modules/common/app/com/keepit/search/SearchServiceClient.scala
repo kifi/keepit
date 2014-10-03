@@ -52,7 +52,6 @@ trait SearchServiceClient extends ServiceClient {
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
-  def correctSpelling(text: String, enableBoost: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -67,11 +66,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
 
-  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
-  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
-  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
-  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
-  def semanticLoss(query: String): Future[Map[String, Float]]
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
@@ -226,13 +220,6 @@ class SearchServiceClientImpl(
 
   def version(): Future[String] = {
     call(Common.internal.version()).map(r => r.body)
-  }
-
-  def correctSpelling(text: String, enableBoost: Boolean): Future[String] = {
-    call(Search.internal.correctSpelling(text, enableBoost)).map { r =>
-      val suggests = r.json.as[JsArray].value.map { x => Json.fromJson[ScoredSuggest](x).get }
-      suggests.map { x => x.value + ", " + x.score }.mkString("\n")
-    }
   }
 
   def showUserConfig(id: Id[User]): Future[SearchConfig] = {

@@ -28,7 +28,6 @@ import com.keepit.search.graph.collection.CollectionSearcher
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
 import com.keepit.search.query.HotDocSetFilter
-import com.keepit.search.spellcheck.SpellCorrector
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -41,7 +40,6 @@ class MainSearcherFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
-    spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
@@ -181,5 +179,4 @@ class MainSearcherFactory @Inject() (
     }
   }
 
-  def getSpellCorrector(): SpellCorrector = spellCorrector
 }
