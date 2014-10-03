@@ -35,7 +35,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.typeahead.{ TypeaheadHit, HashtagTypeahead }
+import com.keepit.typeahead.{ HashtagHit, TypeaheadHit, HashtagTypeahead }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -249,7 +249,7 @@ class KeepsCommander @Inject() (
       case Some(userId) =>
         searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
       case None =>
-        Future.successful(Seq[SharingUserInfo]())
+        Future.successful(Seq.fill(keeps.length)(SharingUserInfo(Set.empty, 0)))
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
@@ -397,7 +397,7 @@ class KeepsCommander @Inject() (
         throw e
       case Success(keep) =>
         SafeFuture {
-          searchClient.updateURIGraph()
+          searchClient.updateKeepIndex()
           curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
         }
         KeepInfo.fromKeep(keep)
@@ -418,7 +418,7 @@ class KeepsCommander @Inject() (
       addToCollection(coll.id.get, keeps).size
     }
     SafeFuture {
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
       hashtagTypeahead.refresh(libraryId)
     }
@@ -451,7 +451,7 @@ class KeepsCommander @Inject() (
 
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
     hashtagTypeahead.refreshByIds(deactivatedBookmarks.map(_.libraryId).flatten.distinct)
     deactivatedKeepInfos
   }
@@ -525,7 +525,7 @@ class KeepsCommander @Inject() (
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
     hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
   }
 
@@ -535,7 +535,7 @@ class KeepsCommander @Inject() (
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
     }
     keptAnalytics.rekeptPages(userId, keeps, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
     hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     keeps.length
   }
@@ -555,7 +555,7 @@ class KeepsCommander @Inject() (
       (oldKeeps, newKeeps)
     }
     (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => keptAnalytics.updatedKeep(oldKeep, newKeep, context) }
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
     newKeeps.length
   }
 
@@ -563,7 +563,7 @@ class KeepsCommander @Inject() (
     val shouldBeUpdated = (isPrivate.isDefined && keep.isPrivate != isPrivate.get) || (title.isDefined && keep.title != title)
     if (shouldBeUpdated) Some {
       val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       keptAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
     }
@@ -595,7 +595,7 @@ class KeepsCommander @Inject() (
           keepRepo.getByExtIdandLibraryId(keepId, libId) match {
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
               val keep2 = keepRepo.save(keep.withTitle(normTitle))
-              searchClient.updateURIGraph()
+              searchClient.updateKeepIndex()
               keptAnalytics.updatedKeep(keep, keep2, context)
               Right(keep2)
             case Some(keep) =>
@@ -647,7 +647,7 @@ class KeepsCommander @Inject() (
       tagged
     }
     if (updateUriGraph) {
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
     result
@@ -669,7 +669,7 @@ class KeepsCommander @Inject() (
       }
       removed.toSet
     } tap { _ =>
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
   }
@@ -709,7 +709,7 @@ class KeepsCommander @Inject() (
       }
     }
     keep.foreach(_.libraryId.foreach(hashtagTypeahead.refresh))
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
@@ -726,7 +726,7 @@ class KeepsCommander @Inject() (
       }
     }
     hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   def tagsByUrl(url: String, userId: Id[User]): Seq[Collection] = {
@@ -775,9 +775,9 @@ class KeepsCommander @Inject() (
     keepsWithTags
   }
 
-  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[Hashtag]] = {
+  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
-    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info))
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

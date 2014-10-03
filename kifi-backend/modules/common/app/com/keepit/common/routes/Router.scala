@@ -176,6 +176,8 @@ object Search extends Service {
   object internal {
     def updateBrowsingHistory(id: Id[User]) = ServiceRoute(POST, s"/internal/search/events/browsed/${id.id}")
     def warmUpUser(id: Id[User]) = ServiceRoute(GET, s"/internal/search/warmUp/${id.id}")
+    def updateKeepIndex() = ServiceRoute(GET, "/internal/search/updateKeepIndex")
+    def updateLibraryIndex() = ServiceRoute(GET, "/internal/search/updateLibraryIndex")
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")
     def uriGraphDumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/dumpDoc/${id.id}")
@@ -193,7 +195,6 @@ object Search extends Service {
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
     def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) =
       ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
-    def correctSpelling(input: String, enableBoost: Boolean) = ServiceRoute(GET, "/internal/search/spell/suggest", Param("input", input), Param("enableBoost", enableBoost))
     def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
     def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")

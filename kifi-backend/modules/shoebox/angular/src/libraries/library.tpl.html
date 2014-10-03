@@ -1,14 +1,12 @@
 <div class="kf-main-library-keeps">
   <div class="kf-library-card-header">
-    <div kf-library-card library="library" username="username" library-slug="librarySlug"></div>
-
-    <div class="kf-subtitle">
-      <div class="kf-edit-keeps" ng-click="toggleEdit()">
-        <span class="sprite sprite-edit-pencil-icon"></span>
-        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
-      </div>
-      <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-    </div>
+    <div kf-library-card
+      library="library"
+      username="username"
+      library-slug="librarySlug"
+      loading="loading"
+      toggle-edit="toggleEdit"
+    ></div>
   </div>
 
   <div kf-keeps
@@ -22,5 +20,4 @@
     toggle-edit="toggleEdit"
     update-selected-count="updateSelectedCount(numSelected)"
   ></div>
-
 </div>

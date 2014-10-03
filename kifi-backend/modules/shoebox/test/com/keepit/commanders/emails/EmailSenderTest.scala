@@ -5,7 +5,6 @@ import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeAB
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.template.helpers._
 import com.keepit.common.mail.{ EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -57,7 +56,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val trackingCode = EmailTrackingParam(
           subAction = Some("findMoreFriendsBtn"),
-          tips = Seq(EmailTip.ConnectFacebook)).encode
+          tip = Some(EmailTip.ConnectFacebook)).encode
 
         html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn"
           + s"&${EmailTrackingParam.paramName}=$trackingCode")

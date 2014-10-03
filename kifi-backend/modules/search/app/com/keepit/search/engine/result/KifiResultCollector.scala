@@ -7,7 +7,7 @@ import com.keepit.search.tracker.ResultClickBoosts
 import org.apache.lucene.util.PriorityQueue
 
 object KifiResultCollector {
-  val MIN_MATCHING = 0.5f
+  val MIN_MATCHING = 0.6f
 
   class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var secondaryId: Long)
 
@@ -94,6 +94,7 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
 
   require(matchingThreshold <= 1.0f)
 
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
@@ -104,7 +105,7 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
     val id = ctx.id
 
     // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
+    val matching = ctx.computeMatching(minMatchingThreshold)
 
     if (matching > 0.0f) {
       // compute clickBoost and score
@@ -114,7 +115,7 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
       if (matching >= matchingThreshold) {
         score = ctx.score() * matching * clickBoost
       } else {
-        // below the threshold (and above MIN_MATCHING), we save this hit if this is a clicked hit (clickBoost > 1.0f)
+        // below the threshold (and above minMatchingThreshold), we save this hit if this is a clicked hit (clickBoost > 1.0f)
         if (clickBoost > 1.0f) score = ctx.score() * matching * clickBoost // else score remains 0.0f
       }
 
@@ -142,11 +143,12 @@ class KifiNonUserResultCollector(maxHitsPerCategory: Int, matchingThreshold: Flo
 
   require(matchingThreshold <= 1.0f)
 
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
   private[this] val hits = createQueue(maxHitsPerCategory)
 
   override def collect(ctx: ScoreContext): Unit = {
     // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
+    val matching = ctx.computeMatching(minMatchingThreshold)
 
     if (matching >= matchingThreshold) {
       val score = ctx.score() * matching
@@ -164,6 +166,8 @@ class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) 
   import KifiResultCollector._
 
   require(matchingThreshold <= 1.0f)
+
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
   private[this] val othersHits = createQueue(maxHitsPerCategory)
@@ -172,7 +176,7 @@ class LibraryResultCollector(maxHitsPerCategory: Int, matchingThreshold: Float) 
     val id = ctx.id
 
     // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
-    val matching = ctx.computeMatching(KifiResultCollector.MIN_MATCHING)
+    val matching = ctx.computeMatching(minMatchingThreshold)
 
     if (matching > 0.0f) {
       var score = 0.0f

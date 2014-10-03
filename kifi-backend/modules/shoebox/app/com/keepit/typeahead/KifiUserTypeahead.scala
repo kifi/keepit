@@ -11,7 +11,7 @@ import scala.concurrent.Future
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.time._
 import org.joda.time.Minutes
@@ -26,6 +26,10 @@ class KifiUserTypeahead @Inject() (
     userConnectionRepo: UserConnectionRepo,
     UserCache: UserIdCache) extends Typeahead[User, User, User, PersonalTypeahead[User, User, User]] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
+
+  protected val refreshRequestConsolidationWindow = 10 minutes
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
 
   def refreshAll(): Future[Unit] = {
     val userIds = db.readOnlyReplica { implicit ro =>

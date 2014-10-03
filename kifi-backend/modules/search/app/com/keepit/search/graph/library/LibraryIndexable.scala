@@ -1,6 +1,7 @@
 package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
+import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model.{ LibraryVisibility, User, LibraryMembership, Library }
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.LangDetector
@@ -31,7 +32,7 @@ object LibraryFields {
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) extends Indexable[Library, Library] {
+class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]) extends Indexable[Library, Library] {
 
   val id = library.id.get
   val sequenceNumber = library.seq

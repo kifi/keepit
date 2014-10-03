@@ -10,7 +10,7 @@ class ScoreContext(
     scoreMaxArray: Array[Float],
     scoreSumArray: Array[Float],
     matchWeight: Array[Float],
-    collector: ResultCollector[ScoreContext]) extends Joiner {
+    collector: ResultCollector[ScoreContext]) extends ScoreContextBase(scoreMaxArray, scoreSumArray) {
 
   def this(
     scoreExpr: ScoreExpr,
@@ -18,15 +18,7 @@ class ScoreContext(
     matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) = this(scoreExpr, new Array[Float](scoreArraySize), new Array[Float](scoreArraySize), matchWeight, collector)
 
-  private[engine] var visibility: Int = 0
-
-  private[engine] var secondaryId: Long = -1 // secondary id (keep id for kifi search)
   private[this] var secondaryIdScore: Float = -1.0f
-
-  private[engine] var degree: Int = 0
-
-  private[engine] val scoreMax = scoreMaxArray
-  private[engine] val scoreSum = scoreSumArray
 
   def score(): Float = scoreExpr()(this)
 
@@ -78,10 +70,6 @@ class ScoreContext(
 
   def flush(): Unit = {
     if (visibility != Visibility.RESTRICTED) collector.collect(this)
-  }
-
-  private[engine] def setVisibility(theVisibility: Int) = {
-    visibility = theVisibility
   }
 
   private[engine] def addScore(idx: Int, scr: Float) = {
@@ -167,7 +155,6 @@ class DirectScoreContext(
     Arrays.fill(scoreArray, 0.0f)
     docId = pq.addCoreScores(this)
     collector.collect(this)
-    docId = -1
   }
 
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")

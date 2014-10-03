@@ -51,7 +51,6 @@ class DataBuffer(maxPages: Int = 10000) {
   def alloc(writer: DataBufferWriter, recType: Int, byteSize: Int): DataBufferWriter = {
     if (byteSize >= MAX_DATASIZE) throw new DataBufferException(s"data size too big: $byteSize")
     if (recType >= MAX_RECTYPEID) throw new DataBufferException(s"record type id too big: $recType")
-    if (byteSize % 2 != 0) throw new DataBufferException(s"data size not aligned")
 
     // add a page if not enough room
     if (_freeSpace - byteSize - DESCRIPTOR_SIZE < 0) addPage()

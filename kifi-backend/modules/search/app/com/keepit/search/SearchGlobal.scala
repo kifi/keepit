@@ -9,10 +9,8 @@ import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.article.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api._
-import com.keepit.search.nlp.NlpParser
 import com.keepit.search.user.UserIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
-import com.keepit.search.spellcheck.SpellIndexerPlugin
 import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.user._
 import com.keepit.search.graph.library.LibraryIndexerPlugin
@@ -40,12 +38,10 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[PhraseIndexerPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[SpellIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UserGraphPlugin] != null)
     require(injector.instance[SearchFriendGraphPlugin] != null)
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded
-    require(NlpParser.enabled)
   }
 }

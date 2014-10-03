@@ -1,16 +1,15 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, Key, StringCacheImpl }
 import com.keepit.common.db._
-import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import com.keepit.common.cache.{ StringCacheImpl, FortyTwoCachePlugin, Key }
-import play.api.libs.json.{ JsArray, Json, JsValue }
+import play.api.libs.json.{ JsArray, JsValue, Json }
 import play.api.mvc.QueryStringBindable
+
 import scala.concurrent.duration.Duration
-import com.keepit.model.UserValues.UserValueStringHandler
 
 case class UserValue(
     id: Option[Id[UserValue]] = None,
@@ -68,6 +67,7 @@ object UserValueName {
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
+  val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 

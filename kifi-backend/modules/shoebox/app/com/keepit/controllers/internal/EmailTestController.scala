@@ -4,9 +4,10 @@ import com.google.inject.Inject
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.model.{ Library, NotificationCategory, User }
+import com.keepit.model.{ UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -22,6 +23,7 @@ class EmailTestController @Inject() (
     friendRequestEmailSender: FriendRequestEmailSender,
     contactJoinedEmailSender: ContactJoinedEmailSender,
     connectionMadeSender: FriendConnectionMadeEmailSender,
+    emailConfirmationSender: EmailConfirmationSender,
     libraryInviteEmailSender: LibraryInviteEmailSender) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
@@ -82,6 +84,7 @@ class EmailTestController @Inject() (
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
       case "libraryInviteUser" => libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
       case "libraryInviteNonUser" => libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
+      case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
     }
 
     emailF.map(email => Ok(email.htmlBody.value))

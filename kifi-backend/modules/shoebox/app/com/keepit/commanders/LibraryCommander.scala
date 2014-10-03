@@ -80,7 +80,8 @@ class LibraryCommander @Inject() (
         keeps = keepInfos,
         numKeeps = keepCount,
         numCollaborators = numCollabs,
-        numFollowers = numFollows)
+        numFollowers = numFollows,
+        lastKept = lib.lastKept)
     }
   }
 
@@ -199,7 +200,7 @@ class LibraryCommander @Inject() (
           keepRepo.save(k.copy(state = KeepStates.INACTIVE))(s)
         }
         keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
-        searchClient.updateURIGraph()
+        searchClient.updateKeepIndex()
       }
       None
     }
@@ -269,7 +270,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
+  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
@@ -303,20 +304,26 @@ class LibraryCommander @Inject() (
   }
 
   def inviteBulkUsers(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
-    val emailFutures = db.readWrite { implicit s =>
+    val emailFutures = {
       // save invites
-      invites.map { invite =>
-        libraryInviteRepo.save(invite)
+      db.readWrite { implicit s =>
+        invites.map { invite =>
+          libraryInviteRepo.save(invite)
+        }
       }
 
       invites.groupBy(invite => (invite.ownerId, invite.libraryId))
         .map { key =>
           val (inviterId, libId) = key._1
-          val inviter = basicUserRepo.load(inviterId)
+          val (inviter, lib, libOwner) = db.readOnlyReplica { implicit session =>
+            val inviter = basicUserRepo.load(inviterId)
+            val lib = libraryRepo.get(libId)
+            val libOwner = basicUserRepo.load(lib.ownerId)
+
+            (inviter, lib, libOwner)
+          }
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
-          val lib = libraryRepo.get(libId)
-          val libOwner = basicUserRepo.load(lib.ownerId)
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, libOwner.externalId, lib.slug)}"""
 
           // send notifications to kifi users only
@@ -410,14 +417,16 @@ class LibraryCommander @Inject() (
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
-    if (targetLib.ownerId != inviterId)
+    if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
       Left(LibraryFail("permission_denied"))
     else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail("cant_invite_to_system_generated_library"))
     else {
       val successInvites = db.readOnlyMaster { implicit s =>
         for (i <- inviteList) yield {
-          val (recipient, access, msgOpt) = i
+          val (recipient, inviteAccess, msgOpt) = i
+          // TODO (aaron): if non-owners invite that's not READ_ONLY, we need to change API to present "partial" failures
+          val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess // force READ_ONLY invites for non-owners
           val (inv, extId) = recipient match {
             case Left(id) =>
               (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(userRepo.get(id).externalId))
@@ -515,7 +524,7 @@ class LibraryCommander @Inject() (
   }
 
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
-    val (library, memTo) = db.readOnlyMaster { implicit s =>
+    val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
       (library, memTo)
@@ -526,14 +535,14 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
-            userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
+            userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
           }
         }
 
-        val badKeeps = applyToKeeps(userId, library, keeps, Set(), saveKeep)
+        val badKeeps = applyToKeeps(userId, toLibrary, keeps, Set(), saveKeep)
         badKeeps
     }
   }
@@ -562,12 +571,12 @@ class LibraryCommander @Inject() (
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession) = {
     val libs = libraryRepo.getByUser(userId)
     val mainOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
     }
     val secretOpt = libs.find {
-      case (acc, lib) =>
-        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
+      case (membership, lib) =>
+        membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
     }
     val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
       // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
@@ -613,7 +622,8 @@ case class LibraryInfo(
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
-  kind: LibraryKind)
+  kind: LibraryKind,
+  lastKept: Option[DateTime])
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -626,7 +636,8 @@ object LibraryInfo {
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
-    (__ \ 'kind).format[LibraryKind]
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).formatNullable[DateTime]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
   def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
@@ -639,7 +650,8 @@ object LibraryInfo {
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
-      kind = lib.kind
+      kind = lib.kind,
+      lastKept = lib.lastKept
     )
   }
 
@@ -676,6 +688,7 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   kind: LibraryKind,
+  lastKept: Option[DateTime],
   owner: BasicUser,
   collaborators: Seq[BasicUser],
   followers: Seq[BasicUser],
@@ -693,6 +706,7 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'collaborators).format[Seq[BasicUser]] and
     (__ \ 'followers).format[Seq[BasicUser]] and

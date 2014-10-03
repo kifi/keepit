@@ -16,8 +16,6 @@ object ApplicationBuild extends Build {
   Version.writeVersionToFile()
 
   lazy val searchDependencies = Seq(
-    "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
-      from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
     "org.apache.lucene" % "lucene-core" % "4.7.0",
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",

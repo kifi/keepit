@@ -6,7 +6,7 @@ import java.io.File
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ FakeKeepImageStore, ImageSize, KeepImageStore }
+import com.keepit.common.store.{ S3ImageConfig, FakeKeepImageStore, ImageSize, KeepImageStore }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -48,11 +48,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
 
       val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url, urlId = url.id.get,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get), inDisjointLib = lib.isDisjoint))
 
       val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url, urlId = url.id.get,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get), inDisjointLib = lib.isDisjoint))
       (user, lib, uri, keep1, keep2)
     }
   }
@@ -251,4 +251,34 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
       }
     }
   }
+
+  "KeepImageCommander" should {
+    "de-dupe known (by hash) images" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[KeepImageCommander]
+        val (user, lib, uri, keep1, _) = setup()
+
+        {
+          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, KeepImageSource.UserUpload)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess
+        }
+
+        {
+          val path = db.readOnlyMaster { implicit session =>
+            keepImageRepo.all().head.imagePath
+          }
+          val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path
+          val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, KeepImageSource.UserPicked)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+
+          // If this didn't de-dupe, it would fail, because the HTTP fetcher is disabled when no application is running
+          saved === ImageProcessState.StoreSuccess
+        }
+
+        true === true
+      }
+    }
+  }
+
 }

@@ -41,11 +41,11 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val hover = KeepSource.keeper
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,
-              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
             val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
             val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -154,19 +154,19 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val hover = KeepSource.keeper
             val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
             val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
             val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
             val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
             val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("google")))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("googleBetter")))

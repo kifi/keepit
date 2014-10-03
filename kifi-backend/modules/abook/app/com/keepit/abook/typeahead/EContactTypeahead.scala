@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.abook.ABookInfoRepo
 import scala.concurrent.{ Future }
 import com.keepit.common.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import com.keepit.typeahead._
 import org.joda.time.Minutes
 import com.keepit.common.time._
@@ -30,6 +30,10 @@ class EContactTypeahead @Inject() (
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
   val MYSQL_MAX_ROWS = 50000000
+
+  protected val refreshRequestConsolidationWindow = 10 minutes
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
 
   override protected def extractName(info: EContact): String = {
     val name = info.name.getOrElse("").trim

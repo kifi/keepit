@@ -1,14 +1,16 @@
 package com.keepit.curator.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.db.{ State, SequenceNumber }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ CuratorLibraryMembershipInfo, CuratorLibraryMembershipInfoRepo }
-import com.keepit.model.{ LibraryMembershipView, LibraryMembership, LibraryKind, Library, Name, SystemValueRepo }
+import com.keepit.model.view.LibraryMembershipView
+import com.keepit.model.{ LibraryMembership, Name, SystemValueRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 import scala.concurrent.Future
 
 class LibraryMembershipIngestionHelper @Inject() (

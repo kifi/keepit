@@ -162,14 +162,7 @@ class SendgridCommander @Inject() (
 
       datParamOpt.foreach { encodedEmailTrackingParam =>
         EmailTrackingParam.decode(encodedEmailTrackingParam) match {
-          case Right(param) =>
-            param.subAction.foreach(v => contextBuilder += ("subaction", v))
-            if (param.tips.nonEmpty) contextBuilder += ("emailTips", param.tips)
-            if (param.variableComponents.nonEmpty) contextBuilder += ("emailComponents", param.variableComponents)
-
-            param.auxiliaryData.foreach { ctx =>
-              ctx.data.foreach { case (key, value) => contextBuilder.data(key) = value }
-            }
+          case Right(param) => contextBuilder.addDetailedEmailInfo(param)
           case Left(errors) =>
             val errMsg = errors.mkString("; ")
             airbrake.notify(s"failed to decode EmailTrackingParam: $errMsg")

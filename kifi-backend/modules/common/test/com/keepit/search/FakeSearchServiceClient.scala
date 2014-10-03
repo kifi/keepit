@@ -14,6 +14,10 @@ import com.keepit.social.{ TypeaheadUserHit, BasicUser }
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
+  override def updateKeepIndex(): Unit = {}
+
+  override def updateLibraryIndex(): Unit = {}
+
   override def updateURIGraph(): Unit = {}
 
   override def reindexURIGraph(): Unit = {}
@@ -64,8 +68,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def benchmarks(): Future[BenchmarkResults] = ???
 
   override def version(): Future[String] = ???
-
-  override def correctSpelling(text: String, enableBoost: Boolean): Future[String] = ???
 
   override def showUserConfig(id: Id[User]): Future[SearchConfig] = ???
 

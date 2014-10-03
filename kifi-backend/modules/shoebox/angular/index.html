@@ -8,8 +8,8 @@
 <link rel="stylesheet" type="text/css" href="/dist/kifi.min.css">
 <link rel="stylesheet" type="text/css" href="/dist/svg.css">
 
-<div class="kf-cols" ng-controller="AppCtrl">
-  <header class="kf-header" ng-include="'layout/header/header.tpl.html'"></header>
+<div class="kf-cols ng-cloak" ng-controller="AppCtrl" ng-show="drawPage">
+  <header ng-include="'layout/header/header.tpl.html'"></header>
   <div class="kf-col-island">
     <aside class="kf-col kf-sidebar" ng-include="'layout/sidebar/sidebar.tpl.html'">
     </aside><section class="kf-scrollable-pane"><section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'">
@@ -24,3 +24,4 @@
 <script src="/dist/lib.min.js"></script>
 <script src="/dist/kifi.min.js"></script>
 <script>angular.bootstrap(document, ['kifi']);</script>
+<script type="text/javascript" async src="//platform.twitter.com/widgets.js"></script>

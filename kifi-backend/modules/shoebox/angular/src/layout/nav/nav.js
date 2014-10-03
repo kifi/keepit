@@ -3,13 +3,13 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$rootScope', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$anchorScroll',
-  function ($location, $rootScope, util, friendService, modalService, tagService, profileService, libraryService, $anchorScroll) {
+  '$location', '$window', '$rootScope', '$timeout', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
+  function ($location, $window, $rootScope, $timeout, util, friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
       restrict: 'A',
       templateUrl: 'layout/nav/nav.tpl.html',
-      link: function (scope /*, element, attrs*/) {
+      link: function (scope , element /*, attrs*/) {
         scope.counts = {
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
@@ -25,6 +25,25 @@ angular.module('kifi')
         scope.allInvitedLibs = libraryService.invitedSummaries;
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
+
+        var w = angular.element($window);
+        var scrollableLibList = element.find('.kf-scrollable-libs');
+
+        // on resizing window -> trigger new turn -> reset library list height
+        w.bind('resize', function () {
+          scope.$apply(function () {
+            setLibListHeight();
+          });
+        });
+
+        function setLibListHeight() {
+          if (scrollableLibList.offset()) {
+            scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
+          }
+          if (scope.refreshScroll) {
+            scope.refreshScroll();
+          }
+        }
 
         var fuseOptions = {
            keys: ['name'],
@@ -46,6 +65,30 @@ angular.module('kifi')
               util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
               util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
             });
+          }
+        });
+
+        // we thought about putting this check into the watch function above,
+        // but even when libraries are enabled, the element is found but the offset is 0
+        // in setLibListHeight(), if the offset is 0, the height of scrollableLibList == window height
+        // and thus no scrolly-bar =[
+        // once the offset is not 0, we know it's in the correct position and we can cancel this interval
+        var lastHeight = 0;
+        var promiseLibList = $interval(function() {
+          scrollableLibList = element.find('.kf-scrollable-libs');
+          if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
+            setLibListHeight();
+            if (lastHeight === scrollableLibList.height()) {
+              $interval.cancel(promiseLibList);
+            }
+            lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
+          }
+        }, 100);
+
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
+            util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
           }
         });
 
@@ -76,28 +119,6 @@ angular.module('kifi')
 
         scope.inRecoExperiment = function () {
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
-        };
-
-        // Filter Box Stuff
-        scope.orders = {
-          options: ['A-Z','Z-A','# Keeps'],
-          currentOrder: ''
-        };
-
-        scope.sortLibsBy = function () {
-          switch (scope.orders.currentOrder) {
-            case 'A-Z':
-              sortLibrariesByName(1);
-              break;
-            case 'Z-A':
-              sortLibrariesByName(-1);
-              break;
-            case '# Keeps':
-              sortLibrariesByNumKeeps();
-              break;
-            default:
-              break;
-          }
         };
 
         scope.filter = {};
@@ -150,47 +171,66 @@ angular.module('kifi')
           return scope.userLibsToShow.concat(scope.invitedLibsToShow);
         };
 
-        function sortLibrariesByName(order) {
-          var sorting = function(a,b) {
-            if (a.name > b.name) {
-              return 1;
-            } else if (a.name < b.name) {
-              return -1;
-            } else {
-              return 0;
-            }
-          };
-
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
-          if (order < 0) {
-            libs = libs.reverse();
-            invited = invited.reverse();
-          }
+        scope.sortByName = function () {
+          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
+          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc);
+          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc);
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
-        
-        function sortLibrariesByNumKeeps() {
-          var sorting = function(a,b) {
-            if (a.numKeeps > b.numKeeps) {
-              return -1;
-            } else if (a.numKeeps < b.numKeeps) {
-              return 1;
-            } else {
-              return 0;
-            }
-          };
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
-          util.replaceArrayInPlace(scope.userLibsToShow, libs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
-
-        // Scroll-Bar Stuff
-        scope.scrollAround = function() {
-          $anchorScroll();
         };
+
+        scope.sortByNameReverse = function () {
+          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
+          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc).reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc).reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByNumKeeps = function () {
+          var libs = _.sortBy(scope.allUserLibs, 'numKeeps').reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, 'numKeeps').reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByNumFollowers = function () {
+          var libs = _.sortBy(scope.allUserLibs, 'numFollowers').reverse();
+          var invited = _.sortBy(scope.allInvitedLibs, 'numFollowers').reverse();
+          util.replaceArrayInPlace(scope.userLibsToShow, libs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
+        };
+
+        scope.sortByLastViewed = function () {
+          function sortByOptTime(libs) {
+            var partition = _.values(
+                              _.groupBy(libs, function(lib) { 
+                                return lib.lastViewed === undefined;
+                              })
+                            );
+            var libsUndefinedTimes = partition[0];
+            var libsRealTimes = partition[1];
+            return _.sortBy(libsRealTimes, 'lastViewed').reverse().concat(libsUndefinedTimes);
+          }
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+        };
+
+        scope.sortByLastKept = function () {
+          function sortByOptTime(libs) {
+            var partition = _.values(
+                              _.groupBy(libs, function(lib) { 
+                                return lib.lastKept === undefined;
+                              })
+                            );
+            var libsUndefinedTimes = partition[0];
+            var libsRealTimes = partition[1];
+            return _.sortBy(libsRealTimes, 'lastKept').reverse().concat(libsUndefinedTimes);
+          }
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+        };
+
       }
     };
   }

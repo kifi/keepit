@@ -50,7 +50,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val user1 = makeUser(42, shoebox)
         val user2 = makeUser(43, shoebox)
 
-        Await.ready(sender.addToQueue(), Duration(5, "seconds"))
+        Await.ready(sender.addToQueue(Seq(user1.id.get, user2.id.get)), Duration(5, "seconds"))
         fakeQueue.messages.size === 2
         fakeQueue.lockedMessages.size === 0
         fakeQueue.consumedMessages.size === 0

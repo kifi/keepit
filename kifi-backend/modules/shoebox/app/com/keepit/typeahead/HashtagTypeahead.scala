@@ -12,6 +12,7 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
+import com.keepit.serializer.TupleFormat
 
 case class LibraryHashtagTypeahead(ownerId: Id[Library], tags: Seq[Hashtag], filter: PrefixFilter[Hashtag], createdAt: DateTime) extends PersonalTypeahead[Library, Hashtag, Hashtag] {
   def getInfos(tagIds: Seq[Id[Hashtag]]) = Future.successful(tagIds.map(id => tags(id.id.toInt)))
@@ -28,10 +29,16 @@ class HashtagTypeahead @Inject() (
     collectionRepo: CollectionRepo,
     db: Database) extends Typeahead[Library, Hashtag, Hashtag, LibraryHashtagTypeahead] {
 
+  protected val refreshRequestConsolidationWindow = 0 seconds
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
+
+  private val refreshIfOlderThan = 15 minutes
+
   protected def get(libraryId: Id[Library]): Future[Option[LibraryHashtagTypeahead]] = Future.successful {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     cache.get(LibraryHashtagTypeaheadLibraryIdKey(libraryId)).map { typeahead =>
-      if (typeahead.createdAt.isBefore(clock.now.minusHours(24))) refresh(libraryId)
+      if (typeahead.createdAt.isBefore(clock.now.minusMillis(refreshIfOlderThan.toMillis.toInt))) refresh(libraryId)
       typeahead
     }
   }
@@ -60,3 +67,15 @@ case class LibraryHashtagTypeaheadLibraryIdKey(id: Id[Library]) extends Key[Libr
 
 class LibraryHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryHashtagTypeaheadLibraryIdKey, LibraryHashtagTypeahead](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class HashtagHit(tag: Hashtag, matches: Seq[(Int, Int)])
+object HashtagHit {
+  implicit val format = {
+    implicit val tupleFormat = TupleFormat.tuple2Format[Int, Int]
+    Json.format[HashtagHit]
+  }
+  def highlight(query: String, tags: Seq[Hashtag]): Seq[HashtagHit] = {
+    val queryRegex = PrefixMatching.getHighlightingRegex(query)
+    tags.map { tag => HashtagHit(tag, PrefixMatching.highlight(tag.tag, queryRegex)) }
+  }
+}

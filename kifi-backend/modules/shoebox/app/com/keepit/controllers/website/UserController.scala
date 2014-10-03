@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
+import com.keepit.commanders.emails.{ EmailSenderProvider, EmailConfirmationSender }
 import com.keepit.commanders.{ ConnectionInfo, _ }
 import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.keepit.common.db.slick._
@@ -58,6 +59,7 @@ class UserController @Inject() (
     authCommander: AuthCommander,
     searchClient: SearchServiceClient,
     abookUploadConf: ABookUploadConf,
+    emailSender: EmailSenderProvider,
     fortytwoConfig: FortyTwoConfig) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
@@ -248,14 +250,14 @@ class UserController @Inject() (
     Ok(JsString("success"))
   }
 
-  def addEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def addEmail() = JsonAction.authenticatedParseJsonAsync { implicit request =>
     val newAddress = (request.body \ "email").as[String]
     val isPrimary = (request.body \ "isPrimary").as[Boolean]
     EmailAddress.validate(newAddress) match {
       case Failure(e) =>
-        BadRequest(e.getMessage)
+        Future.successful(BadRequest(e.getMessage))
       case Success(newEmail) =>
-        userCommander.addEmail(request.userId, newEmail, isPrimary) match {
+        userCommander.addEmail(request.userId, newEmail, isPrimary) map {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
@@ -422,25 +424,19 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
+
+  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticatedAsync { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
-          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-          postOffice.sendMail(ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(email),
-            subject = "Kifi.com | Please confirm your email address",
-            htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = NotificationCategory.User.EMAIL_CONFIRMATION
-          ))
-          Ok("0")
+          emailSender.confirmation(emailAddr) map { f =>
+            Ok("0")
+          }
         case _ =>
-          Forbidden("0")
+          Future.successful(Forbidden("0"))
       }
     }
-    Ok
   }
 
   def importStatus() = JsonAction.authenticatedAsync { implicit request =>

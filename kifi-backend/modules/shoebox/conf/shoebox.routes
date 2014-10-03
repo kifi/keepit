@@ -220,7 +220,6 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
@@ -609,9 +608,6 @@ GET     /admin/phrases              @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
-
-GET     /admin/spell/spellchecker   @com.keepit.controllers.admin.AdminSpellCorrectorController.spellChecker()
-POST    /admin/spell/correct        @com.keepit.controllers.admin.AdminSpellCorrectorController.correct()
 
 GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
 POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])

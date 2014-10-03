@@ -1,0 +1,11 @@
+@(toUserId: Id[User], verifyUrl: String)
+@import com.keepit.common.mail.template.helpers._
+
+Hi @firstName(toUserId),
+
+To protect your privacy and security, please confirm your email address by clicking the link below:
+@verifyUrl
+
+We look forward seeing you on Kifi,
+
+The Kifi Team
