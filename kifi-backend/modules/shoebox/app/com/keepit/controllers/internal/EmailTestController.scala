@@ -3,6 +3,7 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
@@ -82,8 +83,14 @@ class EmailTestController @Inject() (
       case "connectionMade" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
       case "socialFriendJoined" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(FACEBOOK))
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
-      case "libraryInviteUser" => libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
-      case "libraryInviteNonUser" => libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
+      case "libraryInviteUser" => {
+        implicit val config = PublicIdConfiguration("secret key")
+        libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
+      }
+      case "libraryInviteNonUser" => {
+        implicit val config = PublicIdConfiguration("secret key")
+        libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
+      }
       case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
     }
 
