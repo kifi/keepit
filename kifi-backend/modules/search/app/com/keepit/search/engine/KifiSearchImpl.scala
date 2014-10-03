@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.{ KifiShardResult, KifiResultCollector }
+import com.keepit.search.engine.result.{ HitQueue, KifiShardResult, KifiResultCollector }
 import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation

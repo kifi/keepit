@@ -5,9 +5,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.KifiResultCollector.HitQueue
-import com.keepit.search.engine.result.{ KifiResultCollector, KifiNonUserResultCollector, KifiShardResult, KifiShardHit }
-import org.apache.lucene.search._
+import com.keepit.search.engine.result._
+import org.apache.lucene.search.{ Explanation, Query }
 import scala.concurrent.{ Future, Promise }
 
 class KifiSearchNonUserImpl(
@@ -69,7 +68,7 @@ class KifiSearchNonUserImpl(
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), 0, 0, total, true)
   }
 
-  override def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
+  override def toKifiShardHit(h: Hit): KifiShardHit = {
     getKeepRecord(h.secondaryId) match {
       case Some(r) =>
         KifiShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
