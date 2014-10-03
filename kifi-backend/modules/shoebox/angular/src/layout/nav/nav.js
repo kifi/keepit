@@ -229,9 +229,10 @@ angular.module('kifi')
                               );
                 var libsUndefinedTimes = partition[0];
                 var libsRealTimes = partition[1];
-
-                var order = libsRealTimes.sort(sorting);
-                return order.concat(libsUndefinedTimes);
+                if (!libsRealTimes) {
+                  libsRealTimes = [];
+                }
+                return libsRealTimes.concat(libsUndefinedTimes);
               };
               libs = sortByOptTime(scope.allUserLibs);
               invited = sortByOptTime(scope.allInvitedLibs);
@@ -252,9 +253,10 @@ angular.module('kifi')
                               );
                 var libsUndefinedTimes = partition[0];
                 var libsRealTimes = partition[1];
-
-                var order = libsRealTimes.sort(sorting);
-                return order.concat(libsUndefinedTimes);
+                if (!libsRealTimes) {
+                  libsRealTimes = [];
+                }
+                return libsRealTimes.sort(sorting).concat(libsUndefinedTimes);
               };
               libs = sortByOptTime(scope.allUserLibs);
               invited = sortByOptTime(scope.allInvitedLibs);
