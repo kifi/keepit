@@ -3,6 +3,7 @@ package com.keepit.typeahead
 import scala.math.min
 import com.keepit.common.logging.Logging
 import scala.util.matching.Regex
+import java.util.regex.Pattern
 
 object PrefixMatching extends Logging {
   private[this] def initDistance(numTerms: Int): Array[Int] = {
@@ -78,7 +79,7 @@ object PrefixMatching extends Logging {
 
   def getHighlightingRegex(query: String): Regex = {
     val queryTerms = PrefixFilter.tokenize(query)
-    ("(^|" + PrefixFilter.tokenBoundary + ")(" + queryTerms.sortBy(-_.length).mkString("|") + ")").r
+    ("(^|" + PrefixFilter.tokenBoundary + ")(" + queryTerms.sortBy(-_.length).map(Pattern.quote).mkString("|") + ")").r
   }
 
   def highlight(name: String, highlightingRegex: Regex): List[(Int, Int)] = {
