@@ -85,28 +85,6 @@ angular.module('kifi')
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
 
-        // Filter Box Stuff
-        scope.orders = {
-          options: ['A-Z','Z-A','# Keeps'],
-          currentOrder: ''
-        };
-
-        scope.sortLibsBy = function () {
-          switch (scope.orders.currentOrder) {
-            case 'A-Z':
-              sortLibrariesByName(1);
-              break;
-            case 'Z-A':
-              sortLibrariesByName(-1);
-              break;
-            case '# Keeps':
-              sortLibrariesByNumKeeps();
-              break;
-            default:
-              break;
-          }
-        };
-
         scope.filter = {};
         scope.isFilterFocused = false;
         var preventClearFilter = false;
@@ -157,42 +135,49 @@ angular.module('kifi')
           return scope.userLibsToShow.concat(scope.invitedLibsToShow);
         };
 
-        function sortLibrariesByName(order) {
-          var sorting = function(a,b) {
-            if (a.name > b.name) {
-              return 1;
-            } else if (a.name < b.name) {
-              return -1;
-            } else {
-              return 0;
-            }
-          };
-
-          var libs = scope.allUserLibs.sort(sorting);
-          var invited = scope.allInvitedLibs.sort(sorting);
-          if (order < 0) {
-            libs = libs.reverse();
-            invited = invited.reverse();
+        scope.sortLibraries = function (sortBy) {
+          var sorting;
+          switch (sortBy) {
+            case 'A-Z':
+              sorting = function(a,b) {
+                if (a.name > b.name) { return 1; } 
+                else if (a.name < b.name) { return -1; } 
+                else { return 0; }
+              };
+              break;
+            case 'Z-A':
+              sorting = function(a,b) {
+                if (a.name < b.name) { return 1; } 
+                else if (a.name > b.name) { return -1; } 
+                else { return 0; }
+              };
+              break;
+            case 'NumKeeps':
+              sorting = function(a,b) {
+                if (a.numKeeps < b.numKeeps) { return 1; } 
+                else if (a.numKeeps > b.numKeeps) { return -1; } 
+                else { return 0; }
+              };
+              break;
+            case 'NumFollowers':
+              sorting = function(a,b) {
+                if (a.numFollowers < b.numFollowers) { return 1; } 
+                else if (a.numFollowers > b.numFollowers) { return -1; } 
+                else { return 0; }
+              };
+              break;
+            case 'LastViewed':
+              break;
+            case 'LastKept':
+              break;
+            default:
+              break;
           }
-          util.replaceArrayInPlace(scope.userLibsToShow, libs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
-        
-        function sortLibrariesByNumKeeps() {
-          var sorting = function(a,b) {
-            if (a.numKeeps > b.numKeeps) {
-              return -1;
-            } else if (a.numKeeps < b.numKeeps) {
-              return 1;
-            } else {
-              return 0;
-            }
-          };
           var libs = scope.allUserLibs.sort(sorting);
           var invited = scope.allInvitedLibs.sort(sorting);
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        }
+        };
 
         // Scroll-Bar Stuff
         scope.scrollAround = function() {
