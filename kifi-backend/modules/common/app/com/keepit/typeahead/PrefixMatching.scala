@@ -91,5 +91,7 @@ object PrefixMatching extends Logging {
       Nil
     }
   }
+
+  def highlight(name: String, query: String): List[(Int, Int)] = highlight(name, getHighlightingRegex(query))
 }
 
