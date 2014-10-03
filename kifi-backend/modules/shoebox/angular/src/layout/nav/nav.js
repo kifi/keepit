@@ -121,6 +121,10 @@ angular.module('kifi')
           return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
 
+        ///////////////////////////////
+        ////// Filtering Stuff ////////
+        ///////////////////////////////
+
         scope.filter = {};
         scope.isFilterFocused = false;
         var preventClearFilter = false;
@@ -171,6 +175,10 @@ angular.module('kifi')
           return scope.userLibsToShow.concat(scope.invitedLibsToShow);
         };
 
+        ///////////////////////////////
+        /////// Sorting Stuff /////////
+        ///////////////////////////////
+
         scope.sortByName = function () {
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
           var libs = _.sortBy(scope.allUserLibs, sortByNameFunc);
@@ -208,8 +216,8 @@ angular.module('kifi')
                                 return lib.lastViewed === undefined;
                               })
                             );
-            var libsUndefinedTimes = partition[0];
-            var libsRealTimes = partition[1];
+            var libsRealTimes = partition[0];
+            var libsUndefinedTimes = partition[1];
             return _.sortBy(libsRealTimes, 'lastViewed').reverse().concat(libsUndefinedTimes);
           }
           util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
