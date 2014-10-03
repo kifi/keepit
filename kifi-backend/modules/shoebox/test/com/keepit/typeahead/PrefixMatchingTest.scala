@@ -59,5 +59,24 @@ class PrefixMatchingTest extends Specification {
       )
       prefixMatch(names, "s") === Seq("Sam Sasaki", "Satoshi Ueno", "Eishay Smith")
     }
+
+    "highlight the longest matches" in {
+      def highlight(name: String, query: String): Seq[String] = PrefixMatching.highlight(name, query).map { case (idx, len) => name.substring(idx, idx + len) }
+
+      highlight("Alan Turing", "a") === Seq("A")
+      highlight("Alan - Turing", "a") === Seq("A")
+      highlight("Alan Turing", " a") === Seq("A")
+      highlight("Alan Turing", " a ") === Seq("A")
+      highlight("Alan Turing", "a Tu") === Seq("A", "Tu")
+      highlight("Alan Turing", "tu a") === Seq("A", "Tu")
+      highlight("Alan Turing", "g") === Seq()
+      highlight("Alan Turing", "al") === Seq("Al")
+      highlight("Alan Turing", "a alan") === Seq("Alan")
+      highlight("Alan Turing", "alan a") === Seq("Alan")
+      highlight("Léo Grimaldi", "leo") === Seq("Léo")
+      highlight("Léo Grimaldi", "Leo") === Seq("Léo")
+      highlight("Léo Grimaldi", "léo") === Seq("Léo")
+      highlight("Léo Grimaldi", "l grim") === Seq("L", "Grim")
+    }
   }
 }

@@ -35,7 +35,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.typeahead.{ TypeaheadHit, HashtagTypeahead }
+import com.keepit.typeahead.{ HashtagHit, TypeaheadHit, HashtagTypeahead }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -775,9 +775,11 @@ class KeepsCommander @Inject() (
     keepsWithTags
   }
 
-  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[Hashtag]] = {
+  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
-    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info))
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map { hashtags =>
+      hashtags.map { tag => HashtagHit.highlight(tag, query) }
+    }
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

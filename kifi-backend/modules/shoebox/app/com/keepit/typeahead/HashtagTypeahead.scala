@@ -12,6 +12,7 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
+import com.keepit.serializer.TupleFormat
 
 case class LibraryHashtagTypeahead(ownerId: Id[Library], tags: Seq[Hashtag], filter: PrefixFilter[Hashtag], createdAt: DateTime) extends PersonalTypeahead[Library, Hashtag, Hashtag] {
   def getInfos(tagIds: Seq[Id[Hashtag]]) = Future.successful(tagIds.map(id => tags(id.id.toInt)))
@@ -66,3 +67,12 @@ case class LibraryHashtagTypeaheadLibraryIdKey(id: Id[Library]) extends Key[Libr
 
 class LibraryHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryHashtagTypeaheadLibraryIdKey, LibraryHashtagTypeahead](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class HashtagHit(tag: Hashtag, matches: Seq[(Int, Int)])
+object HashtagHit {
+  implicit val format = {
+    implicit val tupleFormat = TupleFormat.tuple2Format[Int, Int]
+    Json.format[HashtagHit]
+  }
+  def highlight(tag: Hashtag, query: String): HashtagHit = HashtagHit(tag, PrefixMatching.highlight(tag.tag, query))
+}
