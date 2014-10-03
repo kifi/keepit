@@ -18,7 +18,6 @@ import com.keepit.search.graph.user._
 import com.keepit.search.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
 import com.keepit.search.phrasedetector.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
 import com.keepit.search.sharding._
-import com.keepit.search.spellcheck.{ SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer }
 import com.keepit.search.user._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{ Provides, Singleton }
@@ -70,7 +69,6 @@ trait IndexModule extends ScalaModule with Logging {
     bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]
-    bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
     bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
     bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped]
@@ -205,14 +203,6 @@ trait IndexModule extends ScalaModule with Logging {
       new File(configDir, "phrase")
     }
     new PhraseIndexerImpl(dir, airbrake, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer, conf: Configuration, serviceDisovery: ServiceDiscovery): SpellIndexer = {
-    val version = IndexerVersionProviders.Spell.getVersionByStatus(serviceDisovery)
-    val spellDir = getIndexDirectory("index.spell.directory", noShard, version, backup, conf, IndexerVersionProviders.Spell.getVersionsForCleanup())
-    SpellIndexer(spellDir, shardedArticleIndexer)
   }
 
   @Provides @Singleton
