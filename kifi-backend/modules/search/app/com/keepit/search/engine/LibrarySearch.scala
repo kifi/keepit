@@ -3,8 +3,7 @@ package com.keepit.search.engine
 import com.keepit.common.db.Id
 import com.keepit.model.{ Keep, User }
 import com.keepit.search.{ Searcher, SearchConfig, SearchFilter }
-import com.keepit.search.engine.result.KifiResultCollector.HitQueue
-import com.keepit.search.engine.result.{ LibraryShardHit, LibraryResultCollector, LibraryShardResult }
+import com.keepit.search.engine.result.{ HitQueue, LibraryShardHit, LibraryResultCollector, LibraryShardResult }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
