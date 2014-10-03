@@ -54,9 +54,14 @@
     <span class="kf-keep-footer-link" ng-if="!hasTag(keep) && keep.isMyBookmark"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
     <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark && !keep.isPrivate"><a ng-click="togglePrivate(keep)" href='javascript:'>Make Private</a></span>
     <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark && keep.isPrivate"><a ng-click="togglePrivate(keep)" href='javascript:'>Make Public</a></span>
-    <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark"><a ng-click="unkeep(keep)" href='javascript:'>Unkeep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPublic(keep)" href='javascript:'>Keep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPrivate(keep)" href='javascript:'>Keep Privately</a></span>
+    <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark"><a ng-click="unkeep(keep)" href="javascript:">Unkeep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPublic(keep)" href="javascript:">Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!keep.isMyBookmark"><a ng-click="keepPrivate(keep)" href="javascript:">Keep Privately</a></span>
+    <span class="kf-keep-footer-link" ng-if="librariesEnabled && !keepingToLibrary"><a ng-click="showKeepingToLibrary()" href="javascript:">Keep to a Library</a></span>
+    <select ng-if="keepingToLibrary" ng-model="data.selectedLibraryId" ng-change="keepToLibrary(keep)">
+      <option ng-repeat="lib in libraries"
+              value="{{lib.id}}">{{lib.name}}</option>
+    </select>
     <span class="kf-keep-footer-link" ng-if="keep.isMyBookmark && librariesEnabled"><a ng-href="{{keep.libraryInfo.url}}">{{keep.libraryInfo.name}}</a></span>
     <div class="kf-keep-private" ng-if="keep.isMyBookmark && keep.isPrivate"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>

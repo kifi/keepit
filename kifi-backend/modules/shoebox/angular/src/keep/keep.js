@@ -34,9 +34,9 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService',
+  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService', 'keepDecoratorService',
   'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
-  function ($document, $rootScope, $rootElement, installService, keepActionService,
+  function ($document, $rootScope, $rootElement, installService, keepActionService, keepDecoratorService,
             libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
@@ -283,6 +283,34 @@ angular.module('kifi')
           });
         };
 
+        scope.showKeepingToLibrary = function () {
+          scope.keepingToLibrary = true;
+        };
+
+        scope.keepToLibrary = function (keep) {
+          var libraryId = scope.data.selectedLibraryId;
+
+          return keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
+            if (result.failures && result.failures.length) {
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html'
+              });
+            } else {
+              return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                var keep = new keepDecoratorService.Keep(fullKeep);
+                keep.buildKeep(keep);
+                keep.makeKept();
+
+                libraryService.fetchLibrarySummaries(true);
+                libraryService.addToLibraryCount(libraryId, 1);  // This needs to be plural.
+                tagService.addToKeepCount(1);  // Should this be 1 or n?
+
+                scope.keepingToLibrary = false;
+              });
+            }
+          });
+        };
+
         scope.getSingleSelectedKeep = function (keep) {
           return [keep];
         };
@@ -341,8 +369,15 @@ angular.module('kifi')
 
         scope.$watch(function () {
           return libraryService.librarySummaries.length;
-        }, function () {
-          scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
+        }, function (newVal) {
+          if (newVal) {
+            scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
+
+            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+              return lib.access !== 'read_only';
+            });
+            scope.data = {};
+          }
         });
 
         // Dragging.
