@@ -1,6 +1,6 @@
 <ul class="kf-nav-group" ng-if="!librariesEnabled">
   <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/recommendations') }">
-    <a class="kf-nav-link" href="/recommendations" ng-if="inRecoExperiment()">
+    <a class="kf-nav-link" href="/recommendations">
       <span class="sprite sprite-clover-small"></span>
       <span class="kf-nav-name pre-libraries-style">Recommendations</span>
     </a>
@@ -16,7 +16,7 @@
 
 <div class="kf-nav-group" ng-if="librariesEnabled">
   <div class="kf-nav-lib-recos" ng-class="{ active: isActive('/recommendations') }">
-    <a class="kf-nav-link" href="/recommendations" ng-if="inRecoExperiment()">
+    <a class="kf-nav-link" href="/recommendations">
       <span class="sprite sprite-clover-small"></span>
       <span class="kf-nav-name">Recommendations</span>
     </a>

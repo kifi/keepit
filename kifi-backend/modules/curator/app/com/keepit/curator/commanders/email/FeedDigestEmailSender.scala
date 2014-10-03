@@ -15,7 +15,7 @@ import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.commanders.RecommendationGenerationCommander
+import com.keepit.curator.commanders.{ RecommendationGenerationCommander, SeedIngestionCommander }
 import com.keepit.curator.model.{ UriRecommendation, UriRecommendationRepo }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
@@ -127,6 +127,7 @@ sealed case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[
 class FeedDigestEmailSender @Inject() (
     recommendationGenerationCommander: RecommendationGenerationCommander,
     uriRecommendationRepo: UriRecommendationRepo,
+    seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     abook: ABookServiceClient,
     db: Database,
@@ -140,9 +141,9 @@ class FeedDigestEmailSender @Inject() (
 
   val defaultUriRecommendationScores = UriRecommendationScores()
 
-  def addToQueue(): Future[Set[Id[User]]] = {
+  def addToQueue(additionalUsers: Seq[Id[User]] = Seq.empty): Future[Set[Id[User]]] = {
     if (serviceDiscovery.isLeader()) {
-      userExperimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map { userSet =>
+      shoebox.getUsers(seedCommander.getUsersWithSufficientData().toSeq ++ additionalUsers).map { userSet =>
         userSet.map { user =>
           if (user.primaryEmail.isDefined) {
             queue.send(SendFeedDigestToUserMessage(user.id.get))
