@@ -23,24 +23,24 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
@@ -69,20 +69,20 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.1f, 0.2f, 0.7f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
 
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
 
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(2, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -105,18 +105,18 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(KifiResultCollector.MIN_MATCHING - 0.01f, 0.02f, remainingWeight), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
@@ -141,27 +141,27 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(1)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(10)
-      ctx.setVisibility(Visibility.OTHERS)
+      ctx.visibility = Visibility.OTHERS
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.NETWORK)
+      ctx.visibility = Visibility.NETWORK
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.MEMBER)
+      ctx.visibility = Visibility.MEMBER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -185,17 +185,17 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -215,22 +215,22 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.8f, 0.1f, 0.1f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 4
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 3
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 2
       ctx.flush()
