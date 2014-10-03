@@ -172,7 +172,7 @@ angular.module('kifi')
         };
 
         scope.sortLibraries = function (sortBy) {
-          var sorting, libs, invited;
+          var sorting, sortByOptTime, libs, invited;
           switch (sortBy) {
             case 'A-Z':
               sorting = function(a,b) {
@@ -215,6 +215,26 @@ angular.module('kifi')
               break;
 
             case 'LastViewed':
+              sorting = function(a,b) { // assumes lastViewed is not undefined
+                if (a.lastViewed < b.lastViewed) { return 1; } 
+                else if (a.lastViewed > b.lastViewed) { return -1; } 
+                else { return 0; }
+              };
+              sortByOptTime = function(libs) {
+                // first partitions lastViewed fields that are undefined & adds them after sorted list
+                var partition = _.values(
+                                _.groupBy(libs, function(lib) { 
+                                  return lib.lastViewed === undefined;
+                                })
+                              );
+                var libsUndefinedTimes = partition[0];
+                var libsRealTimes = partition[1];
+
+                var order = libsRealTimes.sort(sorting);
+                return order.concat(libsUndefinedTimes);
+              };
+              libs = sortByOptTime(scope.allUserLibs);
+              invited = sortByOptTime(scope.allInvitedLibs);
               break;
 
             case 'LastKept':
@@ -223,7 +243,7 @@ angular.module('kifi')
                 else if (a.lastKept > b.lastKept) { return -1; } 
                 else { return 0; }
               };
-              var sortByOptTime = function(libs) {
+              sortByOptTime = function(libs) {
                 // first partitions lastKept fields that are undefined & adds them after sorted list
                 var partition = _.values(
                                 _.groupBy(libs, function(lib) { 
