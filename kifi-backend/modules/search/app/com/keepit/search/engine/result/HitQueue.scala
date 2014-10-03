@@ -8,7 +8,7 @@ class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
   def highScore: Float = _highScore
 
   private[this] var _totalHits = 0
-  def totalHits: Int = 0
+  def totalHits: Int = _totalHits
 
   override def lessThan(a: Hit, b: Hit) = (a.normalizedScore < b.normalizedScore)
 
