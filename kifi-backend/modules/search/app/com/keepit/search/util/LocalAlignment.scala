@@ -7,7 +7,7 @@ import java.util.Arrays
 import LocalAlignment._
 import com.keepit.common.logging.Logging
 
-trait LocalAlignment {
+abstract class LocalAlignment {
   def begin(): Unit
   def end(): Unit
   def update(id: Int, position: Int, weight: Float = 1.0f): Unit
@@ -100,7 +100,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
   private[this] val matching = new Array[Boolean](bufSize)
   private[this] var state: State[Match] = phraseMatcher.initialState
   private[this] var matchedPhrases = Set.empty[Match]
-  private[this] var dictSize = phraseMatcher.size
+  private[this] val dictSize = phraseMatcher.size
 
   private[this] def flush(): Unit = {
     while (processedPos < bufferedPos) { processOnePosition() }
@@ -108,8 +108,9 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
 
   @inline private[this] def processOnePosition(): Unit = {
     processedPos += 1
-    val weight = if (matching(processedPos % bufSize)) 1.0f else nonPhraseWeight
-    localAlignment.update(ids(processedPos % bufSize), processedPos, weight)
+    val index = processedPos % bufSize
+    val weight = if (matching(index)) 1.0f else nonPhraseWeight
+    localAlignment.update(ids(index), processedPos, weight)
   }
 
   def begin(): Unit = {
@@ -137,22 +138,24 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
       processOnePosition()
     }
     bufferedPos = pos
-    ids(pos % bufSize) = termId
-    matching(pos % bufSize) = false
+    val index = pos % bufSize
+    ids(index) = termId
+    matching(index) = false
 
     state = phraseMatcher.next(termId, state)
     state.check(pos, onMatch = {
       case (curPos, aMatch) =>
-        var i = curPos - min(bufSize, aMatch.len)
+        val aMatchLen = aMatch.len
+        var i = curPos - min(bufSize, aMatchLen)
         while (i < curPos) {
           i += 1
           if (i < 0) {
-            log.error(s"i=$i curPos=$curPos aMatch.len=${aMatch.len}")
+            log.error(s"i=$i curPos=$curPos aMatch.len=${aMatchLen}")
           } else {
             matching(i % bufSize) = true
           }
         }
-        if (aMatch.len > 1) matchedPhrases += aMatch
+        if (aMatchLen > 1) matchedPhrases += aMatch
     })
   }
 
