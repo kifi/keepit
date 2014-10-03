@@ -53,6 +53,6 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
     val total = elapsed(_endTime)
     val detail = timeLine.map(event => s"${event._1}=${elapsed(event._2)}").mkString("[", ", ", "]")
 
-    s"search time summary: total = $total, detail=$detail"
+    s"search time summary: total=$total, detail=$detail"
   }
 }

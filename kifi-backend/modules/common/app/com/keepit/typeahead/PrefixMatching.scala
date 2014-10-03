@@ -1,8 +1,10 @@
 package com.keepit.typeahead
 
 import scala.math.min
+import com.keepit.common.logging.Logging
+import scala.util.matching.Regex
 
-object PrefixMatching {
+object PrefixMatching extends Logging {
   private[this] def initDistance(numTerms: Int): Array[Int] = {
     val scores = new Array[Int](numTerms + 1)
     var i = 0
@@ -66,5 +68,30 @@ object PrefixMatching {
     if (matchFlags != allMatched) sc = maxDist
     sc
   }
+
+  private def doTheyAlign(firstString: String, secondString: String): Boolean = {
+    val firstTokens = PrefixFilter.tokenizeNormalizedName(firstString)
+    val secondTokens = PrefixFilter.tokenizeNormalizedName(secondString)
+    (firstTokens.length == secondTokens.length) &&
+      (firstTokens zip secondTokens).forall { case (firstToken, secondToken) => firstToken.length == secondToken.length }
+  }
+
+  def getHighlightingRegex(query: String): Regex = {
+    val queryTerms = PrefixFilter.tokenize(query)
+    ("(^|" + PrefixFilter.tokenBoundary + ")(" + queryTerms.sortBy(-_.length).mkString("|") + ")").r
+  }
+
+  def highlight(name: String, highlightingRegex: Regex): List[(Int, Int)] = {
+    // This requires that the normalization does not shift characters (e.g. currently only removes diacritical marks)
+    val normalizedName = PrefixFilter.normalize(name)
+    if (doTheyAlign(name, normalizedName)) {
+      highlightingRegex.findAllMatchIn(normalizedName).map { m => (m.start(2), m.group(2).length) }.toList
+    } else {
+      log.warn(s"PrefixFilter normalization has not preserved alignment from $name to $normalizedName")
+      Nil
+    }
+  }
+
+  def highlight(name: String, query: String): List[(Int, Int)] = highlight(name, getHighlightingRegex(query))
 }
 

@@ -115,7 +115,7 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
       if (matching >= matchingThreshold) {
         score = ctx.score() * matching * clickBoost
       } else {
-        // below the threshold (and above MIN_MATCHING), we save this hit if this is a clicked hit (clickBoost > 1.0f)
+        // below the threshold (and above minMatchingThreshold), we save this hit if this is a clicked hit (clickBoost > 1.0f)
         if (clickBoost > 1.0f) score = ctx.score() * matching * clickBoost // else score remains 0.0f
       }
 
