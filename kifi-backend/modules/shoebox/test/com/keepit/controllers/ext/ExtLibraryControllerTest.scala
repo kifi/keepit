@@ -402,11 +402,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(tagKeep(user1, libPubId, keep.externalId, "Awesome")) === OK
 
         // user can search tags in own library
-        contentAsString(searchTags(user1, libPubId, "a", 2)) === """["aardvark","animal"]"""
+        contentAsString(searchTags(user1, libPubId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
         contentAsString(searchTags(user1, libPubId, "s", 2)) === """[]"""
 
         // other user with read access to library can search tags
-        contentAsString(searchTags(user2, libPubId, "a", 3)) === """["aardvark","animal","Awesome"]"""
+        contentAsString(searchTags(user2, libPubId, "a", 3)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]},{"tag":"Awesome","matches":[[0,1]]}]"""
         contentAsString(searchTags(user2, libPubId, "s", 3)) === """[]"""
 
         // other user without read access to library cannot search tags
