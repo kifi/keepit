@@ -28,21 +28,6 @@ angular.module('kifi')
 
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
-        //var libList = element.find('.kf-nav-lib-users');
-        //var antiscroll = element.find('.antiscroll-inner');
-
-/*
-        libList.on('mousewheel', function(e) {
-          var d = e.originalEvent.deltaY;
-          var visibleHeight = scrollableLibList.innerHeight();
-          var totalHeight = libList.innerHeight();
-          var maxScroll = totalHeight - visibleHeight;
-          var scroll = antiscroll.scrollTop();
-          if ((d < 0 && scroll <= 0) || (d > 0 && scroll >= maxScroll)) {
-            e.preventDefault();
-          }
-        });
-        */
 
         // on resizing window -> trigger new turn -> reset library list height
         w.bind('resize', function () {
@@ -83,26 +68,22 @@ angular.module('kifi')
           }
         });
 
-        /*
-        var isScrollOffset = _.debounce(function () {
-          scrollableLibList = element.find('.kf-scrollable-libs');
-          var someEle = element.find('.kf-nav-lib-system');
-          return (scrollableLibList.length > 0 && someEle.length > 0) && scrollableLibList.offset();
-        }, 100);
-
-        scope.$watch(isScrollOffset, function () {
-          scrollableLibList = element.find('.kf-scrollable-libs');
-          setLibListHeight();
-        });*/
-
-        var promise = $interval(function() {
+        // we thought about putting this check into the watch function above,
+        // but even when libraries are enabled, the element is found but the offset is 0
+        // in setLibListHeight(), if the offset is 0, the height of scrollableLibList == window height
+        // and thus no scrolly-bar =[
+        // once the offset is not 0, we know it's in the correct position and we can cancel this interval
+        var lastHeight = 0;
+        var promiseLibList = $interval(function() {
           scrollableLibList = element.find('.kf-scrollable-libs');
           if (scrollableLibList.offset() && scrollableLibList.offset().top > 0) {
             setLibListHeight();
-            $interval.cancel(promise);
+            if (lastHeight == scrollableLibList.height()) {
+              $interval.cancel(promiseLibList);
+            }
+            lastHeight = scrollableLibList.height(); // probably a better way to do this - sometimes scrollbar is buggy but this secures the height
           }
         }, 100);
-        
 
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
