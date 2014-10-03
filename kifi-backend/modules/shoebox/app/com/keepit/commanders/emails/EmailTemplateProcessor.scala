@@ -57,9 +57,9 @@ class EmailTemplateProcessorImpl @Inject() (
     val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt.map(_._2) }
 
     templatesF.flatMap[ProcessedEmailResult] { templates =>
-      val htmlBody = views.html.email.black.layout(templates, emailToSend.closingLines)
+      val htmlBody = views.html.email.layouts.default(templates, emailToSend)
       val textBody = emailToSend.textTemplate.map { text =>
-        views.html.email.black.layoutText(Seq(text))
+        views.html.email.layouts.defaultText(Seq(text))
       }
 
       val fromName = emailToSend.fromName.collect {
