@@ -20,6 +20,7 @@ package object template {
     val title = TagLabel("title")
     val baseUrl = TagLabel("baseUrl")
     val trackingParam = TagLabel("trackingParam")
+    val footerHtml = TagLabel("footer")
   }
 
   // val/def that use tags need to return the Html type so certain characters aren't escaped as HTML entities
@@ -30,6 +31,8 @@ package object template {
     val iTunesAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575"
     private val cdnBaseUrl = "https://djty7jcqog9qu.cloudfront.net"
     private val assetBaseUrl = cdnBaseUrl + "/assets/black"
+
+    val footerHtml = Tag0(tags.footerHtml).toHtml
 
     def assetUrl(path: String) = assetBaseUrl + '/' + path
 

@@ -7,13 +7,16 @@ import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
+import com.keepit.heimdal.ContextData
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.common.mail.template.{ EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
+import com.keepit.common.mail.template.{ EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
+import com.keepit.common.mail.template.EmailLayout._
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
 import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 
@@ -57,10 +60,7 @@ class EmailTemplateProcessorImpl @Inject() (
     val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt.map(_._2) }
 
     templatesF.flatMap[ProcessedEmailResult] { templates =>
-      val htmlBody = views.html.email.layouts.default(templates, emailToSend)
-      val textBody = emailToSend.textTemplate.map { text =>
-        views.html.email.layouts.defaultText(Seq(text))
-      }
+      val (htmlBody, textBody) = loadLayout(emailToSend, templates)
 
       val fromName = emailToSend.fromName.collect {
         case Left(userId) => s"${fullName(userId)} (via Kifi)"
@@ -97,7 +97,20 @@ class EmailTemplateProcessorImpl @Inject() (
     }
   }
 
-  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]) = {
+  private def loadLayout(emailToSend: EmailToSend, templates: Seq[Html]): (Html, Option[Html]) = {
+    val layoutOpt: Option[EmailLayout] = emailToSend.templateOptions.get("layout")
+
+    layoutOpt match {
+      case Some(CustomLayout) =>
+        val textBodyOpt = emailToSend.textTemplate.map { text => views.html.email.layouts.customText(text, emailToSend) }
+        (views.html.email.layouts.custom(templates.head, emailToSend), textBodyOpt)
+      case _ =>
+        val textBodyOpt = emailToSend.textTemplate.map { text => views.html.email.layouts.defaultText(Seq(text)) }
+        (views.html.email.layouts.default(templates, emailToSend), textBodyOpt)
+    }
+  }
+
+  private def evalTemplate(text: String, input: DataNeededResult, emailToSend: EmailToSend, emailTipOpt: Option[EmailTip]): String = {
     tagRegex.replaceAllIn(text, { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -129,6 +142,7 @@ class EmailTemplateProcessorImpl @Inject() (
           emailToSend.category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
         }
         case tags.parentCategory => NotificationCategory.ParentCategory.get(emailToSend.category).getOrElse("unknown")
+        case tags.footerHtml => evalTemplate(views.html.email.layouts.footer().body, input, emailToSend, None)
         case tags.trackingParam =>
           EmailTrackingParam(
             subAction = Json.fromJson[String](tagArgs(0)).asOpt,
