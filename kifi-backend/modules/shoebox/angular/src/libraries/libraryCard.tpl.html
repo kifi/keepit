@@ -44,7 +44,7 @@
           <span ng-repeat="follower in followersToShow">
             <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
               class="kf-keep-lib-user-image"
-              kf-user-tooltip
+              kf-who-tooltip
               keeper="follower"
               ng-mouseenter="showTooltip()"
               ng-mouseleave="hideTooltip()"

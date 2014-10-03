@@ -110,6 +110,10 @@ angular.module('kifi')
           return library.owner && library.owner.id === profileService.me.id;
         };
 
+        scope.followerIsMe = function (follower) {
+          return follower.id === profileService.me.id;
+        };
+
         scope.canBeShared = function (library) {
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
@@ -207,73 +211,6 @@ angular.module('kifi')
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-      }
-    };
-  }
-])
-
-.directive('kfUserTooltip', [
-  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService',
-  function ($window, $timeout, $rootElement, $compile, $templateCache, keepWhoService) {
-    return {
-      restrict: 'A',
-      link: function (scope, element) {
-        var tooltip = null;
-        var timeout = null;
-
-        scope.tooltipEnabled = false;
-        scope.getPicUrl = keepWhoService.getPicUrl;
-        scope.getName = keepWhoService.getName;
-
-        if (!scope.keeper && scope.follower) {
-          scope.keeper = scope.follower;
-        }
-
-        function cancelTimeout() {
-          $timeout.cancel(timeout);
-        }
-
-        scope.$on('$destroy', function () {
-          cancelTimeout();
-          if (tooltip) {
-            tooltip.remove();
-          }
-        });
-
-        scope.showTooltip = function () {
-          if (!tooltip) {
-            // Create tooltip
-            tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
-            $rootElement.find('html').append(tooltip);
-            $compile(tooltip)(scope);
-          }
-
-          // Set position
-          var triangleOffset = 42;
-          var triangleWidth = 1;
-          var triangle = tooltip.find('.kifi-fr-kcard-tri');
-          var left = element.offset().left + element.width() / 2 - triangleOffset;
-          var top = element.offset().top - 91;
-          var triangleLeft = triangleOffset - triangleWidth;
-          if ($window.innerWidth - left - tooltip.width() < 3) {
-            left += 2 * triangleOffset - tooltip.width();
-            triangleLeft = tooltip.width() - triangleOffset - triangleWidth;
-          }
-          tooltip.css({left: left + 'px', top: top + 'px', width: tooltip.width() + 'px', visibility: 'hidden'});
-          triangle.css({left: triangleLeft});
-
-          timeout = $timeout(function () {
-            tooltip.css('visibility', 'visible');
-            scope.tooltipEnabled = true;
-          }, 500);
-        };
-
-        scope.hideTooltip = function () {
-          cancelTimeout();
-          scope.tooltipEnabled = false;
-        };
-
-        scope.youText = 'You! You look great!';
       }
     };
   }
