@@ -3,13 +3,13 @@ package com.keepit.shoebox
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.model.view.UserSessionView
+import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import com.keepit.common.net.{ URI, CallTimeouts, HttpClient }
@@ -20,7 +20,6 @@ import com.keepit.common.zookeeper._
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.social._
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
@@ -36,8 +35,6 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.keepit.heimdal.SanitizedKifiHit
-import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX

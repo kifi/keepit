@@ -64,6 +64,13 @@ package object template {
 
     def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?", content)
 
+    private def connectNetworkUrl(network: String, content: String): Html = Html {
+      s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
+    }
+
+    def connectFacebookUrl(content: String) = connectNetworkUrl("facebook", content)
+    def connectLinkedInUrl(content: String) = connectNetworkUrl("linkedin", content)
+
     def inviteContactUrl(id: Id[User], content: String) =
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", content)
 

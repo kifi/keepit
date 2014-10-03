@@ -1,33 +1,30 @@
 package com.keepit.shoebox
 
-import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
+import java.util.concurrent.atomic.AtomicInteger
+
+import com.google.inject.util.Providers
+import com.keepit.common.actor.FakeScheduler
+import com.keepit.common.db._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.net.URI
 import com.keepit.common.service.ServiceType
-import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.model._
-import com.keepit.common.db._
-import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.model.view.UserSessionView
-import collection.mutable
-import scala.concurrent.Future
-import com.keepit.search._
-import java.util.concurrent.atomic.AtomicInteger
-import collection.mutable.{ Map => MutableMap }
-import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser, SocialId }
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
-import play.api.libs.json.JsObject
-import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
-import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
-import com.keepit.common.actor.FakeScheduler
-import org.joda.time.DateTime
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.eliza.model.ThreadItem
-import com.kifi.franz.QueueName
-import com.keepit.graph.manager._
+import com.keepit.model._
+import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
+import com.keepit.scraper.{ HttpRedirect, ScrapeRequest, Signature }
+import com.keepit.search._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
+import org.joda.time.DateTime
 import play.api.libs.json.JsObject
-import com.keepit.heimdal.SanitizedKifiHit
-import com.keepit.model.serialize.UriIdAndSeq
+
+import scala.collection.mutable
+import scala.collection.mutable.{ Map => MutableMap }
+import scala.concurrent.Future
 
 class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -679,7 +676,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val changedLibraries = allLibraries.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val changedLibrariesAndMemberships = changedLibraries.map { library =>
       val memberships = allLibraryMemberships.values.filter(_.libraryId == library.id.get)
-      LibraryAndMemberships(library, memberships.toSeq)
+      LibraryAndMemberships(library, memberships.toSeq.map(_.toLibraryMembershipView))
     }
     Future.successful(changedLibrariesAndMemberships)
   }
@@ -730,7 +727,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]] = {
-    val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { LibraryMembership.toLibraryMembershipView(_) }
+    val changed = allLibraryMemberships.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize).map { _.toLibraryMembershipView }
     Future.successful(changed)
   }
 

@@ -417,14 +417,16 @@ class LibraryCommander @Inject() (
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
-    if (targetLib.ownerId != inviterId)
+    if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
       Left(LibraryFail("permission_denied"))
     else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail("cant_invite_to_system_generated_library"))
     else {
       val successInvites = db.readOnlyMaster { implicit s =>
         for (i <- inviteList) yield {
-          val (recipient, access, msgOpt) = i
+          val (recipient, inviteAccess, msgOpt) = i
+          // TODO (aaron): if non-owners invite that's not READ_ONLY, we need to change API to present "partial" failures
+          val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess // force READ_ONLY invites for non-owners
           val (inv, extId) = recipient match {
             case Left(id) =>
               (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = access, message = msgOpt), Left(userRepo.get(id).externalId))

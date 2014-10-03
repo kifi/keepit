@@ -58,9 +58,14 @@
   border-radius: 100% 
 
 .kf-scrollable-libs
-  height: 350px
   width: calc(100% + 40px)
-  overflow: auto
+
+  // This is a hack to hide the scrollbar
+  // (cf. comments in scrollbar.js)
+  overflow: hidden
+  .antiscroll-inner
+    .kf-nav-lib-users
+      width: calc(100%)
 
 .kf-lib-search
   width: calc(100% + 40px)

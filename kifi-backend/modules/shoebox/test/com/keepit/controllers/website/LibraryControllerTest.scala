@@ -440,18 +440,22 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, lib1, lib2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
           val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user1.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          (user1, user2, user3, library)
+          (user1, user2, user3, library1, library2)
         }
 
-        val pubId = Library.publicId(lib1.id.get)
-        val testPath = com.keepit.controllers.website.routes.LibraryController.inviteUsersToLibrary(pubId).url
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.inviteUsersToLibrary(pubId1).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.inviteUsersToLibrary(pubId2).url
         inject[FakeUserActionsHelper].setUser(user1)
 
         val inputJson1 = Json.obj(
@@ -460,8 +464,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             Json.obj("type" -> "user", "id" -> user3.externalId, "access" -> LibraryAccess.READ_ONLY),
             Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
         )
-        val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
-        val result1 = libraryController.inviteUsersToLibrary(pubId)(request1)
+        val request1 = FakeRequest("POST", testPath1).withBody(inputJson1)
+        val result1 = libraryController.inviteUsersToLibrary(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -480,8 +484,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "invites" -> Seq(
             Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_INSERT))
         )
-        val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
-        val result2 = libraryController.inviteUsersToLibrary(pubId)(request2)
+        val request2 = FakeRequest("POST", testPath1).withBody(inputJson2)
+        val result2 = libraryController.inviteUsersToLibrary(pubId1)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_INSERT.value}"}]"""))
@@ -489,6 +493,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val invitesToSquirtle = libraryInviteRepo.getWithLibraryId(lib1.id.get).filter(i => i.emailAddress.nonEmpty)
           invitesToSquirtle.map(_.message) === Seq(None, Some("Here is another invite!"))
         }
+
+        inject[FakeUserActionsHelper].setUser(user2)
+        // permission denied sharing a SECRET library that you don't own
+        val request3 = FakeRequest("POST", testPath1).withBody(inputJson2)
+        val result3 = libraryController.inviteUsersToLibrary(pubId1)(request3)
+        status(result3) must equalTo(BAD_REQUEST)
+        // success sharing a PUBLISHED library that you don't own
+        val request4 = FakeRequest("POST", testPath2).withBody(inputJson2)
+        val result4 = libraryController.inviteUsersToLibrary(pubId2)(request4)
+        status(result4) must equalTo(OK)
       }
     }
 

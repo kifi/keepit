@@ -1,5 +1,6 @@
 @()
 @import com.keepit.common.mail.template.helpers._
+@connectLink = @{connectFacebookUrl("tipConnectBtn")}
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
   @email.tags.trSpacer(29)
@@ -17,13 +18,13 @@
       <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
         <tr>
           <td width="50" height="40" align="center" valign="middle">
-            <a href="@baseUrl/link/facebook" target="_blank" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+            <a href="@connectLink" target="_blank" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
               <img src='@assetUrl("fb-letter.png")' width="9" height="20" border="0"/>
             </a>
           </td>
           <td bgcolor="#738BB7" width="2"></td>
           <td align="center" valign="middle" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;border-collapse:collapse;mso-line-height-rule:exactly;">
-            <a href="@baseUrl/link/facebook" target="_blank" style="display:block;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
+            <a href="@connectLink" target="_blank" style="display:block;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:16px;line-height:22px;color:#fff;text-decoration:none;">
               Connect to Facebook
             </a>
           </td>

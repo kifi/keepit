@@ -6,7 +6,6 @@ import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
-import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.ProdTrackingModule
 import com.keepit.search.index.ProdIndexModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -22,7 +21,6 @@ case class SearchProdModule() extends SearchModule with CommonProdModule {
   // Search Functional Modules
   val indexModule = ProdIndexModule()
   val trackingModule = ProdTrackingModule()
-  val spellModule = SpellCorrectorModule()
 
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()

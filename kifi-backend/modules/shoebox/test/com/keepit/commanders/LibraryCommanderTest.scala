@@ -528,14 +528,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
               (None, LibraryAccess.READ_ONLY))
         }
 
-        // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
-        val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
-        res2.isRight === false
-
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
         }
+
+        val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
+        val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
+        // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
+
+        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
       }
     }
 

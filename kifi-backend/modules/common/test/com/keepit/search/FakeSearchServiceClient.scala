@@ -69,8 +69,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def version(): Future[String] = ???
 
-  override def correctSpelling(text: String, enableBoost: Boolean): Future[String] = ???
-
   override def showUserConfig(id: Id[User]): Future[SearchConfig] = ???
 
   override def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {}

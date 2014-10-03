@@ -1,12 +1,13 @@
 package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
+
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.social.BasicUser
+import com.keepit.model.view.LibraryMembershipView
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -139,7 +140,7 @@ object LibraryKind {
   }
 }
 
-case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembership])
+case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembershipView])
 
 object LibraryAndMemberships {
   implicit val format = Json.format[LibraryAndMemberships]
