@@ -167,7 +167,6 @@ class DirectScoreContext(
     Arrays.fill(scoreArray, 0.0f)
     docId = pq.addCoreScores(this)
     collector.collect(this)
-    docId = -1
   }
 
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
