@@ -26,7 +26,7 @@
     <ul class="kf-nav-lib-system">
       <li class="kf-nav-lib-item" ng-class="{ active: isActive('mainLib.url') }">
         <a class="kf-nav-link" ng-href="{{mainLib.url}}">
-          <div class="library-icon svg-library-card"></div>
+          <div class="library-icon svg-main-library-icon"></div>
           <div class="kf-nav-lib-info">
             <div class="kf-nav-lib-name">{{mainLib.name}}</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">
@@ -41,7 +41,7 @@
       </li>
       <li class="kf-nav-lib-item" ng-class="{ active: isActive('secretLib.url') }">
         <a class="kf-nav-link" ng-href="{{secretLib.url}}">
-          <div class="library-icon svg-library-card"></div>
+          <div class="library-icon svg-secret-library-icon"></div>
           <div class="kf-nav-lib-info">
             <div class="kf-nav-lib-name">{{secretLib.name}}</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">
@@ -57,7 +57,7 @@
 
     <div class="kf-nav-lib-item">
       <a class="kf-nav-link">
-        <span class="library-icon svg-new-library-card"></span>
+        <span class="library-icon svg-add-a-library-icon"></span>
         <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
       </a>
     </div>
@@ -83,8 +83,7 @@
 
       </div>
     </div>
-
-    <div class="kf-scrollable-libs" ng-click="scrollAround()">
+    <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">
@@ -123,7 +122,6 @@
             </div>
           </a>
         </li>
-        <li class="kf-nav-lib-item"></li> <!-- dummy item at end of scroll -->
       </ul>
     </div>
 
