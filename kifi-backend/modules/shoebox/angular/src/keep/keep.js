@@ -376,8 +376,8 @@ angular.module('kifi')
           if (newVal) {
             scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
 
-            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
-              return lib.access !== 'read_only';
+            scope.libraries = _.filter(libraryService.librarySummaries, function(library) {
+              return (library.access !== 'read_only') && (library.id !== scope.keep.libraryId);
             });
             scope.data = {};
           }
