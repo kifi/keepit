@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
-  function ($location, $window, $rootScope, $timeout, $document, util, friendService, modalService, tagService, profileService, libraryService, $interval) {
+  '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 
+    'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
+  function ($location, $window, $rootScope, $timeout, $document, util, 
+    friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
       restrict: 'A',
@@ -28,6 +30,7 @@ angular.module('kifi')
 
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
+        var dropDownMenu = element.find('.kf-sort-libs-button');
 
         // on resizing window -> trigger new turn -> reset library list height
         w.bind('resize', function () {
@@ -64,6 +67,7 @@ angular.module('kifi')
               
               util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
               util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
+              dropDownMenu = element.find('.kf-sort-libs-button');
             });
           }
         });
@@ -196,7 +200,7 @@ angular.module('kifi')
 
 
         $document.bind('click', function(event){
-          var isClickedElementPartOfDropdown = element.find('.kf-sort-libs-button').find(event.target).length > 0;
+          var isClickedElementPartOfDropdown = dropDownMenu.find(event.target).length > 0;
           if (isClickedElementPartOfDropdown) {
             return;
           }
