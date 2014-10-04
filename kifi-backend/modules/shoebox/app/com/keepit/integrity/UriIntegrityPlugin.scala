@@ -66,9 +66,9 @@ class UriIntegrityActor @Inject() (
         val userId = oldBm.userId
         val newUriId = newUri.id.get
         val currentBookmarkOpt = if (oldBm.inDisjointLib)
-          keepRepo.getPrimaryInDisjointByUriAndUser(oldBm.uriId, userId)
+          keepRepo.getPrimaryInDisjointByUriAndUser(newUriId, userId)
         else
-          keepRepo.getPrimaryByUriAndLibrary(oldBm.uriId, libId)
+          keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
 
         currentBookmarkOpt match {
           case None => {
@@ -105,7 +105,7 @@ class UriIntegrityActor @Inject() (
                 save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
               }
             } else {
-              // oldBm is already inactive ro duplicate, do nothing
+              // oldBm is already inactive or duplicate, do nothing
               (None, None)
             }
           }

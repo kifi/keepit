@@ -37,15 +37,15 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+            val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,
-              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
             val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
             val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -97,7 +97,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
 
-          // bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
+          bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
 
         }
@@ -150,23 +150,23 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+            val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
             val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
             val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
 
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
             val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
 
             val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
             val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get), inDisjointLib = main.isDisjoint))
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("google")))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("googleBetter")))
@@ -212,8 +212,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0
           keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
-          // keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
-          // keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
         }
 
       }
