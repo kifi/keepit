@@ -212,8 +212,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0
           keepToCollectionRepo.getByKeep(betterBms(0).id.get).size === 1
-          // keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
-          // keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(1).id.get).size === 2
+          keepToCollectionRepo.getByKeep(betterBms(2).id.get).size === 2
         }
 
       }
