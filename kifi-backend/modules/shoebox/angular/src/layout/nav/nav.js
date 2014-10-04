@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$window', '$rootScope', '$timeout', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
-  function ($location, $window, $rootScope, $timeout, util, friendService, modalService, tagService, profileService, libraryService, $interval) {
+  '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
+  function ($location, $window, $rootScope, $timeout, $document, util, friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
       restrict: 'A',
@@ -178,6 +178,33 @@ angular.module('kifi')
         ///////////////////////////////
         /////// Sorting Stuff /////////
         ///////////////////////////////
+
+        scope.toggleShowMenu = { enabled : false };
+        scope.hoverShowMenu = { enabled : false };
+
+        scope.toggleDropdown = function () {
+          scope.toggleShowMenu.enabled = !scope.toggleShowMenu.enabled;
+        };
+
+        scope.hoverShowDropdown = function () {
+          scope.hoverShowMenu.enabled = true;
+        };
+
+        scope.hoverHideDropdown = function () {
+          scope.hoverShowMenu.enabled = false;
+        };
+
+
+        $document.bind('click', function(event){
+          var isClickedElementPartOfDropdown = element.find('.kf-sort-libs-button').find(event.target).length > 0;
+          if (isClickedElementPartOfDropdown) {
+            return;
+          }
+          scope.toggleShowMenu.enabled = false;
+          scope.hoverHideDropdown();
+          scope.$apply();
+        });
+
 
         scope.sortByName = function () {
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
