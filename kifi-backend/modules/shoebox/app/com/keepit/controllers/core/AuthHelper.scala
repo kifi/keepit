@@ -33,7 +33,7 @@ import scala.util.Success
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.controller.{ ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -195,7 +195,9 @@ class AuthHelper @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv")) // todo: uri not relevant for mobile
+      authenticator => Ok(Json.obj("uri" -> uri))
+        .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+        .withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> user.id.get.toString))
     )
   }
 
