@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ UserConnectionsCommander, UserCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -21,11 +21,12 @@ object FriendRecommendationsEmailTip {
   val MIN_RECOS_TO_SHOW = 3
 }
 
-sealed case class FriendReco(userId: Id[User], avatarUrl: String)
+sealed case class FriendReco(userId: Id[User], avatarUrl: String, mutualFriendsCount: Int)
 
 class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
     userCommander: UserCommander,
+    userConnectionsCommander: UserConnectionsCommander,
     private val airbrake: AirbrakeNotifier) extends Logging {
 
   import FriendRecommendationsEmailTip._
@@ -41,10 +42,13 @@ class FriendRecommendationsEmailTip @Inject() (
     abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true) flatMap {
       case Some(userIds) if userIds.size >= MIN_RECOS_TO_SHOW =>
         getManyUserImageUrls(userIds: _*) map { imageUrls =>
-          userIds.sortBy { userId =>
+          userIds.sortBy { friendUserId =>
             /* kifi ghost images should be at the bottom of the list */
-            (if (imageUrls(userId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
-          }.take(MAX_RECOS_TO_SHOW).map(userId => FriendReco(userId, toHttpsUrl(imageUrls(userId))))
+            (if (imageUrls(friendUserId).endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
+          } take MAX_RECOS_TO_SHOW map { friendUserId =>
+            val mutualFriends = userConnectionsCommander.getMutualFriends(userId, friendUserId)
+            FriendReco(friendUserId, toHttpsUrl(imageUrls(friendUserId)), mutualFriends.size)
+          }
         }
       case Some(userIds) =>
         log.info(s"[getFriendRecommendationsForUser $userId] not enough ($MIN_RECOS_TO_SHOW required): $userIds")

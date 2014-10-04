@@ -64,6 +64,7 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
+  userConnectionsCommander: UserConnectionsCommander,
   abook: ABookServiceClient,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -462,4 +463,10 @@ class ShoeboxController @Inject() (
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
     Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
   }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Action { request =>
+    val mutualFriendIds = userConnectionsCommander.getMutualFriends(user1Id, user2Id)
+    Ok(Json.toJson(mutualFriendIds))
+  }
+
 }

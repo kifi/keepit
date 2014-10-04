@@ -117,6 +117,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -741,4 +742,8 @@ class ShoeboxServiceClientImpl @Inject() (
       "passPhrase" -> Json.toJson(hashedPassPhrase))
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
+    call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
+
 }
