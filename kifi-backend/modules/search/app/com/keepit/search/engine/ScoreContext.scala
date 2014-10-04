@@ -123,6 +123,7 @@ class DirectScoreContext(
     this(scoreExpr, new Array[Float](scoreArraySize), matchWeight, collector)
   }
 
+  private[this] var count = 0
   private[this] var docId = -1
   private[this] var pq: TaggedScorerQueue = null
 
@@ -155,7 +156,10 @@ class DirectScoreContext(
     Arrays.fill(scoreArray, 0.0f)
     docId = pq.addCoreScores(this)
     collector.collect(this)
+    count += 1
   }
+
+  def getCount: Int = count
 
   override def join(reader: DataBufferReader): Unit = throw new UnsupportedOperationException("DirectScoreContext does not support join")
 }

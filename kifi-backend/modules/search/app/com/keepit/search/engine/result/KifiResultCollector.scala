@@ -4,88 +4,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.ScoreContext
 import com.keepit.search.engine.Visibility
 import com.keepit.search.tracker.ResultClickBoosts
-import org.apache.lucene.util.PriorityQueue
 
 object KifiResultCollector {
   val MIN_MATCHING = 0.6f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var secondaryId: Long)
-
-  class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
-
-    var highScore = Float.MinValue
-    var totalHits = 0
-
-    override def lessThan(a: Hit, b: Hit) = (a.normalizedScore < b.normalizedScore)
-
-    override def insertWithOverflow(hit: Hit): Hit = {
-      totalHits += 1
-      if (hit.score > highScore) highScore = hit.score
-      super.insertWithOverflow(hit)
-    }
-
-    private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
-
-    def insert(id: Long, score: Float, visibility: Int, secondaryId: Long) {
-      if (overflow == null) {
-        overflow = new Hit(id, score, score, visibility, secondaryId)
-      } else {
-        overflow.id = id
-        overflow.score = score
-        overflow.normalizedScore = score
-        overflow.visibility = visibility
-        overflow.secondaryId = secondaryId
-        overflow
-      }
-      overflow = insertWithOverflow(overflow)
-    }
-
-    def insert(hit: Hit) {
-      overflow = insertWithOverflow(hit)
-    }
-
-    // the following method is destructive. after the call ArticleHitQueue is unusable
-    def toSortedList: List[Hit] = {
-      var res: List[Hit] = Nil
-      var i = size()
-      while (i > 0) {
-        i -= 1
-        res = pop() :: res
-      }
-      res
-    }
-
-    // the following method is destructive. after the call ArticleHitQueue is unusable
-    def toRankedIterator = toSortedList.iterator.zipWithIndex
-
-    def foreach(f: Hit => Unit) {
-      val arr = getHeapArray()
-      val sz = size()
-      var i = 1
-      while (i <= sz) {
-        f(arr(i).asInstanceOf[Hit])
-        i += 1
-      }
-    }
-
-    def discharge(n: Int): List[Hit] = {
-      var i = 0
-      var discharged: List[Hit] = Nil
-      while (i < n && size > 0) {
-        discharged = pop() :: discharged
-        i += 1
-      }
-      discharged
-    }
-
-    def reset() {
-      super.clear()
-      highScore = Float.MinValue
-      totalHits = 0
-    }
-  }
-
-  def createQueue(sz: Int) = new HitQueue(sz)
+  def createQueue(sz: Int): HitQueue = new HitQueue(sz)
 }
 
 class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends ResultCollector[ScoreContext] with Logging {

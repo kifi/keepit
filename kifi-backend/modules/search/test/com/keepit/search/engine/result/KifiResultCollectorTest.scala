@@ -2,7 +2,6 @@ package com.keepit.search.engine.result
 
 import com.keepit.search.engine.{ Visibility, ScoreContext, MaxExpr, DisjunctiveSumExpr }
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.util.LongArraySet
 import org.specs2.mutable.Specification
 
 class KifiResultCollectorTest extends Specification {

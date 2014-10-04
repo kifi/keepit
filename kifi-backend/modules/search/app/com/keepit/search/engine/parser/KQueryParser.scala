@@ -38,7 +38,6 @@ class KQueryParser(
   private[this] val homePageBoost = config.asFloat("homePageBoost")
   private[this] val proximityBoost = config.asFloat("proximityBoost")
   private[this] val proximityGapPenalty = config.asFloat("proximityGapPenalty")
-  private[this] val proximityThreshold = config.asFloat("proximityThreshold")
   private[this] val proximityPowerFactor = config.asFloat("proximityPowerFactor")
 
   var totalParseTime: Long = 0L
@@ -59,8 +58,8 @@ class KQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityThreshold, proximityPowerFactor))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
+          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityPowerFactor))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, 1f)) // disable phrase scoring for title. penalty could be too big
           engBuilder.addBoosterQuery(proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
