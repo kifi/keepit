@@ -14,7 +14,7 @@ class KifiResultCollectorTest extends Specification {
 
   "MainResultCollector" should {
     "collect hits above matchingThreshold" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.7f,
@@ -59,7 +59,7 @@ class KifiResultCollectorTest extends Specification {
 
       (matchingThreshold < KifiResultCollector.MIN_MATCHING) === true
 
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = matchingThreshold,
@@ -95,7 +95,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "collect a hit below matchingThreshold if clicked" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.99f,
@@ -132,7 +132,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "collect hits by category" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -176,7 +176,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "not collect restricted hits" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -206,7 +206,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "boost scores by sharing degree" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,

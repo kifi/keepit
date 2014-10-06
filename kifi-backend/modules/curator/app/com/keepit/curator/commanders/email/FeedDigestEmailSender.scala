@@ -1,8 +1,9 @@
 package com.keepit.curator.commanders.email
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.db.Id
@@ -124,16 +125,15 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
 
 sealed case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[DigestReco])
 
+@Singleton
 class FeedDigestEmailSender @Inject() (
     recommendationGenerationCommander: RecommendationGenerationCommander,
     uriRecommendationRepo: UriRecommendationRepo,
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
-    abook: ABookServiceClient,
     db: Database,
     serviceDiscovery: ServiceDiscovery,
     queue: SQSQueue[SendFeedDigestToUserMessage],
-    userExperimentCommander: RemoteUserExperimentCommander,
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -141,22 +141,20 @@ class FeedDigestEmailSender @Inject() (
 
   val defaultUriRecommendationScores = UriRecommendationScores()
 
-  def addToQueue(additionalUsers: Seq[Id[User]] = Seq.empty): Future[Set[Id[User]]] = {
+  private val queueLock = new ReactiveLock(10)
+
+  def addToQueue(additionalUsers: Seq[Id[User]] = Seq.empty): Future[Unit] = {
     if (serviceDiscovery.isLeader()) {
-      shoebox.getUsers(seedCommander.getUsersWithSufficientData().toSeq ++ additionalUsers).map { userSet =>
-        userSet.map { user =>
-          if (user.primaryEmail.isDefined) {
-            queue.send(SendFeedDigestToUserMessage(user.id.get))
-            user.id
-          } else {
-            log.info(s"NOT sending digest email to ${user.id.get}; primaryEmail missing")
-            None
-          }
-        }.flatten.toSet
+      val usersIdsToSendTo = seedCommander.getUsersWithSufficientData().toSeq ++ additionalUsers
+
+      val seqF = usersIdsToSendTo.map { userId =>
+        queueLock.withLockFuture { queue.send(SendFeedDigestToUserMessage(userId)) }
       }
+
+      Future.sequence(seqF) map (_ -> ())
     } else {
       airbrake.notify("FeedDigestEmailSender.send() should not be called by non-leader!")
-      Future.successful(Set.empty)
+      Future.successful(())
     }
   }
 
@@ -226,20 +224,21 @@ class FeedDigestEmailSender @Inject() (
       textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
-      campaign = Some("digest"),
-      tips = Seq(EmailTip.FriendRecommendations)
+      tips = Seq()
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    shoebox.processAndSendMail(emailToSend).map { sent =>
-      if (sent) {
-        db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
-        }
-        sendAnonymoizedEmailToQa(emailToSend, emailData)
-      }
-      DigestRecoMail(userId, sent, digestRecos)
-    }
+    // TODO(josh) uncomment these lines after load testing
+    //    shoebox.processAndSendMail(emailToSend).map { sent =>
+    //      if (sent) {
+    //        db.readWrite { implicit rw =>
+    //          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
+    //        }
+    //        sendAnonymoizedEmailToQa(emailToSend, emailData)
+    //      }
+    //      DigestRecoMail(userId, sent, digestRecos)
+    //    }
+    Future.successful(DigestRecoMail(userId, true, digestRecos))
   }
 
   private def sendAnonymoizedEmailToQa(module: EmailToSend, emailData: AllDigestRecos): Unit = {

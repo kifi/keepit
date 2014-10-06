@@ -18,7 +18,7 @@ angular.module('kifi')
 ])
 
 .directive('kfTags', [
-  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'libraryService', 
+  '$timeout', '$window', '$rootScope', '$location', 'util', 'dom', 'tagService', 'libraryService',
   function ($timeout, $window, $rootScope, $location, util, dom, tagService, libraryService) {
     var KEY_UP = 38,
       KEY_DOWN = 40,
@@ -297,7 +297,9 @@ angular.module('kifi')
           }
         });
 
-        tagService.fetchAll();
+        tagService.fetchAll().then(function () {
+          scope.$broadcast('refreshScroll');
+        });
 
         scope.watchTagReorder = function () {
           return !getFilterValue();
