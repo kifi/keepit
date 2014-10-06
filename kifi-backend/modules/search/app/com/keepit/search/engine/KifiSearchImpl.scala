@@ -53,12 +53,12 @@ class KifiSearchImpl(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
-    val collector: KifiResultCollector = if (engine.noClickBoostNoSharingBoost) {
+    val collector: KifiResultCollector = if (engine.recencyOnly) {
       new KifiResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
     } else {
       new KifiResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
     }
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
     if (debugFlags != 0) {

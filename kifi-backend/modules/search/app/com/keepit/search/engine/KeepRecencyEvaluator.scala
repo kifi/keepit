@@ -26,6 +26,21 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
     scorer
   }
 
+  private[this] lazy val slowDecayingRecencyQuery = {
+    val recencyBoostStrength = 1.0f
+    val halfDecayMillis = (90 * 24).toFloat * (60.0f * 60.0f * 1000.0f) // 90 days
+    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.createdAtField, recencyBoostStrength, halfDecayMillis)
+  }
+
+  private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createWeight(slowDecayingRecencyQuery)
+
+  protected def getSlowDecayingRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
+    // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
+    val scorer = slowDecayingRecencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+    if (scorer == null) log.warn("SlowDecayingRecencyScorer is null")
+    scorer
+  }
+
   @inline
   protected def getRecencyBoost(recencyScorer: RecencyScorer, docId: Int) = {
     if (recencyScorer != null) {
