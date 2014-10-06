@@ -94,7 +94,6 @@ class ExtAuthController @Inject() (
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
           heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
-          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CREATED, installation.updatedAt))
         } else {
           heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.UPDATED_EXTENSION, installation.updatedAt))
         }
