@@ -16,7 +16,6 @@ case class FakeUserActionsModule() extends UserActionsModule {
   }
 }
 
-@Provides
 @Singleton
 class FakeUserActionsHelper @Inject() (
     val impersonateCookie: ImpersonateCookie,
