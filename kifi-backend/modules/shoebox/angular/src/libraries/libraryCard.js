@@ -81,7 +81,14 @@ angular.module('kifi')
 
           var maxLength = 150;
           if (scope.library.description && scope.library.description.length > maxLength) {
-            scope.library.shortDescription = scope.library.description.substr(0, maxLength);
+            // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
+            var clipLastIndex = maxLength;
+            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
+            if (lastSpaceIndex !== -1) {
+              clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
+            }
+
+            scope.library.shortDescription = scope.library.description.substr(0, clipLastIndex);
             scope.clippedDescription = true;
           }
 
