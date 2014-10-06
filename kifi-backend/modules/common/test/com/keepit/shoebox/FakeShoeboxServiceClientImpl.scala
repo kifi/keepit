@@ -734,4 +734,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedCode: Option[HashedPassPhrase]): Future[Boolean] = {
     Future.successful(true)
   }
+
+  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = Future.successful(Seq())
+
 }
