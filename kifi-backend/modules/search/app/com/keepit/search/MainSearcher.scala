@@ -19,8 +19,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
-import com.keepit.search.util.Hit
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
+import com.keepit.search.util.MergeQueue.Hit
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -403,7 +403,7 @@ class MainSearcher(
   }
 }
 
-class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
+class ArticleHitQueue(sz: Int) extends MergeQueue[MutableArticleHit](sz) {
 
   private[this] val NO_FRIEND_IDS = Set.empty[Id[User]]
 

@@ -1,7 +1,7 @@
 package com.keepit.search.result
 
 import com.keepit.search.SearchConfig
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import play.api.libs.json.JsNumber
@@ -126,7 +126,7 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig, isFinalMerg
     }
   }
 
-  @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
+  @inline private def createQueue(maxHits: Int) = new MergeQueue[DetailedSearchHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[PartialSearchResult]): (Int, Int, Int) = {
