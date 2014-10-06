@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
-  function ($http, util, profileService, routeService, Clutch, $q, friendService) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -162,6 +162,9 @@ angular.module('kifi')
           return librarySummary.id === libraryId;
         });
         lib.numKeeps += val;
+
+        $rootScope.$emit('libraryUpdated', lib);
+        $rootScope.$emit('librarySummariesChanged');
       },
 
       createLibrary: function (opts) {
@@ -210,6 +213,8 @@ angular.module('kifi')
         if (!alreadyJoined) {
           return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
             librarySummaries.push(response.data);
+            _.remove(invitedSummaries, { id: libraryId });
+            $rootScope.$emit('librarySummariesChanged');
           });
         }
 
@@ -219,6 +224,7 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, { id: libraryId });
+          $rootScope.$emit('librarySummariesChanged');
         });
       },
 
@@ -230,6 +236,7 @@ angular.module('kifi')
         });
       }
     };
+
     return api;
   }
 ]);
