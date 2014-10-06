@@ -199,6 +199,7 @@ class FeedDigestEmailSender @Inject() (
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
+      //todo(eishay): find how many new library keeps to show and pull them in.
     } yield {
       if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(userId, recos, socialInfos)
       else {
