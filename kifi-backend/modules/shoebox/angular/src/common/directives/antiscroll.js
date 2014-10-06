@@ -23,17 +23,6 @@ angular.module('antiscroll', ['kifi'])
           });
         };
 
-        // Antiscroll doesn't refresh automatically if nodes are added to its container element.
-        // This is an issue in Angular because this happens quite often. This bit below tries
-        // to fix potential race condition issues. It's not 100%: if a scrollbar did exist,
-        // then it won't refresh.
-        element.on('mouseenter', function () {
-          if (scope.scroller && (!scope.scroller.vertical || !scope.scroller.horizontal)) {
-            scope.refreshScroll();
-          }
-        });
-
-
         scope.refreshScroll();
 
         // http://stackoverflow.com/questions/986937/how-can-i-get-the-browsers-scrollbar-sizes
