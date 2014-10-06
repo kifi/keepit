@@ -47,6 +47,9 @@ class QueryEngineBuilder(coreQuery: Query) {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
+
+        if (clauses.size == 1 && clauses.head.getOccur != MUST_NOT) return buildExpr(clauses.head.getQuery)
+
         val required = new ArrayBuffer[ScoreExpr]()
         val optional = new ArrayBuffer[ScoreExpr]()
         val filterOut = new ArrayBuffer[ScoreExpr]()
