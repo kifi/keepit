@@ -18,11 +18,11 @@ angular.module('kifi')
 
     var meService = new Clutch(function () {
       return $http.get(routeService.profileUrl).then(function (res) {
-        userLoggedIn = true;
+        $rootScope.userLoggedIn = userLoggedIn = true;
         return updateMe(res.data);
       })['catch'](function (err) {
         if (err.status === 403) {
-          userLoggedIn = false;
+          $rootScope.userLoggedIn = userLoggedIn = false;
         }
       });
     }, {

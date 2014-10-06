@@ -192,7 +192,7 @@ angular.module('kifi')
           }
 
           var i = 0;
-          var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
+          var low = 200, high = cardWidth - 140; // text must be minimum 200px wide, max total-80
           var guess = (high - low) / 2 + low;
           var res = calcHeightDelta(guess);
           var bestRes = res;
@@ -226,7 +226,7 @@ angular.module('kifi')
 
         function maybeSizeImage(keep) {
           if (keep && keep.summary) {
-            var hasImage = keep.summary.imageWidth > 50 && keep.summary.imageHeight > 50;
+            var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
             if (hasImage && keep.summary.description && keep.hasSmallImage) {
               keep.sizeCard = null;
               keep.calcSizeCard = sizeImage;
