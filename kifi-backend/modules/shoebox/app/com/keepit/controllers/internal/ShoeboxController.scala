@@ -256,6 +256,22 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
+  def getPrimaryEmailAddressForUsers() = Action(parse.tolerantJson) { request =>
+    Json.fromJson[Seq[Id[User]]](request.body).fold(
+      invalid = { jsErr =>
+        airbrake.notify("s[getPrimaryEmailAddressForUsers] failed to deserialize request body to Seq[Id[User]")
+        log.error(s"[getPrimaryEmailAddressForUsers] bad request: ${request.body}")
+        BadRequest
+      },
+      valid = { userIds =>
+        val userEmailMap = db.readOnlyReplica(2) { implicit session =>
+          userRepo.getUsers(userIds) map { case (id, user) => (id, user.primaryEmail) }
+        }
+        Ok(Json.toJson(userEmailMap))
+      }
+    )
+  }
+
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
     val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
     val collectionIds = db.readOnlyReplica(2) { implicit s => //no cache used

@@ -475,6 +475,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(m)
   }
 
+  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]] = {
+    val m = allUserEmails collect {
+      case (id, emails) if userIds.contains(id) => (id, emails.headOption)
+    }
+    Future.successful(m.toMap)
+  }
+
   def sendMail(email: ElectronicMail): Future[Boolean] = synchronized {
     sentMail += email
     Future.successful(true)
