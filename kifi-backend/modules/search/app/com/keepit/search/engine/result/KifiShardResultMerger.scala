@@ -107,6 +107,7 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   }
 
   @inline private[this] def createQueue(maxHits: Int) = new MergeQueue[KifiShardHit](maxHits)
+
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {

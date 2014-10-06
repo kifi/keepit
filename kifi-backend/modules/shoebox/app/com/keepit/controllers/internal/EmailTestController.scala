@@ -3,11 +3,12 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.model.{ UserEmailAddress, Library, NotificationCategory, User }
+import com.keepit.model.{ LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -70,6 +71,7 @@ class EmailTestController @Inject() (
     def friendId = Id[User](request.getQueryString("friendId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
+    def msg = request.getQueryString("msg")
 
     val emailF = name match {
       case "welcome" => welcomeEmailSender.sendToUser(userId)
@@ -82,8 +84,16 @@ class EmailTestController @Inject() (
       case "connectionMade" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
       case "socialFriendJoined" => connectionMadeSender.sendToUser(userId, friendId, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(FACEBOOK))
       case "contactJoined" => contactJoinedEmailSender.sendToUser(userId, friendId)
-      case "libraryInviteUser" => libraryInviteEmailSender.inviteUserToLibrary(Left(userId), friendId, libraryId)
-      case "libraryInviteNonUser" => libraryInviteEmailSender.inviteUserToLibrary(Right(sendTo), friendId, libraryId)
+      case "libraryInviteUser" => {
+        implicit val config = PublicIdConfiguration("secret key")
+        val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, userId = Some(friendId), access = LibraryAccess.READ_ONLY, message = msg)
+        libraryInviteEmailSender.inviteUserToLibrary(invite).map(_.get)
+      }
+      case "libraryInviteNonUser" => {
+        implicit val config = PublicIdConfiguration("secret key")
+        val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
+        libraryInviteEmailSender.inviteUserToLibrary(invite).map(_.get)
+      }
       case "confirm" => emailConfirmationSender.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
     }
 

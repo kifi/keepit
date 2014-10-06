@@ -340,16 +340,11 @@ class LibraryCommander @Inject() (
           )
 
           // send emails to both users & non-users
-          key._2.map { invite =>
-            val recipient = invite.userId match {
-              case Some(id) => Left(id)
-              case _ => Right(invite.emailAddress.get)
-            }
-            libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId, invite.message)
-          }
+          key._2.map(libraryInviteSender.get.inviteUserToLibrary)
         }.toSeq.flatten
     }
-    Future.sequence(emailFutures)
+    val emailsF = Future.sequence(emailFutures)
+    emailsF map (_.filter(_.isDefined).map(_.get))
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {

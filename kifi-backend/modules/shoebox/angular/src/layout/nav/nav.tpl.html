@@ -67,22 +67,22 @@
         <a class="kf-lib-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
         <input class="kf-lib-filter-input" kf-no-drag-input name="filterName" placeholder="Find a library..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-focus="focusFilter()" ng-blur="blurFilter()">
       </div>
-      <div class="kf-sort-libs-by">
-        <div class="kf-sort-img sprite sprite-arrow-gray-down"></div>
-        <div class="dropdown-menu">
-          <ul class="dropdown-menu-content">
-            <li class="dropdown-option" ng-click="sortByNumKeeps()">Number of Keeps</li>
-            <li class="dropdown-option" ng-click="sortByNumFollowers()">Number of followers</li>
-            <li class="dropdown-option" ng-click="sortByName()">Alphabetical</li>
-            <!-- <li class="dropdown-option" ng-click="sortByNameReverse()">Z-A</li> -->
-            <li class="dropdown-option" ng-click="sortByLastViewed()">Last Viewed</li>
-            <li class="dropdown-option" ng-click="sortByLastKept()">Last Kept To</li>
-          </ul>
-        </div>
-      </div>
 
+      <div class="kf-sort-libs-button" ng-click="toggleDropdown()" ng-mouseover="hoverShowDropdown()" ng-mouseleave="hoverHideDropdown()" 
+      ng-style="{'background-color': toggleShowMenu.enabled == true || hoverShowMenu.enabled == true ? '#ffffff' : '#eeeeee', 
+      'border': toggleShowMenu.enabled == true || hoverShowMenu.enabled == true ? '1px solid #6fa6ef' : '1px solid #e6e6e6'}" >
+        <div class="kf-sort-img sprite sprite-arrow-gray-down"></div>
+        <div class="kf-sort-libs-hover-area"></div>
+        <ul class="dropdown-menu-content" ng-show="toggleShowMenu.enabled || hoverShowMenu.enabled">
+          <li class="dropdown-option" ng-click="sortByNumKeeps()">Number of Keeps</li>
+          <li class="dropdown-option" ng-click="sortByNumFollowers()">Number of followers</li>
+          <li class="dropdown-option" ng-click="sortByName()">Alphabetical</li>
+          <li class="dropdown-option" ng-click="sortByLastViewed()">Last Viewed</li>
+          <li class="dropdown-option" ng-click="sortByLastKept()">Last Kept To</li>
+        </ul>
       </div>
     </div>
+
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">

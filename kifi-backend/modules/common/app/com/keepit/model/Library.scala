@@ -80,6 +80,7 @@ case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
+
 class LibraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryIdKey, Library](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
