@@ -164,6 +164,7 @@ angular.module('kifi')
         lib.numKeeps += val;
 
         $rootScope.$emit('libraryUpdated', lib);
+        $rootScope.$emit('librarySummariesChanged', lib);
       },
 
       createLibrary: function (opts) {
