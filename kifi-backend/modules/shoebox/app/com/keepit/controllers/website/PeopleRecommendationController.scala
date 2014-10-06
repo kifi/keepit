@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.PeopleRecommendationCommander
+import com.keepit.commanders.UserConnectionsCommander
 import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
@@ -20,7 +20,7 @@ class PeopleRecommendationController @Inject() (
     basicUserRepo: BasicUserRepo,
     userRepo: UserRepo,
     db: Database,
-    peopleRecoCommander: PeopleRecommendationCommander,
+    peopleRecoCommander: UserConnectionsCommander,
     socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>

@@ -11,7 +11,11 @@ object KifiResultCollector {
   def createQueue(sz: Int): HitQueue = new HitQueue(sz)
 }
 
-class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends ResultCollector[ScoreContext] with Logging {
+abstract class KifiResultCollector extends ResultCollector[ScoreContext] {
+  def getResults(): (HitQueue, HitQueue, HitQueue)
+}
+
+class KifiResultCollectorWithBoost(clickBoostsProvider: () => ResultClickBoosts, maxHitsPerCategory: Int, matchingThreshold: Float, sharingBoost: Float) extends KifiResultCollector with Logging {
 
   import KifiResultCollector._
 
@@ -49,6 +53,41 @@ class KifiResultCollector(clickBoostsProvider: () => ResultClickBoosts, maxHitsP
           myHits.insert(id, score, visibility, ctx.secondaryId)
         } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           score = score * (1.0f + sharingBoost - sharingBoost / ctx.degree.toFloat)
+          friendsHits.insert(id, score, visibility, ctx.secondaryId)
+        } else {
+          othersHits.insert(id, score, visibility, ctx.secondaryId)
+        }
+      }
+    }
+  }
+
+  def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+}
+
+class KifiResultCollectorWithNoBoost(maxHitsPerCategory: Int, matchingThreshold: Float) extends KifiResultCollector with Logging {
+
+  import KifiResultCollector._
+
+  require(matchingThreshold <= 1.0f)
+
+  private[this] val minMatchingThreshold = scala.math.min(matchingThreshold, KifiResultCollector.MIN_MATCHING)
+  private[this] val myHits = createQueue(maxHitsPerCategory)
+  private[this] val friendsHits = createQueue(maxHitsPerCategory)
+  private[this] val othersHits = createQueue(maxHitsPerCategory)
+
+  override def collect(ctx: ScoreContext): Unit = {
+    val id = ctx.id
+
+    // compute the matching value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+    val matching = ctx.computeMatching(minMatchingThreshold)
+
+    if (matching > 0.0f) {
+      val score = ctx.score()
+      if (score > 0.0f) {
+        val visibility = ctx.visibility
+        if ((visibility & Visibility.OWNER) != 0) {
+          myHits.insert(id, score, visibility, ctx.secondaryId)
+        } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
           friendsHits.insert(id, score, visibility, ctx.secondaryId)
         } else {
           othersHits.insert(id, score, visibility, ctx.secondaryId)

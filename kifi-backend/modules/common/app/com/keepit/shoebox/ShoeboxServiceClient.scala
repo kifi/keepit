@@ -47,6 +47,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
+  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -118,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]]
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -299,6 +301,12 @@ class ShoeboxServiceClientImpl @Inject() (
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
+  }
+
+  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]] = {
+    redundantDBConnectionCheck(userIds)
+    val payload = Json.toJson(userIds)
+    call(Shoebox.internal.getPrimaryEmailAddressForUsers(), payload) map { _.json.as[Map[Id[User], Option[EmailAddress]]] }
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)) { key =>
@@ -746,4 +754,8 @@ class ShoeboxServiceClientImpl @Inject() (
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = {
     call(Shoebox.internal.newKeepsInLibrary(userId, max)).map(_.json.as[Seq[Keep]])
   }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
+    call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
+
 }

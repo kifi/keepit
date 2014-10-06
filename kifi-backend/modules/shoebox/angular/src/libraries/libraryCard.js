@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
-  function ($FB, $location, $window, env, friendService, libraryService, modalService, profileService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -140,23 +140,36 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
-          libraryService.joinLibrary(library.id);
+          libraryService.joinLibrary(library.id).then(function (result) {
+            if (result === 'already_joined') {
+              // TODO(yiping): make a better error message. One idea is to update
+              // the current generic error modal to take in a message parameter.
+              $window.alert('You are already following this library!');
+              return;
+            }
 
-          library.followers.push({
+            library.followers.push({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
               pictureName: profileService.me.pictureName
             });
 
-          augmentData();
-          adjustFollowerPicsSize();
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('changedLibrary');
+              augmentData();
+              adjustFollowerPicsSize();
+            });
+          });
         };
 
         scope.unfollowLibrary = function (library) {
           libraryService.leaveLibrary(library.id).then(function () {
-            _.remove(library.followers, function (follower) {
-              return follower.id === profileService.me.id;
+            _.remove(library.followers, { id: profileService.me.id });
+
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('changedLibrary');
+              adjustFollowerPicsSize();
             });
           });
         };
@@ -201,6 +214,12 @@ angular.module('kifi')
           }
         });
 
+        // When the local library object in libraryService has been updated, update
+        // our scope.library accordingly. $rootScope is used instead of scope because
+        // libraryService is not a child of any scope.
+        $rootScope.$on('libraryUpdated', function (e, library) {
+          _.assign(scope.library, library);
+        });
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);

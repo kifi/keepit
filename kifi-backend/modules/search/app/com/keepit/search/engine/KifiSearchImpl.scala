@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.{ HitQueue, KifiShardResult, KifiResultCollector }
+import com.keepit.search.engine.result._
 import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -53,7 +53,11 @@ class KifiSearchImpl(
     val engine = engineBuilder.build()
     debugLog("engine created")
 
-    val collector = new KifiResultCollector(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
+    val collector: KifiResultCollector = if (engine.noClickBoostNoSharingBoost) {
+      new KifiResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
+    } else {
+      new KifiResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
+    }
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 

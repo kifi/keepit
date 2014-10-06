@@ -10,7 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import concurrent.Future
 
-class PeopleRecommendationCommander @Inject() (
+class UserConnectionsCommander @Inject() (
     abookServiceClient: ABookServiceClient,
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
@@ -37,5 +37,12 @@ class PeopleRecommendationCommander @Inject() (
         FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
       }
     }
+  }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Set[Id[User]] = {
+    val (user1FriendIds, user2FriendIds) = db.readOnlyReplica { implicit session =>
+      (userConnectionRepo.getConnectedUsers(user1Id), userConnectionRepo.getConnectedUsers(user2Id))
+    }
+    user1FriendIds intersect user2FriendIds
   }
 }

@@ -7,8 +7,9 @@
         <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
       </div>
 
-      <div class="kf-keep-lib-name-container kf-keep-title ">
-        <a class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
+      <div ng-switch="recommendation" class="kf-keep-lib-name-container kf-keep-title">
+        <a ng-switch-when="true" class="kf-keep-lib-name" ng-href="{{library.url}}" ng-attr-title="{{library.name}}" ng-bind-html="library.name"></a>
+        <span ng-switch-when="false" class="kf-keep-lib-name" ng-bind-html="library.name"></span>
       </div>
     </div>
 
@@ -60,12 +61,11 @@
       <div class="kf-keep-lib-image"></div>
     </div>
   </div>
-  <!-- TODO(yiping): once library has "kind" property, remove check for recommendation -->
   <div class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
     </button>
-    <button ng-if="isMyLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
+    <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
     <button ng-if="canFollowLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow" ng-click="followLibrary(library)">Follow</button>

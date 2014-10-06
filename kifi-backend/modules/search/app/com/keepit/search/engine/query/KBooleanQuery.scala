@@ -25,19 +25,6 @@ object KBooleanQuery {
 class KBooleanQuery() extends BooleanQuery(false) {
 
   override def rewrite(reader: IndexReader): Query = {
-    if (clauses.size() == 1) { // optimize 1-clause queries
-      val c = clauses.get(0)
-      if (!c.isProhibited()) {
-        var query = c.getQuery().rewrite(reader)
-        if (getBoost() != 1.0f) {
-          // if rewrite was no-op then clone before boost
-          if (query eq c.getQuery()) query = query.clone().asInstanceOf[Query]
-          query.setBoost(getBoost() * query.getBoost())
-        }
-        return query
-      }
-    }
-
     var returnQuery = this
     val rewrittenQuery = new KBooleanQuery() // recursively rewrite
     getClauses.foreach { c =>

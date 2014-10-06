@@ -1,11 +1,6 @@
 package com.keepit.search.query
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import scala.math._
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.util.LocalAlignment._
@@ -17,12 +12,6 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SlowCompositeReaderWrapper
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.BooleanClause
-import org.apache.lucene.search.similarities.DefaultSimilarity
-import org.apache.lucene.search.PhraseQuery
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.TermQuery
 import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
