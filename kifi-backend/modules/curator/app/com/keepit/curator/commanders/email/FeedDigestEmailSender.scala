@@ -224,8 +224,7 @@ class FeedDigestEmailSender @Inject() (
       textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
-      campaign = Some("digest"),
-      tips = Seq(EmailTip.FriendRecommendations)
+      tips = Seq()
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
