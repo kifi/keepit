@@ -18,13 +18,10 @@ angular.module('kifi')
         };
 
         scope.librariesEnabled = false;
-        scope.librarySummaries = libraryService.librarySummaries;
-
         scope.mainLib = {};
         scope.secretLib = {};
 
-        scope.allUserLibs = [];
-        scope.allInvitedLibs = libraryService.invitedSummaries;
+        var allUserLibs = [];
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
 
@@ -55,23 +52,26 @@ angular.module('kifi')
         var librarySummarySearch = {};
         var invitedSummarySearch = {};
 
+
+        function updateNavLibs() {
+          scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
+          scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
+          allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
+
+          util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
+          util.replaceArrayInPlace(scope.invitedLibsToShow, libraryService.invitedSummaries);
+        }
+
         scope.$watch(function () {
           return libraryService.isAllowed();
         }, function (newVal) {
           scope.librariesEnabled = newVal;
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function () {
-              scope.mainLib = _.find(scope.librarySummaries, { 'kind' : 'system_main' });
-              scope.secretLib = _.find(scope.librarySummaries, { 'kind' : 'system_secret' });
-              scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
-
-              util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
-              util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
-              dropDownMenu = element.find('.kf-sort-libs-button');
-              scope.$broadcast('refreshScroll');
-            });
+            libraryService.fetchLibrarySummaries().then(updateNavLibs);
           }
         });
+
+        $rootScope.$on('librarySummariesChanged', updateNavLibs);
 
         // we thought about putting this check into the watch function above,
         // but even when libraries are enabled, the element is found but the offset is 0
@@ -92,8 +92,8 @@ angular.module('kifi')
 
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
-            scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
-            util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
+            allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
+            util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
           }
         });
 
@@ -164,11 +164,11 @@ angular.module('kifi')
         }*/
 
         scope.onFilterChange = function () {
-          librarySummarySearch = new Fuse(scope.allUserLibs, fuseOptions);
-          invitedSummarySearch = new Fuse(scope.allInvitedLibs, fuseOptions);
+          librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
+          invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
           var term = scope.filter.name;
-          var newMyLibs = scope.allUserLibs;
-          var newMyInvited = scope.allInvitedLibs;
+          var newMyLibs = allUserLibs;
+          var newMyInvited = libraryService.invitedSummaries;
           if (term.length) {
             newMyLibs = librarySummarySearch.search(term);
             newMyInvited = invitedSummarySearch.search(term);
@@ -213,30 +213,30 @@ angular.module('kifi')
 
         scope.sortByName = function () {
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
-          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc);
-          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc);
+          var libs = _.sortBy(allUserLibs, sortByNameFunc);
+          var invited = _.sortBy(libraryService.invitedSummaries, sortByNameFunc);
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
 
         scope.sortByNameReverse = function () {
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
-          var libs = _.sortBy(scope.allUserLibs, sortByNameFunc).reverse();
-          var invited = _.sortBy(scope.allInvitedLibs, sortByNameFunc).reverse();
+          var libs = _.sortBy(allUserLibs, sortByNameFunc).reverse();
+          var invited = _.sortBy(libraryService.invitedSummaries, sortByNameFunc).reverse();
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
 
         scope.sortByNumKeeps = function () {
-          var libs = _.sortBy(scope.allUserLibs, 'numKeeps').reverse();
-          var invited = _.sortBy(scope.allInvitedLibs, 'numKeeps').reverse();
+          var libs = _.sortBy(allUserLibs, 'numKeeps').reverse();
+          var invited = _.sortBy(libraryService.invitedSummaries, 'numKeeps').reverse();
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
 
         scope.sortByNumFollowers = function () {
-          var libs = _.sortBy(scope.allUserLibs, 'numFollowers').reverse();
-          var invited = _.sortBy(scope.allInvitedLibs, 'numFollowers').reverse();
+          var libs = _.sortBy(allUserLibs, 'numFollowers').reverse();
+          var invited = _.sortBy(libraryService.invitedSummaries, 'numFollowers').reverse();
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
@@ -252,8 +252,8 @@ angular.module('kifi')
             var libsUndefinedTimes = partition[1];
             return _.sortBy(libsRealTimes, 'lastViewed').reverse().concat(libsUndefinedTimes);
           }
-          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
-          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(libraryService.invitedSummaries));
         };
 
         scope.sortByLastKept = function () {
@@ -267,8 +267,8 @@ angular.module('kifi')
             var libsRealTimes = partition[1];
             return _.sortBy(libsRealTimes, 'lastKept').reverse().concat(libsUndefinedTimes);
           }
-          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(scope.allUserLibs));
-          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(scope.allInvitedLibs));
+          util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(allUserLibs));
+          util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(libraryService.invitedSummaries));
         };
 
       }
