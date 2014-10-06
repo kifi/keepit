@@ -166,7 +166,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         // 2 sent to users
         // 2 copied to QA
-        pending("revert me")
         shoebox.sentMail.size === 4
 
         val (mail42, mail43) = {
