@@ -69,11 +69,6 @@ angular.module('kifi')
             scope.library.owner = profileService.me;
           }
 
-          // TODO(yiping): make sure recommended libraries have visibility.
-          if (!scope.library.visibility && scope.recommendation) {
-            scope.library.visibility = 'published';
-          }
-
           if (scope.library.owner) {
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
           }
@@ -103,8 +98,7 @@ angular.module('kifi')
         };
 
         scope.isUserLibrary = function (library) {
-          // TODO(yiping): get recommendation libraries to have a "kind" property.
-          return library.kind === 'user_created' || scope.recommendation;
+          return library.kind === 'user_created';
         };
 
         scope.isMyLibrary = function (library) {
