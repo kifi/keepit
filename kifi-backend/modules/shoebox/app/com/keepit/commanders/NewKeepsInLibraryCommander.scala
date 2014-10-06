@@ -3,11 +3,13 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
-import com.keepit.model.{ LibraryMembership, Library, Keep, KeepRepo, LibraryMembershipRepo, User }
+import com.keepit.model.{ ImageType, URISummaryRequest, LibraryMembership, Library, Keep, KeepRepo, LibraryMembershipRepo, User }
 import org.joda.time.DateTime
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Future
 
 class NewKeepsInLibraryCommander @Inject() (
     db: Database,
