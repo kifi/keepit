@@ -15,6 +15,7 @@ object UserEventTypes {
   // Growth
   val JOINED = EventType("joined")
   val INVITED = EventType("invited")
+  val CREATED = EventType("created")
 
   // Activity
   val CONNECTED = EventType("connected")
