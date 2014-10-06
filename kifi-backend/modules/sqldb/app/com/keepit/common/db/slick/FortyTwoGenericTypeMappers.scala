@@ -141,6 +141,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = SetParameter { case (seq, parameters) => seq.foreach(pconv(_, parameters)) }
 
   implicit val setSeqStringParameter = setSeqParameter[String]
+  implicit val setSeqLongParameter = setSeqParameter[Long]
   implicit val setDateTimeParameter = setParameterFromMapper[DateTime]
   implicit val setSeqDateTimeParameter = setSeqParameter[DateTime]
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
