@@ -103,7 +103,6 @@ class AuthCommander @Inject() (
     inviteCommander: InviteCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
-    installRepo: KifiInstallationRepo,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
@@ -250,11 +249,6 @@ class AuthCommander @Inject() (
     inviteExtIdOpt.foreach { invite => contextBuilder += ("acceptedInvite", invite.id) }
 
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
-
-    val installs = db.readOnlyReplica { implicit s => installRepo.all(userId) }
-    if (!installs.isEmpty) {
-      heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CREATED, user.createdAt))
-    }
   }
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
