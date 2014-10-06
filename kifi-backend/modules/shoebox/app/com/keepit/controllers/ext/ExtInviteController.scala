@@ -25,7 +25,7 @@ class ExtInviteController @Inject() (
       case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {
         val source = (request.body \ "source").as[String]
-        inviteCommander.invite(request.userId, fullSocialId, None, None, source).map {
+        inviteCommander.invite(request, request.userId, fullSocialId, None, None, source).map {
           case inviteStatus if inviteStatus.sent => {
             log.info(s"[invite] Invite sent: $inviteStatus")
             Ok(Json.obj("sent" -> true))
