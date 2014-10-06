@@ -9,6 +9,7 @@ import scala.util.Try
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext.fj
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
@@ -399,7 +400,7 @@ class SearchCommanderImpl @Inject() (
 
     val future = Future.traverse(searches) { search =>
       if (debug.isDefined) search.debug(debugOption)
-      SafeFuture { search.execute() }
+      SafeFuture { search.execute() }(fj)
     }
 
     val results = monitoredAwait.result(future, 10 seconds, "slow search")
