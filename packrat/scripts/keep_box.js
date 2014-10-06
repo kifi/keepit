@@ -157,7 +157,7 @@ var keepBox = keepBox || (function () {
         $old.remove();
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        $new.find('input[type=text]').last().focus().select();
+        $new.find('input[type=text]:visible').last().focus().select();
 
         $vp.css('height', '');
       }
@@ -409,13 +409,15 @@ var keepBox = keepBox || (function () {
     $view.find('.kifi-keep-box-keep-image-cart').append(canvases[imageIdx] || newNoImage());
 
     var $tags = $view.find('.kifi-keep-box-tags')
-    .data('pre', (keep && keep.tags || []).map(tagToResult))
+    .data('pre', (keep && keep.tags || []).map(tagNameToTokenItem))
     .tokenInput(searchTags.bind(null, library.id), {
       classPrefix: 'kifi-keep-box-tags-',
       placeholder: 'Add a tag',
-      tokenValue: 'name',
+      tokenValue: 'tag',
       preventDuplicates: true,
       allowFreeTagging: true,
+      formatToken: formatTagToken,
+      formatResult: formatTagResult,
       showResults: showTagSuggestions,
       onAdd: $.proxy(onAddTag, null, library.id),
       onDelete: $.proxy(onDeleteTag, null, library.id)
@@ -555,9 +557,14 @@ var keepBox = keepBox || (function () {
   }
 
   function searchTags(libraryId, numTokens, query, withResults) {
-    api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, function (tags) {
-      withResults(tags.map(tagToResult));
-    });
+    if (query) {
+      api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, function (items) {
+        items.push({tag: query, matches: [[0, query.length]]});
+        withResults(items);
+      });
+    } else {
+      withResults([]);
+    }
   }
 
   function showTagSuggestions($dropdown, els, done) {
@@ -569,15 +576,15 @@ var keepBox = keepBox || (function () {
 
   function onAddTag(libraryId, tag) {
     var $tags = $(this);
-    api.port.emit('tag', {libraryId: libraryId, tag: tag.name}, function (name) {
-      if (name && name !== tag.name) {
-        $tags.tokenInput('replace', {name: tag.name}, {name: name});
+    api.port.emit('tag', {libraryId: libraryId, tag: tag.tag}, function (name) {
+      if (name && name !== tag.tag) {
+        $tags.tokenInput('replace', tag, {tag: name});
       }
     });
   }
 
   function onDeleteTag(libraryId, tag) {
-    api.port.emit('untag', {libraryId: libraryId, tag: tag.name}, api.noop);
+    api.port.emit('untag', {libraryId: libraryId, tag: tag.tag}, api.noop);
   }
 
   function createLibrary($view, $btn) {
@@ -630,8 +637,11 @@ var keepBox = keepBox || (function () {
   }
 
   function addNameHtml(lib) {
-    var parts = lib.nameParts;
-    var html = [];
+    lib.nameHtml = appendParts([], lib.nameParts).join('');
+    return lib;
+  }
+
+  function appendParts(html, parts) {
     for (var i = 0; i < parts.length; i++) {
       if (i % 2) {
         html.push('<b>', Mustache.escape(parts[i]), '</b>');
@@ -639,8 +649,32 @@ var keepBox = keepBox || (function () {
         html.push(Mustache.escape(parts[i]));
       }
     }
-    lib.nameHtml = html.join('');
-    return lib;
+    return html;
+  }
+
+  function formatTagToken(item) {
+    return '<li>' + Mustache.escape(item.tag) + '</li>';
+  }
+
+  function formatTagResult(item) {
+    var html = ['<li class="kifi-keep-box-tags-dropdown-item-token">'];
+    pushWithBoldedMatches(html, item.tag, item.matches);
+    html.push('</li>');
+    return html.join('');
+  }
+
+  function pushWithBoldedMatches(html, text, matches) {
+    var i = 0;
+    for (var j = 0; j < matches.length; j++) {
+      var match = matches[j];
+      var pos = match[0];
+      var len = match[1];
+      if (pos >= i) {
+        html.push(Mustache.escape(text.substring(i, pos)), '<b>', Mustache.escape(text.substr(pos, len)), '</b>');
+        i = pos + len;
+      }
+    }
+    html.push(Mustache.escape(text.substr(i)));
   }
 
   function idIs(id) {
@@ -655,8 +689,8 @@ var keepBox = keepBox || (function () {
     return function (o) {return o.libraryId === id};
   }
 
-  function tagToResult(tag) {
-    return {name: tag};
+  function tagNameToTokenItem(name) {
+    return {tag: name};
   }
 
   function getSrc(img) {
