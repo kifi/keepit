@@ -88,7 +88,6 @@ angular.module('kifi')
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
 
-        // Is this still necessary? Should we do librarySummariesChanged instead?
         $rootScope.$on('changedLibrary', function () {
           if (scope.librariesEnabled) {
             allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
@@ -178,11 +177,6 @@ angular.module('kifi')
           scope.filter.name = '';
           scope.onFilterChange();
         };
-
-        /*
-        function getFilterValue() {
-          return scope.filter && scope.filter.name || '';
-        }*/
 
         scope.onFilterChange = function () {
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
