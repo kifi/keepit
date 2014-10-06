@@ -224,20 +224,21 @@ class FeedDigestEmailSender @Inject() (
       textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
-      campaign = Some("digest"),
-      tips = Seq(EmailTip.FriendRecommendations)
+      tips = Seq()
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    shoebox.processAndSendMail(emailToSend).map { sent =>
-      if (sent) {
-        db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
-        }
-        sendAnonymoizedEmailToQa(emailToSend, emailData)
-      }
-      DigestRecoMail(userId, sent, digestRecos)
-    }
+    // TODO(josh) uncomment these lines after load testing
+    //    shoebox.processAndSendMail(emailToSend).map { sent =>
+    //      if (sent) {
+    //        db.readWrite { implicit rw =>
+    //          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
+    //        }
+    //        sendAnonymoizedEmailToQa(emailToSend, emailData)
+    //      }
+    //      DigestRecoMail(userId, sent, digestRecos)
+    //    }
+    Future.successful(DigestRecoMail(userId, true, digestRecos))
   }
 
   private def sendAnonymoizedEmailToQa(module: EmailToSend, emailData: AllDigestRecos): Unit = {
