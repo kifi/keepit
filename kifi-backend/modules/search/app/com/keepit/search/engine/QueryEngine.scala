@@ -7,7 +7,7 @@ import org.apache.lucene.search.{ Query, Weight }
 
 import scala.collection.mutable.ListBuffer
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int, val noClickBoostNoSharingBoost: Boolean) extends Logging with DebugOption {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int, val recencyOnly: Boolean) extends Logging with DebugOption {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
   private[this] val matchWeights: Array[Float] = new Array[Float](coreSize)

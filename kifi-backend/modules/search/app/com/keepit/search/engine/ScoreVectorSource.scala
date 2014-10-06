@@ -124,6 +124,7 @@ class UriFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
+    recencyOnly: Boolean,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
@@ -153,7 +154,7 @@ class UriFromKeepsScoreVectorSource(
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
-    val recencyScorer = getRecencyScorer(readerContext)
+    val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
