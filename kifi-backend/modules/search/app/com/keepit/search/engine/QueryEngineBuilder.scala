@@ -78,6 +78,10 @@ class QueryEngineBuilder(coreQuery: Query) {
       case textQuery: KTextQuery =>
         (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
 
+      case tagQuery: KFilterQuery =>
+        // this is a filter only query, use FixedScoreQuery and MaxExpr so that the recency boosting takes over ranking
+        (new KWrapperQuery(new FixedScoreQuery(tagQuery.subQuery)), MaxExpr(0), 1)
+
       case q =>
         (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
     }
