@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
-  function ($http, util, profileService, routeService, Clutch, $q, friendService) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -162,6 +162,8 @@ angular.module('kifi')
           return librarySummary.id === libraryId;
         });
         lib.numKeeps += val;
+
+        $rootScope.$emit('libraryUpdated', lib);
       },
 
       createLibrary: function (opts) {
@@ -230,6 +232,7 @@ angular.module('kifi')
         });
       }
     };
+
     return api;
   }
 ]);

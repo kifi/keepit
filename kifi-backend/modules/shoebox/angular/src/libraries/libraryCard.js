@@ -214,6 +214,12 @@ angular.module('kifi')
           }
         });
 
+        // When the local library object in libraryService has been updated, update
+        // our scope.library accordingly. $rootScope is used instead of scope because
+        // libraryService is not a child of any scope.
+        $rootScope.$on('libraryUpdated', function (e, library) {
+          _.assign(scope.library, library);
+        });
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);

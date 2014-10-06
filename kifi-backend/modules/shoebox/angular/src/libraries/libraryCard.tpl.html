@@ -65,7 +65,7 @@
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
     </button>
-    <button ng-if="isMyLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
+    <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
       {{editKeepsText}}
     </button>
     <button ng-if="canFollowLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-follow" ng-click="followLibrary(library)">Follow</button>
