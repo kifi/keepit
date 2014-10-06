@@ -51,7 +51,9 @@ class CuratorTasksPlugin @Inject() (
     val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
 
     // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
-    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 3" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
+    // TODO revert this commit
+    //    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 3" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
+    val cronTime = s"0 25 21 ? * 2" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
     cronTaskOnLeader(quartz, emailActor.ref, cronTime, FeedDigestMessage.Queue)
   }
 }
