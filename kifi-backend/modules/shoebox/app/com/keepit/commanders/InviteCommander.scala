@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
@@ -250,14 +250,14 @@ class InviteCommander @Inject() (
     }
   }
 
-  def invite(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
+  def invite(request: AuthenticatedRequest[_], userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
     getInviteInfo(userId, fullSocialId, subject: Option[String], message: Option[String]).flatMap {
-      case inviteInfo if isAllowed(inviteInfo) => processInvite(inviteInfo, source)
+      case inviteInfo if isAllowed(inviteInfo) => processInvite(request, inviteInfo, source)
       case _ => Future.successful(InviteStatus.forbidden)
     }
   }
 
-  private def processInvite(inviteInfo: InviteInfo, source: String): Future[InviteStatus] = {
+  private def processInvite(request: AuthenticatedRequest[_], inviteInfo: InviteInfo, source: String): Future[InviteStatus] = {
     log.info(s"[processInvite] Processing: $inviteInfo")
     val socialNetwork = inviteInfo.friend.left.toOption.map(_.networkType) getOrElse SocialNetworks.EMAIL
     val inviteStatusFuture = socialNetwork match {
@@ -270,7 +270,7 @@ class InviteCommander @Inject() (
     inviteStatusFuture imap {
       case inviteStatus =>
         log.info(s"[processInvite] Processed: $inviteStatus")
-        if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, socialNetwork, source) }
+        if (inviteStatus.sent) { reportSentInvitation(Some(request), inviteStatus.savedInvite.get, socialNetwork, source) }
         inviteStatus
     }
   }
@@ -372,7 +372,7 @@ class InviteCommander @Inject() (
     s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$redirectUri&to=$socialId"
   }
 
-  def confirmFacebookInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
+  def confirmFacebookInvite(request: Option[AuthenticatedRequest[_]], id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
     val inviteStatus = db.readWrite { implicit session =>
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
@@ -385,7 +385,7 @@ class InviteCommander @Inject() (
     if (inviteStatus.sent) {
       val activeInvite = inviteStatus.savedInvite.get
       log.info(s"[confirmFacebookInvite(${id})] Confirmed ${inviteStatus}")
-      reportSentInvitation(activeInvite, SocialNetworks.FACEBOOK, source)
+      reportSentInvitation(request, activeInvite, SocialNetworks.FACEBOOK, source)
     } else { log.error(s"[confirmFacebookInvite(${id}})] Failed to confirmed ${inviteStatus}") }
     inviteStatus
   }
@@ -434,7 +434,7 @@ class InviteCommander @Inject() (
     )
   }
 
-  private def reportSentInvitation(invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
+  private def reportSentInvitation(request: Option[AuthenticatedRequest[_]], invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
     invite.senderUserId.foreach { senderId =>
       val contextBuilder = eventContextBuilder()
       contextBuilder += ("action", "sent")
@@ -447,8 +447,10 @@ class InviteCommander @Inject() (
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
 
       // also send used_kifi event
-      contextBuilder += ("action", "invited")
-      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
+      val cb = eventContextBuilder()
+      cb += ("action", "invited")
+      request.foreach(cb.addRequestInfo(_))
+      heimdal.trackEvent(UserEvent(senderId, cb.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
     }
   }
 
