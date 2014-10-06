@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', '$window', '$rootScope', '$timeout', '$document', 'util', 
+  '$location', '$window', '$rootScope', '$timeout', '$document', 'util',
     'friendService', 'modalService', 'tagService', 'profileService', 'libraryService', '$interval',
-  function ($location, $window, $rootScope, $timeout, $document, util, 
+  function ($location, $window, $rootScope, $timeout, $document, util,
     friendService, modalService, tagService, profileService, libraryService, $interval) {
     return {
       //replace: true,
@@ -19,7 +19,7 @@ angular.module('kifi')
 
         scope.librariesEnabled = false;
         scope.librarySummaries = libraryService.librarySummaries;
-        
+
         scope.mainLib = {};
         scope.secretLib = {};
 
@@ -64,10 +64,11 @@ angular.module('kifi')
               scope.mainLib = _.find(scope.librarySummaries, { 'kind' : 'system_main' });
               scope.secretLib = _.find(scope.librarySummaries, { 'kind' : 'system_secret' });
               scope.allUserLibs = _.filter(scope.librarySummaries, { 'kind' : 'user_created' });
-              
+
               util.replaceArrayInPlace(scope.userLibsToShow, scope.allUserLibs);
               util.replaceArrayInPlace(scope.invitedLibsToShow, scope.allInvitedLibs);
               dropDownMenu = element.find('.kf-sort-libs-button');
+              scope.$broadcast('refreshScroll');
             });
           }
         });
@@ -243,7 +244,7 @@ angular.module('kifi')
         scope.sortByLastViewed = function () {
           function sortByOptTime(libs) {
             var partition = _.values(
-                              _.groupBy(libs, function(lib) { 
+                              _.groupBy(libs, function(lib) {
                                 return lib.lastViewed === undefined;
                               })
                             );
@@ -258,7 +259,7 @@ angular.module('kifi')
         scope.sortByLastKept = function () {
           function sortByOptTime(libs) {
             var partition = _.values(
-                              _.groupBy(libs, function(lib) { 
+                              _.groupBy(libs, function(lib) {
                                 return lib.lastKept === undefined;
                               })
                             );
