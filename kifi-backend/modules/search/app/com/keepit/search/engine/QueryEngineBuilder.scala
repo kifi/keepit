@@ -14,11 +14,10 @@ object QueryEngineBuilder {
 class QueryEngineBuilder(coreQuery: Query) {
 
   private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
+  private[this] val _core = buildExpr(coreQuery) // (query, expr, size, noClickBoostNoSharingBoost)
   private[this] var _boosters: List[(Query, Float)] = Nil
-  private[this] val _core = buildExpr(coreQuery) // (query, expr, size)
   private[this] lazy val _final = buildFinal()
   private[this] var built = false
-  private[this] var noClickBoostNoSharingBoost = false
 
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
@@ -31,20 +30,20 @@ class QueryEngineBuilder(coreQuery: Query) {
   }
 
   def build(): QueryEngine = {
-    new QueryEngine(_final._1, _final._2, _final._3, _core._3, noClickBoostNoSharingBoost)
+    new QueryEngine(_final._1, _final._2, _final._3, _core._3, _core._4)
   }
 
   private[this] def buildFinal(): (ScoreExpr, Query, Int) = {
     built = true
-    val (query, expr, totalSize) = _boosters.foldLeft(_core) {
-      case ((query, expr, size), (booster, boostStrength)) =>
+    val (query, expr, totalSize, noClickBoostNoSharingBoost) = _boosters.foldLeft(_core) {
+      case ((query, expr, size, noClickBoostNoSharingBoost), (booster, boostStrength)) =>
         val boosterExpr = MaxExpr(size)
-        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1)
+        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1, noClickBoostNoSharingBoost)
     }
     (expr, query, totalSize)
   }
 
-  private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int) = {
+  private[this] def buildExpr(query: Query): (Query, ScoreExpr, Int, Boolean) = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -74,20 +73,19 @@ class QueryEngineBuilder(coreQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (coreQuery, expr, exprIndex)
+        (coreQuery, expr, exprIndex, false)
 
       case textQuery: KTextQuery =>
-        (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
+        (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
 
       case tagQuery: KFilterQuery =>
         // this is a filter only query, use FixedScoreQuery and MaxExpr, and disable click boost and sharing boost
         // so that the recency boosting takes over ranking
         // this is a special requirement for "tag:" only query on kifi.com
-        noClickBoostNoSharingBoost = true
-        (new KWrapperQuery(new FixedScoreQuery(tagQuery.subQuery)), MaxExpr(0), 1)
+        (new KWrapperQuery(new FixedScoreQuery(tagQuery.subQuery)), MaxExpr(0), 1, true)
 
       case q =>
-        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1)
+        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
     }
   }
 }
