@@ -41,6 +41,7 @@ angular.module('kifi')
           // 250px needed for other stuff in the parent's width.
           var maxFollowersToShow = Math.floor((parentWidth - 250) / widthPerFollowerPic);
 
+          scope.numAdditionalFollowers = 0;
           if (_.isArray(scope.library.followers)) {
             // If we only have one additional follower that we can't fit in, then we can fit that one
             // in if we don't show the additional-number-of-followers circle.
