@@ -1,10 +1,25 @@
-$(document).on('click', '.more-arrow', function () {
-  var $html = $('html');
-  var top0 = $html.prop('scrollTop');
-  var topN = this.offsetTop + this.offsetHeight;
-  var px = Math.abs(topN - top0);
-  var ms = 320 * Math.log((px + 80) / 60) | 0;
-  $html.animate({scrollTop: topN}, ms);
+$(function () {
+ $('#home_slider').anythingSlider({
+   mode                : "fade",
+   buildStartStop      : false,
+   expand              : true,
+   buildNavigation     : false,
+   buildArrows         : false,
+   autoPlay            : true,
+   hashTags            : false,
+   delay               : 4000,
+   animationTime       : 1000,
+   easing              : 'easeInOutQuint',
+   onSlideBegin: function (event, slider) {
+     var laptop = $("#laptop_slides"), slides = laptop.find("li").length, currSlide = slider.currentPage;
+     if (currSlide >= slides){
+       currSlide = 0;
+     }
+     $("#laptop_slides").find("li").eq(currSlide).fadeIn(1000).siblings().fadeOut(1000);
+   },
+   onSlideComplete: function (slider) {
+   }
+ });
 });
 
 window.addEventListener('message', function (e) {

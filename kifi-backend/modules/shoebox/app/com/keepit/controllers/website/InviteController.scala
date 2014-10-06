@@ -49,7 +49,7 @@ class InviteController @Inject() (db: Database,
         val subject = form.get("subject").map(_.head)
         val message = form.get("message").map(_.head)
         val source = "site"
-        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+        inviteCommander.invite(request, request.userId, fullSocialId, subject, message, source).map {
           case inviteStatus if inviteStatus.sent =>
             log.info(s"[inviteConnection] Invite sent: $inviteStatus")
             CloseWindow()
@@ -73,7 +73,7 @@ class InviteController @Inject() (db: Database,
     fullSocialIdOption match {
       case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {
-        inviteCommander.invite(request.userId, fullSocialId, None, None, "site").map {
+        inviteCommander.invite(request, request.userId, fullSocialId, None, None, "site").map {
           case inviteStatus if inviteStatus.sent => {
             log.info(s"[invite] Invite sent: $inviteStatus")
             Ok(Json.obj("sent" -> true))
@@ -82,7 +82,7 @@ class InviteController @Inject() (db: Database,
             val json = Json.obj(
               "url" -> inviteCommander.acceptUrl(facebookInvite.externalId)
             )
-            inviteCommander.confirmFacebookInvite(facebookInvite.externalId, "site", None, None)
+            inviteCommander.confirmFacebookInvite(Some(request), facebookInvite.externalId, "site", None, None)
             log.info(s"[inviteV2] ${request.userId} to Facebook")
             Ok(json)
           case failedInviteStatus => {
@@ -98,7 +98,7 @@ class InviteController @Inject() (db: Database,
   }
 
   def confirmInvite(id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]) = Action { request =>
-    val inviteStatus = inviteCommander.confirmFacebookInvite(id: ExternalId[Invitation], source, errorMsg: Option[String], errorCode: Option[Int])
+    val inviteStatus = inviteCommander.confirmFacebookInvite(None, id, source, errorMsg, errorCode)
     if (inviteStatus.sent) {
       log.info(s"[confirmInvite] Facebook invite sent: $inviteStatus")
       CloseWindow()
