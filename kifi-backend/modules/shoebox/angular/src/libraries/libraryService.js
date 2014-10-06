@@ -164,7 +164,7 @@ angular.module('kifi')
         lib.numKeeps += val;
 
         $rootScope.$emit('libraryUpdated', lib);
-        $rootScope.$emit('librarySummariesChanged', lib);
+        $rootScope.$emit('librarySummariesChanged');
       },
 
       createLibrary: function (opts) {
@@ -213,6 +213,8 @@ angular.module('kifi')
         if (!alreadyJoined) {
           return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
             librarySummaries.push(response.data);
+            _.remove(invitedSummaries, { id: libraryId });
+            $rootScope.$emit('librarySummariesChanged');
           });
         }
 
@@ -222,6 +224,7 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, { id: libraryId });
+          $rootScope.$emit('librarySummariesChanged');
         });
       },
 
