@@ -115,7 +115,18 @@ trait UserActions extends Logging { self: Controller =>
   private def maybeAugmentKcid[A](res: Result)(implicit request: Request[A]): Result = { // for campaign tracking
     request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
       res.addingToSession("kcid" -> kcid)(request)
-    } getOrElse res
+    } getOrElse {
+      val referrer: String = request.headers.get("Referer").flatMap { ref =>
+        URI.parse(ref).toOption.flatMap(_.host).map(_.name)
+      } getOrElse ("na")
+      request.session.get("kcid").map { existingKcid =>
+        if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
+          res.addingToSession("kcid" -> s"organic-$referrer")(request)
+        } else res
+      } getOrElse {
+        res.addingToSession("kcid" -> s"organic-$referrer")(request)
+      }
+    }
   }
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
