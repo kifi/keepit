@@ -3,9 +3,12 @@ package com.keepit.search.util
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.Scoring
 
-class Hit[H](var score: Float, var scoring: Scoring, var hit: H)
+object MergeQueue {
+  class Hit[H](var score: Float, var scoring: Scoring, var hit: H)
+}
 
-class HitQueue[H](sz: Int) extends PriorityQueue[Hit[H]](sz) {
+class MergeQueue[H](sz: Int) extends PriorityQueue[MergeQueue.Hit[H]](sz) {
+  import MergeQueue.Hit
 
   var highScore = Float.MinValue
   var totalHits = 0
