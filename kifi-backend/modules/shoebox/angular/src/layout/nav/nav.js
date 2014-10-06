@@ -12,30 +12,34 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'layout/nav/nav.tpl.html',
       link: function (scope , element /*, attrs*/) {
-        scope.counts = {
-          friendsCount: friendService.totalFriends(),
-          friendsNotifCount: friendService.requests.length
-        };
-
-        scope.librariesEnabled = false;
-        scope.mainLib = {};
-        scope.secretLib = {};
-
+        //
+        // Internal data.
+        //
         var allUserLibs = [];
-        scope.userLibsToShow = [];
-        scope.invitedLibsToShow = [];
 
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
         var dropDownMenu = element.find('.kf-sort-libs-button');
 
-        // on resizing window -> trigger new turn -> reset library list height
-        w.bind('resize', function () {
-          scope.$apply(function () {
-            setLibListHeight();
-          });
-        });
 
+        //
+        // Scope data.
+        //
+        scope.librariesEnabled = false;
+        scope.mainLib = {};
+        scope.secretLib = {};
+        scope.userLibsToShow = [];
+        scope.invitedLibsToShow = [];
+
+        scope.counts = {
+          friendsCount: friendService.totalFriends(),
+          friendsNotifCount: friendService.requests.length
+        };
+
+
+        //
+        // Internal methods.
+        //
         function setLibListHeight() {
           if (scrollableLibList.offset()) {
             scrollableLibList.height(w.height() - (scrollableLibList.offset().top - w[0].pageYOffset));
@@ -44,14 +48,6 @@ angular.module('kifi')
             scope.refreshScroll();
           }
         }
-
-        var fuseOptions = {
-           keys: ['name'],
-           threshold: 0.3 // 0 means exact match, 1 means match with anything
-        };
-        var librarySummarySearch = {};
-        var invitedSummarySearch = {};
-
 
         function updateNavLibs() {
           scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
@@ -62,6 +58,25 @@ angular.module('kifi')
           util.replaceArrayInPlace(scope.invitedLibsToShow, libraryService.invitedSummaries);
         }
 
+
+        //
+        // Scope methods.
+        //
+        scope.addLibrary = function () {
+          modalService.open({
+            template: 'libraries/manageLibraryModal.tpl.html'
+          });
+        };
+
+        scope.isActive = function (path) {
+          var loc = $location.path();
+          return loc === path || util.startsWith(loc, path + '/');
+        };
+
+
+        //
+        // Watches and listeners.
+        //
         scope.$watch(function () {
           return libraryService.isAllowed();
         }, function (newVal) {
@@ -72,6 +87,40 @@ angular.module('kifi')
         });
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
+
+        // Is this still necessary? Should we do librarySummariesChanged instead?
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
+            util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
+          }
+        });
+
+        scope.$watch(function () {
+          return friendService.requests.length;
+        }, function (value) {
+          scope.counts.friendsNotifCount = value;
+        });
+
+        scope.$watch(friendService.totalFriends, function (value) {
+          scope.counts.friendsCount = value;
+        });
+
+        scope.$watch(tagService.getTotalKeepCount, function (val) {
+          scope.counts.keepCount = val;
+        });
+
+        // on resizing window -> trigger new turn -> reset library list height
+        w.bind('resize', function () {
+          scope.$apply(function () {
+            setLibListHeight();
+          });
+        });
+
+
+        //
+        // Scrolling.
+        //
 
         // we thought about putting this check into the watch function above,
         // but even when libraries are enabled, the element is found but the offset is 0
@@ -90,50 +139,22 @@ angular.module('kifi')
           }
         }, 100);
 
-        $rootScope.$on('changedLibrary', function () {
-          if (scope.librariesEnabled) {
-            allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
-            util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
-          }
-        });
 
-        scope.addLibrary = function () {
-          modalService.open({
-            template: 'libraries/manageLibraryModal.tpl.html'
-          });
+        //
+        // Filtering.
+        //
+        var fuseOptions = {
+           keys: ['name'],
+           threshold: 0.3 // 0 means exact match, 1 means match with anything
         };
-
-        scope.$watch(function () {
-          return friendService.requests.length;
-        }, function (value) {
-          scope.counts.friendsNotifCount = value;
-        });
-
-        scope.$watch(friendService.totalFriends, function (value) {
-          scope.counts.friendsCount = value;
-        });
-
-        scope.$watch(tagService.getTotalKeepCount, function (val) {
-          scope.counts.keepCount = val;
-        });
-
-        scope.isActive = function (path) {
-          var loc = $location.path();
-          return loc === path || util.startsWith(loc, path + '/');
-        };
-
-        scope.inRecoExperiment = function () {
-          return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
-        };
-
-        ///////////////////////////////
-        ////// Filtering Stuff ////////
-        ///////////////////////////////
+        var librarySummarySearch = {};
+        var invitedSummarySearch = {};
 
         scope.filter = {};
         scope.isFilterFocused = false;
         var preventClearFilter = false;
         scope.filter.name = '';
+
         scope.focusFilter = function () {
           scope.isFilterFocused = true;
         };
@@ -180,10 +201,10 @@ angular.module('kifi')
           return scope.userLibsToShow.concat(scope.invitedLibsToShow);
         };
 
-        ///////////////////////////////
-        /////// Sorting Stuff /////////
-        ///////////////////////////////
 
+        //
+        // Sorting.
+        //
         scope.toggleShowMenu = { enabled : false };
         scope.hoverShowMenu = { enabled : false };
 
@@ -198,7 +219,6 @@ angular.module('kifi')
         scope.hoverHideDropdown = function () {
           scope.hoverShowMenu.enabled = false;
         };
-
 
         $document.bind('click', function(event){
           var isClickedElementPartOfDropdown = dropDownMenu.find(event.target).length > 0;
@@ -270,7 +290,6 @@ angular.module('kifi')
           util.replaceArrayInPlace(scope.userLibsToShow, sortByOptTime(allUserLibs));
           util.replaceArrayInPlace(scope.invitedLibsToShow, sortByOptTime(libraryService.invitedSummaries));
         };
-
       }
     };
   }
