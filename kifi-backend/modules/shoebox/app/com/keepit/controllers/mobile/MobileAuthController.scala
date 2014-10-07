@@ -225,10 +225,10 @@ class MobileAuthController @Inject() (
       } find (_.networkType == SocialNetworkType(providerName)) headOption
 
       val result = suiOpt match {
-        case Some(sui) =>
+        case Some(sui) if sui.state != SocialUserInfoStates.INACTIVE =>
           log.info(s"[accessTokenSignup($providerName)] user(${request.user}) already associated with social user: ${sui}")
           Ok(Json.obj("code" -> "link_already_exists")) // err on safe side
-        case None =>
+        case _ =>
           Try {
             val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
             val filledSocialUser = provider.fillProfile(socialUser)

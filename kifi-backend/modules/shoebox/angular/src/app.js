@@ -127,15 +127,14 @@ angular.module('kifi', [
   function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
-      profileService.fetchPrefs();
-      friendService.getRequests();
+      profileService.fetchMe().then(function () {
+        if ($rootScope.userLoggedIn) {
+          profileService.fetchPrefs();
+          friendService.getRequests();
+        }
+      });
       // TODO: add a link for triggering a bookmark import
       // $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-    });
-
-    $scope.drawPage = false;
-    profileService.getMe().then(function () {
-      $scope.drawPage = true;
     });
   }
 ]);

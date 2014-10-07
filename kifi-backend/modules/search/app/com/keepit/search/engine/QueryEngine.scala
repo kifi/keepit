@@ -102,7 +102,8 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
 
     val size = dataBuffer.size
     if (size > 0) {
-      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createJoinerManager(collector))
+      val numBuckets = ((size / 10 + 1) | 0x01)
+      val hashJoin = new HashJoin(dataBuffer, numBuckets, createJoinerManager(collector))
       hashJoin.execute()
     }
   }

@@ -39,4 +39,8 @@ class RecommendationsController @Inject() (
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
+  def trash(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedAsync { request =>
+    commander.updateUriRecommendationFeedback(request.userId, id, UriRecommendationFeedback(trashed = Some(true))).map(fkis => Ok(Json.toJson(fkis)))
+  }
+
 }

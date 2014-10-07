@@ -104,7 +104,6 @@ class MainSearcher(
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      timeLogs.personalizedSearcher()
 
       val weight = personalizedSearcher.createWeight(articleQuery)
 
