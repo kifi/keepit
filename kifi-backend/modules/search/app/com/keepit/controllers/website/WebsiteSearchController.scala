@@ -5,7 +5,6 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.controllers.util.SearchControllerUtil.nonUser
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.iteratee.Enumerator
 import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
@@ -21,7 +20,8 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.search.engine.result.KifiShardHit
 import com.keepit.search.util.IdFilterCompressor
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
+import com.keepit.common.core._
 import com.keepit.controllers.website.WebsiteSearchController._
 
 class WebsiteSearchController @Inject() (
@@ -74,9 +74,8 @@ class WebsiteSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val futureResult = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap {
-      case kifiPlainResult if kifiPlainResult.hits.isEmpty => Future.successful(WebsiteSearchResult(Seq.empty, kifiPlainResult.uuid, IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter)))
-      case kifiPlainResult => {
+    searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
+      val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) Future.successful(JsArray()) else {
         val futureUriSummaries = {
           val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
           shoeboxClient.getUriSummaries(uriIds)
@@ -93,17 +92,18 @@ class WebsiteSearchController @Inject() (
             for {
               users <- futureUsers
               summaries <- futureUriSummaries
-            } yield {
-              val websiteSearchHits = (kifiPlainResult.hits zip infos).map {
-                case (hit, info) =>
-                  WebsiteSearchHit.make(userIdOpt, hit, summaries(Id(hit.id)), info, scores, users, libraries)
+            } yield JsArray(
+              (kifiPlainResult.hits zip infos).map {
+                case (hit, info) => toWebsiteSearchHit(hit, userIdOpt, summaries(Id(hit.id)), info, scores, users, libraries)
               }
-              WebsiteSearchResult(websiteSearchHits, kifiPlainResult.uuid, IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter))
-            }
+            )
         }
       }
+      futureWebsiteSearchHits.imap { hits =>
+        val websiteSearchResult = Json.obj("uuid" -> kifiPlainResult.uuid, "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter), "hits" -> hits)
+        Ok(websiteSearchResult)
+      }
     }
-    futureResult.map(result => Ok(Json.toJson(result)))
   }
 
   //external (from the website)
@@ -152,70 +152,59 @@ object WebsiteSearchController {
   import java.text.Normalizer
   import scala.collection.mutable
 
-  case class WebsiteSearchResult(hits: Seq[WebsiteSearchHit], uuid: ExternalId[ArticleSearchResult], context: String)
+  case class BasicLibrary(libId: PublicId[Library], name: String)
+  object BasicLibrary {
+    implicit val format = Json.format[BasicLibrary]
+  }
 
-  case class BasicLibrary(id: PublicId[Library], name: String)
-  case class BasicKeep(user: BasicUser, library: Option[BasicLibrary])
+  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
+  @inline private def normalize(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
-  case class WebsiteSearchHit(
-    title: String,
-    url: String,
-    score: Float,
-    summary: URISummary,
-    tags: Seq[Hashtag],
-    myKeeps: Seq[BasicLibrary],
-    moreKeeps: Seq[BasicKeep],
-    otherKeeps: Int)
+  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Option[Id[User]], summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): JsObject = {
+    val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(userId.isDefined && _.keptBy == userId)
 
-  object WebsiteSearchHit {
-    private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-    @inline private def normalize(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
+    // Keeps
+    val myKeeps = myRestrictedKeeps.flatMap(_.keptIn).sortBy(scores.byLibrary).map(libraries(_))
 
-    def make(userId: Option[Id[User]], kifiShardHit: KifiShardHit, summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): WebsiteSearchHit = {
-      val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(userId.isDefined && _.keptBy == userId)
-
-      // Keeps
-      val myKeeps = myRestrictedKeeps.flatMap(_.keptIn).sortBy(scores.byLibrary).map(libraries(_))
-
+    val moreKeeps = {
       var uniqueKeepers = mutable.HashSet[Id[User]]()
       userId.foreach(uniqueKeepers += _)
-      val moreKeeps = moreRestrictedKeeps.sortBy(keep => (keep.keptBy.map(scores.byUser), keep.keptIn.map(scores.byLibrary))).collect {
+      moreRestrictedKeeps.sortBy(keep => (keep.keptBy.map(scores.byUser), keep.keptIn.map(scores.byLibrary))).collect {
         case RestrictedKeepInfo(_, keptIn, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
           uniqueKeepers += keeperId
-          BasicKeep(users(keeperId), keptIn.map(libraries(_)))
+          Json.obj("user" -> users(keeperId), "library" -> keptIn.map(libraries(_)))
       }
+    }
 
-      // Tags
+    val otherKeeps = augmentationInfo.otherDiscoverableKeeps + augmentationInfo.otherPublishedKeeps
+
+    // Tags
+    val primaryTags = {
       val primaryKeep = kifiShardHit.libraryId.flatMap { libId => augmentationInfo.keeps.find(_.keptIn.map(_.id == libId).getOrElse(false)) }
-      val primaryTags = primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)))
+      primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)))
+    }
+
+    val moreTags = {
       var uniqueNormalizedTags = mutable.HashSet() ++ primaryTags.map(normalize)
-      val moreTags = augmentationInfo.keeps.map(_.tags).flatten.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)).filter { tag =>
+      augmentationInfo.keeps.map(_.tags).flatten.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)).filter { tag =>
         val normalizedTag = normalize(tag)
         val showTag = !uniqueNormalizedTags.contains(normalizedTag)
         uniqueNormalizedTags += normalizedTag
         showTag
       }
-      val tags = primaryTags ++ moreTags
-
-      WebsiteSearchHit(
-        title = kifiShardHit.title,
-        url = kifiShardHit.url,
-        score = kifiShardHit.finalScore,
-        summary = summary,
-        tags = tags,
-        myKeeps = myKeeps,
-        moreKeeps = moreKeeps,
-        otherKeeps = augmentationInfo.otherDiscoverableKeeps + augmentationInfo.otherPublishedKeeps
-      )
     }
-  }
 
-  object WebsiteSearchResult {
-    implicit val writes: Writes[WebsiteSearchResult] = {
-      implicit val libraryFormat = Json.writes[BasicLibrary]
-      implicit val keepFormat = Json.writes[BasicKeep]
-      implicit val hitFormat = Json.writes[WebsiteSearchHit]
-      Json.writes[WebsiteSearchResult]
-    }
+    val tags = primaryTags ++ moreTags
+
+    Json.obj(
+      "title" -> kifiShardHit.title,
+      "url" -> kifiShardHit.url,
+      "score" -> kifiShardHit.finalScore,
+      "summary" -> summary,
+      "tags" -> tags,
+      "myKeeps" -> myKeeps,
+      "moreKeeps" -> moreKeeps,
+      "otherKeeps" -> otherKeeps
+    )
   }
 }
