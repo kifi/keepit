@@ -201,7 +201,6 @@ var keepBox = keepBox || (function () {
         otherLibs.push(lib);
       }
     }
-    (inLibs.length ? inLibs : otherLibs)[0].highlighted = true;
     return {
       inLibs: inLibs,
       recentLibs: [],
