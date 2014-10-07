@@ -198,7 +198,7 @@ class ShoeboxController @Inject() (
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnlyMaster { implicit session => //using cache
-      keepRepo.getInDisjointByUriAndUser(uriId, userId)
+      keepRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
   }

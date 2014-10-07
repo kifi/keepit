@@ -181,7 +181,7 @@ class MobileBookmarksController @Inject() (
           val libIdOpt = for {
             url <- rawBookmarks.headOption.map(_.url)
             uri <- normalizedURIInterner.getByUri(url)
-            keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, request.userId)
+            keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
             libraryId <- keep.libraryId
           } yield libraryId
           libIdOpt.getOrElse {
