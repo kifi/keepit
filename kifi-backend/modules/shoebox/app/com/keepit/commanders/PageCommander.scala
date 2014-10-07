@@ -61,7 +61,7 @@ class PageCommander @Inject() (
       val getKeepersFutureOpt = nUri map { uri => getKeepersFuture(userId, uri) }
 
       val keep: Option[Keep] = nUri.flatMap { uri =>
-        keepRepo.getInDisjointByUriAndUser(uri.id.get, userId)
+        keepRepo.getByUriAndUser(uri.id.get, userId)
       }
       val tags: Seq[Collection] = keep.map { bm =>
         keepToCollectionRepo.getCollectionsForKeep(bm.id.get).map { collId =>

@@ -76,7 +76,7 @@ class ExtBookmarksController @Inject() (
       db.readWrite { implicit session =>
         val libIdOpt = for {
           uri <- normalizedURIInterner.getByUri(url)
-          keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, request.userId)
+          keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
           libraryId <- keep.libraryId
         } yield libraryId
         libIdOpt.getOrElse {
@@ -101,7 +101,7 @@ class ExtBookmarksController @Inject() (
       db.readWrite { implicit session =>
         val libIdOpt = for {
           uri <- normalizedURIInterner.getByUri(url)
-          keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, request.userId)
+          keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
           libraryId <- keep.libraryId
         } yield libraryId
         libIdOpt.getOrElse {
@@ -139,7 +139,7 @@ class ExtBookmarksController @Inject() (
     val url = (request.body \ "url").as[String]
     db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url).flatMap { uri =>
-        keepRepo.getInDisjointByUriAndUser(uri.id.get, request.userId)
+        keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
@@ -195,7 +195,7 @@ class ExtBookmarksController @Inject() (
 
     val bookmarkOpt = db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url).flatMap { uri =>
-        keepRepo.getInDisjointByUriAndUser(uri.id.get, request.userId)
+        keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
     }
     val maybeOk = for {
