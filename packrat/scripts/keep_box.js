@@ -70,9 +70,10 @@ var keepBox = keepBox || (function () {
       keep_box_libs_list: 'keep_box_libs_list'
     }))
     .on('mousedown', function (e) {
-      if (e.which === 1) {
+      var $target = $(e.target);
+      if (e.which === 1 && !$target.is('input[type=text]')) {
         e.preventDefault();  // prevent keeper drag
-        $(e.target).focus();
+        $target.focus();
       }
     })
     .on('click', '.kifi-keep-box-x', function (e) {
