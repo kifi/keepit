@@ -10,7 +10,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.search.{ AugmentableItem, ItemAugmentationRequest, SearchServiceClient }
+import com.keepit.search.{RestrictedKeepInfo, AugmentableItem, ItemAugmentationRequest, SearchServiceClient}
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
@@ -30,6 +30,7 @@ class PageCommander @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     domainClassifier: DomainClassifier,
     basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
@@ -120,33 +121,40 @@ class PageCommander @Inject() (
     nUriOpt.map { normUri =>
       val item = AugmentableItem(normUri.id.get)
       val request = ItemAugmentationRequest.uniform(userId, item)
-      searchClient.augmentation(request).map { response =>
+
+      // get all keepers from search (read_only data)
+      val getKeepersFuture = searchClient.augmentation(request).map { response =>
         val restrictedKeeps = response.infos(item).keeps
-        val restrictedKeepsMap = (restrictedKeeps map { k => k.id -> (k.keptBy, k.keptIn) }).toMap
-
-        val (keepers, keepsInfo) = db.readOnlyMaster { implicit session =>
-          val (a, b) = restrictedKeepsMap.map { key =>
-            val (keepId, (keeperId, libId)) = key
-
-            // get keeper info (if exists, otherwise just None)
-            val keeperOpt = keeperId.map(basicUserRepo.load)
-
-            // get keep info which is based on library info (if exists, otherwise just None)
-            val keepDataOpt = libId.map { libId =>
-              val lib = libraryRepo.get(libId)
-              val mine = userId == keeperId.get
-              KeepData(
-                id = keepId,
-                mine = mine,
-                removable = mine || userId == lib.ownerId, // TODO: also make removable true if user has RW lib access
-                secret = lib.visibility == LibraryVisibility.SECRET,
-                libraryId = Library.publicId(lib.id.get))
-            }
-            (keeperOpt, keepDataOpt)
-          }.toSeq.unzip // separate & flatten to keepers & kept in which libraries
-          (a.flatten, b.flatten)
+        db.readOnlyMaster { implicit session =>
+          restrictedKeeps.map { case RestrictedKeepInfo(keepId, libId, keeperId, _) =>
+            keeperId.map(basicUserRepo.load) // get keeper info (if exists, otherwise just None)
+          }
         }
-        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsInfo)
+      }
+
+      // find all keeps in database (with uri) (read_write actions)
+      val keepsData = db.readOnlyMaster { implicit session =>
+        val userKeeps = keepRepo.getAllByUriAndUser(normUri.id.get, userId)
+        userKeeps.map { keep =>
+          val keeperId = keep.userId
+          val mine = userId == keeperId
+          keep.libraryId.map { libraryId =>
+            val lib = libraryRepo.get(libraryId)
+            val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+              case Some(mem) => mem.hasWriteAccess
+              case _ => false
+            }
+            KeepData(
+              id = keep.externalId,
+              mine = mine,
+              removable = removable,
+              secret = lib.visibility == LibraryVisibility.SECRET,
+              libraryId = Library.publicId(lib.id.get))
+          }
+        }
+      }
+      getKeepersFuture.map { keepersOpt =>
+        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepersOpt.flatten, keepsData.flatten)
       }
     }.getOrElse {
       Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
