@@ -30,7 +30,7 @@ object ProximityQuery extends Logging {
 
   def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, powerFactor: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, powerFactor: Float)
 
-  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[Int], Match)] = {
+  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[TermId], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
     phrases.foreach {
       case (pos, len) =>
@@ -39,12 +39,12 @@ object ProximityQuery extends Logging {
         }
     }
 
-    var dict = Map.empty[Seq[Int], Match]
-    dict = posNotInPhrase.filter { _ >= 0 }.foldLeft(dict) { (d, pos) => d + (Seq(termIds(pos)) -> TermMatch(pos).asInstanceOf[Match]) }
+    var dict = Map.empty[Seq[TermId], Match]
+    dict = posNotInPhrase.filter { _ >= 0 }.foldLeft(dict) { (d, pos) => d + (Seq(intToTermId(termIds(pos))) -> TermMatch(pos).asInstanceOf[Match]) }
     phrases.foldLeft(dict) {
       case (d, (pos, len)) =>
         if (pos + len <= termIds.length) {
-          val key = termIds.slice(pos, pos + len).toSeq
+          val key = termIds.slice(pos, pos + len).map(intToTermId(_)).toSeq
           val value = (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]
 
           if (key.size != len) log.error(s"bad phrase: ($key, $value)") // verify
@@ -158,7 +158,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       case (equivTerms, id) =>
         equivTerms.foreach { term =>
           val enum = termPositionsEnum(context, term, acceptDocs)
-          if (enum != null) buf += new PositionAndId(enum, term.text(), id)
+          if (enum != null) buf += new PositionAndId(enum, term.text(), intToTermId(id))
         }
     }
 
@@ -174,7 +174,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
  * posLeft = number of unvisited term positions in current document
  * mask : reflects the position of the term in query.
  */
-private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termText: String, val id: Int) {
+private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termText: String, val id: TermId) {
   var doc = -1
   var pos = -1
 
