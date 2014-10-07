@@ -128,6 +128,20 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     localAlignment.begin()
   }
 
+  private[this] val onMatch: (Int, Match) => Unit = { (curPos, aMatch) =>
+    val aMatchLen = aMatch.len
+    var i = curPos - min(bufSize, aMatchLen)
+    while (i < curPos) {
+      i += 1
+      if (i < 0) {
+        log.error(s"i=$i curPos=$curPos aMatch.len=${aMatchLen}")
+      } else {
+        matching(i % bufSize) = true
+      }
+    }
+    if (aMatchLen > 1) matchedPhrases += aMatch
+  }
+
   def update(termId: TermId, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
     if (rawPos == bufferedPos) {
       if (termId == lastId) return // dedup
@@ -148,20 +162,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     matching(index) = false
 
     state = phraseMatcher.next(termId, state)
-    state.check(pos, onMatch = {
-      case (curPos, aMatch) =>
-        val aMatchLen = aMatch.len
-        var i = curPos - min(bufSize, aMatchLen)
-        while (i < curPos) {
-          i += 1
-          if (i < 0) {
-            log.error(s"i=$i curPos=$curPos aMatch.len=${aMatchLen}")
-          } else {
-            matching(i % bufSize) = true
-          }
-        }
-        if (aMatchLen > 1) matchedPhrases += aMatch
-    })
+    state.check(pos, onMatch)
   }
 
   def end(): Unit = {
