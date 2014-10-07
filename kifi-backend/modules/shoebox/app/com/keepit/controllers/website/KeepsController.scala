@@ -372,13 +372,9 @@ class KeepsController @Inject() (
     }
   }
 
-  def page(sort: String, offset: Int, pageSize: Int) = UserAction.async { request =>
-    val collectionsFuture = SafeFuture { collectionCommander.pageCollections(sort, offset, pageSize, request.userId) }
-    for {
-      collections <- collectionsFuture
-    } yield {
-      Ok(Json.obj("collections" -> collections))
-    }
+  def page(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
+    val tags = collectionCommander.pageCollections(sort, offset, pageSize, request.userId)
+    Ok(Json.obj("tags" -> tags))
   }
 
   def saveCollection() = UserAction { request =>

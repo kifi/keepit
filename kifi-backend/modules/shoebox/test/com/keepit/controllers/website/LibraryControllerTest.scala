@@ -986,9 +986,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeUserActionsHelper].setUser(user1)
 
-        val json = Json.obj(
-          "keeps" -> JsArray(keepsToAdd map { k => Json.toJson(k) })
-        )
+        val json = Json.obj("keeps" -> keepsToAdd)
         val request1 = FakeRequest("POST", testPathAdd).withBody(json)
         val result1 = libraryController.addKeeps(pubId1)(request1)
         status(result1) must equalTo(OK)
@@ -1001,9 +999,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val testPathRemove = com.keepit.controllers.website.routes.LibraryController.removeKeeps(pubId1).url
         val k4Id: ExternalId[Keep] = ExternalId()
-        val json2 = Json.obj(
-          "ids" -> Json.toJson(Seq(k1.externalId, k2.externalId, k3.externalId, k4Id))
-        )
+        val json2 = Json.obj("ids" -> Json.toJson(Seq(k1.externalId, k2.externalId, k3.externalId, k4Id)))
         val request2 = FakeRequest("POST", testPathRemove).withBody(json2)
         val result2 = libraryController.removeKeeps(pubId1)(request2)
         status(result2) must equalTo(OK)

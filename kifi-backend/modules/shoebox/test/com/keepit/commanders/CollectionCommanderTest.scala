@@ -220,8 +220,8 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         collectionCommander.pageCollections("user", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Luigi", "Bowser")
         collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "DonkeyKong", "Luigi")
-        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser", "Luigi")
-        collectionCommander.pageCollections("num_keeps", 1, 3, user.id.get).map(_.name) === Seq("DonkeyKong")
+        collectionCommander.pageCollections("name", 1, 3, user.id.get).map(_.name) === Seq("Mario")
+        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser") // Luigi & DonkeyKong don't have keeps!
       }
     }
   }

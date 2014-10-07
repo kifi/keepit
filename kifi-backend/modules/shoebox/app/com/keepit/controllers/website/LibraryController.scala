@@ -372,17 +372,13 @@ class LibraryController @Inject() (
   }
 
   def removeKeeps(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
-    Library.decodePublicId(pubId) match {
-      case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_id"))
-      case Success(libId) =>
-        val keepExtIds = (request.body \ "ids").as[Seq[ExternalId[Keep]]]
-        val source = KeepSource.site
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-        keepsCommander.unkeepManyFromLibrary(keepExtIds, libId, request.userId) match {
-          case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
-          case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
-        }
+    val libraryId = Library.decodePublicId(pubId).get
+    val keepExtIds = (request.body \ "ids").as[Seq[ExternalId[Keep]]]
+    val source = KeepSource.site
+    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
+    keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
+      case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
+      case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
     }
   }
 
