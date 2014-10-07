@@ -10,8 +10,8 @@ import com.keepit.common.logging.Logging
 abstract class LocalAlignment {
   def begin(): Unit
   def end(): Unit
-  def update(id: Int, position: Int, weight: Float = 1.0f): Unit
-  def single(id: Int, weight: Float = 1.0f): Float
+  def update(id: TermId, position: Int, weight: Float = 1.0f): Unit
+  def single(id: TermId, weight: Float = 1.0f): Float
   def score: Float
   def maxScore: Float
 }
@@ -32,7 +32,11 @@ object LocalAlignment {
   case class PhraseMatch(pos: Int, len: Int) extends Match
   case class TermMatch(pos: Int) extends Match { val len = 1 }
 
-  class PhraseMatcher(dict: Seq[(Seq[Int], Match)]) extends AhoCorasick[Int, Match](dict)
+  case class TermId(id: Int)
+  private[this] val termIds = (0 until 32).map(TermId(_)).toArray
+  def intToTermId(id: Int) = if (id < termIds.length) termIds(id) else TermId(id)
+
+  class PhraseMatcher(dict: Seq[(Seq[TermId], Match)]) extends AhoCorasick[TermId, Match](dict)
 }
 
 class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalAlignment {
@@ -64,14 +68,14 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
     lastPos = -1
   }
 
-  def update(termId: Int, curPos: Int, weight: Float = 1.0f): Unit = {
+  def update(termId: TermId, curPos: Int, weight: Float = 1.0f): Unit = {
     if (lastPos < curPos) dist = curPos - lastPos
     // update run lengths and local scores
     var prevRun = 0.0f
     var localScoreSum = 0.0f
     var i = 0
     while (i < numTerms) {
-      val runLen = if (termIds(i) == termId) prevRun + 1.0f else 0.0f
+      val runLen = if (termIds(i) == termId.id) prevRun + 1.0f else 0.0f
       val localScore = ls(i) - getGapPenalty(dist)
       prevRun = rl(i) // store the run length of previous round
       rl(i) = runLen
@@ -85,18 +89,19 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
 
   def end(): Unit = {}
 
-  def single(termId: Int, weight: Float = 1.0f) = weight
+  def single(termId: TermId, weight: Float = 1.0f) = weight
 
   def score: Float = alignmentScore
 }
 
 class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.3f) extends LocalAlignment with Logging {
+  private[this] val invalidTermId = TermId(-1)
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
   private[this] var adjustment = 0
-  private[this] var lastId = -1
-  private[this] val ids = new Array[Int](bufSize)
+  private[this] var lastId = invalidTermId
+  private[this] val ids = new Array[TermId](bufSize)
   private[this] val matching = new Array[Boolean](bufSize)
   private[this] var state: State[Match] = phraseMatcher.initialState
   private[this] var matchedPhrases = Set.empty[Match]
@@ -117,13 +122,13 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     bufferedPos = -1
     processedPos = -1
     adjustment = 0
-    lastId = -1
+    lastId = invalidTermId
     state = phraseMatcher.initialState
     matchedPhrases = Set.empty[Match]
     localAlignment.begin()
   }
 
-  def update(termId: Int, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
+  def update(termId: TermId, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
     if (rawPos == bufferedPos) {
       if (termId == lastId) return // dedup
       adjustment += 1
@@ -164,7 +169,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     localAlignment.end()
   }
 
-  def single(termId: Int, weight: Float = 1.0f) = {
+  def single(termId: TermId, weight: Float = 1.0f) = {
     state = phraseMatcher.initialState
     state = phraseMatcher.next(termId, state)
     localAlignment.single(termId, if (state.matched) 1.0f else nonPhraseWeight)
