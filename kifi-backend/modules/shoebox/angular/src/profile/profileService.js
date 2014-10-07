@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch',
-  function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch) {
+  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch', '$rootElement',
+  function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
 
     var me = {
       seqNum: 0
@@ -16,13 +16,20 @@ angular.module('kifi')
       fetchMe();
     });
 
+    function updateLoginState(meObj) {
+      $rootElement.find('html').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
+      $rootScope.userLoggedIn = userLoggedIn = !!meObj;
+      $rootScope.$broadcast('userLoggedInStateChange', meObj);
+    }
+
     var meService = new Clutch(function () {
       return $http.get(routeService.profileUrl).then(function (res) {
-        $rootScope.userLoggedIn = userLoggedIn = true;
-        return updateMe(res.data);
+        var newMe = updateMe(res.data);
+        updateLoginState(newMe);
+        return newMe;
       })['catch'](function (err) {
         if (err.status === 403) {
-          $rootScope.userLoggedIn = userLoggedIn = false;
+          updateLoginState(null);
         }
       });
     }, {
