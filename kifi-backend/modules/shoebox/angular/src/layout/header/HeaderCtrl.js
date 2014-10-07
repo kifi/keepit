@@ -20,7 +20,7 @@ angular.module('kifi')
 
 
     $scope.me = profileService.me;
-    $scope.me.picUrl = '//www.kifi.com/assets/img/ghost.200.png';
+    $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
     $scope.isActive = function (path) {
       var loc = $location.path();
