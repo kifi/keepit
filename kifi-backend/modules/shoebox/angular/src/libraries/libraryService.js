@@ -229,6 +229,10 @@ angular.module('kifi')
             return library.id === libraryId;
           });
         });
+      },
+
+      copyKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName));
       }
     };
     return api;

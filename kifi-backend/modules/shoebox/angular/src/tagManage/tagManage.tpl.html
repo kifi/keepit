@@ -51,10 +51,10 @@
       					</ng-pluralize>
       				</span>
       				<span class="manage-tag-row-links-section">
-      					<span class="manage-tag-row-link">
+      					<span class="manage-tag-row-link" ng-click="convertToLibrary(tag.name)">
       						Convert to library
       					</span>&middot;
-      					<span class="manage-tag-row-link">
+      					<span class="manage-tag-row-link" ng-click="removeTag(tag)">
       						Delete
       					</span>
       				</span>

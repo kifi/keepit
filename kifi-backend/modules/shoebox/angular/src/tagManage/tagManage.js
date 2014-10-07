@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope',
-  function (tagService, $scope) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'libraryService', '$rootScope',
+  function (tagService, $scope, $window, libraryService, rootScope) {
     $scope.tagList = tagService.list;
     $scope.tagsToShow = $scope.tagList;
 
@@ -72,12 +72,29 @@ angular.module('kifi')
     ///// Manage Tags /////
     ///////////////////////
 
-    $scope.convertToLibrary = function () {
+    $scope.convertToLibrary = function (tagName) {
+      // first create library with same name
+      $window.alert('Creating library ' + tagName);
+      var newLibrary = { name: tagName, slug: tagName, visibility: 'secret' };
+      var promise = libraryService.createLibrary(newLibrary).then(function (resp) {
+        libraryService.fetchLibrarySummaries(true).then(function () {
+          $rootScope.$emit('changedLibrary');
+        });
+      });
 
+      // then copy keeps to that library
+      $window.alert('Copying keeps to ' + tagName);
+      var libraryId = _.find(libraryService.librarySummaries, function (lib) {
+        return lib.name === 'tagName';
+      }).id;
+      libraryService.copyKeepsFromTagToLibrary(libraryId, tagName);
     };
 
     $scope.removeTag = function (tag) {
-      tagService.remove(tag);
+      var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
+      if (choice) {
+        tagService.remove(tag);
+      }
     };
 
   }

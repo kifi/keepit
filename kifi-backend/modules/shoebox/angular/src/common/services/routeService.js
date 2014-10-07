@@ -116,6 +116,9 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
       },
       createLibrary: route('/libraries/add'),
+      copyKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
       },
