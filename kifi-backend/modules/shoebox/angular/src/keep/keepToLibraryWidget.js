@@ -8,7 +8,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       /*
-       * Relies on parent scope to have on its scope:
+       * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
        *  selection - an object whose 'library' property will be the selected library.
        */
@@ -49,10 +49,10 @@ angular.module('kifi')
             return;
           }
 
-          // Clicked on a selection option? Remember the option and exit.
+          // Clicked on a selection option? Also exit, but after a small timeout because
+          // otherwise the widget disappears too quickly for the user to see a nice
+          // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
-            // Using timeout because therwise the widget disappears too quickly and
-            // the user doesn't get to see the selected library highlighted.
             $timeout(removeWidget, 200);
             return;
           }
