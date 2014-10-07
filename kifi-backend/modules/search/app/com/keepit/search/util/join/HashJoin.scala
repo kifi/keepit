@@ -3,7 +3,7 @@ package com.keepit.search.util.join
 class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, joinerManager: JoinerManager) {
 
   @inline
-  private[this] def hash(id: Long): Int = ((id | (id >>> 16)) % numHashBuckets).toInt
+  private[this] def hash(id: Long): Int = ((id ^ (id >>> 16)) % numHashBuckets).toInt
 
   private[this] def buildCumulativeCounts(reader: DataBufferReader): Array[Int] = {
     val count = new Array[Int](numHashBuckets + 1) // the last element will be the total count
