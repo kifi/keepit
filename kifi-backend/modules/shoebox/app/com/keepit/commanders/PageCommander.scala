@@ -10,7 +10,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.search.{RestrictedKeepInfo, AugmentableItem, ItemAugmentationRequest, SearchServiceClient}
+import com.keepit.search.{ RestrictedKeepInfo, AugmentableItem, ItemAugmentationRequest, SearchServiceClient }
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
@@ -126,8 +126,9 @@ class PageCommander @Inject() (
       val getKeepersFuture = searchClient.augmentation(request).map { response =>
         val restrictedKeeps = response.infos(item).keeps
         db.readOnlyMaster { implicit session =>
-          restrictedKeeps.map { case RestrictedKeepInfo(keepId, libId, keeperId, _) =>
-            keeperId.map(basicUserRepo.load) // get keeper info (if exists, otherwise just None)
+          restrictedKeeps.map {
+            case RestrictedKeepInfo(keepId, libId, keeperId, _) =>
+              keeperId.map(basicUserRepo.load) // get keeper info (if exists, otherwise just None)
           }
         }
       }
