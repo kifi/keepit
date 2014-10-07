@@ -112,12 +112,24 @@ angular.module('kifi')
         }
 
         function keepOne (keep, isPrivate) {
-          keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
-             keep.buildKeep(keptItem);
-             keep.makeKept();
-             libraryService.addToLibraryCount(keep.libraryId, 1);
-             tagService.addToKeepCount(1);
-           });
+          if (scope.librariesEnabled) {
+            keepActionService.keepToLibrary([keep.url], keep.libraryId).then(function (resp) {
+              var keptItem = resp && resp.keeps && resp.keeps[0];
+
+              if (keptItem) {
+                keep.buildKeep(keptItem);
+                keep.makeKept();
+                libraryService.addToLibraryCount(keep.libraryId, 1);
+              }
+            });
+          } else {
+            keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
+              keep.buildKeep(keptItem);
+              keep.makeKept();
+
+              tagService.addToKeepCount(1);
+             });
+          }
 
           if (_.isFunction(scope.keepCallback)) {
             scope.keepCallback({ 'keep': keep });
@@ -278,8 +290,11 @@ angular.module('kifi')
               keepOne(keep);
             });
 
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-            tagService.addToKeepCount(-1);
+            if (scope.librariesEnabled) {
+              libraryService.addToLibraryCount(keep.libraryId, -1);
+            } else {
+              tagService.addToKeepCount(-1);
+            }
           });
         };
 
@@ -302,7 +317,6 @@ angular.module('kifi')
 
                   libraryService.fetchLibrarySummaries(true);
                   libraryService.addToLibraryCount(libraryId, 1);
-                  tagService.addToKeepCount(1);
                 });
               }
             });
