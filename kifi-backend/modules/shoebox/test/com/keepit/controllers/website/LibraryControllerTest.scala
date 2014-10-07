@@ -997,10 +997,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (keeps(0), keeps(1), keeps(2))
         }
 
-        val testPathRemove = com.keepit.controllers.website.routes.LibraryController.removeKeeps(pubId1).url
+        // test bulk unkeeping
+        val testPathRemoveMany = com.keepit.controllers.website.routes.LibraryController.removeKeeps(pubId1).url
         val k4Id: ExternalId[Keep] = ExternalId()
-        val json2 = Json.obj("ids" -> Json.toJson(Seq(k1.externalId, k2.externalId, k3.externalId, k4Id)))
-        val request2 = FakeRequest("POST", testPathRemove).withBody(json2)
+        val json2 = Json.obj("ids" -> Json.toJson(Seq(k1.externalId, k2.externalId, k4Id)))
+        val request2 = FakeRequest("POST", testPathRemoveMany).withBody(json2)
         val result2 = libraryController.removeKeeps(pubId1)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
@@ -1011,8 +1012,22 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "failures":["${k4Id}"],
               "unkept":
               [{"id":"${k1.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
-              {"id":"${k2.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"},
-              {"id":"${k3.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}]
+              {"id":"${k2.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"}]
+            }
+          """.stripMargin
+        ))
+
+        // test single unkeeping
+        val testPathRemoveOne = com.keepit.controllers.website.routes.LibraryController.removeKeep(pubId1, k3.externalId).url
+        val request3 = FakeRequest("DELETE", testPathRemoveOne).withBody(Json.obj())
+        val result3: Future[Result] = libraryController.removeKeep(pubId1, k3.externalId)(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+
+        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
+          s"""
+            {
+              "unkept": {"id":"${k3.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}
             }
           """.stripMargin
         ))
