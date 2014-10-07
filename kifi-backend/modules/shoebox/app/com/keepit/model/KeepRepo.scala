@@ -169,7 +169,8 @@ class KeepRepoImpl @Inject() (
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
       val bookmarks = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
-      log.warn(s"[getByUriAndUser] ${bookmarks.length} keeps found for (uri, user) pair ${(uriId, userId)}")
+      if (bookmarks.length > 1)
+        log.warn(s"[getByUriAndUser] ${bookmarks.length} keeps found for (uri, user) pair ${(uriId, userId)}")
       bookmarks.headOption
     }
 
