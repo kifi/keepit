@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('HeaderCtrl', [
-  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices', 'modalService',
-  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices, modalService) {
+  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
+    '$location', 'util', 'keyIndices', 'modalService', 'libraryService',
+  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
+    $location, util, keyIndices, modalService, libraryService) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-active');
@@ -26,6 +28,13 @@ angular.module('kifi')
       if (profileService.userLoggedIn() === true) {
         $scope.showHeader = true;
       }
+    });
+
+    $scope.librariesEnabled = false;
+    $scope.$watch(function () {
+      return libraryService.isAllowed();
+    }, function (newVal) {
+      $scope.librariesEnabled = newVal;
     });
 
     $scope.isActive = function (path) {
@@ -64,6 +73,10 @@ angular.module('kifi')
 
     $scope.navigateToInvite = function () {
       $location.path('/invite');  // TODO: put directly in <a href="">
+    };
+
+    $scope.navigateToManageTags = function () {
+      $location.path('/tags');
     };
 
   }

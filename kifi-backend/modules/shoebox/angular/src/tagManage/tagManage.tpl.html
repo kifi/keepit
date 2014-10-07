@@ -1,0 +1,73 @@
+<div ng-controller="ManageTagCtrl">
+
+  <div class="manage-tag-wrapper">
+    <div class="manage-tag">
+      <h2>Manage your tags</h2>
+      <div class="manage-tag-container">
+      	<div class="manage-tag-header">
+
+
+      		<div class="manage-tag-search-box">
+      			<div class="manage-tag-input-box" ng-class="{ 'focused': isFilterFocused }">
+			        <a class="manage-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
+			        <input class="manage-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Search tags..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-focus="focusFilter()" ng-blur="blurFilter()">
+		      	</div>
+      		</div>
+
+      		<div class="manage-tag-sort-by">
+      			<div class="manage-tag-sort-text">Sort by:</div>
+      			<div class="manage-tag-sort-button" ng-click="selectSortKeeps()" ng-style="{'background-color': selectedSort == 'keeps' ? '#333333' : '#ffffff', 'border-color': selectedSort == 'keeps' ? '#333333' : '#c1c1c1'}">Most used</div>
+      			<div class="manage-tag-sort-button" ng-click="selectSortName()" ng-style="{'background-color': selectedSort == 'name' ? '#333333' : '#ffffff', 'border-color': selectedSort == 'name' ? '#333333' : '#c1c1c1'}">ABC</div>
+      		</div>
+      	</div>
+
+      	<div class="manage-tag-content">
+      		<ul class="manage-tag-list">
+						<li class="manage-tag-row">
+      				<span class="manage-tag-row-name-section">
+      					<div class="manage-tag-row-name">San Francisco is the best city ever but its public transportation sucks</div>
+      				</span>
+      				<span class="manage-tag-row-num-keeps-section">
+      					<ng-pluralize count="2300 | number:0"
+      						when="{'0': 'No keeps', 'one': '1 keep', 'other':'{} keeps'}">
+      					</ng-pluralize>
+      				</span>
+      				<span class="manage-tag-row-links-section">
+      					<span class="manage-tag-row-link">
+      						Convert to library
+      					</span>&middot;
+      					<span class="manage-tag-row-link">
+      						Delete
+      					</span>
+      				</span>
+      			</li>
+      			<li class="manage-tag-row" ng-repeat="tag in tagsToShow">
+      				<span class="manage-tag-row-name-section">
+      					<span class="manage-tag-row-name">{{tag.name}}</span>
+      				</span>
+      				<span class="manage-tag-row-num-keeps-section">
+      					<ng-pluralize count="tag.keeps | number:0"
+      						when="{'0': '0 keeps', 'one': '1 keep', 'other':'{} keeps'}">
+      					</ng-pluralize>
+      				</span>
+      				<span class="manage-tag-row-links-section">
+      					<span class="manage-tag-row-link">
+      						Convert to library
+      					</span>&middot;
+      					<span class="manage-tag-row-link">
+      						Delete
+      					</span>
+      				</span>
+      			</li>
+
+      		</ul>
+      	</div>
+
+      	<div class="manage-tag-pagination">
+      	</div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
