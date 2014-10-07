@@ -179,7 +179,7 @@ class UriFromKeepsScoreVectorSource(
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(uriId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
+          writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
 
           docId = pq.top.doc // next doc
         } else {
@@ -204,7 +204,7 @@ class UriFromKeepsScoreVectorSource(
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
             // write to the buffer
             output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
-            writer.putLong(uriId).putLong(keepId)
+            writer.putLong(uriId, keepId)
             count += 1
           }
           docId = td.nextDoc()
@@ -353,7 +353,7 @@ class LibraryFromKeepsScoreVectorSource(
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // libId (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(libId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
+          writer.putLong(libId, keepId).putTaggedFloatBits(taggedScores, size)
 
           docId = pq.top.doc // next doc
         } else {
