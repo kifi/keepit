@@ -76,7 +76,7 @@ class AugmentationCommanderImpl @Inject() (
       for {
         libraryFilter <- futureLibraryFilter
         userFilter <- futureUserFilter
-        allAugmentationInfos <- getAugmentationInfos(shards, context.userId, libraryFilter, userFilter, items ++ context.corpus.keySet)
+        allAugmentationInfos <- getAugmentationInfos(shards, libraryFilter, userFilter, items ++ context.corpus.keySet)
       } yield {
         val contextualAugmentationInfos = context.corpus.collect { case (item, weight) if allAugmentationInfos.contains(item) => (allAugmentationInfos(item) -> weight) }
         val contextualScores = computeAugmentationScores(contextualAugmentationInfos)
@@ -86,7 +86,7 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, AugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, AugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
     val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, AugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
@@ -128,9 +128,8 @@ class AugmentationCommanderImpl @Inject() (
           val visibility = visibilityDocValues.get(docId)
 
           if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
-            val userIdOpt = if (userIdFilter.findIndex(userId) >= 0) Some(Id[User](userId)) else None
             val record = getKeepRecord(docId)
-            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), userIdOpt, record.tags)
+            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
