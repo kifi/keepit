@@ -691,7 +691,7 @@ api.port.on({
     }
   },
   search_tags: function (data, respond) {
-    ajax('GET', '/ext/libraries/' + data.libraryId + '/tags/search', {q: data.q, n: 6}, respond, respond.bind(null, []));
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/tags/search', {q: data.q, n: data.n}, respond, respond.bind(null, []));
   },
   tag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
