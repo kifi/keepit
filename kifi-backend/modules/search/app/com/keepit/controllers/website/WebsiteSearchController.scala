@@ -81,8 +81,7 @@ class WebsiteSearchController @Inject() (
           shoeboxClient.getUriSummaries(uriIds)
         }
 
-        val userIdOpt = if (userId == nonUser) None else Some(userId)
-        augment(augmentationCommander, userIdOpt.get, kifiPlainResult).flatMap {
+        augment(augmentationCommander, userId, kifiPlainResult).flatMap {
           case (infos, scores) =>
             val futureUsers = shoeboxClient.getBasicUsers(infos.flatMap(_.keeps.flatMap(_.keptBy)).distinct)
             val libraries = getLibraryNames(libraryIndexer.getSearcher, infos.flatMap(_.keeps.flatMap(_.keptIn)).distinct).map {
@@ -94,7 +93,7 @@ class WebsiteSearchController @Inject() (
               summaries <- futureUriSummaries
             } yield JsArray(
               (kifiPlainResult.hits zip infos).map {
-                case (hit, info) => toWebsiteSearchHit(hit, userIdOpt, summaries(Id(hit.id)), info, scores, users, libraries)
+                case (hit, info) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), info, scores, users, libraries)
               }
             )
         }
@@ -160,15 +159,15 @@ object WebsiteSearchController {
   private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
   @inline private def normalize(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
-  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Option[Id[User]], summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): JsObject = {
-    val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(userId.isDefined && _.keptBy == userId)
+  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): JsObject = {
+    val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(_.keptBy == Some(userId))
 
     // Keeps
     val myKeeps = myRestrictedKeeps.flatMap(_.keptIn).sortBy(scores.byLibrary).map(libraries(_))
 
     val moreKeeps = {
       var uniqueKeepers = mutable.HashSet[Id[User]]()
-      userId.foreach(uniqueKeepers += _)
+      uniqueKeepers += userId
       moreRestrictedKeeps.sortBy(keep => (keep.keptBy.map(scores.byUser), keep.keptIn.map(scores.byLibrary))).collect {
         case RestrictedKeepInfo(_, keptIn, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
           uniqueKeepers += keeperId
