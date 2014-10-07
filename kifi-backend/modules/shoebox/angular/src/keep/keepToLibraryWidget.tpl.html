@@ -1,0 +1,6 @@
+<div class="keep-to-library-widget">
+  <input ng-model="search.name">
+  <ul class="library-select-list">
+    <li ng-repeat="library in libraries | filter:search" class="library-select-option" ng-click="selectLibrary(library)">{{library.name}}</li>
+  </ul>
+</div>
