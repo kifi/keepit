@@ -213,6 +213,10 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 
 GET    /m/1/discover/                           @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
 
+GET     /m/1/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /m/1/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
+POST    /m/1/recos/trash           @com.keepit.controllers.website.RecommendationsController.trash(id: ExternalId[NormalizedURI])
+
 ##########################################
 # Website
 ##########################################
