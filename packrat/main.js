@@ -604,6 +604,7 @@ api.port.on({
     var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
       libraries = o.libraries;
+      libraries.filter(idIsIn(libraryIds)).forEach(function (lib) { lib.system = true; });
       var keeps = d ? d.keeps : [];
       respond({keeps: keeps, libraries: o.libraries});
       // preload keep details
@@ -2209,6 +2210,9 @@ function idIs(id) {
 }
 function idIsNot(id) {
   return function (o) {return o.id !== id};
+}
+function idIsIn(ids) {
+  return function (o) {return ids.indexOf(o.id) >= 0; };
 }
 function getId(o) {
   return o.id;

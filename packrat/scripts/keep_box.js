@@ -190,15 +190,13 @@ var keepBox = keepBox || (function () {
     var otherLibs = [];
     for (var i = 0; i < libs.length; i++) {
       var lib = libs[i];
-      if (i === 0) {
-        lib = $.extend({highlighted: true}, lib);
-      }
       if (lib.keep) {
         inLibs.push(lib);
       } else {
         otherLibs.push(lib);
       }
     }
+    (inLibs.length ? inLibs : otherLibs)[0].highlighted = true;
     return {
       inLibs: inLibs,
       recentLibs: [],
@@ -234,12 +232,11 @@ var keepBox = keepBox || (function () {
         case 38: // up
         case 40: // down
           var up = e.keyCode === 38;
-          var $item = $view.find('.kifi-highlighted');
-          $item = $item.length ?
-            $item[up ? 'prev' : 'next']().find('.kifi-keep-box-lib').addBack('.kifi-keep-box-lib') :
-            $view.find('.kifi-keep-box-lib')[up ? 'last' : 'first']();
-          if ($item.length) {
-            highlightLibrary($item[0]);
+          var $items = $view.find('.kifi-keep-box-lib'), numItems = $items.length;
+          if (numItems) {
+            var $item = $items.filter('.kifi-highlighted');
+            var index = $item.length ? ($items.index($item) + (up ? numItems - 1 : 1)) % numItems : (up ? numItems - 1 : 0);
+            highlightLibrary($items[index]);
           }
           return false;
         case 13: // enter
@@ -267,7 +264,7 @@ var keepBox = keepBox || (function () {
         chooseLibrary(this);
       }
     })
-    .on('click', '.kifi-keep-box-lib-remove', function (e) {
+    .on('click', '.kifi-keep-box-lib-unkeep', function (e) {
       if (e.which === 1) {
         var libraryId = $(this).prev().data('id');
         var library = $box.data('libraries').find(idIs(libraryId));
