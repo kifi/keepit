@@ -100,6 +100,7 @@
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
+  -webkit-transform: scale(1); // crbug.com/157218
   transition: height @view-swipe-duration;
 }
 .kifi-keep-box-cart {
@@ -194,6 +195,7 @@
   }
   &.kifi-create {
     background-color: #f3f3f3;
+    border-bottom: none;
   }
   &.kifi-highlighted {
     background-color: #e8e8e8;
@@ -232,12 +234,19 @@
   border: 1px solid rgba(0,0,0,.3);
   border-radius: 4px;
   background-image: linear-gradient(#fff, #f3f3f3);
+  &:focus {
+    outline: 0 !important;
+    box-shadow: 0 0 4px #5b9dd9 !important;
+  }
   &:hover:active,
   &:focus:active {
     background-image: none;
     background-color: #f3f3f3;
   }
   color: #464646 !important;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
 }
 
 .kifi-keep-box-new-lib-h1 {

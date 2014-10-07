@@ -71,7 +71,8 @@ var keepBox = keepBox || (function () {
     }))
     .on('mousedown', function (e) {
       if (e.which === 1) {
-        e.preventDefault();
+        e.preventDefault();  // prevent keeper drag
+        $(e.target).focus();
       }
     })
     .on('click', '.kifi-keep-box-x', function (e) {
@@ -190,6 +191,7 @@ var keepBox = keepBox || (function () {
     var otherLibs = [];
     for (var i = 0; i < libs.length; i++) {
       var lib = libs[i];
+      lib.highlighted = false;
       if (lib.keep) {
         inLibs.push(lib);
       } else {
@@ -344,7 +346,7 @@ var keepBox = keepBox || (function () {
   }
 
   function highlightLibrary(el) {
-    $(el).closest('.kifi-keep-box-libs').find('.kifi-highlighted').removeClass('kifi-highlighted');
+    $(el).closest('.kifi-keep-box-view-libs').find('.kifi-highlighted').removeClass('kifi-highlighted');
     el.classList.add('kifi-highlighted');
   }
 
