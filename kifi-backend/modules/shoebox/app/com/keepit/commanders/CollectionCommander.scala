@@ -66,6 +66,26 @@ class CollectionCommander @Inject() (
     collections
   }
 
+  def pageCollections(sort: String, offset: Int, pageSize: Int, userId: Id[User]) = {
+    log.info(s"Getting all collections for $userId (sort $sort)")
+    val unsortedCollections = db.readOnlyMaster { implicit s =>
+      val colls = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId)
+      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id).toSet)
+      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id).orElse(Some(0))) }
+    }
+    val collections = sort match {
+      case "user" =>
+        userSort(userId, unsortedCollections)
+      case "num_keeps" =>
+        unsortedCollections.sortBy(_.keeps)(Ordering[Option[Int]].reverse)
+      case "name" =>
+        unsortedCollections.sortBy(_.name.toLowerCase)(Ordering[String])
+      case _ => // default is "last_kept"
+        unsortedCollections
+    }
+    collections.drop(offset * pageSize).take(pageSize)
+  }
+
   def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     setCollectionOrdering(uid, getCollectionOrdering(uid))
   }
