@@ -27,12 +27,26 @@
   background: #333;
 }
 .kifi-keep-box-title {
+  display: inline-block;
+  vertical-align: top;
   margin-left: 6px;
   line-height: 37px;
   font-size: 13px;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: #fff;
   font-weight: 300;
   letter-spacing: .3px;
+  transition: opacity @view-swipe-duration;
+  &:not(:last-of-type) {
+    width: 0;
+    opacity: 0;
+  }
+  .kifi-keep-box-title+& {
+    margin-left: 0;
+  }
 }
 @box-top-btn-diam: 24px;
 .kifi-keep-box-back,

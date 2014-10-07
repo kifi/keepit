@@ -146,6 +146,8 @@ var keepBox = keepBox || (function () {
     makeScrollable($new);
 
     $box.find('.kifi-keep-box-back').toggleClass('kifi-hidden', $new.hasClass('kifi-keep-box-view-libs'));
+    var $title = $box.find('.kifi-keep-box-title').on('transitionend', removeThis);
+    $title.clone().text($new.data('boxTitle')).css('opacity', 0).insertAfter($title).layout().css('opacity', '');
 
     var heightDelta = $new[0].offsetHeight - $old[0].offsetHeight;
 
@@ -402,7 +404,6 @@ var keepBox = keepBox || (function () {
 
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
-      static: true,
       title: title,
       site: document.location.hostname,
       hasImages: images.length > 0
@@ -694,6 +695,10 @@ var keepBox = keepBox || (function () {
 
   function tagNameToTokenItem(name) {
     return {tag: name};
+  }
+
+  function removeThis() {
+    $(this).remove();
   }
 
   function getSrc(img) {
