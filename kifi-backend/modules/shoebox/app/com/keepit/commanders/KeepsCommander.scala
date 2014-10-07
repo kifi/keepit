@@ -434,7 +434,7 @@ class KeepsCommander @Inject() (
     val deactivatedBookmarks = db.readWrite { implicit s =>
       val bms = keepInfos.map { ki =>
         normalizedURIInterner.getByUri(ki.url).flatMap { uri =>
-          val ko = keepRepo.getByUriAndUser(uri.id.get, userId).map { b =>
+          val ko = keepRepo.getInDisjointByUriAndUser(uri.id.get, userId).map { b =>
             val saved = keepRepo.save(b withActive false)
             log.info(s"[unkeepMulti] DEACTIVATE $saved (uri=$uri, ki=$ki)")
             saved
@@ -698,7 +698,7 @@ class KeepsCommander @Inject() (
     val keep = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url)
-        keep <- keepRepo.getByUriAndUser(uri.id.get, userId)
+        keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
       } yield {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
@@ -717,7 +717,7 @@ class KeepsCommander @Inject() (
     val keeps = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url).toSeq
-        keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, userId).toSeq
         ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
       } yield {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
@@ -733,7 +733,7 @@ class KeepsCommander @Inject() (
     db.readOnlyMaster { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url).toSeq
-        keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
+        keep <- keepRepo.getInDisjointByUriAndUser(uri.id.get, userId).toSeq
         collectionId <- keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       } yield {
         collectionRepo.get(collectionId)
