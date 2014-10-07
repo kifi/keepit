@@ -1,9 +1,14 @@
-.kf-main
+.kf-logged-in .kf-main
   min-width: 454px
   width: calc(100% - 310px)
 
   @media screen and (max-width: 1280px)
     width: calc(100% - 270px)
+
+  &>.kf-col-inner
+    //border-left: 1px solid #dbdee3
+    //border-right: 1px solid #dbdee3
+    box-sizing: border-box
 
 @media only screen and (max-width: 1024px)
   .kf-main
@@ -13,12 +18,6 @@
   .kf-sidebar-active .kf-main
     width: calc(100% - 270px)
 
-.kf-main
-
-  &>.kf-col-inner
-    //border-left: 1px solid #dbdee3
-    //border-right: 1px solid #dbdee3
-    box-sizing: border-box
 
 .kf-main-head
   position: relative

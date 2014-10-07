@@ -214,9 +214,11 @@ angular.module('kifi')
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-            element.find('.kf-keep-info').css({
-              'height': calcTextHeight + 'px'
-            }).addClass('kf-dyn-positioned');
+            if (calcTextHeight > 20) {
+              element.find('.kf-keep-info').css({
+                'height': calcTextHeight + 'px'
+              }).addClass('kf-dyn-positioned');
+            }
 
             $content.find('.kf-keep-image').on('error', function () {
               $content.find('.kf-keep-small-image').hide();
