@@ -2,7 +2,7 @@ package com.keepit.search.util.join
 
 object BloomFilter {
   def apply(dataBuffer: DataBuffer): BloomFilter = {
-    val bitMaps = new Array[Long](dataBuffer.size / 4 + 1) // four items per entry (each array entry is a bloom filter)
+    val bitMaps = new Array[Long]((dataBuffer.size / 4 + 1) | 0x01) // four items per entry (each array entry is a bloom filter)
     dataBuffer.scan(new DataBufferReader) { reader =>
       val id = reader.nextLong()
       val seed = (id ^ (id >>> 16))
