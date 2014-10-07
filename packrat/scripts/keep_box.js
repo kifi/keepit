@@ -307,18 +307,22 @@ var keepBox = keepBox || (function () {
   }
 
   function addCreateLibraryBindings($view) {
+    var $name = $view.find('.kifi-keep-box-new-lib-name')
+    .on('keydown', function (e) {
+      if (e.keyCode === 13) {
+        createLibrary($view, $submit);
+      }
+    });
     $view
     .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
-      this.parentNode.classList.toggle('kifi-checked', this.checked);
-    })
-    .on('keydown', '.kifi-keep-box-new-lib-name', function (e) {
-      if (e.keyCode === 13) {
-        createLibrary($view, $view.find('.kifi-keep-box-create'));
-      }
-    })
-    .on('click', '.kifi-keep-box-create[href]', function (e) {
-      if (e.which === 1) {
-        createLibrary($view, $(this));
+      var checked = this.checked;
+      this.parentNode.classList.toggle('kifi-checked', checked);
+      $name.toggleClass('kifi-secret', checked);
+    });
+    var $submit = $view.find('.kifi-keep-box-new-lib-create')
+    .on('click', function (e) {
+      if (e.which === 1 && this.href) {
+        createLibrary($view, $submit);
       }
     });
   }

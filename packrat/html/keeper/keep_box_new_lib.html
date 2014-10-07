@@ -1,18 +1,16 @@
 <div class="kifi-keep-box-view kifi-keep-box-view-new-lib">
-  <div class="kifi-keep-box-new-lib-h1">
-    Create Library
-  </div>
   <div class="kifi-keep-box-new-lib-head">Name Your Library</div>
-  <input class="kifi-keep-box-new-lib-name kifi-keep-box-with-lib-icon" name="lib_name" type="text" value="{{name}}" placeholder="Inspiring videos, Recipes I love..."/>
-  <div class="kifi-keep-box-new-lib-head kifi-secret">
-    Secret?
-  </div>
-  <div class="kifi-keep-box-new-lib-visibility">
+  <input class="kifi-keep-box-new-lib-name kifi-keep-box-with-lib-icon{{#secret}} kifi-secret{{/secret}}" name="lib_name" type="text" value="{{name}}" placeholder="Inspiring videos, Recipes I love..."/>
+  <div class="kifi-keep-box-new-lib-head">Make It Private?</div>
+  <div class="kifi-keep-box-new-lib-visibility{{#secret}} kifi-checked{{/secret}}">
     <input class="kifi-keep-box-new-lib-secret" name="lib_secret" type="checkbox"{{#secret}} checked=""{{/secret}}/>
-    <div class="kifi-keep-box-new-lib-desc-1">Your friends might discover keeps you put in this library.</div>
-    <div class="kifi-keep-box-new-lib-desc-2">Only you will be able to see this library.</div>
+    <span class="kifi-keep-box-new-lib-label kifi-n">No, make it public</span>
+    <span class="kifi-keep-box-new-lib-label kifi-y">Yes, make it private</span>
+    <div class="kifi-keep-box-new-lib-desc kifi-n">Anyone will be able to see the keeps in this library.</div>
+    <div class="kifi-keep-box-new-lib-desc kifi-y">Only you will be able to see the keeps in this library.</div>
   </div>
-  <a class="kifi-keep-box-create" href="javascript:">
+  <div class="kifi-keep-box-footer">
     <span class="kifi-keep-box-progress"></span>
-  </a>
+    <a class="kifi-keep-box-new-lib-create kifi-keep-box-button" href="javascript:">Create Library</a>
+  </div>
 </div>
