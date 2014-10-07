@@ -372,6 +372,11 @@ class KeepsController @Inject() (
     }
   }
 
+  def page(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
+    val tags = collectionCommander.pageCollections(sort, offset, pageSize, request.userId)
+    Ok(Json.obj("tags" -> tags))
+  }
+
   def saveCollection() = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
