@@ -53,7 +53,7 @@ class SeedAttributionHelper @Inject() (
 
     def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.1f
     def augmentedInfo2UserAttr(info: AugmentationInfo): UserAttribution = {
-      val users = info.keeps.flatMap(_.keptBy)
+      val users = info.keeps.flatMap(_.keptBy).distinct
       val user2Lib = info.keeps.flatMap {
         case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
         case _ => None
