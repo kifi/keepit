@@ -7,7 +7,7 @@ import org.apache.lucene.index.NumericDocValues
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
-trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
+trait VisibilityEvaluator { self: DebugOption =>
 
   protected val userId: Long
   protected val friendIdsFuture: Future[Set[Long]]
