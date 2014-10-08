@@ -371,7 +371,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def removeKeep(pubId: PublicId[Library], extId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def removeKeep(pubId: PublicId[Library], extId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val source = KeepSource.site
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build

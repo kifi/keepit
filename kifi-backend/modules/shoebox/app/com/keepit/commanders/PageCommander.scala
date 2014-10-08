@@ -126,10 +126,8 @@ class PageCommander @Inject() (
       val getKeepersFuture = searchClient.augmentation(request).map { response =>
         val restrictedKeeps = response.infos(item).keeps
         db.readOnlyMaster { implicit session =>
-          restrictedKeeps.map {
-            case RestrictedKeepInfo(keepId, libId, keeperId, _) =>
-              keeperId.map(basicUserRepo.load) // get keeper info (if exists, otherwise just None)
-          }
+          val userIdSet = restrictedKeeps.map(_.keptBy).flatten.toSet
+          basicUserRepo.loadAll(userIdSet).values.toSeq
         }
       }
 
@@ -139,23 +137,19 @@ class PageCommander @Inject() (
         userKeeps.map { keep =>
           val keeperId = keep.userId
           val mine = userId == keeperId
-          keep.libraryId.map { libraryId =>
-            val lib = libraryRepo.get(libraryId)
-            val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-              case Some(mem) => mem.hasWriteAccess
-              case _ => false
-            }
-            KeepData(
-              id = keep.externalId,
-              mine = mine,
-              removable = removable,
-              secret = lib.visibility == LibraryVisibility.SECRET,
-              libraryId = Library.publicId(lib.id.get))
-          }
+          val libraryId = keep.libraryId.get
+          val lib = libraryRepo.get(libraryId)
+          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.hasWriteAccess)
+          KeepData(
+            id = keep.externalId,
+            mine = mine,
+            removable = removable,
+            secret = lib.visibility == LibraryVisibility.SECRET,
+            libraryId = Library.publicId(lib.id.get))
         }
       }
-      getKeepersFuture.map { keepersOpt =>
-        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepersOpt.flatten, keepsData.flatten)
+      getKeepersFuture.map { keepers =>
+        KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
       }
     }.getOrElse {
       Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, Seq.empty[BasicUser], Seq.empty[KeepData])) // todo: add in otherKeepers?
