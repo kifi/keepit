@@ -27,6 +27,7 @@ angular.module('kifi')
         scope.secretLib = {};
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
+        scope.sortingMenu = { show : false, option : '' };
 
         scope.counts = {
           friendsCount: friendService.totalFriends(),
@@ -51,8 +52,9 @@ angular.module('kifi')
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
 
-          scope.userLibsToShow = sortByKept(allUserLibs);
-          scope.invitedLibsToShow = sortByKept(libraryService.invitedSummaries);
+          scope.userLibsToShow = allUserLibs;
+          scope.invitedLibsToShow = libraryService.invitedSummaries;
+          scope.sortingMenu.option = 'last_kept';
 
           scope.$broadcast('refreshScroll');
         }
@@ -106,6 +108,13 @@ angular.module('kifi')
 
         scope.$watch(tagService.getTotalKeepCount, function (val) {
           scope.counts.keepCount = val;
+        });
+
+        scope.$watch(function () {
+            return scope.sortingMenu.option;
+          }, function () {
+          scope.changeList();
+          scope.turnDropdownOff();
         });
 
         // on resizing window -> trigger new turn -> reset library list height
@@ -189,21 +198,21 @@ angular.module('kifi')
               newInvited = _.sortBy(newInvited, sortByNameFunc);
               break;
 
-            case 'numKeeps':
+            case 'num_keeps':
               newLibs = _.sortBy(newLibs, 'numKeeps').reverse();
               newInvited = _.sortBy(newInvited, 'numKeeps').reverse();
               break;
 
-            case 'numFollowers':
+            case 'num_followers':
               newLibs = _.sortBy(newLibs, 'numFollowers').reverse();
               newInvited = _.sortBy(newInvited, 'numFollowers').reverse();
               break;
 
-            case 'lastViewed':
+            case 'last_viewed':
               newLibs = sortByViewed(newLibs);
               newInvited = sortByViewed(newInvited);
               break;
-            case 'lastKept':
+            case 'last_kept':
               newLibs = sortByKept(newLibs);
               newInvited = sortByKept(newInvited);
               break;
@@ -240,60 +249,36 @@ angular.module('kifi')
         //
         // Sorting.
         //
-        scope.sortingMenu = { show : false, option : 'lastKept' };
-
         scope.toggleDropdown = function () {
-          scope.sortingMenu.show = !scope.sortingMenu.show;
+          if (scope.sortingMenu.show === true) {
+            scope.turnDropdownOff();
+          } else {
+            scope.turnDropdownOn();
+          }
+        };
+        scope.turnDropdownOn = function () {
+          scope.sortingMenu.show = true;
+          $document.on('mousedown', onClick);
+        };
+        scope.turnDropdownOff = function () {
+          scope.sortingMenu.show = false;
+          $document.off('mousedown', onClick);
         };
 
-
         function onClick(event) {
-          // click on sort button
-          if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
-            scope.$apply(scope.toggleDropdown);
-            return;
-          }
-          // click on any dropdown sorting option, have a delay before removing menu
-          if (angular.element(event.target).closest('.dropdown-option').length) {
-            $timeout( function() {
-              scope.sortingMenu.show = false;
-            }, 300);
-            return;
-          }
           // click anywhere else that's not dropdown menu
           if (!angular.element(event.target).closest('.dropdown-menu-content').length) {
             scope.$apply( function() {
-              scope.sortingMenu.show = false;
+              scope.turnDropdownOff();
             });
             return;
           }
         }
-        $document.on('mousedown', onClick);
 
-        scope.sortByName = function () {
-          scope.sortingMenu.option = 'name';
-          scope.changeList();
-        };
-
-        scope.sortByNumKeeps = function () {
-          scope.sortingMenu.option = 'numKeeps';
-          scope.changeList();
-        };
-
-        scope.sortByNumFollowers = function () {
-          scope.sortingMenu.option = 'numFollowers';
-          scope.changeList();
-        };
-
-        scope.sortByLastViewed = function () {
-          scope.sortingMenu.option = 'lastViewed';
-          scope.changeList();
-        };
-
-        scope.sortByLastKept = function () {
-          scope.sortingMenu.option = 'lastKept';
-          scope.changeList();
-        };
+        // Cleaner upper
+        scope.$on('$destroy', function() {
+          $document.off('mousedown', onClick);
+        });
       }
     };
   }

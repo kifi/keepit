@@ -69,30 +69,28 @@
       </div>
 
       <div class="kf-sort-libs">
-        <div class="kf-sort-libs-button" ng-style="{'background-color': sortingMenu.show == true ? '#ffffff' : '#eeeeee',
-      'border': sortingMenu.show == true ? '1px solid #6fa6ef' : '1px solid #e6e6e6'}" >
+        <div class="kf-sort-libs-button" ng-class="{'on': sortingMenu.show }" ng-click="toggleDropdown()">
           <div class="kf-sort-img sprite sprite-arrow-gray-down"></div>
         </div>
 
         <ul class="dropdown-menu-content" ng-show="sortingMenu.show">
-          <li class="dropdown-option" ng-click="sortByLastKept()">
-            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='lastKept'"></div>Last Kept To
+          <li class="dropdown-option" ng-click="sortingMenu.option='last_kept'">
+            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='last_kept'"></div>Last Kept To
           </li>
-          <li class="dropdown-option" ng-click="sortByNumKeeps()">
-            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='numKeeps'"></div>Keeps
+          <li class="dropdown-option" ng-click="sortingMenu.option='num_keeps'">
+            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='num_keeps'"></div>Keeps
           </li>
-          <li class="dropdown-option" ng-click="sortByNumFollowers()">
-            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='numFollowers'"></div>Followers
+          <li class="dropdown-option" ng-click="sortingMenu.option='num_followers'">
+            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='num_followers'"></div>Followers
           </li>
-          <li class="dropdown-option" ng-click="sortByName()">
+          <li class="dropdown-option" ng-click="sortingMenu.option='name'">
             <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='name'"></div>Alphabetical
           </li>
-          <li class="dropdown-option" ng-click="sortByLastViewed()">
-            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='lastViewed'"></div>Last Viewed
+          <li class="dropdown-option" ng-click="sortingMenu.option='last_viewed'">
+            <div class="dropdown-option-check sprite sprite-small-checked-box" ng-show="sortingMenu.option=='last_viewed'"></div>Last Viewed
           </li>
         </ul>
       </div>
-
     </div>
 
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
