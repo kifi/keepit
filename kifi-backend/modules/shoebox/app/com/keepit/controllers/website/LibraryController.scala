@@ -370,7 +370,7 @@ class LibraryController @Inject() (
           unhashedPassPhraseOpt.map { unhashedPassPhrase =>
             val passPhrase = HashedPassPhrase.generateHashedPhrase(unhashedPassPhrase)
             if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(passPhrase))) {
-              val cookie = ("library_access", s"${Library.publicId(library.id.get)}/${passPhrase.value}")
+              val cookie = ("library_access", s"${Library.publicId(library.id.get).id}/${passPhrase.value}")
               NoContent.addingToSession(cookie)
             } else {
               BadRequest(Json.obj("error" -> "invalid_access"))
