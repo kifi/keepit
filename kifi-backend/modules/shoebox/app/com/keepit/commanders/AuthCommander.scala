@@ -8,27 +8,32 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail._
+import com.keepit.common.oauth2.{ OAuth2ProviderConfiguration, OAuth2Configuration }
 import com.keepit.common.performance.timing
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.core.AuthHelper
+import com.keepit.controllers.core.{ OAuth2Providers, AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
+import play.api.http.Status
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.libs.ws.WS
+import play.api.mvc.BodyParsers.parse
 import play.api.mvc.{ RequestHeader, Result }
 import play.api.mvc.Results.{ NotFound, Ok }
 
 import scala.Some
 import scala.concurrent.Future
 
-import securesocial.core.{ Authenticator, AuthenticationMethod, Events, Identity, IdentityId, IdentityProvider }
-import securesocial.core.{ LoginEvent, OAuth1Provider, PasswordInfo, Registry, SecureSocial, SocialUser, UserService }
+import securesocial.core._
 import securesocial.core.providers.utils.GravatarHelper
+
+import scala.util.{ Failure, Success, Try }
 
 case class EmailPassword(email: EmailAddress, password: Array[Char])
 object EmailPassword {
@@ -92,6 +97,7 @@ class AuthCommander @Inject() (
     db: Database,
     clock: Clock,
     airbrakeNotifier: AirbrakeNotifier,
+    oauth2Config: OAuth2Configuration,
     userRepo: UserRepo,
     userCredRepo: UserCredRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
@@ -249,6 +255,58 @@ class AuthCommander @Inject() (
     inviteExtIdOpt.foreach { invite => contextBuilder += ("acceptedInvite", invite.id) }
 
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
+  }
+
+  def fillUserProfile(provider: IdentityProvider, oauth2Info: OAuth2Info): Try[SocialUser] =
+    Try {
+      provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info)))
+    }
+
+  def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
+
+  def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
+    oauth2Config.getProviderConfig(provider.id) match {
+      case Some(providerConfig) if (provider.id.equals("facebook")) => // only fb for now
+        exchangeFBToken(oauth2Info, providerConfig) map { exchangedToken =>
+          log.info(s"[accessTokenSignupAndValidate(${provider.id})] exchangedToken=$exchangedToken isIdentical=${exchangedToken.equals(oauth2Info.accessToken)}")
+          exchangedToken
+        }
+      case _ =>
+        log.error(s"[accessTokenSignupAndValidate(${provider.id})] provider not handled")
+        Future.successful(oauth2Info)
+    }
+  }
+
+  def accessTokenSignupAndValidate(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[(SocialUser, Option[Identity], OAuth2Info)] = {
+    val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
+    val userWithProfile = provider.fillProfile(socialUser)
+    val currSocialUserOpt = UserService.find(userWithProfile.identityId)
+    exchangeLongTermToken(provider, oauth2Info).map { exToken =>
+      (userWithProfile, currSocialUserOpt, exToken)
+    }
+  }
+
+  private def exchangeFBToken(oauth2Info: OAuth2Info, config: OAuth2ProviderConfiguration): Future[OAuth2Info] = {
+    import play.api.Play.current
+    val resF = WS.url(config.exchangeTokenUrl.get).withQueryString(
+      "grant_type" -> "fb_exchange_token",
+      "client_id" -> config.clientId,
+      "client_secret" -> config.clientSecret,
+      "fb_exchange_token" -> oauth2Info.accessToken
+    ).get
+    resF map { res =>
+      log.info(s"[exchangeToken] response=${res.body}")
+      if (res.status == Status.OK) {
+        val params = res.body.split('&').map { token =>
+          val nv = token.split('=')
+          nv(0) -> nv(1)
+        }.toMap
+        oauth2Info.copy(accessToken = params("access_token"), expiresIn = params.get("expires").map(_.toInt))
+      } else {
+        log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$config")
+        oauth2Info
+      }
+    }
   }
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
