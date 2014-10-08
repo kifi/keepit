@@ -113,9 +113,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],
-      mainSearcherFactory,
       inject[MonitoredAwait],
-      clock,
       fortyTwoServices)
 
     (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory, shardedKeepIndexer)

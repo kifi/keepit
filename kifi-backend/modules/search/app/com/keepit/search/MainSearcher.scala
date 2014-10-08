@@ -110,7 +110,6 @@ class MainSearcher(
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val mySearchUris = socialGraphInfo.mySearchUris
       val friendSearchUris = socialGraphInfo.friendSearchUris
-      timeLogs.socialGraphInfo()
 
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.clickBoost()
