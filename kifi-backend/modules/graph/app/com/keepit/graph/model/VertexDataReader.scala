@@ -97,15 +97,15 @@ case object TagReader extends VertexKind[TagReader] {
   implicit val readsAsVertexData = Reads[VertexData[TagReader]] { json => (json \ "id").validate.map(TagData(_)) }
 }
 
-trait ThreadReader extends VertexDataReader {
-  type V = ThreadReader
-  def kind = ThreadReader
+trait DiscussionReader extends VertexDataReader {
+  type V = DiscussionReader
+  def kind = DiscussionReader
 }
-case object ThreadReader extends VertexKind[ThreadReader] {
+case object DiscussionReader extends VertexKind[DiscussionReader] {
   val header = 4.toByte
-  def apply(rawDataReader: RawDataReader): ThreadReader = ???
-  implicit val writes = Writes[ThreadReader](reader => Json.obj("id" -> reader.id))
-  implicit val readsAsVertexData = Reads[VertexData[ThreadReader]] { json => (json \ "id").validate.map(ThreadData(_)) }
+  def apply(rawDataReader: RawDataReader): DiscussionReader = ???
+  implicit val writes = Writes[DiscussionReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[DiscussionReader]] { json => (json \ "id").validate.map(DiscussionData(_)) }
 }
 
 trait FacebookAccountReader extends VertexDataReader {
