@@ -115,14 +115,14 @@ angular.module('kifi')
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
-      getLibraryByUserSlug: function (username, slug) {
-        return route('/users/' + username + '/libraries/' + slug);
+      getLibraryByUserSlug: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + (authToken ? '?authToken=' + authToken : ''));
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
+        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
@@ -139,6 +139,9 @@ angular.module('kifi')
       },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
+      },
+      authIntoLibrary: function (libraryId, authToken) {
+        return route('/libraries/' + libraryId + '/auth?authToken=' + authToken || '');
       }
     };
   }

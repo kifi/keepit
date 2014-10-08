@@ -78,11 +78,6 @@ angular.module('kifi', [
       _.forOwn($location.search(), function (value, key) {
         state[key] = value;
       });
-
-      if ($location.path() !== '/find') {
-        // For now, remove all URL parameters
-        $location.search({}).replace();
-      }
     }
 
     function pushState(obj) {

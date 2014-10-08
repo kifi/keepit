@@ -67,22 +67,17 @@ trait LibraryAccessActions {
 
     val libIdOpt = Library.decodePublicId(libraryPubId).toOption
     libIdOpt.map { libId =>
-      val (cookieLibraryId, hashedPassPhrase) = input.session.get("library_access").flatMap { s =>
-        val a = s.split('/')
-        (a.headOption, a.tail.headOption) match {
-          case (Some(l), Some(p)) =>
-            Library.decodePublicId(PublicId[Library](l)) match {
-              case Success(lid) => Some(Some(lid), Some(HashedPassPhrase(p)))
-              case _ => None
-            }
-          case _ => None
+
+      val (cookieLibraryId, hashedPassPhrase) = input.session.get("library_access").flatMap { libraryAccessCookie =>
+        libraryCommander.getLibraryIdAndPassPhraseFromCookie(libraryAccessCookie).map { r =>
+          (Some(r._1), Some(r._2))
         }
       }.getOrElse((None, None))
 
       if (cookieLibraryId.isEmpty || (cookieLibraryId.isDefined && cookieLibraryId.get != libId)) {
         (libId, userIdOpt, None, None)
       } else {
-        input.getQueryString("accessToken") match {
+        input.getQueryString("authToken") match {
           case Some(accessToken) =>
             (libId, userIdOpt, Some(accessToken), hashedPassPhrase)
           case None =>
