@@ -21,8 +21,8 @@ object VertexDataId {
   implicit def fromTagId(tagId: Id[Collection]): VertexDataId[TagReader] = VertexDataId(tagId.id)
   implicit def toTagId(tagReaderId: VertexDataId[TagReader]): Id[Collection] = Id(tagReaderId.id)
 
-  implicit def fromThreadContentId(threadContentId: Id[ThreadContent]): VertexDataId[ThreadReader] = VertexDataId(threadContentId.id)
-  implicit def toThreadContentId(threadReaderId: VertexDataId[ThreadReader]): Id[ThreadContent] = Id(threadReaderId.id)
+  implicit def fromThreadContentId(threadContentId: Id[ThreadContent]): VertexDataId[DiscussionReader] = VertexDataId(threadContentId.id)
+  implicit def toThreadContentId(discussionReaderId: VertexDataId[DiscussionReader]): Id[ThreadContent] = Id(discussionReaderId.id)
 
   implicit def fromSocialUserIdToFacebookAccountId(socialUserId: Id[SocialUserInfo]): VertexDataId[FacebookAccountReader] = VertexDataId(socialUserId.id)
   implicit def fromFacebookAccountIdtoSocialUserId(facebookAccountReaderId: VertexDataId[FacebookAccountReader]): Id[SocialUserInfo] = Id(facebookAccountReaderId.id)
