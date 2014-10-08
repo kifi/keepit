@@ -179,7 +179,7 @@ class LibraryController @Inject() (
             (id, access, message)
           }
         }
-
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) =>
