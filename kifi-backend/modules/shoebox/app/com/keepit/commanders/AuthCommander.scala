@@ -277,15 +277,6 @@ class AuthCommander @Inject() (
     }
   }
 
-  def accessTokenSignupAndValidate(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[(SocialUser, Option[Identity], OAuth2Info)] = {
-    val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
-    val userWithProfile = provider.fillProfile(socialUser)
-    val currSocialUserOpt = UserService.find(userWithProfile.identityId)
-    exchangeLongTermToken(provider, oauth2Info).map { exToken =>
-      (userWithProfile, currSocialUserOpt, exToken)
-    }
-  }
-
   private def exchangeFBToken(oauth2Info: OAuth2Info, config: OAuth2ProviderConfiguration): Future[OAuth2Info] = {
     import play.api.Play.current
     val resF = WS.url(config.exchangeTokenUrl.get).withQueryString(
