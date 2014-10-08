@@ -56,6 +56,7 @@ angular.module('kifi')
 
           util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
           util.replaceArrayInPlace(scope.invitedLibsToShow, libraryService.invitedSummaries);
+          scope.$broadcast('refreshScroll');
         }
 
 
