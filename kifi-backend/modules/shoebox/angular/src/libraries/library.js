@@ -12,6 +12,8 @@ angular.module('kifi')
     //
     var selectedCount = 0;
     var prePopulated = false;
+    var authToken = $location.search()['authToken'] || $location.search()['authCode'] || $location.search()['accessToken'] || '';
+    //                   ↑↑↑ use this one ↑↑↑
 
 
     //
@@ -24,6 +26,8 @@ angular.module('kifi')
     $scope.scrollDistance = '100%';
     $scope.loading = true;
     $scope.hasMore = true;
+    $scope.page = null; // This is used to decide which page to show (library, permission denied, login)
+    $scope.passphrase = $scope.passphrase || {};
 
 
     //
@@ -35,7 +39,7 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      return libraryService.getKeepsInLibrary($scope.library.id, $scope.keeps.length).then(function (res) {
+      return libraryService.getKeepsInLibrary($scope.library.id, $scope.keeps.length, authToken).then(function (res) {
         var rawKeeps = res.keeps;
 
         rawKeeps.forEach(function (rawKeep) {
@@ -97,20 +101,21 @@ angular.module('kifi')
 
     // librarySummaries has a few of the fields we need to draw the library.
     // Attempt to pre-populate the library object while we wait
-    if (libraryService.librarySummaries) {
+    if ($scope.$root.userLoggedIn && libraryService.librarySummaries) {
       var path = '/' + $scope.username + '/' + $scope.librarySlug;
       var lib = _.find(libraryService.librarySummaries, function (elem) {
         return elem.url === path;
       });
 
       if (lib) {
+        $scope.page = 'library';
         util.replaceObjectInPlace($scope.library, lib);
         prePopulated = true;
       }
     }
 
     // Request for library object also retrieves an initial set of keeps in the library.
-    libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug).then(function (library) {
+    libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken).then(function (library) {
       // If library information has already been prepopulated, extend the library object.
       // Otherwise, replace library object completely with the newly fetched object.
       if (prePopulated) {
@@ -129,6 +134,25 @@ angular.module('kifi')
 
       $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
       $scope.loading = false;
+      $scope.page = 'library';
+    }, function onError(resp) {
+      if (resp.data && resp.data.error) {
+        if (resp.data.error === 'invalid_access' && authToken) {
+          $scope.page = 'login';
+        } else {
+          $scope.page = 'permission_denied';
+        }
+      }
     });
+
+
+    $scope.submitPassPhrase = function () {
+      console.log('hit', $scope.library.id);
+      libraryService.authIntoLibrary($scope.library.id, authToken, $scope.passphrase.value).then(function (result) {
+        console.log('success', result);
+      })['catch'](function (err) {
+        console.log('error', err);
+      });
+    };
   }
 ]);

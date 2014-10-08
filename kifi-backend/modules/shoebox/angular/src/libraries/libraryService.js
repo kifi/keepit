@@ -44,8 +44,8 @@ angular.module('kifi')
       });
     });
 
-    var libraryByUserSlugService = new Clutch(function (username, slug) {
-      return $http.get(routeService.getLibraryByUserSlug(username, slug)).then(function (res) {
+    var libraryByUserSlugService = new Clutch(function (username, slug, authToken) {
+      return $http.get(routeService.getLibraryByUserSlug(username, slug, authToken)).then(function (res) {
         return res.data && res.data.library;
       });
     });
@@ -125,11 +125,11 @@ angular.module('kifi')
         return libraryByUserSlugService.get(username, slug);
       },
 
-      getLibraryByUserSlug: function (username, slug, invalidateCache) {
+      getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
         if (invalidateCache) {
-          libraryByUserSlugService.expire(username, slug);
+          libraryByUserSlugService.expire(username, slug, authToken);
         }
-        return libraryByUserSlugService.get(username, slug);
+        return libraryByUserSlugService.get(username, slug, authToken);
       },
 
       getKeepsInLibrary: function (libraryId, offset, authToken) {
@@ -233,6 +233,13 @@ angular.module('kifi')
           _.remove(librarySummaries, function (library) {
             return library.id === libraryId;
           });
+        });
+      },
+
+      authIntoLibrary: function (libraryId, authToken, passPhrase) {
+        console.log('got', libraryId, authToken, passPhrase);
+        return $http.post(routeService.authIntoLibrary(libraryId), {'passPhrase': passPhrase}).then(function (resp) {
+          return resp;
         });
       }
     };
