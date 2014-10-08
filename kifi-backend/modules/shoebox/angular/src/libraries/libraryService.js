@@ -237,7 +237,6 @@ angular.module('kifi')
       },
 
       authIntoLibrary: function (libraryId, authToken, passPhrase) {
-        console.log('got', libraryId, authToken, passPhrase);
         return $http.post(routeService.authIntoLibrary(libraryId), {'passPhrase': passPhrase}).then(function (resp) {
           return resp;
         });

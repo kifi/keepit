@@ -12,7 +12,7 @@ angular.module('kifi')
     //
     var selectedCount = 0;
     var prePopulated = false;
-    var authToken = $location.search()['authToken'] || $location.search()['authCode'] || $location.search()['accessToken'] || '';
+    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
     //                   ↑↑↑ use this one ↑↑↑
 
 
@@ -147,11 +147,13 @@ angular.module('kifi')
 
 
     $scope.submitPassPhrase = function () {
-      console.log('hit', $scope.library.id);
+      //console.log('hit', $scope.library.id);
       libraryService.authIntoLibrary($scope.library.id, authToken, $scope.passphrase.value).then(function (result) {
-        console.log('success', result);
+        //console.log('success', result);
+        return result;
       })['catch'](function (err) {
-        console.log('error', err);
+        //console.log('error', err);
+        return err;
       });
     };
   }
