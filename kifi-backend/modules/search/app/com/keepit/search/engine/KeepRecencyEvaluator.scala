@@ -1,14 +1,15 @@
 package com.keepit.search.engine
 
-import com.keepit.search.SearchConfig
+import com.keepit.search.{ Searcher, SearchConfig }
 import com.keepit.search.graph.keep.KeepFields
 import com.keepit.search.query.{ RecencyScorer, RecencyQuery }
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ Weight, MatchAllDocsQuery }
 import org.apache.lucene.util.Bits.MatchAllBits
 
-trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
+trait KeepRecencyEvaluator { self: DebugOption =>
 
+  protected val searcher: Searcher
   protected val config: SearchConfig
 
   private[this] lazy val recencyQuery = {
@@ -21,9 +22,7 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
 
   protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    val scorer = recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
-    if (scorer == null) log.warn("RecencyScorer is null")
-    scorer
+    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }
 
   private[this] lazy val slowDecayingRecencyQuery = {
@@ -36,9 +35,7 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
 
   protected def getSlowDecayingRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    val scorer = slowDecayingRecencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
-    if (scorer == null) log.warn("SlowDecayingRecencyScorer is null")
-    scorer
+    slowDecayingRecencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
   }
 
   @inline

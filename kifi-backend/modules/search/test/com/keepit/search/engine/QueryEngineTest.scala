@@ -122,7 +122,7 @@ class QueryEngineTest extends Specification {
 
       engine.execute(collector, new TstScoreVectorSource(indexer1), new TstScoreVectorSource(indexer2))
 
-      engine.getMatchWeights().sum === 1.0f
+      engine.getMatchWeightNormalizer.get.sum === 1.0f
     }
   }
 }
