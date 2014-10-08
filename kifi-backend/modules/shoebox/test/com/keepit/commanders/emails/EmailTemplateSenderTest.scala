@@ -123,13 +123,12 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           val email = inject[ElectronicMailRepo].all().head
           val html = email.htmlBody.value
-          html must contain("Find friends on Kifi to benefit from their keeps")
           html must contain("https://cloudfront/users/1/pics/100/0.jpg")
-          html must contain("alt=\"Aaron\"")
+          html must contain("alt=\"Aaron Paul\"")
           html must contain("https://cloudfront/users/2/pics/100/0.jpg")
-          html must contain("alt=\"Bryan\"")
+          html must contain("alt=\"Bryan Cranston\"")
           html must contain("https://cloudfront/users/4/pics/100/0.jpg")
-          html must contain("alt=\"Dean\"")
+          html must contain("alt=\"Dean Norris\"")
         }
       }
     }

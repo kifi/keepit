@@ -1,6 +1,6 @@
 @()
 @import com.keepit.common.mail.template.helpers._
-
+@email.tags.contentWrapper() {
 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
   <tr>
     <td height="46" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
@@ -10,8 +10,6 @@
     <td style="border-collapse: collapse; mso-line-height-rule: exactly;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
         <tr>
-          <td width="78" class="hide" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
-
           <td class="aside" style="border-collapse: collapse; mso-line-height-rule: exactly;">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
               <tr>
@@ -84,10 +82,9 @@
               </tr>
             </table>
           </td>
-
-          <td width="58" class="hide" style="border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td>
         </tr>
       </table>
     </td>
   </tr>
 </table>
+}
