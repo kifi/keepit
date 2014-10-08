@@ -104,10 +104,7 @@ case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser)
 }
 
 case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0,
-    keepers: Map[Id[User], BasicUser] = Map.empty,
-    userAvatarUrls: Map[Id[User], String] = Map.empty) {
-
-  val friendsToShow = keepers.map(_._1)
+    friendsToShow: Seq[Id[User]]) {
 
   val message = {
     // adding s works since we are only dealing with "friend" and "other"
@@ -244,7 +241,6 @@ class FeedDigestEmailSender @Inject() (
     // the email template requires real userIds since they used by the EmailTemplateSender to fetch attributes for that user
     val userIds = Seq(1, 3, 9, 48, 61, 100, 567, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
     val fakeUser = User(firstName = "Fake", lastName = "User")
-    val fakeBasicUser = BasicUser.fromUser(fakeUser)
     val myFakeUserId = userIds.head
     val otherUserIds = userIds.tail
 
@@ -252,13 +248,12 @@ class FeedDigestEmailSender @Inject() (
       toUser = myFakeUserId,
       recos = emailData.recos.map { reco =>
         val qaFriends = otherUserIds.take(reco.keepers.friends.size)
-        val qaKeepers = qaFriends.take(reco.keepers.keepers.size)
+        val qaKeepers = qaFriends.take(reco.keepers.friendsToShow.size)
         reco.copy(
           isForQa = true,
           keepers = reco.keepers.copy(
             friends = qaFriends,
-            keepers = qaKeepers.map((_, fakeBasicUser)).toMap,
-            userAvatarUrls = qaKeepers.map((_, S3UserPictureConfig.defaultImage)).toMap
+            friendsToShow = qaKeepers
           )
         )
       }
@@ -309,14 +304,13 @@ class FeedDigestEmailSender @Inject() (
     val uriId = candidate.uriId
     val uriF = shoebox.getNormalizedURI(uriId)
     val summariesF = getRecommendationSummaries(uriId)
-    val recoKeepersF = getRecoKeepers(candidate)
 
     for {
       uri <- uriF
       summaries <- summariesF
-      recoKeepers <- recoKeepersF
       if summaries.isDefinedAt(uriId)
-    } yield Some(DigestReco(topicOpt = candidate.topic, recommendationId = candidate.recommendationId, uri = uri, uriSummary = summaries(uriId), keepers = recoKeepers, config = config))
+    } yield Some(DigestReco(topicOpt = candidate.topic, recommendationId = candidate.recommendationId, uri = uri,
+      uriSummary = summaries(uriId), keepers = getRecoKeepers(candidate), config = config))
   } recover {
     case throwable =>
       airbrake.notify(s"failed to load uri reco details for $candidate", throwable)
@@ -327,14 +321,12 @@ class FeedDigestEmailSender @Inject() (
     shoebox.getUriSummaries(uriIds)
   }
 
-  private def getRecoKeepers(candidate: DigestCandidate) = {
+  private def getRecoKeepers(candidate: DigestCandidate): DigestRecoKeepers = {
     candidate.userAttribution match {
       case Some(userAttribution) if userAttribution.friends.size > 0 =>
-        shoebox.getBasicUsers(userAttribution.friends.take(MAX_FRIENDS_TO_SHOW)).map { users =>
-          DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others, keepers = users)
-        }
-      case Some(userAttribution) => Future.successful(DigestRecoKeepers(others = userAttribution.others))
-      case _ => Future.successful(DigestRecoKeepers())
+        DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others, friendsToShow = userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
+      case Some(userAttribution) => DigestRecoKeepers(others = userAttribution.others, friendsToShow = Seq())
+      case _ => DigestRecoKeepers(friendsToShow = Seq())
     }
   }
 
