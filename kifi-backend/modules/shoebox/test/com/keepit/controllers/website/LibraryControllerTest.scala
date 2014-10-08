@@ -1019,8 +1019,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         // test single unkeeping
         val testPathRemoveOne = com.keepit.controllers.website.routes.LibraryController.removeKeep(pubId1, k3.externalId).url
-        val request3 = FakeRequest("DELETE", testPathRemoveOne).withBody(Json.obj())
-        val result3: Future[Result] = libraryController.removeKeep(pubId1, k3.externalId)(request3)
+        val request3 = FakeRequest("DELETE", testPathRemoveOne)
+        val result3 = libraryController.removeKeep(pubId1, k3.externalId)(request3)
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
 
