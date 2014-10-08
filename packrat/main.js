@@ -576,6 +576,7 @@ api.port.on({
         // assume success for instant tile flip on active tab
         api.tabs.emit(tab, 'kept', {kept: libraryId === libraryIds[0] ? 'public' : 'private'});
       }
+      storeRecentLib(libraryId);
     }
   },
   unkeep: function (data, respond, tab) {
@@ -604,7 +605,8 @@ api.port.on({
     var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
       libraries = o.libraries;
-      libraries.filter(idIsIn(libraryIds)).forEach(function (lib) { lib.system = true; });
+      libraries.filter(idIsIn(libraryIds)).forEach(setProp('system', true));
+      libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
       respond({keeps: keeps, libraries: o.libraries});
       // preload keep details
@@ -2146,6 +2148,26 @@ function discardDraft(keys) {
   }
 }
 
+function loadRecentLibs() {
+  try {
+    return JSON.parse(stored('recent_libraries'));
+  } catch (e) {
+    return [];
+  }
+}
+
+function storeRecentLib(id) {
+  var ids = loadRecentLibs();
+  for (var i; (i = ids.indexOf(id)) >= 0;) {
+    ids.splice(i, 1);
+  }
+  ids.unshift(id);
+  if (ids.length > 3) {
+    ids.length = 3;
+  }
+  store('recent_libraries', JSON.stringify(ids));
+}
+
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
@@ -2243,6 +2265,9 @@ function getThreadId(n) {
 }
 function idToThread(id) {
   return threadsById[id];
+}
+function setProp(name, val) {
+  return function (o) { o[name] = val; };
 }
 function makeObjectsForEmailAddresses(id) {
   return id.indexOf('@') < 0 ? id : {kind: 'email', email: id};

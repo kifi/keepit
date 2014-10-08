@@ -192,19 +192,22 @@ var keepBox = keepBox || (function () {
   function partitionLibs(libs) {
     var inLibs = [];
     var otherLibs = [];
+    var recentLibs = [];
     for (var i = 0; i < libs.length; i++) {
       var lib = libs[i];
       lib.highlighted = false;
       if (lib.keep) {
         inLibs.push(lib);
+      } else if (lib.recent) {
+        recentLibs.push(lib);
       } else {
         otherLibs.push(lib);
       }
     }
     return {
       inLibs: inLibs,
-      recentLibs: [],
-      otherLibs: otherLibs
+      recentLibs: otherLibs.length ? recentLibs : [],
+      otherLibs: otherLibs.length ? otherLibs : recentLibs
     };
   }
 
