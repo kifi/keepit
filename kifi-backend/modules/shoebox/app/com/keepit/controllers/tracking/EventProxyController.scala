@@ -43,12 +43,16 @@ class EventProxyController @Inject() (
         val eventType = (rawEvent \ "event").as[String]
         val eventContext = (rawEvent \ "properties").as[JsObject]
         val context = jsObject2HeimdalContext(eventContext, request)
+        val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
+        builder.addExistingContext(context)
+        val fullcontext = builder.build
+
         heimdal.trackEvent(UserEvent(
           userId = request.userId,
-          context = context,
+          context = fullcontext,
           eventType = EventType(eventType)
         ))
-        optionallySendUserUsedKifiEvent(request, context, eventType)
+        optionallySendUserUsedKifiEvent(request, fullcontext, eventType)
       }
     }
     NoContent
@@ -58,7 +62,7 @@ class EventProxyController @Inject() (
   def optionallySendUserUsedKifiEvent(request: AuthenticatedRequest[_], existingContext: HeimdalContext, triggeringEvent: String): Unit = {
     val validEvents = Set("user_viewed_page", "user_viewed_pane")
     if (validEvents.contains(triggeringEvent)) {
-      val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
+      val builder = heimdalContextBuilderFactoryBean()
       builder.addExistingContext(existingContext)
       triggeringEvent match {
         case "user_viewed_page" =>
