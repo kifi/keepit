@@ -151,11 +151,9 @@
 .dropdown-menu-content
   position: absolute
   top: 30px
-  left: 120px
-  width: 120px
+  left: 130px
+  width: 115px
   z-index: 1
-  border: 1px solid #e6e6e6
-  border-radius: 8px
 
 .dropdown-menu-content > li:first-child
   border-radius: 8px 8px 0 0
@@ -164,11 +162,12 @@
   border-radius: 0 0 8px 8px
 
 .dropdown-option
+  position: relative
   height: 36px
-  width: 120px
+  width: 100%
   padding-top: 11px
   box-sizing: border-box
-  border-bottom: 1px solid separatorColor
+  border: 1px solid #e6e6e6
   background-color: #fff
   text-align: center
   font-size: 11px
@@ -177,11 +176,16 @@
   cursor: pointer
 
 .dropdown-option:hover
-  padding-top: 10px
-  padding-bottom: 9px
+  box-sizing: border-box
   border: 1px solid blueColor
   background-color: #fff
 
 .dropdown-option:active
   color: #fff
   background-color: blueColor
+
+.dropdown-option-check
+  position: absolute
+  left: 5px
+  top: 10px
+

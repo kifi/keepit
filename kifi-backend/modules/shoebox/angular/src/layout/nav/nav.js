@@ -198,10 +198,10 @@ angular.module('kifi')
         //
         // Sorting.
         //
-        scope.toggleShowMenu = { enabled : false };
+        scope.sortingMenu = { show : false, option : 'last_kept' };
 
         scope.toggleDropdown = function () {
-          scope.toggleShowMenu.enabled = !scope.toggleShowMenu.enabled;
+          scope.sortingMenu.show = !scope.sortingMenu.show;
         };
 
         $document.on('mousedown', onClick);
@@ -214,20 +214,21 @@ angular.module('kifi')
           // click on any dropdown sorting option, have a delay before removing menu
           if (angular.element(event.target).closest('.dropdown-option').length) {
             $timeout( function() {
-              scope.toggleShowMenu.enabled = false;
-            }, 200);
+              scope.sortingMenu.show = false;
+            }, 300);
             return;
           }
           // click anywhere else that's not dropdown menu
           if (!angular.element(event.target).closest('.dropdown-menu-content').length) {
             scope.$apply( function() {
-              scope.toggleShowMenu.enabled = false;
+              scope.sortingMenu.show = false;
             });
             return;
           }
         }
 
         scope.sortByName = function () {
+          scope.sortingMenu.option = 'name';
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
           var libs = _.sortBy(allUserLibs, sortByNameFunc);
           var invited = _.sortBy(libraryService.invitedSummaries, sortByNameFunc);
@@ -235,15 +236,8 @@ angular.module('kifi')
           util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
         };
 
-        scope.sortByNameReverse = function () {
-          var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
-          var libs = _.sortBy(allUserLibs, sortByNameFunc).reverse();
-          var invited = _.sortBy(libraryService.invitedSummaries, sortByNameFunc).reverse();
-          util.replaceArrayInPlace(scope.userLibsToShow, libs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, invited);
-        };
-
         scope.sortByNumKeeps = function () {
+          scope.sortingMenu.option = 'numKeeps';
           var libs = _.sortBy(allUserLibs, 'numKeeps').reverse();
           var invited = _.sortBy(libraryService.invitedSummaries, 'numKeeps').reverse();
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
@@ -251,6 +245,7 @@ angular.module('kifi')
         };
 
         scope.sortByNumFollowers = function () {
+          scope.sortingMenu.option = 'numFollowers';
           var libs = _.sortBy(allUserLibs, 'numFollowers').reverse();
           var invited = _.sortBy(libraryService.invitedSummaries, 'numFollowers').reverse();
           util.replaceArrayInPlace(scope.userLibsToShow, libs);
@@ -258,6 +253,7 @@ angular.module('kifi')
         };
 
         scope.sortByLastViewed = function () {
+          scope.sortingMenu.option = 'lastViewed';
           function sortByOptTime(libs) {
             var partition = _.values(
                               _.groupBy(libs, function(lib) {
@@ -273,6 +269,7 @@ angular.module('kifi')
         };
 
         scope.sortByLastKept = function () {
+          scope.sortingMenu.option = 'lastKept';
           function sortByOptTime(libs) {
             var partition = _.values(
                               _.groupBy(libs, function(lib) {
