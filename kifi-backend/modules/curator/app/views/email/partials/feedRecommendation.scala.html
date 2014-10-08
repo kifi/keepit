@@ -1,4 +1,4 @@
-@(reco: com.keepit.curator.commanders.email.DigestReco)
+@(reco: com.keepit.curator.commanders.email.DigestItem)
 @import com.keepit.common.mail.template.helpers._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" data-reco-id="@reco.uri.externalId">
@@ -14,8 +14,8 @@
                             <tr>
                                 <td width="82" class="side1">&nbsp;</td>
                                 <td align="center" style="font-family:Arial, sans-serif; font-size:14px; color:#92938d; text-align:left; line-height:18px;  font-weight:bold;">
-                                    @reco.topic.map { topic =>
-                                    Recommended because it’s trending in a topic you’re interested in: @topic
+                                    @reco.reasonHeader.map { reasonHeader =>
+                                      @reasonHeader
                                     }
                                 </td>
                                 <td width="142" class="side1">&nbsp;</td>
