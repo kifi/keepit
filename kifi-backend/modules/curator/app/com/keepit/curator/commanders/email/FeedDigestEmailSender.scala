@@ -79,14 +79,17 @@ case class AllDigestRecos(toUser: Id[User], recos: Seq[DigestReco], isFacebookCo
 
 case class DigestCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution], recommendationId: Id[UriRecommendation], userAttribution: Option[UserAttribution])
 
-case class DigestReco(topicOpt: Option[TopicAttribution], recommendationId: Id[UriRecommendation], uri: NormalizedURI, uriSummary: URISummary,
-    keepers: DigestRecoKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) {
-  val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
+trait DigestItem {
+  val uri: NormalizedURI
+  val uriSummary: URISummary
+  val keepers: DigestItemKeepers
+  protected val config: FortyTwoConfig
+  protected val isForQa: Boolean
+  val title: String = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
   val imageUrl = uriSummary.imageUrl.map(toHttpsUrl)
   val url = uri.url
   val domain = DomainToNameMapper.getNameFromUrl(url)
-  val topic = topicOpt.map(_.topicName)
   val readTime = uriSummary.wordCount.filter(_ >= 0).map { wc =>
     val minutesEstimate = wc / 250
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
@@ -98,13 +101,12 @@ case class DigestReco(topicOpt: Option[TopicAttribution], recommendationId: Id[U
   val keepUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
 }
 
-case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {
-  val firstName = basicUser.firstName
-  val lastName = basicUser.lastName
+case class DigestReco(topicOpt: Option[TopicAttribution], recommendationId: Id[UriRecommendation], uri: NormalizedURI, uriSummary: URISummary,
+    keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
+  val topic = topicOpt.map(_.topicName)
 }
 
-case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0,
-    friendsToShow: Seq[Id[User]]) {
+case class DigestItemKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0, friendsToShow: Seq[Id[User]] = Seq.empty) {
 
   val message = {
     // adding s works since we are only dealing with "friend" and "other"
@@ -321,12 +323,12 @@ class FeedDigestEmailSender @Inject() (
     shoebox.getUriSummaries(uriIds)
   }
 
-  private def getRecoKeepers(candidate: DigestCandidate): DigestRecoKeepers = {
+  private def getRecoKeepers(candidate: DigestCandidate): DigestItemKeepers = {
     candidate.userAttribution match {
       case Some(userAttribution) if userAttribution.friends.size > 0 =>
-        DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others, friendsToShow = userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
-      case Some(userAttribution) => DigestRecoKeepers(others = userAttribution.others, friendsToShow = Seq())
-      case _ => DigestRecoKeepers(friendsToShow = Seq())
+        DigestItemKeepers(friends = userAttribution.friends, others = userAttribution.others, friendsToShow = userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
+      case Some(userAttribution) => DigestItemKeepers(others = userAttribution.others)
+      case _ => DigestItemKeepers()
     }
   }
 
