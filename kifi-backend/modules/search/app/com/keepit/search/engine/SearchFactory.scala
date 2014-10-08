@@ -6,7 +6,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
@@ -36,13 +35,14 @@ class SearchFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
-    mainSearcherFactory: MainSearcherFactory,
     monitoredAwait: MonitoredAwait,
-    implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
+
+  lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
   private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
+  private[this] val configReqConsolidator = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -57,7 +57,7 @@ class SearchFactory @Inject() (
     val currentTime = System.currentTimeMillis()
 
     val clickBoostsFuture = resultClickTracker.getBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
-    val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
+    val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
 
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getFriendIdsFuture(userId)
@@ -260,5 +260,20 @@ class SearchFactory @Inject() (
         }
       case None => Seq.empty
     }
+  }
+
+  def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+    predefinedConfig match {
+      case None =>
+        configReqConsolidator(userId) { k => searchConfigManager.getConfigFuture(userId, experiments) }
+      case Some(conf) =>
+        val default = searchConfigManager.defaultConfig
+        // almost complete overwrite. But when search config parameter list changes, this prevents exception
+        Future.successful((new SearchConfig(default.params ++ conf.params), None))
+    }
+  }
+
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    Seq(clickHistoryTracker.getClickHistoryFuture(userId)) // returning futures to pin them in the heap
   }
 }

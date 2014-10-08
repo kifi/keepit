@@ -119,7 +119,7 @@ class SearchCommanderImpl @Inject() (
     // fetch user data in background
     val prefetcher = fetchUserDataInBackground(userId)
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     val searchFilter = SearchFilter(filter, LibraryContext.None, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
@@ -193,7 +193,7 @@ class SearchCommanderImpl @Inject() (
 
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
-      if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000 * 60 * 8) {
+      if (timing.getTotalTime > timeLimit && timing.timestamp - searchFactory.searchServiceStartedAt > 1000 * 60 * 8) {
         val link = "https://admin.kifi.com/admin/search/results/" + res.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${res.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
         airbrake.notify(msg)
@@ -216,7 +216,7 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
     if (config.asBoolean("newEngine") == true) {
@@ -276,7 +276,7 @@ class SearchCommanderImpl @Inject() (
     // fetch user data in background
     val prefetcher = fetchUserDataInBackground(userId)
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
@@ -350,7 +350,7 @@ class SearchCommanderImpl @Inject() (
 
         // search is a little slow after service restart. allow some grace period
         val timeLimit = 1000
-        if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000 * 60 * 8) {
+        if (timing.getTotalTime > timeLimit && timing.timestamp - searchFactory.searchServiceStartedAt > 1000 * 60 * 8) {
           val link = "https://admin.kifi.com/admin/search/results/" + plainResult.uuid.id
           val msg = s"search time exceeds limit! searchUUID = ${plainResult.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
           airbrake.notify(msg)
@@ -375,7 +375,7 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): KifiShardResult = {
 
-    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
     val debugOption = new DebugOption with Logging
     if (debug.isDefined) debugOption.debug(debug.get)
@@ -410,14 +410,10 @@ class SearchCommanderImpl @Inject() (
   }
 
   //external (from the extension/website)
-  def warmUp(userId: Id[User]) {
-    SafeFuture {
-      mainSearcherFactory.warmUp(userId)
-    }
-  }
+  def warmUp(userId: Id[User]): Unit = searchFactory.warmUp(userId)
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = {
-    mainSearcherFactory.getConfigFuture(userId, experiments).map {
+    searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>
         val langs = lang match {
           case Some(str) => str.split(",").toSeq.map(Lang(_))
@@ -437,7 +433,7 @@ class SearchCommanderImpl @Inject() (
 
   private class Prefetcher(userId: Id[User]) {
     // pin futures in a jvm heap
-    val futures: Seq[Future[Any]] = mainSearcherFactory.warmUp(userId)
+    val futures: Seq[Future[Any]] = searchFactory.warmUp(userId)
   }
 
   class SearchTiming {

@@ -5,14 +5,12 @@ import scala.math.max
 
 class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Logging {
 
-  private[this] var _socialGraphInfo: Long = 0L
   private[this] var _clickBoost: Long = 0L
   private[this] var _queryParsing: Long = 0L
   private[this] var _search: Long = 0L
   private[this] var _processHits: Long = 0L
   private[this] var _endTime: Long = 0L
 
-  def socialGraphInfo(now: Long = System.currentTimeMillis()): Unit = { _socialGraphInfo = now }
   def clickBoost(now: Long = System.currentTimeMillis()): Unit = { _clickBoost = now }
   def queryParsing(now: Long = System.currentTimeMillis()): Unit = { _queryParsing = now }
   def search(now: Long = System.currentTimeMillis()): Unit = { _search = now }
@@ -22,7 +20,6 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
   def elapsed(time: Long = System.currentTimeMillis()): Long = (time - startTime)
 
   def send(): Unit = {
-    send("mainSearch.socialGraphInfo", _socialGraphInfo, ALWAYS)
     send("mainSearch.queryParsing", _queryParsing, ALWAYS)
     send("mainSearch.getClickboost", _clickBoost, ALWAYS)
     send("mainSearch.LuceneSearch", _search, ALWAYS)
@@ -37,7 +34,6 @@ class SearchTimeLogs(startTime: Long = System.currentTimeMillis()) extends Loggi
 
   private def timeLine: List[(String, Long)] = {
     List(
-      ("socialGraphInfo", _socialGraphInfo),
       ("queryParsing", _queryParsing),
       ("clickBoost", _clickBoost),
       ("luceneSearch", _search),
