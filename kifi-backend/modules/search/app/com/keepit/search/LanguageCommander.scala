@@ -24,7 +24,7 @@ trait LanguageCommander {
     acceptLangCodes: Seq[String],
     libraryContext: LibraryContext): Future[(Lang, Option[Lang])]
 
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]]
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]]
 }
 
 class LanguageCommanderImpl @Inject() (
@@ -54,7 +54,7 @@ class LanguageCommanderImpl @Inject() (
       resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryContext)
     }
     if (localShards.nonEmpty) {
-      resultFutures += distLangFreqs2(localShards, userId, libraryContext)
+      resultFutures += distLangFreqs(localShards, userId, libraryContext)
     }
 
     val acceptLangs = parseAcceptLangs(acceptLangCodes)
@@ -119,7 +119,7 @@ class LanguageCommanderImpl @Inject() (
     }
   }
 
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
+  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
     searchFactory.getLibraryIdsFuture(userId, libraryContext).flatMap {
       case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
         Future.traverse(shards) { shard =>
