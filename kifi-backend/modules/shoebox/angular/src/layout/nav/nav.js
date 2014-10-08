@@ -147,26 +147,14 @@ angular.module('kifi')
 
         scope.filter = {};
         scope.isFilterFocused = false;
-        var preventClearFilter = false;
         scope.filter.name = '';
 
         scope.focusFilter = function () {
           scope.isFilterFocused = true;
         };
 
-        scope.disableClearFilter = function () {
-          preventClearFilter = true;
-        };
-
-        scope.enableClearFilter = function () {
-          preventClearFilter = false;
-        };
-
         scope.blurFilter = function () {
           scope.isFilterFocused = false;
-          // if (!preventClearFilter) {
-          //   scope.clearFilter();
-          // }
         };
 
         scope.clearFilter = function () {
