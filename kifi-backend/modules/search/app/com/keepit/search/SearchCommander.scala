@@ -436,10 +436,8 @@ class SearchCommanderImpl @Inject() (
   private[this] def fetchUserDataInBackground(userId: Id[User]): Prefetcher = new Prefetcher(userId)
 
   private class Prefetcher(userId: Id[User]) {
-    var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
-    SafeFuture {
-      futures = mainSearcherFactory.warmUp(userId)
-    }
+    // pin futures in a jvm heap
+    val futures: Seq[Future[Any]] = mainSearcherFactory.warmUp(userId)
   }
 
   class SearchTiming {
