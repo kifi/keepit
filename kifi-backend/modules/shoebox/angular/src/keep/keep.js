@@ -285,19 +285,27 @@ angular.module('kifi')
         };
 
         scope.unkeep = function (keep) {
-          keepActionService.unkeepOne(keep).then(function () {
-            keep.makeUnkept();
+          if (scope.librariesEnabled) {
+            keepActionService.unkeepFromLibrary(keep.libraryId, keep.id).then(function () {
+              keep.makeUnkept();
 
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
-            });
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
 
-            if (scope.librariesEnabled) {
               libraryService.addToLibraryCount(keep.libraryId, -1);
-            } else {
+            });
+          } else {
+            keepActionService.unkeepOne(keep).then(function () {
+              keep.makeUnkept();
+
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
+
               tagService.addToKeepCount(-1);
-            }
-          });
+            });
+          }
         };
 
         scope.showKeepingToLibrary = function () {

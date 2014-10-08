@@ -18,31 +18,38 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 
 trait ScoreVectorSource {
-  def weights: IndexedSeq[(Weight, Float)]
-  def prepare(query: Query): Unit
+  def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit
   def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
-  val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
+  private[this] val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
 
-  def prepare(query: Query): Unit = {
+  def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     weights.clear()
     val weight = searcher.createWeight(query)
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }
+    if (weights.nonEmpty) {
+      // extract and accumulate information from Weights for later use (percent match)
+      matchWeightNormalizer.accumulateWeightInfo(weights)
+    } else {
+      log.error("no weight created")
+    }
   }
 
   def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
-    val scorers = new Array[Scorer](weights.size)
-    indexReaderContexts.foreach { readerContext =>
-      var i = 0
-      while (i < scorers.length) {
-        scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
-        i += 1
+    if (weights.nonEmpty) {
+      val scorers = new Array[Scorer](weights.size)
+      indexReaderContexts.foreach { readerContext =>
+        var i = 0
+        while (i < scorers.length) {
+          scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
+          i += 1
+        }
+        writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)
       }
-      writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)
     }
   }
 
@@ -155,6 +162,7 @@ class UriFromKeepsScoreVectorSource(
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
     val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
+    if (recencyScorer == null) log.warn("RecencyScorer is null")
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
@@ -331,6 +339,7 @@ class LibraryFromKeepsScoreVectorSource(
     val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(visibilityDocValues)
 
     val recencyScorer = getRecencyScorer(readerContext)
+    if (recencyScorer == null) log.warn("RecencyScorer is null")
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter

@@ -11,7 +11,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.{ KeepLangs, KeepFields, ShardedKeepIndexer }
+import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector

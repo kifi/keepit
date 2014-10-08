@@ -123,9 +123,7 @@ class MainSearcherFactory @Inject() (
   }
 
   def warmUp(userId: Id[User]): Seq[Future[Any]] = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
-
-    Seq(clickHistoryFuture) // returning futures to pin them in the heap
+    Seq(getClickHistoryFuture(userId)) // returning futures to pin them in the heap
   }
 
   def clear(): Unit = {

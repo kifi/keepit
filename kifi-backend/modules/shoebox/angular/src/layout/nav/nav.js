@@ -50,8 +50,11 @@ angular.module('kifi')
           scope.mainLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_main' });
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
+
           scope.userLibsToShow = sortByKept(allUserLibs);
           scope.invitedLibsToShow = sortByKept(libraryService.invitedSummaries);
+
+          scope.$broadcast('refreshScroll');
         }
 
 

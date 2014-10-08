@@ -100,9 +100,12 @@
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">
             <div class="library-icon-holder">
-              <div class="library-icon svg-red-card-with-lock" ng-if="library.visibility=='secret'"></div>
+              <div class="library-icon svg-private-library-icon" ng-if="library.visibility=='secret'"></div>
+              <div class="library-icon svg-public-library-icon" ng-if="library.visibility=='published'"></div>
+
+              <!-- TODO: remove this when discoverable libraries have been converted to public libraries in the db. -->
               <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
-              <div class="library-icon svg-green-card-with-globe" ng-if="library.visibility=='published'"></div>
+
               <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
             </div>
             <div class="kf-nav-lib-info">

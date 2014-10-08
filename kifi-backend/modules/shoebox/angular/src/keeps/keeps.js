@@ -61,8 +61,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'selectionService', 'tagService', 'undoService',
-  function ($window, $timeout, keepActionService, selectionService, tagService, undoService) {
+  '$window', '$timeout', 'keepActionService', 'libraryService', 'selectionService', 'tagService', 'undoService',
+  function ($window, $timeout, keepActionService, libraryService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
@@ -124,6 +124,9 @@ angular.module('kifi')
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
 
+        // Not used in template right now but will be when we hide bulk privacy changes.
+        scope.librariesEnabled = libraryService.isAllowed();
+
 
         //
         // Scope methods.
@@ -181,20 +184,42 @@ angular.module('kifi')
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
 
-          keepActionService.unkeepMany(selectedKeeps).then(function () {
-            _.forEach(selectedKeeps, function (selectedKeep) {
-              selectedKeep.makeUnkept();
-            });
+          if (scope.librariesEnabled) {
+            var libraryId = selectedKeeps[0].libraryId;
 
-            undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
-              keepActionService.keepMany(selectedKeeps);
+            keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
               _.forEach(selectedKeeps, function (selectedKeep) {
-                selectedKeep.makeKept();
+                selectedKeep.makeUnkept();
               });
-            });
 
-            tagService.addToKeepCount(-1 * selectedKeeps.length);
-          });
+              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+                keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), libraryId);
+
+                _.forEach(selectedKeeps, function (selectedKeep) {
+                  selectedKeep.makeKept();
+                });
+
+                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
+              });
+
+              libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+            });
+          } else {
+            keepActionService.unkeepMany(selectedKeeps).then(function () {
+              _.forEach(selectedKeeps, function (selectedKeep) {
+                selectedKeep.makeUnkept();
+              });
+
+              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+                keepActionService.keepMany(selectedKeeps);
+                _.forEach(selectedKeeps, function (selectedKeep) {
+                  selectedKeep.makeKept();
+                });
+              });
+
+              tagService.addToKeepCount(-1 * selectedKeeps.length);
+            });
+          }
         };
 
         scope.togglePrivate = function (keeps) {
