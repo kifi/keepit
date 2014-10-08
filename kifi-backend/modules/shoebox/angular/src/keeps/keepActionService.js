@@ -233,7 +233,7 @@ angular.module('kifi')
 
     function unkeepFromLibrary(libraryId, keepId) {
       var url = routeService.removeKeepFromLibrary(libraryId, keepId);
-      return $http.delete(url);
+      return $http.delete(url);  // jshint ignore:line
     }
 
     function unkeepManyFromLibrary(libraryId, keeps) {
