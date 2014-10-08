@@ -1,7 +1,7 @@
 ##########################################
 # Search Admin
 ##########################################
-GET         /search/instance      @com.keepit.controllers.search.SearchAdminController.instance()
+GET         /admin/search/instance         @com.keepit.controllers.search.SearchAdminController.instance()
 
 ##########################################
 # Search Extension API
