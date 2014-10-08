@@ -54,8 +54,7 @@ angular.module('kifi')
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
 
-          util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
-          util.replaceArrayInPlace(scope.invitedLibsToShow, libraryService.invitedSummaries);
+          scope.sortByLastKept();
         }
 
 
@@ -200,30 +199,33 @@ angular.module('kifi')
         // Sorting.
         //
         scope.toggleShowMenu = { enabled : false };
-        scope.hoverShowMenu = { enabled : false };
 
         scope.toggleDropdown = function () {
           scope.toggleShowMenu.enabled = !scope.toggleShowMenu.enabled;
         };
 
-        scope.hoverShowDropdown = function () {
-          scope.hoverShowMenu.enabled = true;
-        };
-
-        scope.hoverHideDropdown = function () {
-          scope.hoverShowMenu.enabled = false;
-        };
-
-        $document.bind('click', function(event){
-          var isClickedElementPartOfDropdown = dropDownMenu.find(event.target).length > 0;
-          if (isClickedElementPartOfDropdown) {
+        $document.on('mousedown', onClick);
+        function onClick(event) {
+          // click on sort button
+          if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
+            scope.$apply(scope.toggleDropdown);
             return;
           }
-          scope.toggleShowMenu.enabled = false;
-          scope.hoverHideDropdown();
-          scope.$apply();
-        });
-
+          // click on any dropdown sorting option, have a delay before removing menu
+          if (angular.element(event.target).closest('.dropdown-option').length) {
+            $timeout( function() {
+              scope.toggleShowMenu.enabled = false;
+            }, 200);
+            return;
+          }
+          // click anywhere else that's not dropdown menu
+          if (!angular.element(event.target).closest('.dropdown-menu-content').length) {
+            scope.$apply( function() {
+              scope.toggleShowMenu.enabled = false;
+            });
+            return;
+          }
+        }
 
         scope.sortByName = function () {
           var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
