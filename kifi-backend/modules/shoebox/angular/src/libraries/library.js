@@ -137,7 +137,7 @@ angular.module('kifi')
       $scope.page = 'library';
     }, function onError(resp) {
       if (resp.data && resp.data.error) {
-        if (resp.data.error === 'invalid_access' && authToken) {
+        if (resp.data.error && authToken) {
           $scope.page = 'login';
         } else {
           $scope.page = 'permission_denied';
@@ -148,7 +148,7 @@ angular.module('kifi')
 
     $scope.submitPassPhrase = function () {
       //console.log('hit', $scope.library.id);
-      libraryService.authIntoLibrary($scope.library.id, authToken, $scope.passphrase.value).then(function (result) {
+      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value).then(function (result) {
         //console.log('success', result);
         return result;
       })['catch'](function (err) {
