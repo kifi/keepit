@@ -70,10 +70,11 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
       val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
         visibility = LibraryVisibility.DISCOVERABLE, ownerId = userIron.id.get, createdAt = t1, memberCount = 1))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_WRITE, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t2, showInSearch = true))
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
@@ -83,7 +84,7 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
       allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
       allLibs.map(_.description) === Seq(None, None, None)
       allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.PUBLISHED, LibraryVisibility.DISCOVERABLE)
-      libraryMembershipRepo.count === 4
+      libraryMembershipRepo.count === 5
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -101,7 +102,7 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
       val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
       val uri4 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds1")))
       val uri5 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds2")))
-      val uri6 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds3")))
+      val uri6 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds3")).copy(restriction = Some(Restriction.ADULT)))
       val uri7 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds4")))
       val uri8 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds5")))
 
@@ -121,22 +122,22 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
         keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
           uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(100),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libShield.id.get), inDisjointLib = libShield.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds"), userId = userAgent.id.get, url = url3.url, urlId = url3.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds"), userId = userIron.id.get, url = url3.url, urlId = url3.id.get,
           uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(15),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds1"), userId = userAgent.id.get, url = url4.url, urlId = url4.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds1"), userId = userIron.id.get, url = url4.url, urlId = url4.id.get,
           uriId = uri4.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(25),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds2"), userId = userAgent.id.get, url = url5.url, urlId = url5.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds2"), userId = userIron.id.get, url = url5.url, urlId = url5.id.get,
           uriId = uri5.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(35),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds3"), userId = userAgent.id.get, url = url6.url, urlId = url6.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds3"), userId = userIron.id.get, url = url6.url, urlId = url6.id.get,
           uriId = uri6.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(45),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds4"), userId = userAgent.id.get, url = url7.url, urlId = url7.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds4"), userId = userIron.id.get, url = url7.url, urlId = url7.id.get,
           uriId = uri7.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(55),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)),
-        keepRepo.save(Keep(title = Some("McDonalds5"), userId = userAgent.id.get, url = url8.url, urlId = url8.id.get,
+        keepRepo.save(Keep(title = Some("McDonalds5"), userId = userIron.id.get, url = url8.url, urlId = url8.id.get,
           uriId = uri8.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(65),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint)))
     }
@@ -152,8 +153,8 @@ class NewKeepsInLibraryCommanderTest extends TestKitSupport with SpecificationLi
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience, keeps: Seq[Id[Keep]]) = setupKeeps()
         val commander = inject[NewKeepsInLibraryCommander]
         commander.getLastViewdKeeps(userIron.id.get, 100).size === 0
-        commander.getLastViewdKeeps(userAgent.id.get, 100).map(_.id.get) === Seq(keeps(2), keeps(0), keeps(3), keeps(4), keeps(5), keeps(6), keeps(7), keeps(1))
-        commander.getLastViewdKeeps(userCaptain.id.get, 100).map(_.id.get) === Seq(keeps(2), keeps(3), keeps(4), keeps(5), keeps(6), keeps(7))
+        commander.getLastViewdKeeps(userCaptain.id.get, 100).map(_.id.get) === Seq(keeps(2), keeps(3), keeps(4), keeps(6), keeps(7))
+        commander.getLastViewdKeeps(userAgent.id.get, 100).map(_.id.get) === Seq(keeps(2), keeps(0), keeps(3), keeps(4), keeps(6), keeps(7), keeps(1))
         commander.getLastViewdKeeps(userAgent.id.get, 2).map(_.id.get) === Seq(keeps(2), keeps(0))
         commander.getLastViewdKeeps(userCaptain.id.get, 2).map(_.id.get) === Seq(keeps(2), keeps(3))
         commander.getLastViewdKeeps(userAgent.id.get, 1).map(_.id.get) === Seq(keeps(2))
