@@ -71,20 +71,22 @@
 <script src="/assets/js/auth-footer.js"></script>
 <script type="text/javascript" src="/assets/js/track-ext.js"></script>
 
-<script type="text/javascript">
-var fb_param = {};
-fb_param.pixel_id = '6015565712777';
-fb_param.value = '0.00';
-fb_param.currency = 'USD';
-(function(){
-var fpw = document.createElement('script');
-fpw.async = true;
-fpw.src = '//connect.facebook.net/en_US/fp.js';
-var ref = document.getElementsByTagName('script')[0];
-ref.parentNode.insertBefore(fpw, ref);
+<script>(function() {
+var _fbq = window._fbq || (window._fbq = []);
+if (!_fbq.loaded) {
+var fbds = document.createElement('script');
+fbds.async = true;
+fbds.src = '//connect.facebook.net/en_US/fbds.js';
+var s = document.getElementsByTagName('script')[0];
+s.parentNode.insertBefore(fbds, s);
+_fbq.loaded = true;
+}
 })();
+window._fbq = window._fbq || [];
+window._fbq.push(['track', '6012675478096', {'value':'0.00','currency':'USD'}]);
 </script>
-<noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6015565712777&amp;value=0&amp;currency=USD" /></noscript>
+<noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/tr?ev=6012675478096&amp;cd[value]=0.00&amp;cd[currency]=USD&amp;noscript=1" /></noscript>
+
 
 <script src="//platform.twitter.com/oct.js" type="text/javascript"></script>
 <script type="text/javascript">
