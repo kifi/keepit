@@ -112,12 +112,24 @@ angular.module('kifi')
         }
 
         function keepOne (keep, isPrivate) {
-          keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
-             keep.buildKeep(keptItem);
-             keep.makeKept();
-             libraryService.addToLibraryCount(keep.libraryId, 1);
-             tagService.addToKeepCount(1);
-           });
+          if (scope.librariesEnabled) {
+            keepActionService.keepToLibrary([keep.url], keep.libraryId).then(function (resp) {
+              var keptItem = resp && resp.keeps && resp.keeps[0];
+
+              if (keptItem) {
+                keep.buildKeep(keptItem);
+                keep.makeKept();
+                libraryService.addToLibraryCount(keep.libraryId, 1);
+              }
+            });
+          } else {
+            keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
+              keep.buildKeep(keptItem);
+              keep.makeKept();
+
+              tagService.addToKeepCount(1);
+             });
+          }
 
           if (_.isFunction(scope.keepCallback)) {
             scope.keepCallback({ 'keep': keep });
@@ -273,16 +285,27 @@ angular.module('kifi')
         };
 
         scope.unkeep = function (keep) {
-          keepActionService.unkeepOne(keep).then(function () {
-            keep.makeUnkept();
+          if (scope.librariesEnabled) {
+            keepActionService.unkeepFromLibrary(keep.libraryId, keep.id).then(function () {
+              keep.makeUnkept();
 
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
+
+              libraryService.addToLibraryCount(keep.libraryId, -1);
             });
+          } else {
+            keepActionService.unkeepOne(keep).then(function () {
+              keep.makeUnkept();
 
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-            tagService.addToKeepCount(-1);
-          });
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
+
+              tagService.addToKeepCount(-1);
+            });
+          }
         };
 
         scope.showKeepingToLibrary = function () {
@@ -304,7 +327,6 @@ angular.module('kifi')
 
                   libraryService.fetchLibrarySummaries(true);
                   libraryService.addToLibraryCount(libraryId, 1);
-                  tagService.addToKeepCount(1);
                 });
               }
             });

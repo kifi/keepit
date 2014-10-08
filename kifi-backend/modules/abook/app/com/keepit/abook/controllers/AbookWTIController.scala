@@ -23,14 +23,6 @@ class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookSer
     Ok(JsNumber(wtiCommander.countInvitationsSent(userId, friendId)))
   }
 
-  def blockRichConnection() = Action(parse.tolerantJson) { request =>
-    val o = request.body
-    val userId = (o \ "userId").as(Id.format[User])
-    val friendId = (o \ "friendSocialId").asOpt(Id.format[SocialUserInfo]).map(Left(_)) getOrElse Right((o \ "friendEmailAddress").as[EmailAddress])
-    wtiCommander.blockRichConnection(userId, friendId)
-    Ok
-  }
-
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = Action { request =>
     val ripestFruits = wtiCommander.getRipestFruitsByCommonKifiFriendsCount(userId, page, pageSize)
     Ok(Json.toJson(ripestFruits))

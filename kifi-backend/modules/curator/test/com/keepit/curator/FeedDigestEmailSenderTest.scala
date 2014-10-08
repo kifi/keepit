@@ -256,9 +256,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         sumU43.feed.size === 3
         sumU43.mailSent === true
-        sumU43.feed(0).reco === uriModels(0)._2
-        sumU43.feed(1).reco === uriModels(1)._2
-        sumU43.feed(2).reco === uriModels(2)._2
+        sumU43.feed(0).recommendationId === uriModels(0)._2.id.get
+        sumU43.feed(1).recommendationId === uriModels(1)._2.id.get
+        sumU43.feed(2).recommendationId === uriModels(2)._2.id.get
       }
     }
   }

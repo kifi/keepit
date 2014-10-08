@@ -5,8 +5,9 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ SocialUserInfo, User, ExperimentType }
+import com.keepit.model.{ User, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.{ SocialNetworkType, SocialId }
 import play.api.mvc.Request
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.core.Identity
@@ -19,7 +20,7 @@ class RemoteUserActionsHelper @Inject() (
     shoebox: ShoeboxServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,
-    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper {
+    val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper {
 
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = getUserExperiments(userId).map(_.contains(ExperimentType.ADMIN))
 
@@ -31,4 +32,11 @@ class RemoteUserActionsHelper @Inject() (
 
   def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = shoebox.getSocialUserInfosByUserId(userId).map(_.headOption.flatMap(_.credentials))
 
+  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful { getSecureSocialUserFromRequest }
+
+  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = {
+    shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)).map { suiOpt =>
+      suiOpt.flatMap(_.userId)
+    }
+  }
 }

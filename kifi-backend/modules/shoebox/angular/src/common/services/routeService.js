@@ -101,6 +101,15 @@ angular.module('kifi')
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
       },
+      addKeepsToLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps');
+      },
+      removeKeepFromLibrary: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId);
+      },
+      removeManyKeepsFromLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps/delete');
+      },
 
       ////////////////////////////
       // Libraries              //
