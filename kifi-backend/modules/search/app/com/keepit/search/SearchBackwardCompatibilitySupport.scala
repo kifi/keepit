@@ -90,7 +90,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
     val librarySearcher = libraryIndexer.getSearcher
 
     val future = augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
-      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
+      val augmenter = AugmentedItem(userId, friendIds.map(Id[User](_)), Set.empty[Id[Library]], augmentationResponse.scores) _
 
       (result.hits zip items).map {
         case (hit, item) =>

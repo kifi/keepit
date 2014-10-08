@@ -96,31 +96,6 @@ trait SearchControllerUtil {
     }
   }
 
-  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
-    val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
-    val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
-    val context = AugmentationContext.uniform(userId, previousItems ++ items)
-    val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.augmentation(augmentationRequest).flatMap { augmentationResponse =>
-      val futureBasicUsers = shoeboxClient.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
-      val libraryNames = getLibraryNames(librarySearcher, augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptIn).flatten).toSeq)
-      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
-      val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
-      futureBasicUsers.map { basicUsers =>
-        val userNames = basicUsers.mapValues(basicUser => basicUser.firstName + " " + basicUser.lastName)
-        JsArray(augmentedItems.map {
-          augmentedItem =>
-            Json.obj(
-              "keep" -> augmentedItem.keep.map { case (keptIn, keptBy, tags) => Json.obj("keptIn" -> libraryNames(keptIn), "keptBy" -> keptBy.map(userNames(_)), "tags" -> tags) },
-              "moreKeeps" -> JsArray(augmentedItem.moreKeeps.map { case (keptIn, keptBy) => Json.obj("keptIn" -> keptIn.map(libraryNames(_)), "keptBy" -> keptBy.map(userNames(_))) }),
-              "moreTags" -> Json.toJson(augmentedItem.moreTags),
-              "otherPublishedKeeps" -> augmentedItem.otherPublishedKeeps
-            )
-        })
-      }
-    }
-  }
-
   def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
     libraryIds.map { libId =>
       libId -> LibraryRecord.retrieve(librarySearcher, libId).get.name

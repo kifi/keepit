@@ -174,3 +174,32 @@ class AugmentationCommanderImpl @Inject() (
     AugmentationScores(libraryScores.toMap, userScores.toMap, tagScores.toMap)
   }
 }
+
+case class AugmentedItem(userId: Id[User], friends: Set[Id[User]], libraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
+  def uri: Id[NormalizedURI] = item.uri
+  def otherPublishedKeeps: Int = info.otherPublishedKeeps
+  def otherDiscoverableKeeps: Int = info.otherDiscoverableKeeps
+
+  lazy val keep = item.keptIn.flatMap { libraryId =>
+    info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
+      val sortedTags = keepInfo.tags.toSeq.sortBy(scores.byTag)
+      val userIdOpt = keepInfo.keptBy
+      (libraryId, userIdOpt, sortedTags)
+    }
+  }
+
+  lazy private val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
+    case ((moreKeeps, moreTags), RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
+  }
+
+  lazy private val (moreKeepsSet, moreTagsSet) = keep match {
+    case Some((libraryId, userIdOpt, tags)) => (allKeeps - ((Some(libraryId), userIdOpt)), allTags -- tags)
+    case None => (allKeeps, allTags)
+  }
+
+  lazy val moreKeeps = moreKeepsSet.toSeq.sortBy {
+    case (libraryIdOpt, userIdOpt) => (-libraryIdOpt.map(scores.byLibrary).getOrElse(0f), -userIdOpt.map(scores.byUser).getOrElse(0f))
+  }
+
+  lazy val moreTags = moreTagsSet.toSeq.sortBy(-scores.byTag(_))
+}

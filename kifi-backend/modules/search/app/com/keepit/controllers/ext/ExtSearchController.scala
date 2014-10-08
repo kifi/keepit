@@ -74,11 +74,6 @@ class ExtSearchController @Inject() (
 
     var decorationFutures: List[Future[String]] = Nil
 
-    if (userId != nonUser) {
-      val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
-      decorationFutures = augmentationFuture :: decorationFutures
-    }
-
     if (withUriSummary) {
       decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
     }
