@@ -55,7 +55,6 @@ class ExtSearchController @Inject() (
   def search2(
     query: String,
     filter: Option[String],
-    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -63,7 +62,7 @@ class ExtSearchController @Inject() (
     debug: Option[String] = None,
     withUriSummary: Boolean = false) = MaybeUserAction { request =>
 
-    val libraryContextFuture = getLibraryContextFuture(library, None, request)
+    val libraryContextFuture = getLibraryContextFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
 
