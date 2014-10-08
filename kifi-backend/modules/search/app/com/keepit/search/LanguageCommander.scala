@@ -1,10 +1,12 @@
 package com.keepit.search
 
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.sharding.Shard
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.Id
 import com.keepit.common.zookeeper.ServiceInstance
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.common.akka.SafeFuture
@@ -32,6 +34,8 @@ class LanguageCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     shardedKeepIndexer: ShardedKeepIndexer) extends LanguageCommander with Logging {
 
+  private[this] val reqConsolidator = new RequestConsolidator[(Id[User], Long), ListBuffer[Map[Lang, Int]]](60 seconds)
+
   def getLangs(
     localShards: Set[Shard[NormalizedURI]],
     dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
@@ -48,18 +52,28 @@ class LanguageCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
-
-    if (dispatchPlan.nonEmpty) {
-      resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryContext)
+    val libId = libraryContext match {
+      case LibraryContext.Authorized(libId) => libId
+      case LibraryContext.NotAuthorized(libId) => libId
+      case _ => -1L
     }
-    if (localShards.nonEmpty) {
-      resultFutures += distLangFreqs(localShards, userId, libraryContext)
+
+    val future = reqConsolidator((userId, libId)) { key =>
+      val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
+
+      if (dispatchPlan.nonEmpty) {
+        resultFutures ++= searchClient.distLangFreqs(dispatchPlan, userId, libraryContext)
+      }
+      if (localShards.nonEmpty) {
+        resultFutures += distLangFreqs(localShards, userId, libraryContext)
+      }
+
+      Future.sequence(resultFutures)
     }
 
     val acceptLangs = parseAcceptLangs(acceptLangCodes)
 
-    Future.sequence(resultFutures).map { freqs =>
+    future.map { freqs =>
       val langProf = {
         val total = freqs.map(_.values.sum).sum.toFloat
         freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()) {
