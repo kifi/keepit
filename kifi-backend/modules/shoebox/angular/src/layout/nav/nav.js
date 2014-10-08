@@ -16,11 +16,8 @@ angular.module('kifi')
         // Internal data.
         //
         var allUserLibs = [];
-
         var w = angular.element($window);
         var scrollableLibList = element.find('.kf-scrollable-libs');
-        var dropDownMenu = element.find('.kf-sort-libs-button');
-
 
         //
         // Scope data.
@@ -167,9 +164,9 @@ angular.module('kifi')
 
         scope.blurFilter = function () {
           scope.isFilterFocused = false;
-          if (!preventClearFilter) {
-            scope.clearFilter();
-          }
+          // if (!preventClearFilter) {
+          //   scope.clearFilter();
+          // }
         };
 
         scope.clearFilter = function () {
@@ -183,6 +180,7 @@ angular.module('kifi')
           var term = scope.filter.name;
           var newMyLibs = allUserLibs;
           var newMyInvited = libraryService.invitedSummaries;
+
           if (term.length) {
             newMyLibs = librarySummarySearch.search(term);
             newMyInvited = invitedSummarySearch.search(term);
@@ -204,7 +202,7 @@ angular.module('kifi')
           scope.sortingMenu.show = !scope.sortingMenu.show;
         };
 
-        $document.on('mousedown', onClick);
+
         function onClick(event) {
           // click on sort button
           if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
@@ -226,6 +224,7 @@ angular.module('kifi')
             return;
           }
         }
+        $document.on('mousedown', onClick);
 
         scope.sortByName = function () {
           scope.sortingMenu.option = 'name';
