@@ -77,7 +77,7 @@ trait LibraryAccessActions {
       if (cookieLibraryId.isEmpty || (cookieLibraryId.isDefined && cookieLibraryId.get != libId)) {
         (libId, userIdOpt, None, None)
       } else {
-        input.getQueryString("auth") match {
+        input.getQueryString("authToken") match {
           case Some(accessToken) =>
             (libId, userIdOpt, Some(accessToken), hashedPassPhrase)
           case None =>

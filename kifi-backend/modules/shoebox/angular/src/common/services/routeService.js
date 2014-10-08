@@ -116,13 +116,13 @@ angular.module('kifi')
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
       getLibraryByUserSlug: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug + (authToken ? '?accessToken=' + authToken : ''));
+        return route('/users/' + username + '/libraries/' + slug + (authToken ? '?authToken=' + authToken : ''));
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
+        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
