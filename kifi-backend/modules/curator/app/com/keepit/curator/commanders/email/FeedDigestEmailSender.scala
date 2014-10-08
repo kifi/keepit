@@ -78,7 +78,13 @@ object RecentInterestRankStrategy extends RecoRankStrategy {
 
 case class AllDigestItems(toUser: Id[User], items: Seq[DigestItem], isFacebookConnected: Boolean = false)
 
-case class DigestCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution], recommendationId: Id[UriRecommendation], userAttribution: Option[UserAttribution])
+trait DigestItemCandidate {
+  val uriId: Id[NormalizedURI]
+  val userAttribution: Option[UserAttribution]
+}
+
+case class DigestRecoCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution],
+  recommendationId: Id[UriRecommendation], userAttribution: Option[UserAttribution]) extends DigestItemCandidate
 
 trait DigestItem {
   val uri: NormalizedURI
@@ -289,7 +295,7 @@ class FeedDigestEmailSender @Inject() (
     val uriRecosF = recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, rankStrategy.recommendationsToQuery, RECO_THRESHOLD)
     uriRecosF flatMap { recos =>
       val presortedRecos = recos.sorted(rankStrategy.ordering).map { reco =>
-        DigestCandidate(uriId = reco.uriId, topic = reco.attribution.topic, recommendationId = reco.id.get, userAttribution = reco.attribution.user)
+        DigestRecoCandidate(uriId = reco.uriId, topic = reco.attribution.topic, recommendationId = reco.id.get, userAttribution = reco.attribution.user)
       }
       FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, getDigestReco)
     } map (_.flatten)
@@ -307,7 +313,7 @@ class FeedDigestEmailSender @Inject() (
     }
   }
 
-  private def getDigestReco(candidate: DigestCandidate): Future[Option[DigestReco]] = {
+  private def getDigestReco(candidate: DigestItemCandidate): Future[Option[DigestReco]] = {
     val uriId = candidate.uriId
     val uriF = shoebox.getNormalizedURI(uriId)
     val summariesF = getRecommendationSummaries(uriId)
@@ -316,8 +322,14 @@ class FeedDigestEmailSender @Inject() (
       uri <- uriF
       summaries <- summariesF
       if summaries.isDefinedAt(uriId)
-    } yield Some(DigestReco(topicOpt = candidate.topic, recommendationId = candidate.recommendationId, uri = uri,
-      uriSummary = summaries(uriId), keepers = getRecoKeepers(candidate), config = config))
+    } yield {
+      val keepers = getRecoKeepers(candidate)
+      candidate match {
+        case reco: DigestRecoCandidate =>
+          Some(DigestReco(topicOpt = reco.topic, recommendationId = reco.recommendationId, uri = uri,
+            uriSummary = summaries(uriId), keepers = keepers, config = config))
+      }
+    }
   } recover {
     case throwable =>
       airbrake.notify(s"failed to load uri reco details for $candidate", throwable)
@@ -328,7 +340,7 @@ class FeedDigestEmailSender @Inject() (
     shoebox.getUriSummaries(uriIds)
   }
 
-  private def getRecoKeepers(candidate: DigestCandidate): DigestItemKeepers = {
+  private def getRecoKeepers(candidate: DigestItemCandidate): DigestItemKeepers = {
     candidate.userAttribution match {
       case Some(userAttribution) if userAttribution.friends.size > 0 =>
         DigestItemKeepers(friends = userAttribution.friends, others = userAttribution.others, friendsToShow = userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
