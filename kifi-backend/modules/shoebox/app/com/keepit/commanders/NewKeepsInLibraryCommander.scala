@@ -2,19 +2,22 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.ImageSize
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.{ ImageType, URISummaryRequest, LibraryMembership, Library, Keep, KeepRepo, LibraryMembershipRepo, User }
+import com.keepit.model.LibraryAccess.OWNER
+import com.keepit.model.{ Keep, KeepRepo, LibraryMembership, LibraryMembershipRepo, NormalizedURIRepo, User }
 import org.joda.time.DateTime
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
 
 class NewKeepsInLibraryCommander @Inject() (
     db: Database,
+    normalizedUriRepo: NormalizedURIRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    keepRepo: KeepRepo) {
+    keepRepo: KeepRepo) extends Logging {
 
   private def lastDateToGetKeepsFrom(libraryMembership: LibraryMembership): DateTime = {
     (libraryMembership.lastViewed, libraryMembership.lastEmailSent) match {
@@ -27,17 +30,32 @@ class NewKeepsInLibraryCommander @Inject() (
 
   private def getOldestLeastViewdKeeps(userId: Id[User], max: Int): Seq[mutable.Stack[Keep]] = {
     db.readOnlyReplica { implicit session =>
-      val libs = mutable.Stack(libraryMembershipRepo.getWithUserId(userId).sortBy(_.lastViewed): _*)
+      //get only libraries I'm not an owner of
+      val libs = mutable.Stack(libraryMembershipRepo.getWithUserId(userId).filterNot(_.access == OWNER).sortBy(_.lastViewed): _*)
       //yes, ugly double mutable code. need to think of a way to make it more functional
       val libraryKeeps = ArrayBuffer[mutable.Stack[Keep]]()
       while (libraryKeeps.size < max && libs.nonEmpty) {
         val libraryMembership: LibraryMembership = libs.pop()
         val since = lastDateToGetKeepsFrom(libraryMembership)
-        val keeps = keepRepo.getKeepsFromLibrarySince(since, libraryMembership.libraryId, max)
+        val keeps = keepRepo.getKeepsFromLibrarySince(since, libraryMembership.libraryId, max) filterNot pornUrl filterNot {
+          keep => keptByUser(keep, userId)
+        }
         if (keeps.nonEmpty) libraryKeeps.append(mutable.Stack(keeps: _*))
       }
       libraryKeeps
     }
+  }
+
+  private def keptByUser(keep: Keep, userId: Id[User])(implicit session: RSession): Boolean = {
+    val kept = keepRepo.getByUriAndUser(keep.uriId, userId).isDefined
+    if (kept) log.info(s"keep ${keep.title.get} was kept by user $userId, filtering out")
+    kept
+  }
+
+  private def pornUrl(keep: Keep)(implicit session: RSession): Boolean = {
+    val restricted = normalizedUriRepo.get(keep.uriId).restriction.isDefined
+    if (restricted) log.info(s"keep ${keep.title.get} is restricted, filtering out")
+    restricted
   }
 
   private def pickOldestKeepFromEachLibrary(libraryKeeps: Seq[mutable.Stack[Keep]], max: Int): Seq[Keep] = {

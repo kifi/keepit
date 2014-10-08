@@ -1,8 +1,8 @@
 package com.keepit.curator.commanders.email
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.PimpMyFuture._
-import com.keepit.common.concurrent.{FutureHelpers, ReactiveLock}
+import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
@@ -13,19 +13,19 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.commanders.{RecommendationGenerationCommander, SeedIngestionCommander}
-import com.keepit.curator.model.{UserAttribution, TopicAttribution, UriRecommendation, UriRecommendationRepo}
+import com.keepit.curator.commanders.{ RecommendationGenerationCommander, SeedIngestionCommander }
+import com.keepit.curator.model.{ UserAttribution, TopicAttribution, UriRecommendation, UriRecommendationRepo }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUser, SocialNetworks}
+import com.keepit.social.{ BasicUser, SocialNetworks }
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Random, Success}
+import scala.util.{ Failure, Random, Success }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -119,7 +119,6 @@ case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0
     if (keepersMessagePrefix.size > 0) keepersMessagePrefix + " kept this" else ""
   }
 }
-
 
 case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[DigestReco])
 
