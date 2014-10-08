@@ -140,8 +140,8 @@ angular.module('kifi')
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
-      authIntoLibrary: function (libraryId, authToken) {
-        return route('/libraries/' + libraryId + '/auth?authToken=' + authToken || '');
+      authIntoLibrary: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
       }
     };
   }
