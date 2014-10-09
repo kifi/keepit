@@ -17,7 +17,7 @@ abstract class LocalAlignment {
 }
 
 object LocalAlignment {
-  def apply(termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, gapPenalty: Float): LocalAlignment = {
+  def apply(termIds: Array[TermId], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, gapPenalty: Float): LocalAlignment = {
     val localAlignment = new BasicLocalAlignment(termIds, gapPenalty)
     phraseMatcher match {
       case Some(phraseMatcher) => new PhraseAwareLocalAlignment(phraseMatcher, phraseBoost, localAlignment)
@@ -39,7 +39,7 @@ object LocalAlignment {
   class PhraseMatcher(dict: Seq[(Seq[TermId], Match)]) extends AhoCorasick[TermId, Match](dict)
 }
 
-class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalAlignment {
+class BasicLocalAlignment(termIds: Array[TermId], gapPenalty: Float) extends LocalAlignment {
   // Find all partial sequence matches (possible phrases) using the dynamic programming.
   // This is similar to a local alignment matching in bioinformatics, but we disallow gaps.
   // We give a weight to each term occurrence using a local alignment score, thus, a term in a
@@ -75,7 +75,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
     var localScoreSum = 0.0f
     var i = 0
     while (i < numTerms) {
-      val runLen = if (termIds(i) == termId.id) prevRun + 1.0f else 0.0f
+      val runLen = if (termIds(i) == termId) prevRun + 1.0f else 0.0f
       val localScore = ls(i) - getGapPenalty(dist)
       prevRun = rl(i) // store the run length of previous round
       rl(i) = runLen
