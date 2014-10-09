@@ -13,8 +13,6 @@ GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchC
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
 POST        /search/events/searched        @com.keepit.controllers.ext.ExtSearchEventController.searched()
 POST        /search/events/browsed        @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()
-GET         /search/users/page        @com.keepit.controllers.ext.ExtUserSearchController.page(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
-GET         /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 
 ##########################################
 # Mobile V1
