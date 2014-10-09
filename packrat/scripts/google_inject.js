@@ -305,7 +305,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     if (href && resIdx >= 0) {
       var hit = isKifi ? response.hits[resIdx] : null;
       api.port.emit("log_search_event", [
-        "resultClicked",
+        "clicked",
         {
           "origin": origin,
           "guided": e.originalEvent.guided || false,
