@@ -408,7 +408,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
-            authToken = "token", passPhrase = "blarg"))
+            authToken = "token", passPhrase = "blarg bob fred"))
         }
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
@@ -416,7 +416,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // test can view if non-user provides correct authtoken & passphrase
         libraryCommander.canViewLibrary(None, libScience) === false
         libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("wrong one"))) === false
+        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("Blarg bobfRed"))) === true
       }
     }
 
