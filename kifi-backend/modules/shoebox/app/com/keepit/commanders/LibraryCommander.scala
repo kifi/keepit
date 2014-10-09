@@ -9,13 +9,12 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
@@ -48,6 +47,8 @@ class LibraryCommander @Inject() (
     elizaClient: ElizaServiceClient,
     keptAnalytics: KeepingAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
+    heimdal: HeimdalServiceClient,
+    contextBuilderFactory: HeimdalContextBuilderFactory,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -409,7 +410,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
@@ -434,6 +435,7 @@ class LibraryCommander @Inject() (
       }
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
+      trackLibraryInvitation(inviterId, eventContext)
       Right(res)
     }
   }
@@ -614,6 +616,13 @@ class LibraryCommander @Inject() (
         }
       case _ => None
     }
+  }
+
+  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {
+    val builder = contextBuilderFactory()
+    builder.addExistingContext(eventContext)
+    builder += ("category", "libraryInvitation")
+    heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
 }
 

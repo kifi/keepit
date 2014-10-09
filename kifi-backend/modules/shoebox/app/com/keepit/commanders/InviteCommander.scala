@@ -428,6 +428,7 @@ class InviteCommander @Inject() (
       contextBuilder += ("inviteId", invite.externalId.id)
       contextBuilder += ("invitationNumber", invite.timesSent)
       contextBuilder += ("source", source)
+      contextBuilder += ("category", "kifiInvitation")
       invite.recipientEmailAddress.foreach { emailAddress => contextBuilder += ("recipientEmailAddress", emailAddress.toString) }
       invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))

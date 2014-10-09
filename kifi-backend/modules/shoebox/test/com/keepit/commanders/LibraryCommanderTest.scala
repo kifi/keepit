@@ -5,18 +5,18 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
-import com.keepit.common.mail.{ ElectronicMailRepo, FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule, EmailAddress }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
-import org.specs2.mutable.{ SpecificationLike, Specification }
+import org.specs2.mutable.{ SpecificationLike }
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -31,7 +31,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     FakeCryptoModule(),
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
-    FakeElizaServiceClientModule()
+    FakeElizaServiceClientModule(),
+    FakeHeimdalServiceClientModule()
   )
 
   def setupUsers()(implicit injector: Injector) = {
@@ -499,6 +500,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "invite users" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
+
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
         val libraryCommander = inject[LibraryCommander]
 
@@ -512,7 +514,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
+        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)(HeimdalContext(Map()))
         res1.isRight === true
         res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
           (Left(userAgent.externalId), LibraryAccess.READ_ONLY),
@@ -535,10 +537,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
         val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
         // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO)(HeimdalContext(Map())).isRight === true
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW)(HeimdalContext(Map())).isRight === true
       }
     }
 
