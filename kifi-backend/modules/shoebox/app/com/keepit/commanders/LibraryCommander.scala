@@ -20,13 +20,14 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.http.Status.{ FORBIDDEN, BAD_REQUEST }
+import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
+import scala.util.Success
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -582,6 +583,39 @@ class LibraryCommander @Inject() (
       internSystemGeneratedLibraries(userId)
     } else (mainOpt.get._2, secretOpt.get._2)
     (main, secret)
+  }
+
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug): Either[(Int, String), Library] = {
+    val ownerOpt = db.readOnlyMaster { implicit s =>
+      ExternalId.asOpt[User](username).flatMap(userRepo.getOpt).orElse {
+        userRepo.getByUsername(Username(username))
+      }
+    }
+    ownerOpt match {
+      case None =>
+        Left((BAD_REQUEST, "invalid_username"))
+      case Some(owner) =>
+        db.readOnlyMaster { implicit s =>
+          libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = slug)
+        } match {
+          case None =>
+            Left((NOT_FOUND, "no_library_found"))
+          case Some(lib) =>
+            Right(lib)
+        }
+    }
+  }
+
+  def getLibraryIdAndPassPhraseFromCookie(libraryAccessCookie: String): Option[(Id[Library], HashedPassPhrase)] = { /* cookie is in session, key: library_access */
+    val a = libraryAccessCookie.split('/')
+    (a.headOption, a.tail.headOption) match {
+      case (Some(l), Some(p)) =>
+        Library.decodePublicId(PublicId[Library](l)) match {
+          case Success(lid) => Some((lid, HashedPassPhrase(p)))
+          case _ => None
+        }
+      case _ => None
+    }
   }
 
   private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {

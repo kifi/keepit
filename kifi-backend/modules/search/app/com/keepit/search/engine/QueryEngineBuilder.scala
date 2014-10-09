@@ -14,7 +14,7 @@ object QueryEngineBuilder {
 class QueryEngineBuilder(coreQuery: Query) {
 
   private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
-  private[this] val _core = buildExpr(coreQuery) // (query, expr, size, noClickBoostNoSharingBoost)
+  private[this] val _core = buildExpr(coreQuery) // (query, expr, size, recencyOnly)
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] lazy val _final = buildFinal()
   private[this] var built = false
@@ -36,9 +36,9 @@ class QueryEngineBuilder(coreQuery: Query) {
   private[this] def buildFinal(): (ScoreExpr, Query, Int) = {
     built = true
     val (query, expr, totalSize, noClickBoostNoSharingBoost) = _boosters.foldLeft(_core) {
-      case ((query, expr, size, noClickBoostNoSharingBoost), (booster, boostStrength)) =>
+      case ((query, expr, size, recencyOnly), (booster, boostStrength)) =>
         val boosterExpr = MaxExpr(size)
-        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1, noClickBoostNoSharingBoost)
+        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength), size + 1, recencyOnly)
     }
     (expr, query, totalSize)
   }
@@ -47,6 +47,9 @@ class QueryEngineBuilder(coreQuery: Query) {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
+
+        if (clauses.size == 1 && clauses.head.getOccur != MUST_NOT) return buildExpr(clauses.head.getQuery)
+
         val required = new ArrayBuffer[ScoreExpr]()
         val optional = new ArrayBuffer[ScoreExpr]()
         val filterOut = new ArrayBuffer[ScoreExpr]()

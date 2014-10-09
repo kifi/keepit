@@ -55,6 +55,28 @@ class DataBufferTest extends Specification {
       (result == expected) === true
     }
 
+    "read/write records with a pair of Longs" in {
+      val buf = new DataBuffer
+      val writer = new DataBufferWriter
+
+      var recType = 0
+      val expected = (0 until 100).map { id =>
+        val datum = (recType, true, rand.nextLong, rand.nextLong, false)
+        buf.alloc(writer, recType, 16)
+        writer.putLong(datum._3, datum._4)
+        recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
+        datum
+      }
+      buf.numPages === 1
+
+      var result = new ArrayBuffer[(Int, Boolean, Long, Long, Boolean)]()
+      buf.scan(new DataBufferReader) { reader =>
+        result += ((reader.recordType, reader.hasMore, reader.nextLong, reader.nextLong, reader.hasMore))
+      }
+
+      (result == expected) === true
+    }
+
     "read/write records with Tagged Float" in {
 
       val buf = new DataBuffer

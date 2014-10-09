@@ -11,12 +11,12 @@ import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import com.keepit.common.controller._
 
 import play.api.libs.json.{ Json, JsNumber, JsArray }
-import play.api.test.FakeRequest
+import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
@@ -165,6 +165,30 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
         val json = Json.parse(contentAsString(result))
         val userIds = Json.fromJson[Set[Id[User]]](json).get
         commonUserIds.toSet === userIds
+      }
+    }
+
+    "getPrimaryEmailAddressForUsers" should {
+      "return a map of user id -> EmailAddress" in {
+        withDb(shoeboxControllerTestModules: _*) { implicit injector =>
+          val call = com.keepit.controllers.internal.routes.ShoeboxController.getPrimaryEmailAddressForUsers()
+          call.method === "POST"
+          call.url === s"/internal/shoebox/database/getPrimaryEmailAddressForUsers"
+
+          val userEmails = db.readWrite { implicit rw =>
+            for (i <- 1 to 3) yield inject[UserRepo].save(User(firstName = s"first$i",
+              lastName = s"last$i", primaryEmail = Some(EmailAddress(s"test$i@yahoo.com"))))
+          }.map(user => user.id.get -> user.primaryEmail).toMap
+
+          val userIds = userEmails.keySet
+          val payload = Json.toJson(userIds)
+          val ctrl = inject[ShoeboxController]
+          val result = ctrl.getPrimaryEmailAddressForUsers()(FakeRequest("POST", call.url, FakeHeaders(), payload))
+          status(result) must equalTo(OK)
+
+          val json = Json.parse(contentAsString(result))
+          Json.fromJson[Map[Id[User], Option[EmailAddress]]](json).get === userEmails
+        }
       }
     }
   }

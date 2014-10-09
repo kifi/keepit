@@ -41,6 +41,7 @@ angular.module('kifi')
           // 250px needed for other stuff in the parent's width.
           var maxFollowersToShow = Math.floor((parentWidth - 250) / widthPerFollowerPic);
 
+          scope.numAdditionalFollowers = 0;
           if (_.isArray(scope.library.followers)) {
             // If we only have one additional follower that we can't fit in, then we can fit that one
             // in if we don't show the additional-number-of-followers circle.
@@ -68,11 +69,6 @@ angular.module('kifi')
             scope.library.owner = profileService.me;
           }
 
-          // TODO(yiping): make sure recommended libraries have visibility.
-          if (!scope.library.visibility && scope.recommendation) {
-            scope.library.visibility = 'published';
-          }
-
           if (scope.library.owner) {
             scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
           }
@@ -85,7 +81,14 @@ angular.module('kifi')
 
           var maxLength = 150;
           if (scope.library.description && scope.library.description.length > maxLength) {
-            scope.library.shortDescription = scope.library.description.substr(0, maxLength);
+            // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
+            var clipLastIndex = maxLength;
+            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
+            if (lastSpaceIndex !== -1) {
+              clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
+            }
+
+            scope.library.shortDescription = scope.library.description.substr(0, clipLastIndex);
             scope.clippedDescription = true;
           }
 
@@ -102,8 +105,7 @@ angular.module('kifi')
         };
 
         scope.isUserLibrary = function (library) {
-          // TODO(yiping): get recommendation libraries to have a "kind" property.
-          return library.kind === 'user_created' || scope.recommendation;
+          return library.kind === 'user_created';
         };
 
         scope.isMyLibrary = function (library) {
@@ -214,6 +216,12 @@ angular.module('kifi')
           }
         });
 
+        // When the local library object in libraryService has been updated, update
+        // our scope.library accordingly. $rootScope is used instead of scope because
+        // libraryService is not a child of any scope.
+        $rootScope.$on('libraryUpdated', function (e, library) {
+          _.assign(scope.library, library);
+        });
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);

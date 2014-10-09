@@ -36,6 +36,20 @@ class DataBufferWriter {
     _current += 4
     this
   }
+  def putLong(value1: Long, value2: Long): DataBufferWriter = {
+    if (_current + 8 > _endoff) throw new DataBufferException("buffer overrun")
+
+    _page(_current) = (value1 >>> 48).toShort
+    _page(_current + 1) = (value1 >>> 32).toShort
+    _page(_current + 2) = (value1 >>> 16).toShort
+    _page(_current + 3) = value1.toShort
+    _page(_current + 4) = (value2 >>> 48).toShort
+    _page(_current + 5) = (value2 >>> 32).toShort
+    _page(_current + 6) = (value2 >>> 16).toShort
+    _page(_current + 7) = value2.toShort
+    _current += 8
+    this
+  }
 
   // Int
   def putInt(value: Int): DataBufferWriter = {

@@ -101,19 +101,28 @@ angular.module('kifi')
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
       },
+      addKeepsToLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps');
+      },
+      removeKeepFromLibrary: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId);
+      },
+      removeManyKeepsFromLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps/delete');
+      },
 
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
-      getLibraryByUserSlug: function (username, slug) {
-        return route('/users/' + username + '/libraries/' + slug);
+      getLibraryByUserSlug: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + (authToken ? '?authToken=' + authToken : ''));
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
+        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
@@ -130,6 +139,9 @@ angular.module('kifi')
       },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
+      },
+      authIntoLibrary: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
       }
     };
   }

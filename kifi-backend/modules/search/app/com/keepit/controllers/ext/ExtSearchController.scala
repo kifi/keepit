@@ -1,7 +1,6 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -24,7 +23,6 @@ class ExtSearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
-    amazonInstanceInfo: AmazonInstanceInfo,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
@@ -55,7 +53,6 @@ class ExtSearchController @Inject() (
   def search2(
     query: String,
     filter: Option[String],
-    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -63,7 +60,7 @@ class ExtSearchController @Inject() (
     debug: Option[String] = None,
     withUriSummary: Boolean = false) = MaybeUserAction { request =>
 
-    val libraryContextFuture = getLibraryContextFuture(library, None, request)
+    val libraryContextFuture = getLibraryContextFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
 
@@ -95,14 +92,6 @@ class ExtSearchController @Inject() (
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
-  }
-
-  def instance() = HtmlAction.authenticated { request =>
-    if (request.experiments.contains(ADMIN)) {
-      Ok(amazonInstanceInfo.name.getOrElse(""))
-    } else {
-      NotFound
-    }
   }
 }
 

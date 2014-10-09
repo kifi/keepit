@@ -30,6 +30,7 @@ class ABookRecommendationCommander @Inject() (
     emailInviteRecommendationRepo: EmailInviteRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
+    oldWTICommander: WTICommander,
     clock: Clock) extends Logging {
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
@@ -48,7 +49,7 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
-  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
+  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Unit = {
     db.readWrite { implicit session =>
       (irrelevantFriendId, network) match {
         case (Right(socialUserId), FACEBOOK) => facebookInviteRecommendationRepo.recordIrrelevantRecommendation(userId, socialUserId)
@@ -59,6 +60,7 @@ class ABookRecommendationCommander @Inject() (
         case unsupportedNetwork => throw new IllegalArgumentException(s"Cannot hide unsupported invite recommendation: $unsupportedNetwork")
       }
     }
+    oldWTICommander.blockRichConnection(userId, irrelevantFriendId.swap)
   }
 
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {

@@ -26,15 +26,13 @@ import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 
 import scala.concurrent.Future
 import scala.util.Try
-import com.keepit.common.queue.{ RecordInvitation, CancelInvitation }
+import com.keepit.common.queue.{ CancelInvitation }
 import com.keepit.abook.ABookServiceClient
 
 import akka.actor.Scheduler
-import org.joda.time.DateTime
 import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString
 import com.keepit.inject.FortyTwoConfig
@@ -42,7 +40,7 @@ import com.keepit.social.SecureSocialClientIds
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
-import com.keepit.abook.model.RichContact
+import com.keepit.abook.model.{ InviteRecommendation, RichContact }
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress], name: Option[String] = None) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).right.map(_.address).merge}"
@@ -62,18 +60,6 @@ object FullSocialId {
     FullSocialId(network, identifier, name)
   }
   implicit val format: Format[FullSocialId] = Format(Reads.of[String].map(FullSocialId.apply), Writes(fullSocialId => JsString(fullSocialId.toString())))
-}
-
-case class Invitee(name: String, fullSocialId: FullSocialId, pictureUrl: Option[String], canBeInvited: Boolean, lastInvitedAt: Option[DateTime])
-
-object Invitee {
-  implicit val format = (
-    (__ \ 'name).format[String] and
-    (__ \ 'fullSocialId).format[FullSocialId] and
-    (__ \ 'pictureUrl).formatNullable[String] and
-    (__ \ 'canBeInvited).format[Boolean] and
-    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
-  )(Invitee.apply, unlift(Invitee.unapply))
 }
 
 case class InviteInfo(invitation: Invitation, friend: Either[SocialUserInfo, RichContact], subject: Option[String], message: Option[String])
@@ -490,29 +476,31 @@ class InviteCommander @Inject() (
     }
   }
 
-  def getRipestInvitees(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Invitee]] = {
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[InviteRecommendation]] = {
     abook.getRipestFruits(userId, page, pageSize).map { ripestFruits =>
-      val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
-      db.readOnlyReplica { implicit session =>
-        val lastInvitedAtByEmailAddress = invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailConnections.flatMap(_.friendEmailAddress))
-        val lastInvitedAtBySocialUserId = invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialConnections.flatMap(_.friendSocialId))
-        ripestFruits.map { richConnection =>
-          richConnection.connectionType match {
-            case SocialNetworks.EMAIL =>
-              val emailAddress = richConnection.friendEmailAddress.get
-              val name = richConnection.friendName getOrElse emailAddress.address
-              val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
-              val canBeInvited = true
-              Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))
-            case _ =>
-              val socialUserId = richConnection.friendSocialId.get
-              val socialUserInfo = socialUserInfoRepo.get(socialUserId)
-              val name = richConnection.friendName getOrElse socialUserInfo.fullName
-              val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
-              val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
-              val canBeInvited = true
-              Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
-          }
+      val (lastInvitedAtByEmailAddress, lastInvitedAtBySocialUserId, socialUserInfosBySocialUserId) = {
+        val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
+        val emailAddresses = emailConnections.flatMap(_.friendEmailAddress)
+        val socialUserIds = socialConnections.flatMap(_.friendSocialId)
+        db.readOnlyReplica { implicit session =>
+          (
+            invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailAddresses),
+            invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialUserIds),
+            socialUserInfoRepo.getSocialUserBasicInfos(socialUserIds)
+          )
+        }
+      }
+      ripestFruits.map { richConnection =>
+        richConnection.connectionType match {
+          case SocialNetworks.EMAIL =>
+            val emailAddress = richConnection.friendEmailAddress.get
+            InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), richConnection.friendName, None, lastInvitedAtByEmailAddress.get(emailAddress), -1)
+          case socialNetwork =>
+            val socialUserId = richConnection.friendSocialId.get
+            val socialUserInfo = socialUserInfosBySocialUserId(socialUserId)
+            val name = richConnection.friendName getOrElse socialUserInfo.fullName
+            val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
+            InviteRecommendation(socialNetwork, Right(socialUserInfo.socialId), Some(name), pictureUrl, lastInvitedAtBySocialUserId.get(socialUserId), -1)
         }
       }
     }

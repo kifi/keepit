@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
-  function ($http, util, profileService, routeService, Clutch, $q, friendService) {
+  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService',
+  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService) {
     var librarySummaries = [],
         invitedSummaries = [];
 
@@ -44,8 +44,8 @@ angular.module('kifi')
       });
     });
 
-    var libraryByUserSlugService = new Clutch(function (username, slug) {
-      return $http.get(routeService.getLibraryByUserSlug(username, slug)).then(function (res) {
+    var libraryByUserSlugService = new Clutch(function (username, slug, authToken) {
+      return $http.get(routeService.getLibraryByUserSlug(username, slug, authToken)).then(function (res) {
         return res.data && res.data.library;
       });
     });
@@ -125,11 +125,11 @@ angular.module('kifi')
         return libraryByUserSlugService.get(username, slug);
       },
 
-      getLibraryByUserSlug: function (username, slug, invalidateCache) {
+      getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
         if (invalidateCache) {
-          libraryByUserSlugService.expire(username, slug);
+          libraryByUserSlugService.expire(username, slug, authToken);
         }
-        return libraryByUserSlugService.get(username, slug);
+        return libraryByUserSlugService.get(username, slug, authToken);
       },
 
       getKeepsInLibrary: function (libraryId, offset, authToken) {
@@ -162,6 +162,9 @@ angular.module('kifi')
           return librarySummary.id === libraryId;
         });
         lib.numKeeps += val;
+
+        $rootScope.$emit('libraryUpdated', lib);
+        $rootScope.$emit('librarySummariesChanged');
       },
 
       createLibrary: function (opts) {
@@ -210,6 +213,8 @@ angular.module('kifi')
         if (!alreadyJoined) {
           return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
             librarySummaries.push(response.data);
+            _.remove(invitedSummaries, { id: libraryId });
+            $rootScope.$emit('librarySummariesChanged');
           });
         }
 
@@ -219,6 +224,7 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, { id: libraryId });
+          $rootScope.$emit('librarySummariesChanged');
         });
       },
 
@@ -228,8 +234,15 @@ angular.module('kifi')
             return library.id === libraryId;
           });
         });
+      },
+
+      authIntoLibrary: function (username, slug, authToken, passPhrase) {
+        return $http.post(routeService.authIntoLibrary(username, slug, authToken), {'passPhrase': passPhrase}).then(function (resp) {
+          return resp;
+        });
       }
     };
+
     return api;
   }
 ]);

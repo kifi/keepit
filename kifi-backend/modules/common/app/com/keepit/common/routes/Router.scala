@@ -78,6 +78,7 @@ object Shoebox extends Service {
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
     def getBasicUsersNoCache() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsersNoCache")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
+    def getPrimaryEmailAddressForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getPrimaryEmailAddressForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
     def getUserOpt(id: ExternalId[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserOpt", Param("id", id))
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
@@ -169,6 +170,7 @@ object Shoebox extends Service {
     def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
+    def newKeepsInLibrary(userId: Id[User], max: Int) = ServiceRoute(POST, "/internal/shoebox/database/newKeepsInLibrary", Param("userId", userId), Param("max", max))
     def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getMutualFriends", Param("user1Id", user1Id), Param("user2Id", user2Id))
   }
 }

@@ -29,7 +29,6 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
-  def getNotViewdOrEmailed(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -118,14 +117,6 @@ class LibraryMembershipRepoImpl @Inject() (
     val updateTime = Some(clock.now)
     (for { t <- rows if t.id === membershipId } yield (t.lastEmailSent)).update(updateTime)
     invalidateCache(get(membershipId).copy(lastEmailSent = updateTime))
-  }
-
-  def getNotViewdOrEmailed(userId: Id[User], since: DateTime)(implicit session: RSession): Seq[Id[Library]] = {
-    import StaticQuery.interpolation
-    sql"""select library_id from library_membership where user_id = $userId
-         and (last_email_sent is null or last_email_sent < $since)
-         and (last_viewed is null or last_viewed < $since)"""
-      .as[Id[Library]].list.toSeq
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {

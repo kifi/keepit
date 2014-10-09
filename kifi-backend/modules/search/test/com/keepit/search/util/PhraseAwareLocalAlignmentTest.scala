@@ -8,7 +8,7 @@ import scala.util.Random
 import LocalAlignment._
 
 class PhraseAwareLocalAlignmentTest extends Specification {
-  val toId: Map[String, Int] = Map("a" -> 10, "b" -> 20, "c" -> 30, "d" -> 40, "e" -> 50)
+  val toId: Map[String, TermId] = Map("a" -> 10, "b" -> 20, "c" -> 30, "d" -> 40, "e" -> 50).mapValues(LocalAlignment.intToTermId(_))
 
   val dict0 = Seq(
     (Seq("b", "c") map toId, PhraseMatch(0, 2)),
@@ -38,11 +38,11 @@ class PhraseAwareLocalAlignmentTest extends Specification {
   val pm4 = new PhraseMatcher(dict4)
 
   class DummyLocalAlignment extends LocalAlignment {
-    var positions = Set.empty[(Int, Int, Float)]
-    def begin(): Unit = { positions = Set.empty[(Int, Int, Float)] }
-    def update(id: Int, pos: Int, weight: Float = 1.0f): Unit = { positions += ((id, pos, weight)) }
+    var positions = Set.empty[(TermId, Int, Float)]
+    def begin(): Unit = { positions = Set.empty[(TermId, Int, Float)] }
+    def update(id: TermId, pos: Int, weight: Float = 1.0f): Unit = { positions += ((id, pos, weight)) }
     def end(): Unit = {}
-    def single(id: Int, weight: Float = 1.0f): Float = weight
+    def single(id: TermId, weight: Float = 1.0f): Float = weight
     def score: Float = 0.0f
     def maxScore: Float = 1.0f
   }

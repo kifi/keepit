@@ -23,6 +23,7 @@ angular.module('antiscroll', ['kifi'])
           });
         };
 
+
         scope.refreshScroll();
 
         // http://stackoverflow.com/questions/986937/how-can-i-get-the-browsers-scrollbar-sizes

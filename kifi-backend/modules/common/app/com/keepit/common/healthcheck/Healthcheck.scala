@@ -125,7 +125,7 @@ class HealthcheckActor @Inject() (
       emailSender.sendMail(email)
     case CheckCacheMissRatio =>
       val cacheName = MemcachedCache.name
-      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 5, cacheName) // I rather have minRatio set to 2% but one step at a time...
+      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 20, cacheName) // I rather have minRatio set to 2% but one step at a time...
       if (misses.nonEmpty) {
         val message = misses.map {
           case (key, ratio) =>
