@@ -9,8 +9,8 @@ You can also Connect Facebook to access recommendations from your friends’ bes
 @baseUrl/link/facebook?redirect=recommendations
 }
 
-@allRecos.items.map { item =>
-@partials.feedRecommendationText(item)
+@allRecos.recommendations.map { recommendation =>
+@partials.feedRecommendationText(recommendation)
 }
 
 View Full List: @baseUrl/recommendations
