@@ -22,7 +22,7 @@ import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import java.text.Normalizer
-import com.keepit.search.graph.library.LibraryFields
+import com.keepit.controllers.util.SearchControllerUtil.BasicLibrary
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -122,6 +122,7 @@ class AugmentationCommanderImpl @Inject() (
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
     var otherDiscoverableKeeps = 0
+    val uniqueKeepers = MutableSet[Long]() // todo(Léo, Yasu): This won't scale with very popular pages, will have to implement something like HyperLogLog counting
 
     (keepSearcher.indexReader.getContext.leaves()).foreach { atomicReaderContext =>
       val reader = atomicReaderContext.reader().asInstanceOf[WrappedSubReader]
@@ -147,21 +148,26 @@ class AugmentationCommanderImpl @Inject() (
 
           if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
             val record = getKeepRecord(docId)
+            uniqueKeepers += userId
             keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
+              uniqueKeepers += userId
               keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
+              uniqueKeepers += userId
               keeps += RestrictedKeepInfo(record.externalId, None, Some(Id(userId)), Set.empty)
             case SECRET => // ignore
           }
           else visibility match { // kept by others
             case PUBLISHED =>
+              uniqueKeepers += userId
               otherPublishedKeeps += 1
             //todo(Léo): define which published libraries are relevant (should we count irrelevant library keeps in otherDiscoverableKeeps?)
             case DISCOVERABLE =>
+              uniqueKeepers += userId
               otherDiscoverableKeeps += 1
             case SECRET => // ignore
           }
@@ -170,7 +176,7 @@ class AugmentationCommanderImpl @Inject() (
         }
       }
     }
-    AugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps)
+    AugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueKeepers.size)
   }
 
   private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): AugmentationScores = {
@@ -196,7 +202,7 @@ class AugmentationCommanderImpl @Inject() (
 case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
-  def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(AugmentedItem.isSecret(_, librarySearcher)))
+  def isSecret(isSecretLibrary: Id[Library] => Boolean) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(isSecretLibrary)
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
@@ -228,7 +234,7 @@ case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds:
   private lazy val moreTags = moreKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_))).toSeq
 
   def tags = {
-    var uniqueNormalizedTags = MutableSet[String]()
+    val uniqueNormalizedTags = MutableSet[String]()
     (myTags.iterator ++ primaryTags.iterator ++ moreTags.iterator).filter { tag =>
       val normalizedTag = AugmentedItem.normalizeTag(tag)
       val showTag = !uniqueNormalizedTags.contains(normalizedTag)
@@ -260,10 +266,4 @@ object AugmentedItem {
   private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
   @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
-  private[AugmentedItem] def isSecret(lib: Id[Library], librarySearcher: Searcher): Boolean = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, lib.id) match {
-      case Some(visibility) => visibility == LibraryFields.Visibility.SECRET
-      case None => false
-    }
-  }
 }
