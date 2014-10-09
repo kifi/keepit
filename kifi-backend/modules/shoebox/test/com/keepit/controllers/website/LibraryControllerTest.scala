@@ -213,39 +213,75 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId1 = Library.publicId(lib1.id.get)
 
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
+        val testPath = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
         inject[FakeUserActionsHelper].setUser(user1)
-        val request1 = FakeRequest("GET", testPath1)
+        val request1 = FakeRequest("GET", testPath)
         val result1 = libraryController.getLibraryById(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
-        val expected = Json.parse(
+        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
           s"""{
-             |"library":{
-               |"id":"${pubId1.id}",
-               |"name":"Library1",
-               |"visibility":"secret",
-               |"slug":"lib1",
-               |"url":"/ahsu/lib1",
-               |"kind":"user_created",
-               |"owner":{
-               |  "id":"${basicUser1.externalId}",
-               |  "firstName":"${basicUser1.firstName}",
-               |  "lastName":"${basicUser1.lastName}",
-               |  "pictureName":"${basicUser1.pictureName}",
-               |  "username":"${basicUser1.username.get.value}"
-               |  },
-               |"collaborators":[],
-               |"followers":[],
-               |"keeps":[],
-               |"numKeeps":0,
-               |"numCollaborators":0,
-               |"numFollowers":0
-             |}
-          }""".stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+           |"library":{
+             |"id":"${pubId1.id}",
+             |"name":"Library1",
+             |"visibility":"secret",
+             |"slug":"lib1",
+             |"url":"/ahsu/lib1",
+             |"kind":"user_created",
+             |"owner":{
+             |  "id":"${basicUser1.externalId}",
+             |  "firstName":"${basicUser1.firstName}",
+             |  "lastName":"${basicUser1.lastName}",
+             |  "pictureName":"${basicUser1.pictureName}",
+             |  "username":"${basicUser1.username.get.value}"
+             |  },
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
+           |},
+           |"access":"owner"
+          }""".stripMargin))
+
+        val user2 = db.readWrite { implicit s =>
+          val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Some(Username("bhsu"))))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          user2
+        }
+        inject[FakeUserActionsHelper].setUser(user2)
+        val request2 = FakeRequest("GET", testPath)
+        val result2 = libraryController.getLibraryById(pubId1)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""{
+           |"library":{
+             |"id":"${pubId1.id}",
+             |"name":"Library1",
+             |"visibility":"secret",
+             |"slug":"lib1",
+             |"url":"/ahsu/lib1",
+             |"kind":"user_created",
+             |"owner":{
+             |  "id":"${basicUser1.externalId}",
+             |  "firstName":"${basicUser1.firstName}",
+             |  "lastName":"${basicUser1.lastName}",
+             |  "pictureName":"${basicUser1.pictureName}",
+             |  "username":"${basicUser1.username.get.value}"
+             |  },
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
+           |},
+           |"access":"none"
+          }""".stripMargin))
       }
     }
 
@@ -326,7 +362,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numKeeps":0,
                |"numCollaborators":0,
                |"numFollowers":0
-             |}}""".stripMargin)
+             |},
+             |"access":"owner"
+            |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
       }
