@@ -147,16 +147,15 @@ angular.module('kifi')
           }
         }
       });
-    }
+    };
 
     init();
 
 
     $scope.submitPassPhrase = function () {
-      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value).then(function (result) {
+      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value).then(function () {
         init(true);
       })['catch'](function (err) {
-        console.log('error', err);
         $scope.$error.name = 'Oops, that didn\'t work. Try again? Check the email you recieved for the correct pass phrase.';
         return err;
       });
