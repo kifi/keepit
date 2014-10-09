@@ -1,7 +1,7 @@
 package com.keepit.search.graph.library
 
 import com.keepit.model.{ LibraryAndMemberships, Library }
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.search.IndexInfo
 import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -43,6 +43,14 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
     super.indexInfos(this.name)
+  }
+
+  def isSecret(lib: Id[Library]): Boolean = {
+    getSearcher.getLongDocValue(LibraryFields.visibilityField, lib.id).exists(_ == LibraryFields.Visibility.SECRET)
+  }
+
+  def getRecord(libraryId: Id[Library]): Option[LibraryRecord] = {
+    getSearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 }
 

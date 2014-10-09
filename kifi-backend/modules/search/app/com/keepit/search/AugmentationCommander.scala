@@ -22,7 +22,7 @@ import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import java.text.Normalizer
-import com.keepit.search.graph.library.LibraryFields
+import com.keepit.controllers.util.SearchControllerUtil.BasicLibrary
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -202,7 +202,7 @@ class AugmentationCommanderImpl @Inject() (
 case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
-  def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(AugmentedItem.isSecret(_, librarySearcher)))
+  def isSecret(isSecretLibrary: Id[Library] => Boolean) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(isSecretLibrary)
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
@@ -266,10 +266,4 @@ object AugmentedItem {
   private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
   @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
-  private[AugmentedItem] def isSecret(lib: Id[Library], librarySearcher: Searcher): Boolean = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, lib.id) match {
-      case Some(visibility) => visibility == LibraryFields.Visibility.SECRET
-      case None => false
-    }
-  }
 }

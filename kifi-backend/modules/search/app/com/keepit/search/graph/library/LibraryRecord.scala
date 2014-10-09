@@ -39,8 +39,4 @@ object LibraryRecord {
     val id = Id[Library](in.readLong())
     LibraryRecord(title, description, id)
   }
-
-  def retrieve(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
-    librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
-  }
 }
