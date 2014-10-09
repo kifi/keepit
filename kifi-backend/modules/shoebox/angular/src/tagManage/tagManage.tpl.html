@@ -33,33 +33,14 @@
                                     </ng-pluralize>
                               </span>
       				<span class="manage-tag-row-links-section">
-      					<span class="manage-tag-row-link" kf-keep-to-library-widget ng-click="showWidget()">
+      					<span class="manage-tag-row-link-convert" kf-keep-to-library-widget ng-click="showWidget()">
       						Convert to library
       					</span>&middot;
-      					<span class="manage-tag-row-link" ng-click="removeTag(tag)">
+      					<span class="manage-tag-row-link-delete" ng-click="removeTag(tag)">
       						Delete
       					</span>
       				</span>
       			</li>
-                        <!-- Dummy tag for UI testing -->
-                        <li class="manage-tag-row">
-                              <div class="manage-tag-row-name-section">
-                                    <div class="manage-tag-row-name">San Francisco is the best city ever but its p(max 64 characters)</div>
-                              </div>
-                              <span class="manage-tag-row-num-keeps-section">
-                                    <ng-pluralize count="2300 | number:0"
-                                          when="{'0': '', 'one': '1 keep', 'other':'{} keeps'}">
-                                    </ng-pluralize>
-                              </span>
-                              <span class="manage-tag-row-links-section">
-                                    <span class="manage-tag-row-link">
-                                          Convert to library
-                                    </span>&middot;
-                                    <span class="manage-tag-row-link">
-                                          Delete
-                                    </span>
-                              </span>
-                        </li>
       		</ul>
       	</div>
 

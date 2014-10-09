@@ -59,9 +59,9 @@ angular.module('kifi')
       }
     });
 
-    ///////////////////////////
-    ///// Filtering Stuff /////
-    ///////////////////////////
+    //
+    // Filtering Stuff
+    //
     var fuseOptions = {
        keys: ['name'],
        threshold: 0.3 // 0 means exact match, 1 means match with anything
@@ -96,14 +96,14 @@ angular.module('kifi')
     };
 
 
-    ///////////////////////
-    ///// Manage Tags /////
-    ///////////////////////
-
+    //
+    // Manage Tags
+    //
     $scope.removeTag = function (tag) {
       var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
       if (choice) {
         tagService.remove(tag);
+        _.remove($scope.tagsToShow, function(t) { return t === tag; });
       }
     };
 
