@@ -234,10 +234,10 @@ class ProximityQueryTest extends Specification {
       scorer === null
     }
     "make a phrase dictionary correctly" in {
-      val termIds = Array(0, 1, 2, 3, 4, 5, 6, 1, 2)
-      val phrases1 = Set((1, 3), (5, 2))
-
       def termIdSeq(ids: Int*) = ids.map(LocalAlignment.intToTermId(_))
+
+      val termIds = termIdSeq(0, 1, 2, 3, 4, 5, 6, 1, 2).toArray
+      val phrases1 = Set((1, 3), (5, 2))
 
       ProximityQuery.buildPhraseDict(termIds, phrases1).toSet ===
         Set((termIdSeq(0), TermMatch(0)), (termIdSeq(1), TermMatch(7)), (termIdSeq(2), TermMatch(8)), (termIdSeq(4), TermMatch(4)), (termIdSeq(1, 2, 3), PhraseMatch(1, 3)), (termIdSeq(5, 6), PhraseMatch(5, 2)))

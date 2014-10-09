@@ -81,6 +81,24 @@ class AuthController @Inject() (
     }
   }
 
+  def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        BadRequest(Json.obj("error" -> "invalid_token"))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenLogin(providerName, oauth2Info)
+    }
+  }
+
+  def accessTokenSignup(providerName: String) = Action.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenSignup(providerName, oauth2Info)
+    }
+  }
+
   def afterLogin() = HtmlAction(allowPending = true)(authenticatedAction = { implicit request =>
     if (request.user.state == UserStates.PENDING) {
       Redirect("/")

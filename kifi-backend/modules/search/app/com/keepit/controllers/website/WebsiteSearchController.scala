@@ -1,9 +1,9 @@
 package com.keepit.controllers.website
 
 import com.keepit.common.concurrent.ExecutionContext._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.keepit.controllers.util.SearchControllerUtil
-import com.keepit.controllers.util.SearchControllerUtil.nonUser
+import com.keepit.controllers.util.SearchControllerUtil.{ BasicLibrary, nonUser }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
@@ -14,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexer }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -82,18 +82,15 @@ class WebsiteSearchController @Inject() (
         }
 
         augment(augmentationCommander, userId, kifiPlainResult).flatMap {
-          case (infos, scores) =>
-            val futureUsers = shoeboxClient.getBasicUsers(infos.flatMap(_.keeps.flatMap(_.keptBy)).distinct)
-            val libraries = getLibraryNames(libraryIndexer.getSearcher, infos.flatMap(_.keeps.flatMap(_.keptIn)).distinct).map {
-              case (libId, name) =>
-                libId -> BasicLibrary(Library.publicId(libId), name)
-            }
+          case augmentedItems =>
+            val futureUsers = shoeboxClient.getBasicUsers(augmentedItems.flatMap(_.keepers).distinct)
+            val libraries = getBasicLibraries(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries).toSet)
             for {
               users <- futureUsers
               summaries <- futureUriSummaries
             } yield JsArray(
-              (kifiPlainResult.hits zip infos).map {
-                case (hit, info) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), info, scores, users, libraries)
+              (kifiPlainResult.hits zip augmentedItems).map {
+                case (hit, augmentedItem) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), augmentedItem, users, libraries)
               }
             )
         }
@@ -124,13 +121,8 @@ class WebsiteSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).map { libraryShardResult =>
-      val libraries = {
-        val librarySearcher = libraryIndexer.getSearcher
-        libraryShardResult.hits.map(_.id).map { libId =>
-          libId -> LibraryRecord.retrieve(librarySearcher, libId)
-        }.toMap
-      }
-
+      val librarySearcher = libraryIndexer.getSearcher
+      val libraries = libraryShardResult.hits.map(_.id).map { libId => libId -> LibraryIndexable.getRecord(librarySearcher, libId) }.toMap
       val json = JsArray(libraryShardResult.hits.map { hit =>
         val library = libraries(hit.id)
         Json.obj(
@@ -148,59 +140,26 @@ class WebsiteSearchController @Inject() (
 
 object WebsiteSearchController {
 
-  import java.text.Normalizer
-  import scala.collection.mutable
+  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentedItem: AugmentedItem, allUsers: Map[Id[User], BasicUser], allLibraries: Map[Id[Library], BasicLibrary]): JsObject = {
 
-  case class BasicLibrary(libId: PublicId[Library], name: String)
-  object BasicLibrary {
-    implicit val format = Json.format[BasicLibrary]
-  }
-
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private def normalize(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
-
-  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): JsObject = {
-    val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(_.keptBy == Some(userId))
-
-    // Keeps
-    val myKeeps = myRestrictedKeeps.flatMap(_.keptIn).sortBy(scores.byLibrary).map(libraries(_))
-
+    val myKeeps: Seq[BasicLibrary] = augmentedItem.myKeeps.map(myKeep => allLibraries(myKeep.keptIn.get))
     val moreKeeps = {
-      var uniqueKeepers = mutable.HashSet[Id[User]]()
-      uniqueKeepers += userId
-      moreRestrictedKeeps.sortBy(keep => (keep.keptBy.map(scores.byUser), keep.keptIn.map(scores.byLibrary))).collect {
+      import scala.collection.mutable
+      var uniqueKeepers = mutable.Set[Id[User]]()
+      augmentedItem.moreKeeps.collect {
         case RestrictedKeepInfo(_, keptIn, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
           uniqueKeepers += keeperId
-          Json.obj("user" -> users(keeperId), "library" -> keptIn.map(libraries(_)))
+          Json.obj("user" -> allUsers(keeperId), "library" -> keptIn.map(allLibraries(_)))
       }
     }
-
-    val otherKeeps = augmentationInfo.otherDiscoverableKeeps + augmentationInfo.otherPublishedKeeps
-
-    // Tags
-    val primaryTags = {
-      val primaryKeep = kifiShardHit.libraryId.flatMap { libId => augmentationInfo.keeps.find(_.keptIn.map(_.id == libId).getOrElse(false)) }
-      primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)))
-    }
-
-    val moreTags = {
-      var uniqueNormalizedTags = mutable.HashSet() ++ primaryTags.map(normalize)
-      augmentationInfo.keeps.map(_.tags).flatten.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)).filter { tag =>
-        val normalizedTag = normalize(tag)
-        val showTag = !uniqueNormalizedTags.contains(normalizedTag)
-        uniqueNormalizedTags += normalizedTag
-        showTag
-      }
-    }
-
-    val tags = primaryTags ++ moreTags
+    val otherKeeps = augmentedItem.otherDiscoverableKeeps + augmentedItem.otherPublishedKeeps
 
     Json.obj(
       "title" -> kifiShardHit.title,
       "url" -> kifiShardHit.url,
       "score" -> kifiShardHit.finalScore,
       "summary" -> summary,
-      "tags" -> tags,
+      "tags" -> augmentedItem.tags,
       "myKeeps" -> myKeeps,
       "moreKeeps" -> moreKeeps,
       "otherKeeps" -> otherKeeps

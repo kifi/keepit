@@ -7,7 +7,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
-import com.keepit.social.{ SocialId, UserIdentity }
+import com.keepit.social.{ UserIdentity }
 import com.keepit.controllers.core.{ AuthController, AuthHelper }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.social.SocialNetworkType
@@ -101,7 +101,7 @@ class MobileAuthController @Inject() (
   }
 
   def accessTokenSignup(providerName: String) = Action.async(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2Info] match {
+    request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
@@ -110,7 +110,7 @@ class MobileAuthController @Inject() (
   }
 
   def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
-    request.body.asOpt[OAuth2Info] match {
+    request.body.asOpt[OAuth2TokenInfo] match {
       case None =>
         BadRequest(Json.obj("error" -> "invalid_token"))
       case Some(oauth2Info) =>

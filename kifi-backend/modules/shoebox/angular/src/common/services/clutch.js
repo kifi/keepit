@@ -30,10 +30,10 @@ angular.module('kifi')
         var key = stringize(arguments);
         var hit = this._cache[key];
 
-        if (!hit) {
+        if (!hit || (!hit.value && !hit.activeRequest)) {
           // Never been refreshed.
           return refresh.call(this, key, arguments);
-        } else if (!hit.value || hit.activeRequest) {
+        } else if (hit.activeRequest) {
           // Previous refresh did not finish.
           return hit.q;
         } else if (isExpired(hit.time, this._config.cacheDuration)) {

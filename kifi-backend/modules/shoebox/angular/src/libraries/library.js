@@ -28,6 +28,7 @@ angular.module('kifi')
     $scope.hasMore = true;
     $scope.page = null; // This is used to decide which page to show (library, permission denied, login)
     $scope.passphrase = $scope.passphrase || {};
+    $scope.$error = $scope.$error || {};
 
 
     //
@@ -114,45 +115,48 @@ angular.module('kifi')
       }
     }
 
-    // Request for library object also retrieves an initial set of keeps in the library.
-    libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken).then(function (library) {
-      // If library information has already been prepopulated, extend the library object.
-      // Otherwise, replace library object completely with the newly fetched object.
-      if (prePopulated) {
-        _.assign($scope.library, library);
-      } else {
-        util.replaceObjectInPlace($scope.library, library);
-      }
 
-      library.keeps.forEach(function (rawKeep) {
-        var keep = new keepDecoratorService.Keep(rawKeep);
-        keep.buildKeep(keep);
-        keep.makeKept();
-
-        $scope.keeps.push(keep);
-      });
-
-      $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
-      $scope.loading = false;
-      $scope.page = 'library';
-    }, function onError(resp) {
-      if (resp.data && resp.data.error) {
-        if (resp.data.error && authToken) {
-          $scope.page = 'login';
+    var init = function (invalidateCache) {
+      // Request for library object also retrieves an initial set of keeps in the library.
+      libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken, invalidateCache || false).then(function (library) {
+        // If library information has already been prepopulated, extend the library object.
+        // Otherwise, replace library object completely with the newly fetched object.
+        if (prePopulated) {
+          _.assign($scope.library, library);
         } else {
-          $scope.page = 'permission_denied';
+          util.replaceObjectInPlace($scope.library, library);
         }
-      }
-    });
+
+        library.keeps.forEach(function (rawKeep) {
+          var keep = new keepDecoratorService.Keep(rawKeep);
+          keep.buildKeep(keep);
+          keep.makeKept();
+
+          $scope.keeps.push(keep);
+        });
+
+        $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
+        $scope.loading = false;
+        $scope.page = 'library';
+      }, function onError(resp) {
+        if (resp.data && resp.data.error) {
+          if (resp.data.error && authToken) {
+            $scope.page = 'login';
+          } else {
+            $scope.page = 'permission_denied';
+          }
+        }
+      });
+    };
+
+    init();
 
 
     $scope.submitPassPhrase = function () {
-      //console.log('hit', $scope.library.id);
-      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value).then(function (result) {
-        //console.log('success', result);
-        return result;
+      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value).then(function () {
+        init(true);
       })['catch'](function (err) {
-        //console.log('error', err);
+        $scope.$error.name = 'Oops, that didn\'t work. Try again? Check the email you recieved for the correct pass phrase.';
         return err;
       });
     };

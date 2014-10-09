@@ -35,13 +35,13 @@
     <!-- Needs to log in -->
   <div class="kf-main-library-keeps" ng-if="page === 'login'">
     <p>This is a private library. If you were invited, enter the passphrase sent to you in the invitation email.</p>
-    <div class="manage-lib-input-wrapper">
-      <div class="">
-        <span class="manage-lib-error manage-lib-name-error" ng-if="$error.name">{{$error.name}}</span>
-      </div>
+    <div>
       <input class="" ng-model="passphrase.value" type="text" name="name" placeholder="Passphrase" autocomplete="off" novalidate>
-      <button ng-click="submitPassPhrase()">Get access</button>
+      <input type="submit" ng-click="submitPassPhrase()" value="Get access">
       <div>Example: person string wind</div>
+      <div class="kf-lib-access-error" ng-if="$error.name">
+        {{$error.name}}
+      </div>
     </div>
   </div>
 
