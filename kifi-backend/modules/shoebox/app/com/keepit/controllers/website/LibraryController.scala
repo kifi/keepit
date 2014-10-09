@@ -90,8 +90,15 @@ class LibraryController @Inject() (
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { library =>
-      Ok(Json.obj("library" -> Json.toJson(library)))
+    libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { libInfo =>
+      val accessStr = request.userIdOpt.map { userId =>
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
+        }.map(_.access.value)
+      }.flatten.getOrElse {
+        "none"
+      }
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "access" -> accessStr))
     }
   }
 
@@ -107,7 +114,14 @@ class LibraryController @Inject() (
             }
           }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
-            Ok(Json.obj("library" -> Json.toJson(libInfo)))
+            val accessStr = request.userIdOpt.map { userId =>
+              db.readOnlyMaster { implicit s =>
+                libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId)
+              }.map(_.access.value)
+            }.flatten.getOrElse {
+              "none"
+            }
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "access" -> accessStr))
           }
         })
       case Left((respCode, msg)) =>
