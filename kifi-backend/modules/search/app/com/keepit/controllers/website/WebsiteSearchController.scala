@@ -14,7 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.graph.library.{ LibraryIndexer }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -84,7 +84,7 @@ class WebsiteSearchController @Inject() (
         augment(augmentationCommander, userId, kifiPlainResult).flatMap {
           case augmentedItems =>
             val futureUsers = shoeboxClient.getBasicUsers(augmentedItems.flatMap(_.keepers).distinct)
-            val libraries = getBasicLibraries(libraryIndexer, augmentedItems.flatMap(_.libraries).toSet)
+            val libraries = getBasicLibraries(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries).toSet)
             for {
               users <- futureUsers
               summaries <- futureUriSummaries
@@ -121,7 +121,8 @@ class WebsiteSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).map { libraryShardResult =>
-      val libraries = libraryShardResult.hits.map(_.id).map { libId => libId -> libraryIndexer.getRecord(libId) }.toMap
+      val librarySearcher = libraryIndexer.getSearcher
+      val libraries = libraryShardResult.hits.map(_.id).map { libId => libId -> LibraryIndexable.getRecord(librarySearcher, libId) }.toMap
       val json = JsArray(libraryShardResult.hits.map { hit =>
         val library = libraries(hit.id)
         Json.obj(
