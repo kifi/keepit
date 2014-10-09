@@ -140,6 +140,8 @@ class WebsiteSearchController @Inject() (
 
 object WebsiteSearchController {
 
+  private implicit val basicLibraryWrites = Writes[BasicLibrary] { library => Json.obj("libId" -> library.id, "name" -> library.name) }
+
   def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentedItem: AugmentedItem, allUsers: Map[Id[User], BasicUser], allLibraries: Map[Id[Library], BasicLibrary]): JsObject = {
 
     val myKeeps: Seq[BasicLibrary] = augmentedItem.myKeeps.map(myKeep => allLibraries(myKeep.keptIn.get))
