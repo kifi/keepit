@@ -6,7 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult }
-import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryFields, LibraryIndexer }
 import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
@@ -45,7 +45,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
 
         augmentedItem.friends.foreach { friendId => friendStats.add(friendId.id, hit.score) }
 
-        val isPrivate = augmentedItem.isSecret(libraryIndexer.isSecret)
+        val isPrivate = augmentedItem.isSecret(LibraryIndexable.isSecret(libraryIndexer.getSearcher, _))
 
         DetailedSearchHit(
           uriId.id,

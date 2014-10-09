@@ -20,7 +20,7 @@ import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
-import com.keepit.search.graph.library.{ LibraryIndexer, LibraryRecord, LibraryFields }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer, LibraryRecord, LibraryFields }
 
 import scala.util.{ Failure, Success }
 
@@ -100,10 +100,10 @@ trait SearchControllerUtil {
     augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  def getBasicLibraries(libraryIndexer: LibraryIndexer, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
+  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
     libraryIds.map { libId =>
-      val name = libraryIndexer.getRecord(libId).get.name
-      libId -> BasicLibrary(Library.publicId(libId), name, libraryIndexer.isSecret(libId))
+      val name = LibraryIndexable.getRecord(librarySearcher, libId).get.name
+      libId -> BasicLibrary(Library.publicId(libId), name, LibraryIndexable.isSecret(librarySearcher, libId))
     }.toMap
   }
 

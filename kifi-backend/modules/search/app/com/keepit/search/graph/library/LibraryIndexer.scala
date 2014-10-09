@@ -44,14 +44,6 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
   override def indexInfos(name: String): Seq[IndexInfo] = {
     super.indexInfos(this.name)
   }
-
-  def isSecret(lib: Id[Library]): Boolean = {
-    getSearcher.getLongDocValue(LibraryFields.visibilityField, lib.id).exists(_ == LibraryFields.Visibility.SECRET)
-  }
-
-  def getRecord(libraryId: Id[Library]): Option[LibraryRecord] = {
-    getSearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
-  }
 }
 
 class LibraryIndexerActor @Inject() (
