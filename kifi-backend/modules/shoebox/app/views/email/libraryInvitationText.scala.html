@@ -1,0 +1,22 @@
+@(inviteeId: Option[Id[User]],
+inviterId: Id[User],
+inviteMsg: Option[String],
+libraryInfo: com.keepit.commanders.LibraryInfo,
+passPhrase: String)
+@import com.keepit.common.mail.template.helpers._
+@libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
+@libraryUrl = {@{baseUrl}@libraryInfo.url}
+
+@fullName(inviterId) invited you to follow a library on kifi
+@inviteMsg.map { msg =>
+  "@msg"
+}
+@libraryInfo.name
+
+@libraryInfo.shortDescription.getOrElse("")
+
+@libraryUrl
+Passphrase: @passPhrase
+
+Cheers!
+The Kifi team

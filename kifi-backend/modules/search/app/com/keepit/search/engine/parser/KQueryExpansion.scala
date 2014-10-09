@@ -177,8 +177,14 @@ trait KQueryExpansion extends QueryParser {
       }
     }
 
-    // if we have too many terms, don't concat terms
-    if (concatBoost > 0.0f && clauses.size <= 42) KConcatQueryAdder.addConcatQueries(queries, concatBoost)
+    if (concatBoost > 0.0f) {
+      // concat first 8 terms
+      if (clauses.size <= 8) {
+        KConcatQueryAdder.addConcatQueries(queries, concatBoost)
+      } else {
+        KConcatQueryAdder.addConcatQueries(queries.take(8), concatBoost)
+      }
+    }
 
     getBooleanQuery(clauses)
   }

@@ -2,15 +2,17 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ DbSequenceAssigner, State, ExternalId, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
-import com.keepit.common.time.Clock
+import org.joda.time.DateTime
+import com.keepit.common.time._
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
+import scala.collection.immutable.Seq
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -25,6 +27,8 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
+  def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
+  def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -46,7 +50,9 @@ class LibraryMembershipRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
     def showInSearch = column[Boolean]("show_in_search", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def lastViewed = column[Option[DateTime]]("last_viewed", O.Nullable)
+    def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, lastViewed, lastEmailSent) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
@@ -96,8 +102,21 @@ class LibraryMembershipRepoImpl @Inject() (
   private def countMembershipsCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryMembership]]) = Compiled {
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
   }
+
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
     countMembershipsCompiled(libraryId, excludeState).run
+  }
+
+  def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession) = {
+    val updateTime = Some(clock.now)
+    (for { t <- rows if t.id === membershipId } yield (t.lastViewed)).update(updateTime)
+    invalidateCache(get(membershipId).copy(lastViewed = updateTime))
+  }
+
+  def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession) = {
+    val updateTime = Some(clock.now)
+    (for { t <- rows if t.id === membershipId } yield (t.lastEmailSent)).update(updateTime)
+    invalidateCache(get(membershipId).copy(lastEmailSent = updateTime))
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {

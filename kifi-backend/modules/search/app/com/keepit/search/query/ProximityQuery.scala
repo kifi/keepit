@@ -28,9 +28,9 @@ object ProximityQuery extends Logging {
 
   val maxLength = 64 // we use first 64 terms (enough?)
 
-  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, threshold: Float, powerFactor: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, threshold, powerFactor: Float)
+  def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, powerFactor: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, powerFactor: Float)
 
-  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[Int], Match)] = {
+  def buildPhraseDict(termIds: Array[TermId], phrases: Set[(Int, Int)]): Seq[(Seq[TermId], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
     phrases.foreach {
       case (pos, len) =>
@@ -39,7 +39,7 @@ object ProximityQuery extends Logging {
         }
     }
 
-    var dict = Map.empty[Seq[Int], Match]
+    var dict = Map.empty[Seq[TermId], Match]
     dict = posNotInPhrase.filter { _ >= 0 }.foldLeft(dict) { (d, pos) => d + (Seq(termIds(pos)) -> TermMatch(pos).asInstanceOf[Match]) }
     phrases.foldLeft(dict) {
       case (d, (pos, len)) =>
@@ -57,7 +57,7 @@ object ProximityQuery extends Logging {
   }
 }
 
-class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val threshold: Float, val powerFactor: Float) extends Query {
+class ProximityQuery(val terms: Seq[Seq[Term]], val phrases: Set[(Int, Int)] = Set(), val phraseBoost: Float, val gapPenalty: Float, val powerFactor: Float) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = new ProximityWeight(this)
 
@@ -83,15 +83,14 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
   private[this] var value = 0.0f
 
   val gapPenalty = query.gapPenalty
-  val threshold = query.threshold
 
   private[this] val termIdMap = {
     var id = -1
-    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]) { (m, termSeq) =>
+    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], TermId]) { (m, termSeq) =>
       if (m.contains(termSeq)) m
       else {
         id += 1
-        m + (termSeq -> id)
+        m + (termSeq -> intToTermId(id))
       }
     }
   }
@@ -134,7 +133,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
       result.setDescription(s"proximity(${termsString + phrases}), product of:")
       val powerExpl = new ComplexExplanation()
-      powerExpl.setDescription(s"proximity score. threshold = $threshold")
+      powerExpl.setDescription(s"proximity score")
       powerExpl.setValue(proxScore / value)
       result.addDetail(powerExpl)
       result.addDetail(new Explanation(value, "weight value"))
@@ -159,11 +158,11 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       case (equivTerms, id) =>
         equivTerms.foreach { term =>
           val enum = termPositionsEnum(context, term, acceptDocs)
-          if (enum != null) buf += new PositionAndId(enum, term.text(), id)
+          if (enum != null) buf += new PositionAndId(enum, id)
         }
     }
 
-    if (buf.isEmpty) null else new ProximityScorer(this, buf.toArray, termIds, phraseMatcher, query.phraseBoost, threshold, query.powerFactor)
+    if (buf.isEmpty) null else new ProximityScorer(this, buf.toArray, termIds, phraseMatcher, query.phraseBoost, query.powerFactor)
   }
 }
 
@@ -175,7 +174,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
  * posLeft = number of unvisited term positions in current document
  * mask : reflects the position of the term in query.
  */
-private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termText: String, val id: Int) {
+private[query] final class PositionAndId(tp: DocsAndPositionsEnum, val id: TermId) {
   var doc = -1
   var pos = -1
 
@@ -203,7 +202,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   def cost(): Long = tp.cost()
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, threshold: Float, powerFactor: Float) extends Scorer(weight) with Logging {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[TermId], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, powerFactor: Float) extends Scorer(weight) with Logging {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
@@ -258,14 +257,6 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
   override def nextDoc(): Int = advance(0)
 
   override def advance(target: Int): Int = {
-    var iter = goto(target)
-    while (iter < NO_MORE_DOCS && proximityScore < threshold) {
-      iter = goto(target)
-    }
-    iter
-  }
-
-  private def goto(target: Int): Int = {
     var top = pq.top
     val doc = if (target <= curDoc && curDoc < NO_MORE_DOCS) curDoc + 1 else target
     while (top.doc < doc) {
@@ -273,7 +264,6 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
       top = pq.updateTop()
     }
     curDoc = top.doc
-    score() // score this doc. its proximity score need to be greater than the threshold
     curDoc
   }
 

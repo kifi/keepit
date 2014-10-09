@@ -11,7 +11,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SocialId, UserIdentity, SecureSocialClientIds, SocialNetworkType }
 
 import play.api.Play._
 import play.api.libs.json.{ JsNumber, Json }
@@ -28,6 +28,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
+
+import scala.concurrent.Future
+import scala.util.{ Success, Failure }
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -75,6 +78,24 @@ class AuthController @Inject() (
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
       case res => res
+    }
+  }
+
+  def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        BadRequest(Json.obj("error" -> "invalid_token"))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenLogin(providerName, oauth2Info)
+    }
+  }
+
+  def accessTokenSignup(providerName: String) = Action.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenSignup(providerName, oauth2Info)
     }
   }
 
@@ -276,7 +297,9 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: String) = HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
+  def verifyEmail(code: String) =
+    HtmlAction(allowPending = true)(authenticatedAction = authHelper.doVerifyEmail(code)(_), unauthenticatedAction = authHelper.doVerifyEmail(code)(_))
+
   def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
     Redirect(routes.AuthController.loginPage())
       .withSession(request.session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))

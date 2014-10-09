@@ -132,15 +132,6 @@ class ShoeboxRichConnectionCommander @Inject() (
 
     invitations.length
   }
-
-  def block(userId: Id[User], fullSocialId: FullSocialId): Unit = {
-    val friendId = fullSocialId.identifier.left.map { socialId =>
-      db.readOnlyReplica { implicit session =>
-        socialUserInfoRepo.get.get(socialId, fullSocialId.network).id.get
-      }
-    }
-    abook.blockRichConnection(userId, friendId)
-  }
 }
 
 case class DefaultRepoModificationBatchingConfiguration[A <: RepoModificationActor[_]]() extends BatchingActorConfiguration[A] {

@@ -3,7 +3,6 @@ package com.keepit.search
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import com.keepit.serializer.TupleFormat
 
 case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
@@ -16,44 +15,6 @@ object AugmentableItem {
       def reads(json: JsValue) = json.validate[Seq[(AugmentableItem, T)]].map(_.toMap)
       def writes(itemMap: Map[AugmentableItem, T]) = Json.toJson(itemMap.toSeq)
     }
-  }
-}
-
-case class AugmentedItem(
-  uri: Id[NormalizedURI],
-  keep: Option[(Id[Library], Option[Id[User]], Seq[Hashtag])],
-  moreKeeps: Seq[(Option[Id[Library]], Option[Id[User]])],
-  moreTags: Seq[Hashtag],
-  otherPublishedKeeps: Int,
-  otherDiscoverableKeeps: Int)
-
-object AugmentedItem {
-  def withScores(augmentationScores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo): AugmentedItem = {
-    val keep = item.keptIn.flatMap { libraryId =>
-      info.keeps.find(_.keptIn == Some(libraryId)).map { keepInfo =>
-        val sortedTags = keepInfo.tags.toSeq.sortBy(augmentationScores.tagScores.getOrElse(_, 0f))
-        val userIdOpt = keepInfo.keptBy
-        (libraryId, userIdOpt, sortedTags)
-      }
-    }
-
-    val (allKeeps, allTags) = info.keeps.foldLeft(Set.empty[(Option[Id[Library]], Option[Id[User]])], Set.empty[Hashtag]) {
-      case ((moreKeeps, moreTags), RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags)) => (moreKeeps + ((libraryIdOpt, userIdOpt)), moreTags ++ tags)
-    }
-
-    val (moreKeeps, moreTags) = keep match {
-      case Some((libraryId, userIdOpt, tags)) => (allKeeps - ((Some(libraryId), userIdOpt)), allTags -- tags)
-      case None => (allKeeps, allTags)
-    }
-
-    val moreSortedKeeps = moreKeeps.toSeq.sortBy {
-      case (libraryIdOpt, userIdOpt) => (
-        -libraryIdOpt.flatMap(augmentationScores.libraryScores.get).getOrElse(0f),
-        -userIdOpt.flatMap(augmentationScores.userScores.get).getOrElse(0f)
-      )
-    }
-    val moreSortedTags = moreTags.toSeq.sortBy(-augmentationScores.tagScores.getOrElse(_, 0f))
-    AugmentedItem(item.uri, keep, moreSortedKeeps, moreSortedTags, info.otherPublishedKeeps, info.otherDiscoverableKeeps)
   }
 }
 
@@ -85,6 +46,10 @@ case class AugmentationScores(
     }.toMap
     AugmentationScores(addedLibraryScores, addedUserScores, addedTagScores)
   }
+
+  def byUser(userId: Id[User]): Float = userScores.getOrElse(userId, 0f)
+  def byLibrary(libraryId: Id[Library]): Float = libraryScores.getOrElse(libraryId, 0f)
+  def byTag(tag: Hashtag): Float = tagScores.getOrElse(tag, 0f)
 }
 
 case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Float])

@@ -11,6 +11,9 @@ import securesocial.core.SecuredRequest
 import play.api.mvc.Result
 import play.api.http.Status.{ NO_CONTENT, RESET_CONTENT }
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
+
+import scala.util.Try
 
 trait ActionsBuilder { self: Controller =>
   val actionAuthenticator: ActionAuthenticator
@@ -52,7 +55,18 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       onUnauthenticated(request).map { res =>
         request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
           res.addingToSession("kcid" -> kcid)(request)
-        } getOrElse res
+        } getOrElse {
+          val referrer: String = request.headers.get("Referer").flatMap { ref =>
+            URI.parse(ref).toOption.flatMap(_.host).map(_.name)
+          } getOrElse ("na")
+          request.session.get("kcid").map { existingKcid =>
+            if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
+              res.addingToSession("kcid" -> s"organic-$referrer")(request)
+            } else res
+          } getOrElse {
+            Try(res.addingToSession("kcid" -> s"organic-$referrer")(request)).toOption.getOrElse(res) //for testability (addingToSession requires the application)
+          }
+        }
       }
     }
 

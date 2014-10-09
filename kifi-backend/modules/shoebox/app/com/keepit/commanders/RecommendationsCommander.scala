@@ -105,7 +105,7 @@ class RecommendationsCommander @Inject() (
       title = nUri.title,
       url = nUri.url,
       keepers = reco.attribution.map { attr =>
-        db.readOnlyReplica { implicit session => attr.user.map(_.friends.map(basicUserRepo.load)) }
+        db.readOnlyReplica { implicit session => attr.user.map(_.friends.toSet.map(basicUserRepo.load).toSeq) }
       }.flatten.getOrElse(Seq.empty),
       others = reco.attribution.map { attr =>
         attr.user.map(_.others)
@@ -208,7 +208,7 @@ class RecommendationsCommander @Inject() (
     Future.sequence(db.readOnlyReplica { implicit session =>
       Seq[Id[Library]](Id[Library](24138)).map(libRepo.get)
     }.map { lib =>
-      libCommander.createFullLibraryInfo(userId, lib).map(lib.ownerId -> _)
+      libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
     }).map {
       libInfosWithOwner =>
         libInfosWithOwner.map {

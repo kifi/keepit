@@ -1,7 +1,6 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model._
@@ -23,7 +22,6 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.routes.Search
-import play.api.templates.Html
 
 class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
@@ -69,7 +67,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distSearch2() = Action(parse.tolerantJson) { request =>
+  def distSearch2() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -80,7 +78,7 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
-    val library = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
+    val libraryContext = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
       case (Some(libId), _) => LibraryContext.Authorized(libId)
       case (None, Some(libId)) => LibraryContext.NotAuthorized(libId)
       case _ => LibraryContext.None
@@ -92,7 +90,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    val result = searchCommander.distSearch2(
+    searchCommander.distSearch2(
       shards,
       id,
       Lang(lang1),
@@ -100,13 +98,11 @@ class SearchController @Inject() (
       userExperiments,
       query,
       filter,
-      library,
+      libraryContext,
       maxHits,
       context,
       None,
-      debug)
-
-    Ok(result.json)
+      debug).map { result => Ok(result.json) }
   }
 
   def distLangFreqs() = Action.async(parse.tolerantJson) { request =>
@@ -121,7 +117,7 @@ class SearchController @Inject() (
       case _ => LibraryContext.None
     }
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    languageCommander.distLangFreqs2(shards, userId, libraryContext).map { freqs =>
+    languageCommander.distLangFreqs(shards, userId, libraryContext).map { freqs =>
       Ok(Json.toJson(freqs.map { case (lang, freq) => lang.lang -> freq }))
     }
   }

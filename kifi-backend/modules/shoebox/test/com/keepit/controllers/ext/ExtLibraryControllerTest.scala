@@ -272,11 +272,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           val keep1 = keepRepo.save(Keep(title = Some("Run"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(1)))
+            uriId = uri1.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint, createdAt = t1.plusMinutes(1)))
           val keep2 = keepRepo.save(Keep(title = Some("Throw"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(2)))
+            uriId = uri2.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint, createdAt = t1.plusMinutes(2)))
           val keep3 = keepRepo.save(Keep(title = Some("DontChoke"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), createdAt = t1.plusMinutes(3)))
+            uriId = uri3.id.get, source = KeepSource.keeper, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint, createdAt = t1.plusMinutes(3)))
           (user1, user2, lib1, lib2, keep1, keep2, keep3)
         }
         implicit val config = inject[PublicIdConfiguration]
@@ -384,6 +384,36 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
       }
     }
+
+    "search tags in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
+          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          (user1, user2, lib, mem1, mem2, keep)
+        }
+        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
+        status(tagKeep(user1, libPubId, keep.externalId, "animal")) === OK
+        status(tagKeep(user1, libPubId, keep.externalId, "aardvark")) === OK
+        status(tagKeep(user1, libPubId, keep.externalId, "Awesome")) === OK
+
+        // user can search tags in own library
+        contentAsString(searchTags(user1, libPubId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
+        contentAsString(searchTags(user1, libPubId, "s", 2)) === """[]"""
+
+        // other user with read access to library can search tags
+        contentAsString(searchTags(user2, libPubId, "a", 3)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]},{"tag":"Awesome","matches":[[0,1]]}]"""
+        contentAsString(searchTags(user2, libPubId, "s", 3)) === """[]"""
+
+        // other user without read access to library cannot search tags
+        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(state = LibraryMembershipStates.INACTIVE)) }
+        status(searchTags(user2, libPubId, "a", 3)) === FORBIDDEN
+      }
+    }
   }
 
   private def getLibraries(user: User)(implicit injector: Injector): Future[Result] = {
@@ -431,12 +461,17 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     controller.untagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.untagKeep(libraryId, keepId, tag)))
   }
 
+  private def searchTags(user: User, libraryId: PublicId[Library], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.searchTags(libraryId, q, Some(n))(request(routes.ExtLibraryController.searchTags(libraryId, q, Some(n))))
+  }
+
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = keepRepo.save(Keep(
       title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url,
-      source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
+      source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id, inDisjointLib = lib.isDisjoint))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))
       keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = coll.id.get))

@@ -144,7 +144,9 @@ angular.module('jun.facebook', [])
 	this.initialized = false;
 
 	this.init = function (params) {
-		if (!initPromise) {
+		if (window.FB && that.loading) {
+			return $q.reject({'error': 'no_FB_on_page'});
+		} else if (!initPromise) {
 			initPromise = that.load().then(function (FB) {
 				params = angular.extend({
 					appId: options.appId,

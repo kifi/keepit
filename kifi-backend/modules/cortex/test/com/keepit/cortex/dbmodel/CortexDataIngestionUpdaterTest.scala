@@ -52,9 +52,9 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
 
         shoebox.saveBookmarks(
           Keep(uriId = Id[NormalizedURI](1), url = "url1", urlId = Id[URL](1), source = KeepSource.keeper,
-            userId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))),
+            userId = Id[User](1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true),
           Keep(uriId = Id[NormalizedURI](2), url = "url1", urlId = Id[URL](2), source = KeepSource.bookmarkImport,
-            userId = Id[User](2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)))
+            userId = Id[User](2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true)
         )
 
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2

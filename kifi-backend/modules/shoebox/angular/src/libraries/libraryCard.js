@@ -2,8 +2,9 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryCard', ['$location', '$window', 'friendService', 'libraryService', 'modalService', 'profileService',
-  function ($location, $window, friendService, libraryService, modalService, profileService) {
+.directive('kfLibraryCard', [
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -11,13 +12,21 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        recommendation: '='
+        recommendation: '=',
+        loading: '=',
+        toggleEdit: '='
       },
       templateUrl: 'libraries/libraryCard.tpl.html',
       link: function (scope, element/*, attrs*/) {
+        //
+        // Scope data.
+        //
+        scope.facebookAppId = $FB.appId();
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
+        scope.editKeepsText = 'Edit Keeps';
+
 
         //
         // Internal methods.
@@ -32,6 +41,7 @@ angular.module('kifi')
           // 250px needed for other stuff in the parent's width.
           var maxFollowersToShow = Math.floor((parentWidth - 250) / widthPerFollowerPic);
 
+          scope.numAdditionalFollowers = 0;
           if (_.isArray(scope.library.followers)) {
             // If we only have one additional follower that we can't fit in, then we can fit that one
             // in if we don't show the additional-number-of-followers circle.
@@ -50,18 +60,13 @@ angular.module('kifi')
           followerPicsDiv.width(maxFollowersToShow * widthPerFollowerPic);
         }
 
-        // Data augmentation. May want to move out to own decorator service
-        // like the keepDecoratorService if this gets too large.
+        // Data augmentation.
+        // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
+        // currently in nav.js too.
         function augmentData() {
           // TODO(yiping): get real owner data when owner is not user.
           if (!scope.library.owner) {
             scope.library.owner = profileService.me;
-          }
-
-          // TODO(yiping): make sure recommended libraries have visibility.
-          // This is just a placeholder for now.
-          if (!scope.library.visibility) {
-            scope.library.visibility = 'published';
           }
 
           if (scope.library.owner) {
@@ -76,13 +81,25 @@ angular.module('kifi')
 
           var maxLength = 150;
           if (scope.library.description && scope.library.description.length > maxLength) {
-            scope.library.shortDescription = scope.library.description.substr(0, maxLength);
+            // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
+            var clipLastIndex = maxLength;
+            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
+            if (lastSpaceIndex !== -1) {
+              clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
+            }
+
+            scope.library.shortDescription = scope.library.description.substr(0, clipLastIndex);
             scope.clippedDescription = true;
           }
 
-          scope.library.shareUrl = $location.protocol() + '://' + $location.host() + $location.path();
+          scope.library.shareUrl = env.origin + scope.library.url;
+          scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
         }
 
+
+        //
+        // Scope methods.
+        //
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
         };
@@ -91,43 +108,70 @@ angular.module('kifi')
           return library.kind === 'user_created';
         };
 
+        scope.isMyLibrary = function (library) {
+          return library.owner && library.owner.id === profileService.me.id;
+        };
+
+        scope.followerIsMe = function (follower) {
+          return follower.id === profileService.me.id;
+        };
+
         scope.canBeShared = function (library) {
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
           return scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
-                  library.ownerId === profileService.me.id);
+                  scope.isMyLibrary(library));
         };
 
-        scope.isMyLibrary = function (library) {
-          return library.ownerId === profileService.me.id;
+        scope.shareFB = function () {
+          $FB.ui({
+            method: 'share',
+            href: scope.library.shareUrl
+          });
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.
-        scope.followingLibrary = function (library) {
-          var alreadyFollowing = _.some(scope.library.followers, {id: profileService.me.id});
-          return !alreadyFollowing && library.ownerId !== profileService.me.id;
+        scope.canFollowLibrary = function (library) {
+          return !scope.alreadyFollowingLibrary(library) && !scope.isMyLibrary(library);
+        };
+
+        scope.alreadyFollowingLibrary = function (library) {
+          return _.some(library.followers, { id: profileService.me.id });
         };
 
         scope.followLibrary = function (library) {
-          libraryService.joinLibrary(library.id);
+          libraryService.joinLibrary(library.id).then(function (result) {
+            if (result === 'already_joined') {
+              // TODO(yiping): make a better error message. One idea is to update
+              // the current generic error modal to take in a message parameter.
+              $window.alert('You are already following this library!');
+              return;
+            }
 
-          library.followers.push({
+            library.followers.push({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
               pictureName: profileService.me.pictureName
             });
 
-          augmentData();
-          adjustFollowerPicsSize();
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('changedLibrary');
+              augmentData();
+              adjustFollowerPicsSize();
+            });
+          });
         };
 
         scope.unfollowLibrary = function (library) {
           libraryService.leaveLibrary(library.id).then(function () {
-            _.remove(library.followers, function (follower) {
-              return follower.id === profileService.me.id;
+            _.remove(library.followers, { id: profileService.me.id });
+
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('changedLibrary');
+              adjustFollowerPicsSize();
             });
           });
         };
@@ -154,81 +198,37 @@ angular.module('kifi')
           });
         };
 
-        // Wait until library is ready.
-        scope.$watch(function () {
-          return scope.library.id;
-        }, function (newVal) {
-          if (newVal) {
-            // For dev testing.
-            // Uncomment the following to get some fake followers into the library.
-            // scope.library.followers = [
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
-            //     firstName: 'Danny',
-            //     lastName: 'Blumenfeld',
-            //     pictureName: 'VhYUF.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   },
-            //   {
-            //     id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            //     firstName: 'David',
-            //     lastName: 'Elsonbaty',
-            //     pictureName: 'EbOc0.jpg'
-            //   }
-            // ];
+        scope.toggleEditKeeps = function () {
+          scope.toggleEdit();
+          scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
+        };
 
+
+        //
+        // Watches and listeners.
+        //
+
+        // Wait until library data is ready before processing information to display the library card.
+        scope.$watch('loading', function (newVal) {
+          if (!newVal) {
             augmentData();
             adjustFollowerPicsSize();
           }
         });
 
+        // When the local library object in libraryService has been updated, update
+        // our scope.library accordingly. $rootScope is used instead of scope because
+        // libraryService is not a child of any scope.
+        $rootScope.$on('libraryUpdated', function (e, library) {
+          _.assign(scope.library, library);
+        });
+
+        // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);
         $window.addEventListener('resize', adjustFollowerPicsSizeOnResize);
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', adjustFollowerPicsSizeOnResize);
         });
-
       }
     };
   }

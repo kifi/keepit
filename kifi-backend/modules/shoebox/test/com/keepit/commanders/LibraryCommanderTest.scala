@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ ElectronicMailRepo, FakeOutbox, FakeMailModule, EmailAddress }
@@ -15,11 +16,12 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
-import org.specs2.mutable.Specification
+import org.specs2.mutable.{ SpecificationLike, Specification }
 
 import scala.concurrent._
+import scala.concurrent.duration.Duration
 
-class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
+class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeScrapeSchedulerModule(),
@@ -155,13 +157,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
       val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
       val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(15),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
-        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(30),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
 
       val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
       val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
@@ -338,21 +340,21 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
           val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
 
-          val (ironAccesses, ironLibs) = targetLib1._1.unzip
+          val (ironMemberships, ironLibs) = targetLib1._1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")
-          ironAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
+          ironMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (captainAccesses, captainLibs) = targetLib2._1.unzip
+          val (captainMemberships, captainLibs) = targetLib2._1.unzip
           captainLibs.map(_.slug.value) === Seq("murica")
-          captainAccesses === Seq(LibraryAccess.OWNER)
+          captainMemberships.map(_.access) === Seq(LibraryAccess.OWNER)
 
-          val (agentAccesses, agentLibs) = targetLib3._1.unzip
+          val (agentMemberships, agentLibs) = targetLib3._1.unzip
           agentLibs.map(_.slug.value) === Seq("avengers", "murica")
-          agentAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
+          agentMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (hulkAccesses, hulkLibs) = targetLib4._1.unzip
+          val (hulkMemberships, hulkLibs) = targetLib4._1.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
-          hulkAccesses === Seq(LibraryAccess.READ_INSERT)
+          hulkMemberships.map(_.access) === Seq(LibraryAccess.READ_INSERT)
           val (hulkInvites, hulkInvitedLibs) = targetLib4._2.unzip
           hulkInvitedLibs.map(_.slug.value) === Seq("murica")
           hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
@@ -526,14 +528,17 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
               (None, LibraryAccess.READ_ONLY))
         }
 
-        // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
-        val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
-        res2.isRight === false
-
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4
         }
+
+        val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
+        val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
+        // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO).isRight === true
+
+        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
+        libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW).isRight === true
       }
     }
 
@@ -595,6 +600,23 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
           libraryRepo.get(libMurica.id.get).memberCount === 2
+        }
+      }
+    }
+
+    "count keeps in library with getKeepsFromLibrariesSince" in {
+      withDb(modules: _*) { implicit injector =>
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libShield.id.get, 10000).size === 0
+          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000).size === 3
+          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(10), libMurica.id.get, 10000).size === 2
+          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(20), libMurica.id.get, 10000).size === 1
+          keepRepo.getKeepsFromLibrarySince(t1.plusMinutes(60), libMurica.id.get, 10000).size === 0
+          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 2).size === 2
+          keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 1).size === 1
         }
       }
     }
@@ -744,13 +766,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = None))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = None, inDisjointLib = false)) // libraryId == None (?)
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
@@ -802,8 +824,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val allInvites = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.all
         }
-        //Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
-        libraryCommander.inviteBulkUsers(allInvites)
+        Await.result(libraryCommander.inviteBulkUsers(allInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3

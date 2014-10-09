@@ -2,7 +2,6 @@ package com.keepit.search.engine.result
 
 import com.keepit.search.engine.{ Visibility, ScoreContext, MaxExpr, DisjunctiveSumExpr }
 import com.keepit.search.tracker.ResultClickBoosts
-import com.keepit.search.util.LongArraySet
 import org.specs2.mutable.Specification
 
 class KifiResultCollectorTest extends Specification {
@@ -14,39 +13,8 @@ class KifiResultCollectorTest extends Specification {
   private val exprSize = 3
 
   "MainResultCollector" should {
-    "collect hits above MIN_MATCHING" in {
-      val collector = new KifiResultCollector(
-        clickBoostsProvider = () => new TstResultClickBoosts(),
-        maxHitsPerCategory = 10,
-        matchingThreshold = 0.0f,
-        sharingBoost = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
-
-      ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
-      ctx.addScore(1, 1.0f)
-      ctx.degree = 1
-      ctx.flush()
-
-      ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
-      ctx.addScore(1, 1.0f)
-      ctx.addScore(2, 1.0f)
-      ctx.degree = 1
-      ctx.flush()
-
-      val (mHits, fHits, oHits) = collector.getResults()
-      mHits.size === 1
-      fHits.size === 0
-      oHits.size === 0
-
-      val hit = mHits.pop()
-      hit.id === 20
-      hit.score === 2.0f * 0.7f
-    }
-
     "collect hits above matchingThreshold" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.7f,
@@ -54,24 +22,24 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
       ctx.addScore(2, 1.0f)
@@ -86,29 +54,70 @@ class KifiResultCollectorTest extends Specification {
       Set(mHits.pop().id, mHits.pop().id) === Set(30L, 40L)
     }
 
-    "collect a hit below percentMatchThreshold if clicked" in {
-      val collector = new KifiResultCollector(
-        clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
+    "collect hits above matchingThreshold which is below MIN_MATCHING" in {
+      val matchingThreshold = 0.2f
+
+      (matchingThreshold < KifiResultCollector.MIN_MATCHING) === true
+
+      val collector = new KifiResultCollectorWithBoost(
+        clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
-        matchingThreshold = 0.9f,
+        matchingThreshold = matchingThreshold,
         sharingBoost = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
+
+      val ctx = new ScoreContext(expr, exprSize, Array(0.1f, 0.2f, 0.7f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
+      ctx.addScore(0, 1.0f)
+      ctx.degree = 1
+      ctx.flush()
+
+      ctx.set(20)
+      ctx.visibility = Visibility.OWNER
+      ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
+      ctx.degree = 1
+      ctx.flush()
+
+      ctx.set(30)
+      ctx.visibility = Visibility.OWNER
+      ctx.addScore(2, 1.0f)
+      ctx.degree = 1
+      ctx.flush()
+
+      val (mHits, fHits, oHits) = collector.getResults()
+      mHits.size === 2
+      fHits.size === 0
+      oHits.size === 0
+
+      Set(mHits.pop().id, mHits.pop().id) === Set(20L, 30L)
+    }
+
+    "collect a hit below matchingThreshold if clicked" in {
+      val collector = new KifiResultCollectorWithBoost(
+        clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 3.0f),
+        maxHitsPerCategory = 10,
+        matchingThreshold = 0.99f,
+        sharingBoost = 0.0f)
+      val remainingWeight = 1.0f - KifiResultCollector.MIN_MATCHING - 0.01f
+      val ctx = new ScoreContext(expr, exprSize, Array(KifiResultCollector.MIN_MATCHING - 0.01f, 0.02f, remainingWeight), collector)
+
+      ctx.set(10)
+      ctx.visibility = Visibility.OWNER
+      ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
-      ctx.addScore(2, 1.0f)
+      ctx.addScore(1, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
+      ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.addScore(2, 1.0f)
       ctx.degree = 1
       ctx.flush()
 
@@ -119,11 +128,11 @@ class KifiResultCollectorTest extends Specification {
 
       val hit = mHits.pop()
       hit.id === 20L
-      hit.score === 2.0f * 0.7f * 3.0f // sum * pctMatch * click boost
+      hit.score === 2.0f * (KifiResultCollector.MIN_MATCHING + 0.01f) * 3.0f // sum * pctMatch * click boost
     }
 
     "collect hits by category" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -131,27 +140,27 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(1)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(10)
-      ctx.setVisibility(Visibility.OTHERS)
+      ctx.visibility = Visibility.OTHERS
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.NETWORK)
+      ctx.visibility = Visibility.NETWORK
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.MEMBER)
+      ctx.visibility = Visibility.MEMBER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -167,7 +176,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "not collect restricted hits" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(Set(20L), 2.0f),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -175,17 +184,17 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(MaxExpr(0), 1, Array(1.0f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.RESTRICTED)
+      ctx.visibility = Visibility.RESTRICTED
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
@@ -197,7 +206,7 @@ class KifiResultCollectorTest extends Specification {
     }
 
     "boost scores by sharing degree" in {
-      val collector = new KifiResultCollector(
+      val collector = new KifiResultCollectorWithBoost(
         clickBoostsProvider = () => new TstResultClickBoosts(),
         maxHitsPerCategory = 10,
         matchingThreshold = 0.0f,
@@ -205,22 +214,22 @@ class KifiResultCollectorTest extends Specification {
       val ctx = new ScoreContext(expr, exprSize, Array(0.8f, 0.1f, 0.1f), collector)
 
       ctx.set(10)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 1
       ctx.flush()
       ctx.set(20)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 4
       ctx.flush()
       ctx.set(30)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 3
       ctx.flush()
       ctx.set(40)
-      ctx.setVisibility(Visibility.OWNER)
+      ctx.visibility = Visibility.OWNER
       ctx.addScore(0, 1.0f)
       ctx.degree = 2
       ctx.flush()

@@ -71,7 +71,8 @@ class BookmarkStore(
             visibility = Keep.isPrivateToVisibility(rec.isPrivate), // todo(andrew/léo/yasuhiro): Fix to include real library visibility
             userId = userId,
             source = BookmarkStore.bookmarkSource,
-            libraryId = None // todo(andrew/léo/yasuhiro): Fix to include real library
+            libraryId = None, // todo(andrew/léo/yasuhiro): Fix to include real library
+            inDisjointLib = true // todo(ray/yasuhiro): include library!
           )
         }
       }

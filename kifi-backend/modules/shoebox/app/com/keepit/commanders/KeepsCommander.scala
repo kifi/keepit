@@ -17,7 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.SearchServiceClient
+import com.keepit.search.{ SharingUserInfo, SearchServiceClient }
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -35,6 +35,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.typeahead.{ HashtagHit, TypeaheadHit, HashtagTypeahead }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -161,6 +162,7 @@ class KeepsCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
+    hashtagTypeahead: HashtagTypeahead,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
@@ -242,8 +244,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserId: Id[User], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
-    val sharingInfosFuture = searchClient.sharingUserInfo(perspectiveUserId, keeps.map(_.uriId))
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
+    val sharingInfosFuture = perspectiveUserIdOpt match {
+      case Some(userId) =>
+        searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+      case None =>
+        Future.successful(Seq.fill(keeps.length)(SharingUserInfo(Set.empty, 0)))
+    }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
     })
@@ -314,7 +321,7 @@ class KeepsCommander @Inject() (
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
 
-        decorateKeepsIntoKeepInfos(userId, keeps).map { keepInfos =>
+        decorateKeepsIntoKeepInfos(Some(userId), keeps).map { keepInfos =>
           (keepInfos, clickCounts, rkCounts).zipped.map {
             case (keepInfo, clickCount, rkCount) =>
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
@@ -390,7 +397,7 @@ class KeepsCommander @Inject() (
         throw e
       case Success(keep) =>
         SafeFuture {
-          searchClient.updateURIGraph()
+          searchClient.updateKeepIndex()
           curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
         }
         KeepInfo.fromKeep(keep)
@@ -411,8 +418,9 @@ class KeepsCommander @Inject() (
       addToCollection(coll.id.get, keeps).size
     }
     SafeFuture {
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
+      hashtagTypeahead.refresh(libraryId)
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
@@ -443,7 +451,8 @@ class KeepsCommander @Inject() (
 
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
+    hashtagTypeahead.refreshByIds(deactivatedBookmarks.map(_.libraryId).flatten.distinct)
     deactivatedKeepInfos
   }
 
@@ -516,7 +525,8 @@ class KeepsCommander @Inject() (
   private def finalizeUnkeeping(keeps: Seq[Keep], userId: Id[User])(implicit context: HeimdalContext): Unit = {
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -525,7 +535,8 @@ class KeepsCommander @Inject() (
       keeps.map(setKeepStateWithSession(_, KeepStates.ACTIVE, userId))
     }
     keptAnalytics.rekeptPages(userId, keeps, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     keeps.length
   }
 
@@ -544,7 +555,7 @@ class KeepsCommander @Inject() (
       (oldKeeps, newKeeps)
     }
     (oldKeeps zip newKeeps) map { case (oldKeep, newKeep) => keptAnalytics.updatedKeep(oldKeep, newKeep, context) }
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
     newKeeps.length
   }
 
@@ -552,7 +563,7 @@ class KeepsCommander @Inject() (
     val shouldBeUpdated = (isPrivate.isDefined && keep.isPrivate != isPrivate.get) || (title.isDefined && keep.title != title)
     if (shouldBeUpdated) Some {
       val updatedKeep = db.readWrite { implicit s => updateKeepWithSession(keep, isPrivate, title) }
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
       keptAnalytics.updatedKeep(keep, updatedKeep, context)
       updatedKeep
     }
@@ -584,7 +595,7 @@ class KeepsCommander @Inject() (
           keepRepo.getByExtIdandLibraryId(keepId, libId) match {
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
               val keep2 = keepRepo.save(keep.withTitle(normTitle))
-              searchClient.updateURIGraph()
+              searchClient.updateKeepIndex()
               keptAnalytics.updatedKeep(keep, keep2, context)
               Right(keep2)
             case Some(keep) =>
@@ -636,7 +647,8 @@ class KeepsCommander @Inject() (
       tagged
     }
     if (updateUriGraph) {
-      searchClient.updateURIGraph()
+      searchClient.updateKeepIndex()
+      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
     result
   }
@@ -656,7 +668,10 @@ class KeepsCommander @Inject() (
         keptAnalytics.untaggedPage(collection, keepsById(ktc.keepId), context, removedAt)
       }
       removed.toSet
-    } tap { _ => searchClient.updateURIGraph() }
+    } tap { _ =>
+      searchClient.updateKeepIndex()
+      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    }
   }
 
   def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext) = {
@@ -680,35 +695,38 @@ class KeepsCommander @Inject() (
   }
 
   def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit = {
-    db.readWrite { implicit s =>
+    val keep = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url)
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId)
         collection <- collectionRepo.getOpt(id)
-      } {
+      } yield {
         keepToCollectionRepo.remove(keepId = keep.id.get, collectionId = collection.id.get)
         collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
         keepRepo.save(keep) // notify keep index
         keptAnalytics.untaggedPage(collection, keep, context)
+        keep
       }
     }
-    searchClient.updateURIGraph()
+    keep.foreach(_.libraryId.foreach(hashtagTypeahead.refresh))
+    searchClient.updateKeepIndex()
   }
 
   //todo(hopefully not Léo): this method does not report to analytics, let's fix this after we get rid of Collection
   def clearTags(url: String, userId: Id[User]): Unit = {
-    db.readWrite { implicit s =>
+    val keeps = db.readWrite { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url).toSeq
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq
         ktc <- keepToCollectionRepo.getByKeep(keep.id.get)
-      } {
+      } yield {
         keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-        keepRepo.save(keep) // notify keep index
         collectionRepo.collectionChanged(ktc.collectionId, inactivateIfEmpty = true)
+        keepRepo.save(keep) // notify keep index
       }
     }
-    searchClient.updateURIGraph()
+    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    searchClient.updateKeepIndex()
   }
 
   def tagsByUrl(url: String, userId: Id[User]): Seq[Collection] = {
@@ -728,7 +746,7 @@ class KeepsCommander @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
+    val keepsWithTags = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
       case Failure(e) => Left(e.getMessage)
       case Success(keep) =>
         val tags = db.readWrite { implicit s =>
@@ -753,6 +771,13 @@ class KeepsCommander @Inject() (
         }
         Right((KeepInfo.fromKeep(keep), tags))
     }
+    hashtagTypeahead.refresh(libraryId)
+    keepsWithTags
+  }
+
+  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+    implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
+    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

@@ -2,6 +2,7 @@ package com.keepit.common.cache
 
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
+import com.keepit.model.cache.UserSessionViewExternalIdCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -66,7 +67,7 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserSessionExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
+    new UserSessionViewExternalIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
 
   @Singleton
   @Provides

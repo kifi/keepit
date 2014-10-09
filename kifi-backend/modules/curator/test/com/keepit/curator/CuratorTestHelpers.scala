@@ -31,7 +31,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
         visibility = LibraryVisibility.DISCOVERABLE,
-        libraryId = None))
+        libraryId = Some(Id[Library](1)),
+        inDisjointLib = true))
     }
   }
 
@@ -45,7 +46,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
         visibility = LibraryVisibility.SECRET,
-        libraryId = None))
+        libraryId = Some(Id[Library](1)),
+        inDisjointLib = true))
     }
   }
 

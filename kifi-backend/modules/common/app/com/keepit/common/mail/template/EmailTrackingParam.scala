@@ -8,10 +8,14 @@ import play.api.libs.json.{ JsError, JsSuccess, Json, __ }
 import play.api.libs.functional.syntax._
 
 case class EmailTrackingParam(
-  subAction: Option[String] = None,
-  variableComponents: Seq[String] = Seq.empty,
-  tips: Seq[EmailTip] = Seq.empty,
-  auxiliaryData: Option[HeimdalContext] = None)
+    subAction: Option[String] = None,
+    variableComponents: Seq[String] = Seq.empty,
+    tip: Option[EmailTip] = None,
+    @deprecated("use `tip` (unless we start supporting multiple tips in 1 email", since = "2014-10-02") tips: Seq[EmailTip] = Seq.empty,
+    auxiliaryData: Option[HeimdalContext] = None) {
+
+  def encode = EmailTrackingParam.encode(this)
+}
 
 object EmailTrackingParam extends Logging {
   val paramName = "dat"
@@ -27,6 +31,7 @@ object EmailTrackingParam extends Logging {
   implicit val format = (
     (__ \ "l").formatNullable[String] and
     (__ \ "c").format[Seq[String]] and
+    (__ \ "t1").formatNullable[EmailTip] and
     (__ \ "t").format[Seq[EmailTip]] and
     (__ \ "a").formatNullable[HeimdalContext]
   )(EmailTrackingParam.apply, unlift(EmailTrackingParam.unapply))

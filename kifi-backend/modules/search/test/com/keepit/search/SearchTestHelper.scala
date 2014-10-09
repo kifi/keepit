@@ -19,7 +19,6 @@ import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
-import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
@@ -101,7 +100,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],
-      inject[SpellCorrector],
       inject[MonitoredAwait],
       clock,
       fortyTwoServices)
@@ -115,9 +113,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],
-      mainSearcherFactory,
       inject[MonitoredAwait],
-      clock,
       fortyTwoServices)
 
     (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory, shardedKeepIndexer)

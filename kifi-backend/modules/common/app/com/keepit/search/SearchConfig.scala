@@ -40,7 +40,6 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "1.5",
       "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
-      "proximityThreshold" -> "0.0",
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "0",
@@ -71,7 +70,6 @@ object SearchConfig {
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
-      "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
       "messageHalfLifeHours" -> "exponential time decay constant used in message search",
       "newEngine" -> "use new engine"

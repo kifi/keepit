@@ -1,0 +1,64 @@
+@(title: String = "Kifi", htmlClass: String = "", dataTrack: String = "", trackViewEvent: String = "visitor_viewed_page", trackClickEvent: String = "visitor_clicked_page", headScripts: Html = Html(""), styles: Html = Html(""), bodyClass: String = "", content: Html = Html(""), scripts: Html = Html(""), headerType: String = "", footerType: String = "", earlyScripts: Html = Html(""), isLoggedIn: Boolean = false, metaProperties: Option[Html] = None)
+
+<!DOCTYPE html>
+<html lang="en" class="@if(!isLoggedIn){guest }@htmlClass"@if(dataTrack!=""){ data-track-view-event="@trackViewEvent" data-track-click-event="@trackClickEvent" data-track-type="@dataTrack"}>
+
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width">
+
+<title>@title</title>
+
+<meta name="keywords" content="kifi, bookmark, signup, sign up, registration, register, join, login, log in">
+<meta name="description" content="Kifi allows you to easily keep and tag anything you find online – an article, video, picture, email, recipe, research document, item on your wishlist, just anything - and quickly find it on top of your favorite search engine results.">
+@if(metaProperties.isEmpty) {
+<meta property="og:image" content="https://www.kifi.com/assets/images/facebook-90x90.png">
+<meta property="og:title" content="@title">
+<meta property="og:description" content="Kifi allows you to easily keep and tag anything you find online – an article, video, picture, email, recipe, research document, item on your wishlist, just anything - and quickly find it on top of your favorite search engine results.">
+<meta property="og:site_name" content="Kifi">
+} else {
+@metaProperties.get
+}
+
+<link rel="stylesheet" type="text/css" href="/assets/guest/css/landing.css"/>
+<link href='https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700' rel='stylesheet' type='text/css'>
+<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
+
+<script>
+  var kifiViewTracker = [];
+  (function(e,b){if(!b.__SV){var a,f,i,g;window.mixpanel=b;a=e.createElement("script");a.type="text/javascript";a.async=!0;a.src='//cdn.mxpnl.com/libs/mixpanel-2.2.min.js';f=e.getElementsByTagName("script")[0];f.parentNode.insertBefore(a,f);b._i=[];b.init=function(a,e,d){function f(b,h){var a=h.split(".");2==a.length&&(b=b[a[0]],h=a[1]);b[h]=function(){b.push([h].concat(Array.prototype.slice.call(arguments,0)))}}var c=b;"undefined"!==typeof d?c=b[d]=[]:d="mixpanel";c.people=c.people||[];c.toString=function(b){var a="mixpanel";"mixpanel"!==d&&(a+="."+d);b||(a+=" (stub)");return a};c.people.toString=function(){return c.toString(1)+".people (stub)"};i="disable track track_pageview track_links track_forms register register_once alias unregister identify name_tag set_config people.set people.set_once people.increment people.append people.track_charge people.clear_charges people.delete_user".split(" ");for(g=0;g<i.length;g++)f(c,i[g]);b._i.push([a,e,d])};b.__SV=1.2}})(document,window.mixpanel||[]);
+  mixpanel.init("cff752ff16ee39eda30ae01bb6fa3bd6");
+</script>
+
+</head>
+
+<body@if(bodyClass != ""){ class="@bodyClass"}>
+
+@header(isLoggedIn)
+
+    <main id="main_content">
+
+@content
+
+    </main><!--end main_content-->
+
+@footer()
+
+@earlyScripts
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>window.jQuery || document.write('<script src="/assets/guest/js/jquery-1.9.1.min.js">\x3C/script>')</script>
+<script type="text/javascript" src="/assets/js/track-ext.js"></script>
+@scripts
+<script>
+var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
+!function(d, t) {
+var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+g.async = true;
+g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
+s.parentNode.insertBefore(g, s);
+}(document, 'script');
+</script>
+
+</body>
+</html>

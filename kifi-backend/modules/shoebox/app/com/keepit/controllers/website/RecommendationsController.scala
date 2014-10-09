@@ -18,12 +18,8 @@ class RecommendationsController @Inject() (
     db: Database) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def adHocRecos(n: Int) = JsonAction.authenticatedParseJsonAsync { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
-      val scores = request.body.as[UriRecommendationScores]
-      commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
-    } else {
-      Future.successful(Forbidden)
-    }
+    val scores = request.body.as[UriRecommendationScores]
+    commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
   }
 
   def topRecos(more: Boolean, recencyWeight: Float) = JsonAction.authenticatedAsync { request =>
@@ -41,6 +37,10 @@ class RecommendationsController @Inject() (
   def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
     val feedback = request.body.as[UriRecommendationFeedback]
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  }
+
+  def trash(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedAsync { request =>
+    commander.updateUriRecommendationFeedback(request.userId, id, UriRecommendationFeedback(trashed = Some(true))).map(fkis => Ok(Json.toJson(fkis)))
   }
 
 }

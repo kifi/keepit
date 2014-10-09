@@ -93,10 +93,11 @@ class ExtAuthController @Inject() (
           val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length }
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
-        } else
-          contextBuilder += ("action", "updatedExtension")
+          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
+        } else {
+          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.UPDATED_EXTENSION, installation.updatedAt))
+        }
 
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
         heimdal.setUserProperties(userId, "latestExtension" -> ContextStringData(installation.version.toString))
       }
     }

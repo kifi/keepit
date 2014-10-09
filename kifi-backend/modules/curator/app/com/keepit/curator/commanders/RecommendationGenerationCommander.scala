@@ -53,11 +53,7 @@ class RecommendationGenerationCommander @Inject() (
   val recommendationGenerationLock = new ReactiveLock(12)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
-  private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = {
-    experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get)).map { userIds =>
-      Random.shuffle((seedCommander.getUsersWithSufficientData() ++ userIds).toSeq)
-    }
-  }
+  private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
   private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
@@ -242,14 +238,13 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   def precomputeRecommendations(): Future[Unit] = {
-    usersToPrecomputeRecommendationsFor().flatMap { userIds =>
-      specialCurators().flatMap { boostedKeepersSeq =>
-        if (recommendationGenerationLock.waiting < userIds.length + 1) {
-          val boostedKeepers = boostedKeepersSeq.toSet
-          Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
-        } else {
-          Future.successful()
-        }
+    val userIds = usersToPrecomputeRecommendationsFor()
+    specialCurators().flatMap { boostedKeepersSeq =>
+      if (recommendationGenerationLock.waiting < userIds.length + 1) {
+        val boostedKeepers = boostedKeepersSeq.toSet
+        Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
+      } else {
+        Future.successful()
       }
     }
   }

@@ -1,9 +1,7 @@
 package com.keepit.test
 
 import akka.actor.ActorSystem
-import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.search.spellcheck.FakeSpellCorrectorModule
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
 import com.keepit.common.time.FakeClockModule
@@ -39,7 +37,6 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
-    FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
     SearchConfigModule(),
     FakeActorSystemModule()
@@ -69,7 +66,6 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeSearchServiceClientModule(),
     FakeDistributedSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
-    FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
     FakeSearchConfigModule()
   )

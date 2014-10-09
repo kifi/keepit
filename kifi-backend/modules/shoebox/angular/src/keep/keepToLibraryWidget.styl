@@ -1,0 +1,71 @@
+.keep-to-library-widget
+  position: absolute
+  box-sizing: border-box
+  border: 1px solid #a6afbd
+  border-radius: 10px
+  box-shadow: 1px 1px 3px rgba(51, 51, 51, 0.6)
+  width: 302px
+  font-size: 12px  // TODO(yiping): get the SegoeUI font used in the PSD?
+  background-color: #fff
+  color: kifiBlack
+  overflow: hidden
+  z-index: 1100
+
+  .keep-to-library-search
+    position: relative
+    border-bottom: 1px solid #e7e7e7
+    padding: 17px 12px
+
+  .keep-to-library-search-input-icon
+    position: absolute
+    top: 26px
+    left: 22px
+    width: 13px
+    height: 14px
+    background-image: url('/img/sprites.png')
+    background-position: -68px -88px
+    background-size: 132px auto
+
+  .keep-to-library-search-input
+    box-sizing: border-box
+    border: 1px solid #dbdee3
+    border-radius: 4px
+    padding: 9px 10px 8px 30px
+    width: 275px
+    height: 31px
+    font-weight: 400
+    placeholder #a1adb9
+    background-color: #fcfcfc
+
+  .library-select-list
+    max-height: 383px
+    overflow-x: hidden
+    overflow-y: scroll
+
+  .library-select-option
+    position: relative
+    box-sizing: border-box
+    border-bottom: 1px solid #e7e7e7
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    white-space: nowrap
+    text-overflow: ellipsis
+    overflow: hidden
+    cursor: pointer
+
+    &.selected
+      background-color: #f3f5f7
+
+    &:active
+      background-color: #e6e8ea
+
+  .keep-to-library-lib-icon-container
+    position: absolute
+    top: 8px
+    left: 14px
+
+  .keep-to-library-lib-icon
+    display: inline-block
+    width: 23px
+    height: 31px
+    background-repeat: no-repeat

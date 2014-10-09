@@ -32,18 +32,17 @@ class SeedIngestionCommander @Inject() (
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
-  val MIN_KEEPS_FOR_RECOS = 100 //This will be gradually lowered to 10 or twenty throughout this week
+  val MIN_KEEPS_FOR_RECOS = 20
 
-  def usersToIngestGraphDataFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
+  def usersToIngestGraphDataFor(): Seq[Id[User]] = getUsersWithSufficientData().toSeq
 
   val ingestionLock = new ReactiveLock()
 
   def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
       ingestLibraryMemberships.flatMap { _ =>
-        usersToIngestGraphDataFor().flatMap { userIds =>
-          FutureHelpers.sequentialExec(userIds)(ingestTopUris)
-        }
+        val userIds = usersToIngestGraphDataFor()
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
       }
     }
     fut.onComplete {

@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Injector }
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -84,7 +84,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           val trackingParam = EmailTrackingParam(
             subAction = Some("kifiLogo"),
             variableComponents = Seq("1Friend"),
-            tips = Seq(EmailTip.FriendRecommendations),
+            tip = Some(EmailTip.FriendRecommendations),
             auxiliaryData = {
               val ctxBuilder = new HeimdalContextBuilder
               ctxBuilder += ("version", 1)
@@ -106,7 +106,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           actualEvent.eventType === UserEventTypes.WAS_NOTIFIED
           actualEvent.context.get[String]("subaction").get === "kifiLogo"
           actualEvent.context.getSeq[String]("emailComponents").get === Seq("1Friend")
-          actualEvent.context.getSeq[EmailTip]("emailTips").get === Seq(EmailTip.FriendRecommendations)
+          actualEvent.context.get[EmailTip]("emailTip").get === EmailTip.FriendRecommendations
           actualEvent.context.get[Double]("version").get === 1.0
           actualEvent.context.get[String]("tipLocation").get === "top"
           actualEvent.context.get[Boolean]("isAdmin").get === true

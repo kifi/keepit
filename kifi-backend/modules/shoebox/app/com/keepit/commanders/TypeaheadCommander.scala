@@ -17,7 +17,7 @@ import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
+import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._

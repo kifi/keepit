@@ -1,0 +1,10 @@
+@(contents: Seq[Html])
+@import com.keepit.common.mail.template.helpers._
+
+@for(html <- contents) {
+@html
+}
+
+Don't want to receive these messages from Kifi? Unsubscribe here: @unsubscribeUrl
+
+Kifi.com | @kifiAddress

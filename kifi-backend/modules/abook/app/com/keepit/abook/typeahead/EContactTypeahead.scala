@@ -8,14 +8,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.abook.ABookInfoRepo
 import scala.concurrent.{ Future }
 import com.keepit.common.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import com.keepit.typeahead._
 import org.joda.time.Minutes
 import com.keepit.common.time._
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.store.S3Bucket
 import com.keepit.abook.model.{ EContactRepo, EContact }
 import com.keepit.common.mail.EmailAddress
@@ -26,41 +25,48 @@ class EContactTypeahead @Inject() (
     cache: EContactTypeaheadCache,
     store: EContactTypeaheadStore,
     abookInfoRepo: ABookInfoRepo,
-    econtactRepo: EContactRepo) extends Typeahead[EContact, EContact] with Logging {
+    econtactRepo: EContactRepo) extends Typeahead[User, EContact, EContact, PersonalTypeahead[User, EContact, EContact]] with Logging {
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
   val MYSQL_MAX_ROWS = 50000000
+
+  protected val refreshRequestConsolidationWindow = 10 minutes
+
+  protected val fetchRequestConsolidationWindow = 15 seconds
 
   override protected def extractName(info: EContact): String = {
     val name = info.name.getOrElse("").trim
     s"$name ${info.email.address}"
   }
 
-  override protected def extractId(info: EContact): Id[EContact] = info.id.get
-
-  def refresh(userId: Id[User]): Future[PrefixFilter[EContact]] = {
-    build(userId).map { filter =>
-      cache.set(EContactTypeaheadKey(userId), filter.data)
-      store += (userId -> filter.data)
-      log.info(s"[rebuild($userId)] cache/store updated; filter=$filter")
-      filter
+  protected def create(userId: Id[User]) = {
+    getAllInfos(userId).map { allInfos =>
+      val filter = buildFilter(userId, allInfos)
+      log.info(s"[refresh($userId)] cache/store updated; filter=$filter")
+      makeTypeahead(userId, filter)
     }(ExecutionContext.fj)
   }
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
-    cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
-      val res = store.getWithMetadata(userId)
-      res match {
-        case Some((filter, meta)) =>
+  protected def invalidate(typeahead: PersonalTypeahead[User, EContact, EContact]): Unit = {
+    val userId = typeahead.ownerId
+    val filter = typeahead.filter
+    store += (userId -> filter)
+    cache.set(EContactTypeaheadKey(userId), filter)
+  }
+
+  protected def get(userId: Id[User]) = {
+    val filterOpt = cache.getOrElseOpt(EContactTypeaheadKey(userId)) {
+      store.getWithMetadata(userId).map {
+        case (filter, meta) =>
           if (meta.exists(m => m.lastModified.plusMinutes(15).isBefore(currentDateTime))) {
             log.info(s"[asyncGetOrCreatePrefixFilter($userId)] filter EXPIRED (lastModified=${meta.get.lastModified}); (curr=${currentDateTime}); (delta=${Minutes.minutesBetween(meta.get.lastModified, currentDateTime)} minutes) - rebuild")
-            refresh(userId) // async
+            refresh(userId)
           }
-          Future.successful(filter) // return curr one
-        case None => refresh(userId).map { _.data }(ExecutionContext.fj)
+          filter
       }
-    }.map { new PrefixFilter[EContact](_) }(ExecutionContext.fj)
+    }
+    Future.successful(filterOpt.map(makeTypeahead(userId, _)))
   }
 
   def refreshAll(): Future[Unit] = {
@@ -75,14 +81,16 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[EContact]] = {
+  private def makeTypeahead(userId: Id[User], filter: PrefixFilter[EContact]) = PersonalTypeahead(userId, filter, getInfos)
+
+  protected def getAllInfos(id: Id[User]): Future[Seq[(Id[EContact], EContact)]] = {
     db.readOnlyMasterAsync { implicit ro =>
-      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email))
+      econtactRepo.getByUserId(id).filter(contact => EmailAddress.isLikelyHuman(contact.email)).map(contact => contact.id.get -> contact)
     }
   }
 
   protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
-    if (ids.isEmpty) Future.successful(Seq.empty[EContact]) else {
+    if (ids.isEmpty) Future.successful(Seq.empty) else {
       db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
       }
@@ -90,19 +98,19 @@ class EContactTypeahead @Inject() (
   }
 }
 
-trait EContactTypeaheadStore extends PrefixFilterStore[User]
+trait EContactTypeaheadStore extends PrefixFilterStore[User, EContact]
 
 class S3EContactTypeaheadStore @Inject() (
   bucket: S3Bucket,
   amazonS3Client: AmazonS3,
-  accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
+  accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User, EContact](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
 
-class InMemoryEContactTypeaheadStore extends InMemoryPrefixFilterStoreImpl[User] with EContactTypeaheadStore
+class InMemoryEContactTypeaheadStore extends InMemoryPrefixFilterStoreImpl[User, EContact] with EContactTypeaheadStore
 
 class EContactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[EContactTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[EContactTypeaheadKey, PrefixFilter[EContact]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class EContactTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
+case class EContactTypeaheadKey(userId: Id[User]) extends Key[PrefixFilter[EContact]] {
   val namespace = "econtact_typeahead"
   override val version = 1
   def toKey() = userId.id.toString

@@ -48,7 +48,6 @@ class LibrarySearchCommanderImpl @Inject() (
     activeShards: ActiveShards,
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
-    mainSearcherFactory: MainSearcherFactory,
     val searchClient: DistributedSearchServiceClient) extends LibrarySearchCommander with Sharding with Logging {
 
   def librarySearch(
@@ -67,7 +66,7 @@ class LibrarySearchCommanderImpl @Inject() (
         val request = LibrarySearchRequest(userId, experiments, query, filter, context, lang1, lang2, maxHits, predefinedConfig)
         val futureRemoteLibraryShardResults = searchClient.distLibrarySearch(remotePlan, request)
         val futureLocalLibraryShardResult = distLibrarySearch(localShards, request)
-        val configFuture = mainSearcherFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
+        val configFuture = searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig)
         val futureResults = Future.sequence(futureRemoteLibraryShardResults :+ futureLocalLibraryShardResult)
         val searchFilter = SearchFilter(filter, LibraryContext.None, context)
         for {
@@ -84,7 +83,7 @@ class LibrarySearchCommanderImpl @Inject() (
   }
 
   def distLibrarySearch(shards: Set[Shard[NormalizedURI]], request: LibrarySearchRequest): Future[Seq[LibraryShardResult]] = {
-    mainSearcherFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig).flatMap {
+    searchFactory.getConfigFuture(request.userId, request.experiments, request.predefinedConfig).flatMap {
       case (searchConfig, _) =>
         val searchFilter = SearchFilter(request.filter, LibraryContext.None, request.context)
         val searches = searchFactory.getLibrarySearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, searchFilter, searchConfig)

@@ -43,10 +43,10 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction1"))) ::
@@ -174,6 +174,54 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           val newOrdering = tagB.externalId :: tagC.externalId :: tagD.externalId :: tagA.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
         }
+      }
+    }
+
+    "paging all tags" in {
+      withDb(modules: _*) { implicit injector =>
+        val userValueRepo = inject[UserValueRepo]
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val keeper = KeepSource.keeper
+        val collectionCommander = inject[CollectionCommander]
+
+        val (user, oldOrdering, tag1, tag2, tag3, tag4) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false))
+
+          val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Mario")))
+          val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Luigi")))
+          val tag3 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Bowser")))
+          val tag4 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("DonkeyKong")))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+
+          val collectionIds = Seq(tag1.externalId, tag2.externalId, tag3.externalId, tag4.externalId)
+
+          userValueRepo.save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
+
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag3.id.get))
+
+          (user1, collectionIds, tag1, tag2, tag3, tag4)
+        }
+
+        collectionCommander.pageCollections("user", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Luigi", "Bowser")
+        collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "DonkeyKong", "Luigi")
+        collectionCommander.pageCollections("name", 1, 3, user.id.get).map(_.name) === Seq("Mario")
+        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser") // Luigi & DonkeyKong don't have keeps!
       }
     }
   }

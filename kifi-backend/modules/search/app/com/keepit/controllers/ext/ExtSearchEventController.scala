@@ -71,9 +71,5 @@ class ExtSearchEventController @Inject() (
     Ok
   }
 
-  def updateBrowsingHistory() = JsonAction.authenticatedParseJson { request =>
-    // decommissioned
-    Ok
-  }
 }
 

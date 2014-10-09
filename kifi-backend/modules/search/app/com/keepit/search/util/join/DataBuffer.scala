@@ -40,7 +40,7 @@ class DataBuffer(maxPages: Int = 10000) {
 
   private[this] def addPage(): Unit = {
     _numPages += 1
-    if (numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
+    if (_numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
 
     _currentPage = new Page(DataBuffer.PAGE_SHORT_ARRAY_SIZE)
     _dataBuf += _currentPage
@@ -51,7 +51,6 @@ class DataBuffer(maxPages: Int = 10000) {
   def alloc(writer: DataBufferWriter, recType: Int, byteSize: Int): DataBufferWriter = {
     if (byteSize >= MAX_DATASIZE) throw new DataBufferException(s"data size too big: $byteSize")
     if (recType >= MAX_RECTYPEID) throw new DataBufferException(s"record type id too big: $recType")
-    if (byteSize % 2 != 0) throw new DataBufferException(s"data size not aligned")
 
     // add a page if not enough room
     if (_freeSpace - byteSize - DESCRIPTOR_SIZE < 0) addPage()
@@ -71,15 +70,13 @@ class DataBuffer(maxPages: Int = 10000) {
   }
 
   def scan[T](reader: DataBufferReader)(f: DataBufferReader => T): Unit = {
-    var pageGlobalOffset = 0
-    _dataBuf.foreach { page =>
-      var byteOffset = 0
-      while (byteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + byteOffset, page, byteOffset)) {
-        val next = reader.next
+    _dataBuf.foldLeft(0) { (pageGlobalOffset, page) =>
+      var nextByteOffset = 0
+      while (nextByteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + nextByteOffset, page, nextByteOffset)) {
+        nextByteOffset = reader.next
         f(reader)
-        byteOffset = next
       }
-      pageGlobalOffset += DataBuffer.PAGE_SIZE
+      pageGlobalOffset + DataBuffer.PAGE_SIZE
     }
   }
 
