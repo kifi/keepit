@@ -9,7 +9,7 @@
     </div>
     <div class="kf-header-right">
       <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
-      <a href="/tags" class="sprite sprite-tag-blue-active" ng-if="librariesEnabled">Manage your tags</a>
+      <a href="/tags" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-mouseenter="hover = true" ng-mouseleave="hover = false" ng-if="librariesEnabled">Manage your tags</a>
       <div class="kf-header-icon-hover-container">
         <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">

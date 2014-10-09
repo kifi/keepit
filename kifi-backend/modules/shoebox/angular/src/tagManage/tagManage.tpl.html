@@ -16,40 +16,22 @@
 
       		<div class="manage-tag-sort-by">
       			<div class="manage-tag-sort-text">Sort by:</div>
-      			<div class="manage-tag-sort-button" ng-click="selectSortKeeps()" ng-style="{'background-color': selectedSort == 'keeps' ? '#333333' : '#ffffff', 'border-color': selectedSort == 'keeps' ? '#333333' : '#c1c1c1'}">Most used</div>
-      			<div class="manage-tag-sort-button" ng-click="selectSortName()" ng-style="{'background-color': selectedSort == 'name' ? '#333333' : '#ffffff', 'border-color': selectedSort == 'name' ? '#333333' : '#c1c1c1'}">ABC</div>
+      			<div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'num_keeps'}" ng-click="selectedSort = 'num_keeps'">Most used</div>
+      			<div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'name'}" ng-click="selectedSort = 'name'">ABC</div>
       		</div>
       	</div>
-
-      	<div class="manage-tag-content">
+NumTags: {{tagList.length}} unique: {{isUniqueTags()}} sort {{selectedSort}} {{num}}
+      	<div class="manage-tag-content" smart-scroll scroll-distance="tagsScrollDistance" scroll-disabled="isTagScrollDisabled()" scroll-next="manageTagScrollNext()">
       		<ul class="manage-tag-list">
-						<li class="manage-tag-row">
-      				<span class="manage-tag-row-name-section">
-      					<div class="manage-tag-row-name">San Francisco is the best city ever but its public transportation sucks</div>
-      				</span>
-      				<span class="manage-tag-row-num-keeps-section">
-      					<ng-pluralize count="2300 | number:0"
-      						when="{'0': 'No keeps', 'one': '1 keep', 'other':'{} keeps'}">
-      					</ng-pluralize>
-      				</span>
-      				<span class="manage-tag-row-links-section">
-      					<span class="manage-tag-row-link">
-      						Convert to library
-      					</span>&middot;
-      					<span class="manage-tag-row-link">
-      						Delete
-      					</span>
-      				</span>
-      			</li>
       			<li class="manage-tag-row" ng-repeat="tag in tagsToShow">
-      				<span class="manage-tag-row-name-section">
-      					<span class="manage-tag-row-name">{{tag.name}}</span>
-      				</span>
-      				<span class="manage-tag-row-num-keeps-section">
-      					<ng-pluralize count="tag.keeps | number:0"
-      						when="{'0': '0 keeps', 'one': '1 keep', 'other':'{} keeps'}">
-      					</ng-pluralize>
-      				</span>
+      				<div class="manage-tag-row-name-section">
+                                    <div class="manage-tag-row-name">{{tag.name}}</div>
+                              </div>
+                              <span class="manage-tag-row-num-keeps-section">
+                                    <ng-pluralize count="tag.keeps | number:0"
+                                          when="{'0': 'No keeps', 'one': '1 keep', 'other':'{} keeps'}">
+                                    </ng-pluralize>
+                              </span>
       				<span class="manage-tag-row-links-section">
       					<span class="manage-tag-row-link" ng-click="convertToLibrary(tag.name)">
       						Convert to library
@@ -59,13 +41,27 @@
       					</span>
       				</span>
       			</li>
-
+                        <li class="manage-tag-row">
+                              <div class="manage-tag-row-name-section">
+                                    <div class="manage-tag-row-name">San Francisco is the best city ever but its p(max 64 characters)</div>
+                              </div>
+                              <span class="manage-tag-row-num-keeps-section">
+                                    <ng-pluralize count="2300 | number:0"
+                                          when="{'0': '', 'one': '1 keep', 'other':'{} keeps'}">
+                                    </ng-pluralize>
+                              </span>
+                              <span class="manage-tag-row-links-section">
+                                    <span class="manage-tag-row-link">
+                                          Convert to library
+                                    </span>&middot;
+                                    <span class="manage-tag-row-link">
+                                          Delete
+                                    </span>
+                              </span>
+                        </li>
       		</ul>
       	</div>
-
-      	<div class="manage-tag-pagination">
-      	</div>
-
+            <span ng-click="manageTagScrollNext()" ng-hide="isTagScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
     </div>

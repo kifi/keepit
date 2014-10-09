@@ -41,11 +41,11 @@
   top: 50%
   transform: translateY(-50%)
   display: inline-block
-  width: 50%
+  width:45%
 
 .manage-tag-input-box
   height: 25px
-  width: calc(100% - 40px)
+  width: 100%
   margin-bottom: 8px
   box-sizing: border-box
   border: 1px solid #e6e6e6
@@ -94,14 +94,14 @@
 
 .manage-tag-sort-text
   display: inline-block
-  padding: 0px 10px
-  font-size: 13px
+  font-size: 12px
   font-weight: 500
   color: textDarkGrey
   background-color: #fff
 
 .manage-tag-sort-button
   display: inline-block
+  margin-left: 5px
   background: #fff
   border: 1px solid #c1c1c1
   border-radius: 8px
@@ -109,10 +109,13 @@
   font-size: 12px
   color: #c1c1c1
   padding: 5px 15px
-  margin: 5px
   cursor: pointer
+  background-color: #ffffff
+  border-color: #c1c1c1
 
-
+  &.on
+    background-color: #333333
+    border-color: #333333
 
 
 ////// ROWS OF TAGS //////
@@ -124,39 +127,42 @@
 
 .manage-tag-row
   border-bottom: 1px solid separatorColor
-  padding: 12px 5px
+  padding: 5px 5px
 
 .manage-tag-row-name-section
+  position: relative
+  top: 2px
   display: inline-block
   width: 50%
 
 .manage-tag-row-name
+  max-width: 90%
+  padding: 5px
+  background-color: #fff
+  border: 1px solid #c1c1c1
   border-radius: 5px
   font-size: 12px
   font-weight: 400
-  padding: 5px
-  position: relative
-  top: 50%
-  background-color: #eeeeee
-  border: 1px solid #c1c1c1
   color: textDarkGrey
-  width: 70%
-
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+  float: left
 
 .manage-tag-row-num-keeps-section
+  margin-top: 5px
   display: inline-block
   font-size: 12px
   font-weight: 500
   vertical-align: top
-  position: relative
-  top: 50%
   padding-top: 3px
 
 .manage-tag-row-links-section
   display: inline-block
+  margin-top: 5px
   float: right
   font-size: 12px
-  font-weight: 300
+  font-weight: 400
   color: textDarkGrey
   position: relative
   top: 50%
@@ -173,5 +179,12 @@
 
 
 ////// FOOTER //////
-.manage-tag-pagination
-  height: 80px
+.kf-show-more-tags
+  float: right
+  margin-right: 5px
+  color: #4b6f9f
+  font-weight: 300
+  font-size: 13px
+  letter-spacing: 0.5px
+  text-decoration: underline
+  cursor: pointer

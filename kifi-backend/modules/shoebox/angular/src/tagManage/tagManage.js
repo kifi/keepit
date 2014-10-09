@@ -2,21 +2,37 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'libraryService', '$rootScope',
-  function (tagService, $scope, $window, libraryService, rootScope) {
-    $scope.tagList = tagService.list;
-    $scope.tagsToShow = $scope.tagList;
-
-    $scope.selectedSort = '';
-
-    $scope.selectSortName = function() {
-      $scope.selectedSort = 'name';
-      $scope.tagsToShow = _.sortBy($scope.tagList, 'lowerName');
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService',
+  function (tagService, $scope, $window, manageTagService) {
+    $scope.selectedSort = 'name';
+    $scope.num = 0;
+    $scope.tagList = manageTagService.list;
+    $scope.tagsLoaded = false;
+    $scope.$watch(function () {
+      return manageTagService.list.length || !manageTagService.hasMore();
+    }, function (res) {
+      if (res) {
+        $scope.tagsLoaded = true;
+        $scope.tagsToShow = $scope.tagList;
+      }
+    });
+    $scope.tagsScrollDistance = '100%';
+    $scope.isTagScrollDisabled = function () {
+      return !manageTagService.hasMore();
+    };
+    $scope.manageTagScrollNext = function () {
+      $scope.num += 1;
+      manageTagService.getMore($scope.selectedSort);
     };
 
-    $scope.selectSortKeeps = function() {
-      $scope.selectedSort = 'keeps';
-      $scope.tagsToShow = _.sortBy($scope.tagList, 'keeps').reverse();
+    $scope.$watch(function () {
+        return $scope.selectedSort;
+      }, function () {
+      manageTagService.getMore($scope.selectedSort);
+    });
+
+    $scope.isUniqueTags = function () {
+      return _.uniq($scope.tagList).length === $scope.tagList.length;
     };
 
     ///////////////////////////
@@ -29,25 +45,13 @@ angular.module('kifi')
     var tagSearch = {};
     $scope.filter = {};
     $scope.isFilterFocused = false;
-    var preventClearFilter = false;
     $scope.filter.name = '';
     $scope.focusFilter = function () {
       $scope.isFilterFocused = true;
     };
 
-    $scope.disableClearFilter = function () {
-      preventClearFilter = true;
-    };
-
-    $scope.enableClearFilter = function () {
-      preventClearFilter = false;
-    };
-
     $scope.blurFilter = function () {
       $scope.isFilterFocused = false;
-      if (!preventClearFilter) {
-        $scope.clearFilter();
-      }
     };
 
     $scope.clearFilter = function () {
@@ -75,6 +79,7 @@ angular.module('kifi')
     $scope.convertToLibrary = function (tagName) {
       // first create library with same name
       $window.alert('Creating library ' + tagName);
+      /*
       var newLibrary = { name: tagName, slug: tagName, visibility: 'secret' };
       var promise = libraryService.createLibrary(newLibrary).then(function (resp) {
         libraryService.fetchLibrarySummaries(true).then(function () {
@@ -88,6 +93,7 @@ angular.module('kifi')
         return lib.name === 'tagName';
       }).id;
       libraryService.copyKeepsFromTagToLibrary(libraryId, tagName);
+      */
     };
 
     $scope.removeTag = function (tag) {

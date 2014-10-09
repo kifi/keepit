@@ -54,6 +54,7 @@ angular.module('kifi')
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
+      pageTags: route('/collections/page'),
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
