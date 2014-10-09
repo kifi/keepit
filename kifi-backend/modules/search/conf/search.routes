@@ -14,13 +14,14 @@ GET         /ext/search                    @com.keepit.controllers.ext.ExtSearch
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
 POST        /ext/search/prime              @com.keepit.controllers.ext.ExtSearchController.warmUp()
 
-GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
-
 # Note:     /search/events routes are deprecated, were last used in extension 3.2.16
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
 POST        /search/events/searched        @com.keepit.controllers.ext.ExtSearchEventController.searched()
 POST        /ext/search/events/searched    @com.keepit.controllers.ext.ExtSearchEventController.searched()
 POST        /ext/search/events/clicked     @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
+
+# Note:     /ext/search/message is not yet in use
+GET         /ext/search/message            @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 
 ##########################################
 # Mobile V1
