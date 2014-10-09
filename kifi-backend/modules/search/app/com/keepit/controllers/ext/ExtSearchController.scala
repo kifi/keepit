@@ -6,6 +6,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.util.SearchControllerUtil
+import com.keepit.controllers.util.SearchControllerUtil.nonUser
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
@@ -50,13 +51,14 @@ class ExtSearchController @Inject() (
   }
 
   def search2(
-    extVersion: KifiExtVersion,
     query: String,
-    maxHits: Int,
     filter: Option[String],
+    maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
-    debug: Option[String] = None) = UserAction { request =>
+    kifiVersion: Option[KifiVersion] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) = MaybeUserAction { request =>
 
     val libraryContextFuture = getLibraryContextFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
@@ -65,12 +67,23 @@ class ExtSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
+
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
-    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
-    val augmentationEnumerator = reactiveEnumerator(Seq(augmentationFuture))
+    var decorationFutures: List[Future[String]] = Nil
 
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(augmentationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
+    if (userId != nonUser) {
+      val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
+      decorationFutures = augmentationFuture :: decorationFutures
+    }
+
+    if (withUriSummary) {
+      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
+    }
+
+    val decorationEnumerator = reactiveEnumerator(decorationFutures)
+
+    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
 
     Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
   }
