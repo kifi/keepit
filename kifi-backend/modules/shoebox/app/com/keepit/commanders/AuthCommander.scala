@@ -4,6 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -107,6 +108,8 @@ class AuthCommander @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
+    libraryCommander: LibraryCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
@@ -325,4 +328,16 @@ class AuthCommander @Inject() (
       NotFound(Json.obj("error" -> "user_not_found"))
     }
   }
+
+  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
+    Library.decodePublicId(libPubId) map { libId =>
+      libraryCommander.joinLibrary(userId, libId).fold(
+        libFail =>
+          airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),
+        library =>
+          log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+      )
+    }
+  }
+
 }

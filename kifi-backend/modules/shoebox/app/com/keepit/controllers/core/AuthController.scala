@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{ ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator }
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -41,7 +42,7 @@ object AuthController {
 
 @json case class EmailSignupInfo(email: String)
 
-@json case class UserPassFinalizeInfo( // todo(ray): add followLibrary
+@json case class UserPassFinalizeInfo(
     private val email: String,
     password: String,
     firstName: String,
@@ -51,7 +52,9 @@ object AuthController {
     picHeight: Option[Int],
     cropX: Option[Int],
     cropY: Option[Int],
-    cropSize: Option[Int]) {
+    cropSize: Option[Int],
+    libraryPublicId: Option[PublicId[Library]] // for auto-follow
+    ) {
   val emailAddress = EmailAddress(email)
 }
 
@@ -159,14 +162,14 @@ class AuthController @Inject() (
                     )
                 )
               } else {
-                authHelper.handleEmailPassFinalizeInfo(info)(AuthenticatedRequest(identity, user.id.get, user, request))
+                authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(AuthenticatedRequest(identity, user.id.get, user, request))
               }
             }
         } getOrElse {
           val pInfo = hasher.hash(new String(info.password))
           val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, info.emailAddress, pInfo, isComplete = false)
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-          authHelper.handleEmailPassFinalizeInfo(info)(AuthenticatedRequest(newIdentity, userId, user, request))
+          authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(AuthenticatedRequest(newIdentity, userId, user, request))
         }
     }
   }
