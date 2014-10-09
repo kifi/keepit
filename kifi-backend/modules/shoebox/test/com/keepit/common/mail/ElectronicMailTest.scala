@@ -44,8 +44,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
         subject = "Test",
         campaign = Some("testing"),
         category = NotificationCategory.User.DIGEST,
-        htmlTemplate = Html("this is <b>html</b>"),
-        closingLines = Seq("Happy Keeping!", "The Kifi team")
+        htmlTemplate = Html("this is <b>html</b>")
       )
 
       val otherEm = Json.fromJson[EmailToSend](Json.toJson[EmailToSend](em)).get

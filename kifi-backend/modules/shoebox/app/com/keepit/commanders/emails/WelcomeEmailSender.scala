@@ -28,8 +28,7 @@ class WelcomeEmailSender @Inject() (
       htmlTemplate = views.html.email.black.welcome(userId),
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
       // TODO(josh) add EmailTip.InstallExtension when it's complete
-      tips = Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn),
-      closingLines = Seq("Happy Keeping!", "The Kifi team")
+      tips = Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn)
     )
     emailTemplateSender.send(emailToSend)
   }
