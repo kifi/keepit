@@ -30,7 +30,7 @@ object ProximityQuery extends Logging {
 
   def apply(terms: Seq[Seq[Term]], phrases: Set[(Int, Int)] = Set(), phraseBoost: Float = 0.0f, gapPenalty: Float, powerFactor: Float) = new ProximityQuery(terms, phrases, phraseBoost, gapPenalty, powerFactor: Float)
 
-  def buildPhraseDict(termIds: Array[Int], phrases: Set[(Int, Int)]): Seq[(Seq[TermId], Match)] = {
+  def buildPhraseDict(termIds: Array[TermId], phrases: Set[(Int, Int)]): Seq[(Seq[TermId], Match)] = {
     val posNotInPhrase = (0 until termIds.length).toArray
     phrases.foreach {
       case (pos, len) =>
@@ -40,11 +40,11 @@ object ProximityQuery extends Logging {
     }
 
     var dict = Map.empty[Seq[TermId], Match]
-    dict = posNotInPhrase.filter { _ >= 0 }.foldLeft(dict) { (d, pos) => d + (Seq(intToTermId(termIds(pos))) -> TermMatch(pos).asInstanceOf[Match]) }
+    dict = posNotInPhrase.filter { _ >= 0 }.foldLeft(dict) { (d, pos) => d + (Seq(termIds(pos)) -> TermMatch(pos).asInstanceOf[Match]) }
     phrases.foldLeft(dict) {
       case (d, (pos, len)) =>
         if (pos + len <= termIds.length) {
-          val key = termIds.slice(pos, pos + len).map(intToTermId(_)).toSeq
+          val key = termIds.slice(pos, pos + len).toSeq
           val value = (if (len == 1) TermMatch(pos) else PhraseMatch(pos, len)).asInstanceOf[Match]
 
           if (key.size != len) log.error(s"bad phrase: ($key, $value)") // verify
@@ -86,11 +86,11 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   private[this] val termIdMap = {
     var id = -1
-    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]) { (m, termSeq) =>
+    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], TermId]) { (m, termSeq) =>
       if (m.contains(termSeq)) m
       else {
         id += 1
-        m + (termSeq -> id)
+        m + (termSeq -> intToTermId(id))
       }
     }
   }
@@ -158,7 +158,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
       case (equivTerms, id) =>
         equivTerms.foreach { term =>
           val enum = termPositionsEnum(context, term, acceptDocs)
-          if (enum != null) buf += new PositionAndId(enum, term.text(), intToTermId(id))
+          if (enum != null) buf += new PositionAndId(enum, id)
         }
     }
 
@@ -174,7 +174,7 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
  * posLeft = number of unvisited term positions in current document
  * mask : reflects the position of the term in query.
  */
-private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termText: String, val id: TermId) {
+private[query] final class PositionAndId(tp: DocsAndPositionsEnum, val id: TermId) {
   var doc = -1
   var pos = -1
 
@@ -202,7 +202,7 @@ private[query] final class PositionAndId(val tp: DocsAndPositionsEnum, val termT
   def cost(): Long = tp.cost()
 }
 
-class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, powerFactor: Float) extends Scorer(weight) with Logging {
+class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termIds: Array[TermId], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, powerFactor: Float) extends Scorer(weight) with Logging {
   private[this] var curDoc = -1
   private[this] var proximityScore = 0.0f
   private[this] var scoredDoc = -1
