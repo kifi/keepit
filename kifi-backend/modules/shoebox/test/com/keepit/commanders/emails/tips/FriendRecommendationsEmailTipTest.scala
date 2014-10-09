@@ -50,9 +50,7 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
             userRepo.save(User(firstName = "Bob", lastName = "Marley", pictureName = Some("0"))),
             userRepo.save(User(firstName = "Joe", lastName = "Mustache", pictureName = Some("mustache"))),
             userRepo.save(User(firstName = "Mr", lastName = "T", pictureName = Some("mrt"))),
-            userRepo.save(User(firstName = "Dolly", lastName = "Parton", pictureName = Some("dolly"))),
-            userRepo.save(User(firstName = "Benedict", lastName = "Arnold", pictureName = Some("benedict"))),
-            userRepo.save(User(firstName = "Winston", lastName = "Churchill", pictureName = Some("winston")))
+            userRepo.save(User(firstName = "Dolly", lastName = "Parton", pictureName = Some("dolly")))
           )
         }
         val friendIds = friends.map(_.id.get)
@@ -75,14 +73,11 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
         val html = Await.result(htmlOptF, Duration(5, "seconds")).get.body
 
         // Friend Recommendations
-        friends.slice(1, 5).foreach { user =>
-          html must contain(s"""?friend=<%kf% ["userExternalId",${user.id.get}] %kf%>&subtype=digestPymk""")
-
-          // check user avatar urls
-          html must contain(s"cloudfront/users/${user.id.get}/pics/100/${user.pictureName.get}.jpg")
+        friends.slice(1, 4).foreach { user =>
+          html must contain(s"""?friend=<%kf% ["userExternalId",${user.id.get}] %kf%>&subtype=pymk""")
         }
+        // b/c user doesn't have an avatar
         html must not contain friends(0).externalId.toString
-        html must not contain s"cloudfront/users/${friends(0).id.get}/pics/100/${friends(0).pictureName.get}.jpg"
       }
     }
 

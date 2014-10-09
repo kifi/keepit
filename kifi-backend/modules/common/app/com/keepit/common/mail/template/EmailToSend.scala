@@ -51,7 +51,6 @@ case class EmailToSend(
   campaign: Option[String] = None,
   senderUserId: Option[Id[User]] = None,
   tips: Seq[EmailTip] = Seq.empty,
-  closingLines: Seq[String] = Seq.empty,
   templateOptions: Map[String, ContextData] = Map.empty,
   extraHeaders: Option[Map[String, String]] = None)
 
@@ -82,7 +81,6 @@ object EmailToSend {
     (__ \ 'campaign).format[Option[String]] and
     (__ \ 'senderUserId).formatNullable[Id[User]] and
     (__ \ 'tips).format[Seq[EmailTip]] and
-    (__ \ 'closingLines).format[Seq[String]] and
     (__ \ 'templateOptions).format[Map[String, ContextData]] and
     (__ \ 'extraHeaders).formatNullable[Map[String, String]]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
