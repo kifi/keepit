@@ -427,6 +427,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
     });
   }
 
+  function onToasterHide() {
+    endStickyToaster();
+    if (window.pane) {
+      pane.unshade();
+    }
+  }
+  function onToasterHidden(trigger) {
+    keeper.moveBackFromBottom();
+    if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
+      hideSlider('toaster');
+    }
+  }
+
   function isSticky() {
     return $slider && $slider.data('stickiness') > 0;
   }
@@ -611,18 +624,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
               pane.shade();
             }
             toaster.show($slider, opts.to);
-            toaster.onHide.add(function () {
-              endStickyToaster();
-              if (window.pane) {
-                pane.unshade();
-              }
-            });
-            toaster.onHidden.add(function (trigger) {
-              keeper.moveBackFromBottom();
-              if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
-                hideSlider('toaster');
-              }
-            });
+            toaster.onHide.add(onToasterHide);
+            toaster.onHidden.add(onToasterHidden);
           }
         });
       });

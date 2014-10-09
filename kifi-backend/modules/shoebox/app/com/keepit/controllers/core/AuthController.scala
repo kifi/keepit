@@ -11,7 +11,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SocialId, UserIdentity, SecureSocialClientIds, SocialNetworkType }
 
 import play.api.Play._
 import play.api.libs.json.{ JsNumber, Json }
@@ -28,6 +28,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
+
+import scala.concurrent.Future
+import scala.util.{ Success, Failure }
 
 object AuthController {
   val LinkWithKey = "linkWith"

@@ -747,9 +747,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           updateCollectionIndexOrdering().toString).withBody(inputJson3)
 
         val result1 = inject[KeepsController].updateCollectionIndexOrdering()(request1)
-        val result2 = inject[KeepsController].updateCollectionIndexOrdering()(request2)
-        val result3 = inject[KeepsController].updateCollectionIndexOrdering()(request3)
-
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -762,6 +759,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
+        val result2 = inject[KeepsController].updateCollectionIndexOrdering()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -774,6 +772,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
            """.stripMargin)
         Json.parse(contentAsString(result2)) must equalTo(expected2)
 
+        val result3 = inject[KeepsController].updateCollectionIndexOrdering()(request3)
         status(result3) must equalTo(OK);
         contentType(result3) must beSome("application/json");
 

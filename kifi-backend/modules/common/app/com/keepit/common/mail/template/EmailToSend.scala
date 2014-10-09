@@ -1,10 +1,42 @@
 package com.keepit.common.mail.template
 
-import com.keepit.common.db.{ LargeString, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress }
+import com.keepit.heimdal.{ ContextStringData, ContextData }
 import com.keepit.model.User
 import com.keepit.serializer.EitherFormat
 import play.twirl.api.Html
+
+sealed trait EmailLayout { val name: String }
+
+object EmailLayout {
+  private[EmailLayout] sealed case class EmailLayoutImpl(name: String) extends EmailLayout
+
+  object DefaultLayout extends EmailLayoutImpl("default")
+  object CustomLayout extends EmailLayoutImpl("custom")
+
+  val ALL = CustomLayout :: DefaultLayout :: Nil
+
+  def apply(name: String) =
+    ALL.find(_.name == name).getOrElse(throw new IllegalArgumentException(s"$name is not a recognized EmailLayout"))
+
+  implicit def toContextData(v: EmailLayout): ContextData = ContextStringData(v)
+
+  private val fromContextDataPf: PartialFunction[ContextData, EmailLayout] = {
+    case ContextStringData(value) => EmailLayoutImpl(value)
+  }
+
+  implicit def fromContextData(v: ContextData): Option[EmailLayout] = Some(v) collect fromContextDataPf
+  implicit def fromContextData(v: Option[ContextData]): Option[EmailLayout] = v collect fromContextDataPf
+
+  implicit def toString(v: EmailLayout): String = v.name
+  implicit def fromString(v: String): EmailLayout = EmailLayoutImpl(v)
+}
+
+object TemplateOptions {
+  val CustomLayout: (String, ContextData) = ("layout", EmailLayout.CustomLayout)
+  val DefaultLayout: (String, ContextData) = ("layout", EmailLayout.DefaultLayout)
+}
 
 case class EmailToSend(
   title: String = "Kifi",
@@ -19,7 +51,7 @@ case class EmailToSend(
   campaign: Option[String] = None,
   senderUserId: Option[Id[User]] = None,
   tips: Seq[EmailTip] = Seq.empty,
-  closingLines: Seq[String] = Seq.empty,
+  templateOptions: Map[String, ContextData] = Map.empty,
   extraHeaders: Option[Map[String, String]] = None)
 
 object EmailToSend {
@@ -49,7 +81,7 @@ object EmailToSend {
     (__ \ 'campaign).format[Option[String]] and
     (__ \ 'senderUserId).formatNullable[Id[User]] and
     (__ \ 'tips).format[Seq[EmailTip]] and
-    (__ \ 'closingLines).format[Seq[String]] and
+    (__ \ 'templateOptions).format[Map[String, ContextData]] and
     (__ \ 'extraHeaders).formatNullable[Map[String, String]]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }

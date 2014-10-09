@@ -1,0 +1,17 @@
+@(closingLines: Seq[String], align: String = "left")
+<tr>
+  <td bgcolor="#ffffff" align="@align">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" align="@align" bgcolor="#ffffff">
+      @email.tags.trSpacer(44)
+      <tr>
+        <td align="@align" style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 16px; line-height: 22px; color: #0c161e; border-collapse: collapse; mso-line-height-rule: exactly;">
+        @for(i <- 0 until closingLines.size) {
+          @if(i != 0){<br/>}
+          @closingLines(i)
+        }
+        </td>
+      </tr>
+      @email.tags.trSpacer(39)
+    </table>
+  </td>
+</tr>

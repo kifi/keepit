@@ -1,10 +1,10 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.PeopleRecommendationCommander
+import com.keepit.commanders.{ InviteCommander, UserConnectionsCommander }
 import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.model.{ UserRepo, UserConnectionRepo, User, SocialUserInfoRepo }
+import com.keepit.model._
 import play.api.libs.json.{ Json, JsNumber, JsArray }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import com.keepit.common.db.ExternalId
@@ -12,6 +12,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.model.InviteRecommendation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.core._
 
 class PeopleRecommendationController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -20,8 +21,9 @@ class PeopleRecommendationController @Inject() (
     basicUserRepo: BasicUserRepo,
     userRepo: UserRepo,
     db: Database,
-    peopleRecoCommander: PeopleRecommendationCommander,
-    socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    peopleRecoCommander: UserConnectionsCommander,
+    socialUserRepo: SocialUserInfoRepo,
+    inviteCommander: InviteCommander) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
     peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
@@ -55,9 +57,14 @@ class PeopleRecommendationController @Inject() (
     val relevantNetworks = db.readOnlyReplica { implicit session =>
       socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
     }
-    abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks).map { inviteRecommendations =>
-      Ok(Json.toJson(inviteRecommendations))
+    val futureInviteRecommendations = {
+      if (request.experiments.contains(ExperimentType.GRAPH_BASED_PEOPLE_TO_INVITE)) {
+        abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks)
+      } else {
+        inviteCommander.getInviteRecommendations(request.userId, offset / limit, limit)
+      }
     }
+    futureInviteRecommendations.imap(recommendations => Ok(Json.toJson(recommendations)))
   }
 
   def hideInviteRecommendation() = JsonAction.authenticatedAsync(parse.json) { request =>

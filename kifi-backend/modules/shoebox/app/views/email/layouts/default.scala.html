@@ -1,10 +1,11 @@
 @(contents: Seq[Html], emailToSend: com.keepit.common.mail.template.EmailToSend)
+@import com.keepit.common.mail.template.helpers._
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>@h.title</title>
+<title>@title</title>
 @headCss()
 </head>
 <body marginwidth="0" marginheight="0" style="margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;" offset="0" topmargin="0" leftmargin="0" bgcolor="#f3f3f3">
@@ -13,21 +14,12 @@
   <td valign="top">
     <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="main_table" bgcolor="#f3f3f3">
       <tr class="hide"><td height="30">&nbsp;</td></tr>
-      <tr>
-          <td bgcolor="#333333">
-              @header()
-          </td>
-      </tr>
+      <tr><td bgcolor="#333333">@header()</td></tr>
       @for(html <- contents) {
       <tr><td bgcolor="#ffffff">@html</td></tr>
       }
-      @closingLines(emailToSend)
       @email.tags.trSpacer(49)
-      <tr>
-          <td valign="top">
-              @footer()
-          </td>
-      </tr>
+      <tr><td valign="top">@email.layouts.footer()</td></tr>
     </table>
   </td>
 </tr>

@@ -1,4 +1,4 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
+@(allRecos: com.keepit.curator.commanders.email.AllDigestItems)
 @import com.keepit.common.mail.template.helpers._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
@@ -44,7 +44,7 @@
     </td>
 </tr>
 
-@allRecos.recos.map { reco =>
+@allRecos.recommendations.map { reco =>
 <tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
 }
 

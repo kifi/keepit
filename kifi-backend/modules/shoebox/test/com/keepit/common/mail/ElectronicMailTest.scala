@@ -1,10 +1,11 @@
 package com.keepit.common.mail
 
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.{ TemplateOptions, EmailLayout, EmailToSend }
+import com.keepit.heimdal.ContextData
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.model.NotificationCategory
-import play.api.libs.json.{ JsSuccess, Json }
+import play.api.libs.json.{ JsValue, JsSuccess, Json }
 import play.twirl.api.Html
 
 class ElectronicMailTest extends Specification with ShoeboxTestInjector {
@@ -43,27 +44,15 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
         subject = "Test",
         campaign = Some("testing"),
         category = NotificationCategory.User.DIGEST,
-        htmlTemplate = Html("this is <b>html</b>"),
-        closingLines = Seq("Happy Keeping!", "The Kifi team")
+        htmlTemplate = Html("this is <b>html</b>")
       )
 
-      val expectedJson = """
-          |{"title":"Kifi","from":"eng@42go.com","to":"josh@kifi.com","cc":[],"subject":"Test",
-          |"htmlTemplate":"this is <b>html</b>","category":"digest","fromName":"Kifi",
-          |"campaign":"testing","tips":[],
-          |"closingLines":["Happy Keeping!","The Kifi team"]
-          |}
-        """.stripMargin
-      val jsVal = Json.parse(expectedJson)
-      Json.toJson(em) === jsVal
+      val otherEm = Json.fromJson[EmailToSend](Json.toJson[EmailToSend](em)).get
 
-      val result = jsVal.as[EmailToSend]
-      result.from === em.from
-      result.to === em.to
-      result.subject === em.subject
-      result.campaign === em.campaign
-      result.category === em.category
-      result.htmlTemplate.body === em.htmlTemplate.body
+      // Html objects don't have a good equals method when we just care about the Html.body
+      val blankHtml = Html("")
+      otherEm.copy(htmlTemplate = blankHtml) === em.copy(htmlTemplate = blankHtml)
+      otherEm.htmlTemplate.body === em.htmlTemplate.body
     }
   }
 }

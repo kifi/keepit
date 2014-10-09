@@ -7,122 +7,90 @@ import org.apache.lucene.search.{ Query, Weight }
 
 import scala.collection.mutable.ListBuffer
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) extends Logging with DebugOption {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int, val recencyOnly: Boolean) extends Logging with DebugOption {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-  private[this] val matchWeights: Array[Float] = new Array[Float](coreSize)
-
-  private[this] def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = {
-    var i = 0
-    while (i < coreSize) {
-      matchWeights(i) += weights(i)._2
-      i += 1
-    }
-  }
-  private[this] def normalizeMatchWeight(): Unit = {
-    var sum = 0.0f
-    var i = 0
-    while (i < coreSize) {
-      sum += matchWeights(i)
-      i += 1
-    }
-    if (sum != 0.0f) {
-      i = 0
-      while (i < coreSize) {
-        matchWeights(i) = matchWeights(i) / sum
-        i += 1
-      }
-    }
-  }
+  private[this] val matchWeightNormalizer: MatchWeightNormalizer = new MatchWeightNormalizer(coreSize)
 
   def execute(collector: ResultCollector[ScoreContext], sources: ScoreVectorSource*): Unit = {
 
-    sources.foreach { source =>
-      val startTime = System.currentTimeMillis()
-
-      prepare(source)
-
-      val elapsed = System.currentTimeMillis() - startTime
-      if ((debugFlags & DebugOption.Log.flag) != 0) {
-        debugLog(s"source prepared: class=${source.getClass.getSimpleName} time=$elapsed")
-      }
-    }
-    normalizeMatchWeight()
-
-    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeights, collector)
-
-    val numRows = sources.foldLeft(0) { (total, source) =>
-      val startTime = System.currentTimeMillis()
-
-      val newTotal = execute(source, directScoreContext)
-
-      val elapsed = System.currentTimeMillis() - startTime
-      if ((debugFlags & DebugOption.Log.flag) != 0) {
-        debugLog(s"source executed: class=${source.getClass.getSimpleName} rows=${newTotal - total} time=$elapsed")
-      }
-      newTotal
+    // if NullExpr, no need to execute
+    if (scoreExpr.isNullExpr) {
+      debugLog("engine not executed: NullExpr")
+      return
     }
 
-    val startTime = System.currentTimeMillis()
+    sources.foreach(prepare(_))
+
+    matchWeightNormalizer.normalizeMatchWeight()
+    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+
+    sources.foreach(execute(_, directScoreContext))
 
     join(collector)
 
-    val elapsed = System.currentTimeMillis() - startTime
-
     if ((debugFlags & DebugOption.Log.flag) != 0) {
-      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=$numRows bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directScoreContext.getCount} joinTime=$elapsed")
+      debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=${dataBuffer.size} bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directScoreContext.getCount}")
     }
   }
 
-  private def prepare(source: ScoreVectorSource): Unit = {
-    // if NullExpr, no need to prepare
-    if (scoreExpr.isNullExpr) return
+  private[this] def prepare(source: ScoreVectorSource): Unit = {
+    val startTime = System.currentTimeMillis()
 
-    source.prepare(query)
-    if (source.weights.nonEmpty) {
-      // extract and accumulate information from Weights for later use (percent match)
-      accumulateWeightInfo(source.weights)
-    } else {
-      log.error("no weight created")
+    source.prepare(query, matchWeightNormalizer)
+
+    val elapsed = System.currentTimeMillis() - startTime
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"source prepared: class=${source.getClass.getSimpleName} time=$elapsed")
     }
   }
 
-  private def execute(source: ScoreVectorSource, directScoreContext: DirectScoreContext): Int = {
-    // if NullExpr, no need to execute
-    if (scoreExpr.isNullExpr) return dataBuffer.size
+  private[this] def execute(source: ScoreVectorSource, directScoreContext: DirectScoreContext): Int = {
+    val startTime = System.currentTimeMillis()
 
-    if (source.weights.nonEmpty) {
-      source.execute(coreSize, dataBuffer, directScoreContext)
+    val lastTotal = dataBuffer.size
+    source.execute(coreSize, dataBuffer, directScoreContext)
+    val newTotal = dataBuffer.size
+
+    val elapsed = System.currentTimeMillis() - startTime
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"source executed: class=${source.getClass.getSimpleName} rows=${newTotal - lastTotal} time=$elapsed")
     }
-    dataBuffer.size
+    newTotal
   }
 
-  private def join(collector: ResultCollector[ScoreContext]): Unit = {
+  private[this] def join(collector: ResultCollector[ScoreContext]): Unit = {
+    val startTime = System.currentTimeMillis()
+
     if (debugTracedIds != null) dumpBuf(debugTracedIds)
 
     val size = dataBuffer.size
     if (size > 0) {
-      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createJoinerManager(collector))
+      val numBuckets = ((size / 10 + 1) | 0x01)
+      val hashJoin = new HashJoin(dataBuffer, numBuckets, createJoinerManager(collector))
       hashJoin.execute()
     }
+
+    val elapsed = System.currentTimeMillis() - startTime
+    debugLog(s"engine joined: time=$elapsed")
   }
 
   def getScoreExpr(): ScoreExpr = scoreExpr
   def getQuery(): Query = query
   def getTotalSize(): Int = totalSize
   def getCoreSize(): Int = coreSize
-  def getMatchWeights(): Array[Float] = matchWeights
+  def getMatchWeightNormalizer(): MatchWeightNormalizer = matchWeightNormalizer
 
-  private def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+  private[this] def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
     val debugOption = this
     if (debugTracedIds == null) {
       new JoinerManager(32) {
-        def create() = new ScoreContext(scoreExpr, totalSize, matchWeights, collector)
+        def create() = new ScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
       }
     } else {
       new JoinerManager(32) {
         def create() = {
-          val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeights, collector)
+          val ctx = new ScoreContextWithDebug(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
           ctx.debug(debugOption)
           ctx
         }
@@ -130,7 +98,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     }
   }
 
-  private def dumpBuf(ids: Set[Long]): Unit = {
+  private[this] def dumpBuf(ids: Set[Long]): Unit = {
     dataBuffer.scan(new DataBufferReader) { reader =>
       // assuming the first datum is ID
       val id = reader.nextLong()
@@ -151,4 +119,35 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
       }
     }
   }
+}
+
+class MatchWeightNormalizer(coreSize: Int) {
+  private[this] val matchWeights: Array[Float] = new Array[Float](coreSize)
+
+  def get: Array[Float] = matchWeights
+
+  def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = synchronized {
+    var i = 0
+    while (i < coreSize) {
+      matchWeights(i) += weights(i)._2
+      i += 1
+    }
+  }
+
+  def normalizeMatchWeight(): Unit = synchronized {
+    var sum = 0.0f
+    var i = 0
+    while (i < coreSize) {
+      sum += matchWeights(i)
+      i += 1
+    }
+    if (sum != 0.0f) {
+      i = 0
+      while (i < coreSize) {
+        matchWeights(i) = matchWeights(i) / sum
+        i += 1
+      }
+    }
+  }
+
 }

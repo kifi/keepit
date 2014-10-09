@@ -157,12 +157,12 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sumU42 = Await.result(sumU42F, Duration(5, "seconds"))
         val sumU43 = Await.result(sumU43F, Duration(5, "seconds"))
 
-        sumU42.feed.size === 2
+        sumU42.recommendations.size === 2
 
         // lycos and excite should not be included because:
         // - lycos does not pass the image width requirement
         // - excite has been sent already
-        sumU43.feed.size === 2
+        sumU43.recommendations.size === 2
 
         // 2 sent to users
         // 2 copied to QA
@@ -254,11 +254,11 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sumU43F = sender.sendToUser(user2.id.get, RecentInterestRankStrategy)
         val sumU43 = Await.result(sumU43F, Duration(5, "seconds"))
 
-        sumU43.feed.size === 3
+        sumU43.recommendations.size === 3
         sumU43.mailSent === true
-        sumU43.feed(0).reco === uriModels(0)._2
-        sumU43.feed(1).reco === uriModels(1)._2
-        sumU43.feed(2).reco === uriModels(2)._2
+        sumU43.recommendations(0).recommendationId === uriModels(0)._2.id.get
+        sumU43.recommendations(1).recommendationId === uriModels(1)._2.id.get
+        sumU43.recommendations(2).recommendationId === uriModels(2)._2.id.get
       }
     }
   }

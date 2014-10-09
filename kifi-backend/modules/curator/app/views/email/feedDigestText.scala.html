@@ -1,4 +1,4 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
+@(allRecos: com.keepit.curator.commanders.email.AllDigestItems)
 @import com.keepit.common.mail.template.helpers._
 
 This Week’s Recommended List
@@ -9,8 +9,8 @@ You can also Connect Facebook to access recommendations from your friends’ bes
 @baseUrl/link/facebook?redirect=recommendations
 }
 
-@allRecos.recos.map { reco =>
-@partials.feedRecommendationText(reco)
+@allRecos.recommendations.map { recommendation =>
+@partials.feedRecommendationText(recommendation)
 }
 
 View Full List: @baseUrl/recommendations

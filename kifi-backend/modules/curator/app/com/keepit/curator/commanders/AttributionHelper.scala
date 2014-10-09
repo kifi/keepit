@@ -9,7 +9,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-@Singleton
 class SeedAttributionHelper @Inject() (
     db: Database,
     keepRepo: CuratorKeepInfoRepo,
@@ -52,16 +51,6 @@ class SeedAttributionHelper @Inject() (
     require(seeds.map(_.userId).toSet.size <= 1, "Batch looking up of sharing users must be all for the same user")
 
     def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.1f
-    def augmentedInfo2UserAttr(info: AugmentationInfo): UserAttribution = {
-      val users = info.keeps.flatMap(_.keptBy)
-      val user2Lib = info.keeps.flatMap {
-        case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
-        case _ => None
-      }.toMap
-      val others = info.otherDiscoverableKeeps + info.otherPublishedKeeps
-      UserAttribution(users, others, Some(user2Lib))
-    }
-
     val ret: Array[Option[UserAttribution]] = Array.fill(seeds.size)(None)
 
     seeds.headOption.map { _.userId } match {
@@ -77,7 +66,7 @@ class SeedAttributionHelper @Inject() (
             resp.infos.foreach {
               case (item, info) =>
                 val idx = uriId2Idx(item.uri)
-                val attr = augmentedInfo2UserAttr(info)
+                val attr = toUserAttribution(info)
                 val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
                 if (n > 0) ret(idx) = Some(attr)
             }
@@ -107,4 +96,13 @@ class SeedAttributionHelper @Inject() (
     }
   }
 
+  def toUserAttribution(info: AugmentationInfo): UserAttribution = {
+    val users = info.keeps.flatMap(_.keptBy).distinct
+    val user2Lib = info.keeps.flatMap {
+      case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
+      case _ => None
+    }.toMap
+    val others = info.otherDiscoverableKeeps + info.otherPublishedKeeps
+    UserAttribution(users, others, Some(user2Lib))
+  }
 }

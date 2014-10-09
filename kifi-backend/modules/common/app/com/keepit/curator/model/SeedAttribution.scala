@@ -2,6 +2,7 @@ package com.keepit.curator.model
 
 import com.keepit.model.{ Keep, User, Library }
 import com.keepit.common.db.Id
+import com.keepit.search.{ RestrictedKeepInfo, AugmentationInfo }
 
 import com.kifi.macros.json
 

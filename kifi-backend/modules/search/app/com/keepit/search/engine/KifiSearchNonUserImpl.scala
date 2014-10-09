@@ -30,7 +30,7 @@ class KifiSearchNonUserImpl(
     debugLog("engine created")
 
     val collector = new KifiNonUserResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, false, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
     if (debugFlags != 0) {

@@ -213,39 +213,75 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId1 = Library.publicId(lib1.id.get)
 
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
+        val testPath = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
         inject[FakeUserActionsHelper].setUser(user1)
-        val request1 = FakeRequest("GET", testPath1)
+        val request1 = FakeRequest("GET", testPath)
         val result1 = libraryController.getLibraryById(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
-        val expected = Json.parse(
+        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
           s"""{
-             |"library":{
-               |"id":"${pubId1.id}",
-               |"name":"Library1",
-               |"visibility":"secret",
-               |"slug":"lib1",
-               |"url":"/ahsu/lib1",
-               |"kind":"user_created",
-               |"owner":{
-               |  "id":"${basicUser1.externalId}",
-               |  "firstName":"${basicUser1.firstName}",
-               |  "lastName":"${basicUser1.lastName}",
-               |  "pictureName":"${basicUser1.pictureName}",
-               |  "username":"${basicUser1.username.get.value}"
-               |  },
-               |"collaborators":[],
-               |"followers":[],
-               |"keeps":[],
-               |"numKeeps":0,
-               |"numCollaborators":0,
-               |"numFollowers":0
-             |}
-          }""".stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+           |"library":{
+             |"id":"${pubId1.id}",
+             |"name":"Library1",
+             |"visibility":"secret",
+             |"slug":"lib1",
+             |"url":"/ahsu/lib1",
+             |"kind":"user_created",
+             |"owner":{
+             |  "id":"${basicUser1.externalId}",
+             |  "firstName":"${basicUser1.firstName}",
+             |  "lastName":"${basicUser1.lastName}",
+             |  "pictureName":"${basicUser1.pictureName}",
+             |  "username":"${basicUser1.username.get.value}"
+             |  },
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
+           |},
+           |"access":"owner"
+          }""".stripMargin))
+
+        val user2 = db.readWrite { implicit s =>
+          val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Some(Username("bhsu"))))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          user2
+        }
+        inject[FakeUserActionsHelper].setUser(user2)
+        val request2 = FakeRequest("GET", testPath)
+        val result2 = libraryController.getLibraryById(pubId1)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""{
+           |"library":{
+             |"id":"${pubId1.id}",
+             |"name":"Library1",
+             |"visibility":"secret",
+             |"slug":"lib1",
+             |"url":"/ahsu/lib1",
+             |"kind":"user_created",
+             |"owner":{
+             |  "id":"${basicUser1.externalId}",
+             |  "firstName":"${basicUser1.firstName}",
+             |  "lastName":"${basicUser1.lastName}",
+             |  "pictureName":"${basicUser1.pictureName}",
+             |  "username":"${basicUser1.username.get.value}"
+             |  },
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
+           |},
+           |"access":"none"
+          }""".stripMargin))
       }
     }
 
@@ -326,7 +362,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numKeeps":0,
                |"numCollaborators":0,
                |"numFollowers":0
-             |}}""".stripMargin)
+             |},
+             |"access":"owner"
+            |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
       }
@@ -958,6 +996,78 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "alreadyKept":[{"id":"${k4.externalId}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"}]
               }
             """.stripMargin
+        ))
+      }
+    }
+
+    "remove keeps from library" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val libraryController = inject[LibraryController]
+
+        val (user1, lib1) = db.readWrite { implicit s =>
+          val u1 = userRepo.save(User(firstName = "Mario", lastName = "Plumber"))
+          val lib1 = libraryRepo.save(Library(ownerId = u1.id.get, name = "Mario Party", visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("marioparty"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib1.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
+          (u1, lib1)
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val testPathAdd = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1).url
+
+        val keepsToAdd =
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
+            Nil
+
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        val json = Json.obj("keeps" -> keepsToAdd)
+        val request1 = FakeRequest("POST", testPathAdd).withBody(json)
+        val result1 = libraryController.addKeeps(pubId1)(request1)
+        status(result1) must equalTo(OK)
+
+        val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 10, 0).sortBy(_.createdAt)
+          keeps.length === 3
+          (keeps(0), keeps(1), keeps(2))
+        }
+
+        // test bulk unkeeping
+        val testPathRemoveMany = com.keepit.controllers.website.routes.LibraryController.removeKeeps(pubId1).url
+        val k4Id: ExternalId[Keep] = ExternalId()
+        val json2 = Json.obj("ids" -> Json.toJson(Seq(k1.externalId, k2.externalId, k4Id)))
+        val request2 = FakeRequest("POST", testPathRemoveMany).withBody(json2)
+        val result2 = libraryController.removeKeeps(pubId1)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+            {
+              "failures":["${k4Id}"],
+              "unkept":
+              [{"id":"${k1.externalId}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
+              {"id":"${k2.externalId}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"}]
+            }
+          """.stripMargin
+        ))
+
+        // test single unkeeping
+        val testPathRemoveOne = com.keepit.controllers.website.routes.LibraryController.removeKeep(pubId1, k3.externalId).url
+        val request3 = FakeRequest("DELETE", testPathRemoveOne)
+        val result3 = libraryController.removeKeep(pubId1, k3.externalId)(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+
+        Json.parse(contentAsString(result3)) must equalTo(Json.parse(
+          s"""
+            {
+              "unkept": {"id":"${k3.externalId}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}
+            }
+          """.stripMargin
         ))
       }
     }

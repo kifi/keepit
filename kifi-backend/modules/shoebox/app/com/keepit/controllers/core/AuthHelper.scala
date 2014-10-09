@@ -2,11 +2,9 @@ package com.keepit.controllers.core
 
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.net.UserAgent
-import com.keepit.common.performance._
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
-import play.api.libs.json.{ Json, JsValue }
 import securesocial.core._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
@@ -24,16 +22,14 @@ import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import scala.util.Failure
-import scala.Some
+import scala.util.{ Try, Failure, Success }
 import play.api.mvc.Result
-import play.api.libs.json.JsNumber
+import play.api.libs.json.{ Json, JsNumber, JsValue }
 import play.api.mvc.DiscardingCookie
-import scala.util.Success
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.controller.{ ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -195,7 +191,9 @@ class AuthHelper @Inject() (
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv")) // todo: uri not relevant for mobile
+      authenticator => Ok(Json.obj("uri" -> uri))
+        .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+        .withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> user.id.get.toString))
     )
   }
 
@@ -419,6 +417,76 @@ class AuthHelper @Inject() (
           BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
+    }
+  }
+
+  def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
+    Registry.providers.get(providerName) match {
+      case None =>
+        log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
+      case Some(provider) =>
+        authCommander.fillUserProfile(provider, oauth2InfoOrig) match {
+          case Failure(t) =>
+            log.error(s"[accessTokenSignup($providerName)] Caught Exception($t) during fillProfile; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+          case Success(filledUser) =>
+            authCommander.exchangeLongTermToken(provider, oauth2InfoOrig) map { oauth2InfoNew =>
+              authCommander.getSocialUserOpt(filledUser.identityId) match {
+                case None =>
+                  val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
+                  log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
+                  Authenticator.create(saved).fold(
+                    error => throw error,
+                    authenticator =>
+                      Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                        .withCookies(authenticator.toCookie)
+                  )
+                case Some(identity) => // social user exists
+                  db.readOnlyMaster(attempts = 2) { implicit s =>
+                    socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
+                  } match {
+                    case None => // kifi user does not exist
+                      Authenticator.create(identity).fold(
+                        error => throw error,
+                        authenticator =>
+                          Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                            .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                            .withCookies(authenticator.toCookie)
+                      )
+                    case Some(userId) =>
+                      val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
+                      Authenticator.create(identity).fold(
+                        error => throw error,
+                        authenticator =>
+                          Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
+                            .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                            .withCookies(authenticator.toCookie)
+                      )
+                  }
+
+              }
+            }
+        }
+    }
+  }
+
+  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Result = {
+    (for {
+      provider <- Registry.providers.get(providerName)
+    } yield {
+      Try {
+        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
+      } match {
+        case Success(socialUser) =>
+          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        case Failure(t) =>
+          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+          BadRequest(Json.obj("error" -> "invalid_token"))
+      }
+    }) getOrElse {
+      BadRequest(Json.obj("error" -> "invalid_arguments"))
     }
   }
 

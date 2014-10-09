@@ -7,7 +7,7 @@ import org.apache.lucene.index.NumericDocValues
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
-trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
+trait VisibilityEvaluator { self: DebugOption =>
 
   protected val userId: Long
   protected val friendIdsFuture: Future[Set[Long]]
@@ -62,6 +62,8 @@ final class KeepVisibilityEvaluator(
     userIdDocValues: NumericDocValues,
     visibilityDocValues: NumericDocValues) {
 
+  private[this] val published = LibraryFields.Visibility.PUBLISHED
+
   def apply(docId: Int, libId: Long): Int = {
     if (memberLibraryIds.findIndex(libId) >= 0) {
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
@@ -76,7 +78,7 @@ final class KeepVisibilityEvaluator(
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.MEMBER // the keep is in an authorized library
     } else {
-      if (visibilityDocValues.get(docId) == LibraryFields.Visibility.PUBLISHED) {
+      if (visibilityDocValues.get(docId) == published) {
         if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
           Visibility.NETWORK // the keep is in a published library, and my friend kept it
         } else if (trustedLibraryIds.findIndex(libId) >= 0) {
@@ -97,6 +99,8 @@ final class LibraryVisibilityEvaluator(
     authorizedLibraryIds: LongArraySet,
     visibilityDocValues: NumericDocValues) {
 
+  private[this] val published = LibraryFields.Visibility.PUBLISHED
+
   def apply(docId: Int, libId: Long): Int = {
     if (memberLibraryIds.findIndex(libId) >= 0) {
       if (myOwnLibraryIds.findIndex(libId) >= 0) {
@@ -107,7 +111,7 @@ final class LibraryVisibilityEvaluator(
     } else if (authorizedLibraryIds.findIndex(libId) >= 0) {
       Visibility.MEMBER // the keep is in an authorized library
     } else {
-      if (visibilityDocValues.get(docId) == LibraryFields.Visibility.PUBLISHED) {
+      if (visibilityDocValues.get(docId) == published) {
         Visibility.OTHERS // a published library
       } else {
         Visibility.RESTRICTED

@@ -16,7 +16,8 @@ case class LibraryMembership(
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
     showInSearch: Boolean,
-    lastViewed: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    lastViewed: Option[DateTime] = None,
+    lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)

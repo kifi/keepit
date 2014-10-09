@@ -85,6 +85,10 @@ case class AugmentationScores(
     }.toMap
     AugmentationScores(addedLibraryScores, addedUserScores, addedTagScores)
   }
+
+  def byUser(userId: Id[User]): Float = userScores.getOrElse(userId, 0f)
+  def byLibrary(libraryId: Id[Library]): Float = libraryScores.getOrElse(libraryId, 0f)
+  def byTag(tag: Hashtag): Float = tagScores.getOrElse(tag, 0f)
 }
 
 case class AugmentationContext(userId: Id[User], corpus: Map[AugmentableItem, Float])

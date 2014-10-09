@@ -19,8 +19,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
-import com.keepit.search.util.Hit
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
+import com.keepit.search.util.MergeQueue.Hit
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -104,14 +104,12 @@ class MainSearcher(
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      timeLogs.personalizedSearcher()
 
       val weight = personalizedSearcher.createWeight(articleQuery)
 
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val mySearchUris = socialGraphInfo.mySearchUris
       val friendSearchUris = socialGraphInfo.friendSearchUris
-      timeLogs.socialGraphInfo()
 
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.clickBoost()
@@ -403,7 +401,7 @@ class MainSearcher(
   }
 }
 
-class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
+class ArticleHitQueue(sz: Int) extends MergeQueue[MutableArticleHit](sz) {
 
   private[this] val NO_FRIEND_IDS = Set.empty[Id[User]]
 

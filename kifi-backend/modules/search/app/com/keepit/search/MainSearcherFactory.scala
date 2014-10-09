@@ -8,7 +8,6 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
 import com.keepit.search.engine.SearchTimeLogs
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -17,8 +16,6 @@ import com.keepit.search.user.UserSearcher
 import com.keepit.search.query.parser.MainQueryParser
 import scala.concurrent._
 import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
 import com.keepit.search.graph.bookmark.URIGraphSearcher
@@ -46,11 +43,7 @@ class MainSearcherFactory @Inject() (
 
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
-  private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
-  private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
   private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
-
-  lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   private def mkQueryParser(lang1: Lang, lang2: Option[Lang], config: SearchConfig): MainQueryParser = {
     new MainQueryParser(
@@ -74,7 +67,7 @@ class MainSearcherFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig): Seq[MainSearcher] = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
+    val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
     val parser = mkQueryParser(lang1, lang2, config)
@@ -122,12 +115,6 @@ class MainSearcherFactory @Inject() (
     searchers(0)
   }
 
-  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
-    val clickHistoryFuture = getClickHistoryFuture(userId)
-
-    Seq(clickHistoryFuture) // returning futures to pin them in the heap
-  }
-
   def clear(): Unit = {
     consolidateURIGraphSearcherReq.clear()
     consolidateCollectionSearcherReq.clear()
@@ -160,23 +147,7 @@ class MainSearcherFactory @Inject() (
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
-  def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
-    SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
-  }
-
   def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
-
-  def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
-    predefinedConfig match {
-      case None =>
-        consolidateConfigReq(userId) { k => searchConfigManager.getConfigFuture(userId, experiments) }
-      case Some(conf) =>
-        val default = searchConfigManager.defaultConfig
-        // almost complete overwrite. But when search config parameter list changes, this prevents exception
-        Future.successful((new SearchConfig(default.params ++ conf.params), None))
-    }
-  }
-
 }

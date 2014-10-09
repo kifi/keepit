@@ -162,7 +162,8 @@ angular.module('kifi')
       };
 
       $log.log('keepActionService.keepToLibrary()', data);
-      var url = env.xhrBase + '/libraries/' + libraryId + '/keeps';
+
+      var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -230,6 +231,19 @@ angular.module('kifi')
       return unkeepMany([keep]);
     }
 
+    function unkeepFromLibrary(libraryId, keepId) {
+      var url = routeService.removeKeepFromLibrary(libraryId, keepId);
+      return $http.delete(url);  // jshint ignore:line
+    }
+
+    function unkeepManyFromLibrary(libraryId, keeps) {
+      var url = routeService.removeManyKeepsFromLibrary(libraryId);
+      var data = {
+        'ids': _.pluck(keeps, 'id')
+      };
+      return $http.post(url, data);
+    }
+
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
@@ -243,7 +257,9 @@ angular.module('kifi')
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,
       unkeepOne: unkeepOne,
-      unkeepMany: unkeepMany
+      unkeepMany: unkeepMany,
+      unkeepFromLibrary: unkeepFromLibrary,
+      unkeepManyFromLibrary: unkeepManyFromLibrary
     };
 
     return api;

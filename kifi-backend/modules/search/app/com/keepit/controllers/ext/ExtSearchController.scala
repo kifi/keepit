@@ -1,13 +1,11 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
 import com.keepit.controllers.util.SearchControllerUtil
-import com.keepit.controllers.util.SearchControllerUtil.nonUser
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
@@ -24,7 +22,6 @@ class ExtSearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
-    amazonInstanceInfo: AmazonInstanceInfo,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
@@ -53,40 +50,27 @@ class ExtSearchController @Inject() (
   }
 
   def search2(
+    extVersion: KifiExtVersion,
     query: String,
-    filter: Option[String],
-    library: Option[String],
     maxHits: Int,
+    filter: Option[String],
     lastUUIDStr: Option[String],
     context: Option[String],
-    kifiVersion: Option[KifiVersion] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = MaybeUserAction { request =>
+    debug: Option[String] = None) = UserAction { request =>
 
-    val libraryContextFuture = getLibraryContextFuture(library, None, request)
+    val libraryContextFuture = getLibraryContextFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
-
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
-    var decorationFutures: List[Future[String]] = Nil
+    val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
+    val augmentationEnumerator = reactiveEnumerator(Seq(augmentationFuture))
 
-    if (userId != nonUser) {
-      val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
-      decorationFutures = augmentationFuture :: decorationFutures
-    }
-
-    if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
-    }
-
-    val decorationEnumerator = reactiveEnumerator(decorationFutures)
-
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
+    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(augmentationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
 
     Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
   }
@@ -95,14 +79,6 @@ class ExtSearchController @Inject() (
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
     Ok
-  }
-
-  def instance() = HtmlAction.authenticated { request =>
-    if (request.experiments.contains(ADMIN)) {
-      Ok(amazonInstanceInfo.name.getOrElse(""))
-    } else {
-      NotFound
-    }
   }
 }
 

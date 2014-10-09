@@ -27,7 +27,6 @@ POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.aboo
 GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.controllers.ABookController.refreshAllPrefixFilters
 
 POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.controllers.ABookController.richConnectionUpdate()
-POST     /internal/abook/blockRichConnection                    @com.keepit.abook.controllers.ABookWTIController.blockRichConnection()
 GET      /internal/abook/ripestFruit                            @com.keepit.abook.controllers.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
 GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.controllers.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
 GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.controllers.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)

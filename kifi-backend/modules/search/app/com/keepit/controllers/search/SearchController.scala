@@ -121,7 +121,7 @@ class SearchController @Inject() (
       case _ => LibraryContext.None
     }
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    languageCommander.distLangFreqs2(shards, userId, libraryContext).map { freqs =>
+    languageCommander.distLangFreqs(shards, userId, libraryContext).map { freqs =>
       Ok(Json.toJson(freqs.map { case (lang, freq) => lang.lang -> freq }))
     }
   }

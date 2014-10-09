@@ -21,7 +21,7 @@ class MobileInviteController @Inject() (
         val subject = (request.body \ "subject").asOpt[String]
         val message = (request.body \ "message").asOpt[String]
         val source = "mobile"
-        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+        inviteCommander.invite(request, request.userId, fullSocialId, subject, message, source).map {
           case inviteStatus if inviteStatus.sent => {
             log.info(s"[inviteConnection] Invite sent: $inviteStatus")
             Ok(Json.obj("code" -> "invitation_sent"))

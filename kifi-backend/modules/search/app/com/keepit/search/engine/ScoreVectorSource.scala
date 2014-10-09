@@ -18,31 +18,38 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 
 trait ScoreVectorSource {
-  def weights: IndexedSeq[(Weight, Float)]
-  def prepare(query: Query): Unit
+  def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit
   def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
-  val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
+  private[this] val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
 
-  def prepare(query: Query): Unit = {
+  def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     weights.clear()
     val weight = searcher.createWeight(query)
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }
+    if (weights.nonEmpty) {
+      // extract and accumulate information from Weights for later use (percent match)
+      matchWeightNormalizer.accumulateWeightInfo(weights)
+    } else {
+      log.error("no weight created")
+    }
   }
 
   def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
-    val scorers = new Array[Scorer](weights.size)
-    indexReaderContexts.foreach { readerContext =>
-      var i = 0
-      while (i < scorers.length) {
-        scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
-        i += 1
+    if (weights.nonEmpty) {
+      val scorers = new Array[Scorer](weights.size)
+      indexReaderContexts.foreach { readerContext =>
+        var i = 0
+        while (i < scorers.length) {
+          scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
+          i += 1
+        }
+        writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)
       }
-      writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)
     }
   }
 
@@ -124,6 +131,7 @@ class UriFromKeepsScoreVectorSource(
     protected val friendIdsFuture: Future[Set[Long]],
     protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
+    recencyOnly: Boolean,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
@@ -153,7 +161,8 @@ class UriFromKeepsScoreVectorSource(
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
     val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
     val keepVisibilityEvaluator = getKeepVisibilityEvaluator(userIdDocValues, visibilityDocValues)
-    val recencyScorer = getRecencyScorer(readerContext)
+    val recencyScorer = if (recencyOnly) getSlowDecayingRecencyScorer(readerContext) else getRecencyScorer(readerContext)
+    if (recencyScorer == null) log.warn("RecencyScorer is null")
 
     val taggedScores: Array[Int] = pq.createScoreArray // tagged floats
 
@@ -178,7 +187,7 @@ class UriFromKeepsScoreVectorSource(
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(uriId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
+          writer.putLong(uriId, keepId).putTaggedFloatBits(taggedScores, size)
 
           docId = pq.top.doc // next doc
         } else {
@@ -203,7 +212,7 @@ class UriFromKeepsScoreVectorSource(
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
             // write to the buffer
             output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
-            writer.putLong(uriId).putLong(keepId)
+            writer.putLong(uriId, keepId)
             count += 1
           }
           docId = td.nextDoc()
@@ -330,6 +339,7 @@ class LibraryFromKeepsScoreVectorSource(
     val libraryVisibilityEvaluator = getLibraryVisibilityEvaluator(visibilityDocValues)
 
     val recencyScorer = getRecencyScorer(readerContext)
+    if (recencyScorer == null) log.warn("RecencyScorer is null")
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -352,7 +362,7 @@ class LibraryFromKeepsScoreVectorSource(
 
           // write to the buffer
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // libId (8 bytes), keepId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(libId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
+          writer.putLong(libId, keepId).putTaggedFloatBits(taggedScores, size)
 
           docId = pq.top.doc // next doc
         } else {
