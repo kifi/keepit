@@ -20,7 +20,7 @@
       			<div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'name'}" ng-click="selectedSort = 'name'">ABC</div>
       		</div>
       	</div>
-NumTags: {{tagList.length}} unique: {{isUniqueTags()}} sort {{selectedSort}} {{num}}
+
       	<div class="manage-tag-content" smart-scroll scroll-distance="tagsScrollDistance" scroll-disabled="isTagScrollDisabled()" scroll-next="manageTagScrollNext()">
       		<ul class="manage-tag-list">
       			<li class="manage-tag-row" ng-repeat="tag in tagsToShow">
@@ -29,11 +29,11 @@ NumTags: {{tagList.length}} unique: {{isUniqueTags()}} sort {{selectedSort}} {{n
                               </div>
                               <span class="manage-tag-row-num-keeps-section">
                                     <ng-pluralize count="tag.keeps | number:0"
-                                          when="{'0': 'No keeps', 'one': '1 keep', 'other':'{} keeps'}">
+                                          when="{'0': 'no keeps', 'one': '1 keep', 'other':'{} keeps'}">
                                     </ng-pluralize>
                               </span>
       				<span class="manage-tag-row-links-section">
-      					<span class="manage-tag-row-link" ng-click="convertToLibrary(tag.name)">
+      					<span class="manage-tag-row-link" kf-keep-to-library-widget ng-click="showWidget()">
       						Convert to library
       					</span>&middot;
       					<span class="manage-tag-row-link" ng-click="removeTag(tag)">
@@ -41,6 +41,7 @@ NumTags: {{tagList.length}} unique: {{isUniqueTags()}} sort {{selectedSort}} {{n
       					</span>
       				</span>
       			</li>
+                        <!-- Dummy tag for UI testing -->
                         <li class="manage-tag-row">
                               <div class="manage-tag-row-name-section">
                                     <div class="manage-tag-row-name">San Francisco is the best city ever but its p(max 64 characters)</div>
@@ -61,6 +62,7 @@ NumTags: {{tagList.length}} unique: {{isUniqueTags()}} sort {{selectedSort}} {{n
                         </li>
       		</ul>
       	</div>
+
             <span ng-click="manageTagScrollNext()" ng-hide="isTagScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 

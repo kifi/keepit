@@ -2,12 +2,19 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService',
-  function (tagService, $scope, $window, manageTagService) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService',
+  function (tagService, $scope, $window, manageTagService, libraryService) {
     $scope.selectedSort = 'name';
-    $scope.num = 0;
+
+    $scope.libraries = [];
+    $scope.selected = {};
+
     $scope.tagList = manageTagService.list;
     $scope.tagsLoaded = false;
+
+    //
+    // Smart Scroll
+    //
     $scope.$watch(function () {
       return manageTagService.list.length || !manageTagService.hasMore();
     }, function (res) {
@@ -21,19 +28,36 @@ angular.module('kifi')
       return !manageTagService.hasMore();
     };
     $scope.manageTagScrollNext = function () {
-      $scope.num += 1;
       manageTagService.getMore($scope.selectedSort);
     };
 
     $scope.$watch(function () {
         return $scope.selectedSort;
       }, function () {
+      manageTagService.reset();
       manageTagService.getMore($scope.selectedSort);
     });
 
-    $scope.isUniqueTags = function () {
-      return _.uniq($scope.tagList).length === $scope.tagList.length;
-    };
+    //
+    // Keeping to Library
+    //
+    $scope.librariesEnabled = false;
+    $scope.libraries = [];
+
+    $scope.$watch(function () {
+      return libraryService.isAllowed();
+    }, function (newVal) {
+      $scope.librariesEnabled = newVal;
+      if ($scope.librariesEnabled) {
+        libraryService.fetchLibrarySummaries().then(function () {
+          $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+            return lib.access !== 'read_only';
+          });
+          $scope.selection = $scope.selection || {};
+          $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+        });
+      }
+    });
 
     ///////////////////////////
     ///// Filtering Stuff /////
@@ -75,26 +99,6 @@ angular.module('kifi')
     ///////////////////////
     ///// Manage Tags /////
     ///////////////////////
-
-    $scope.convertToLibrary = function (tagName) {
-      // first create library with same name
-      $window.alert('Creating library ' + tagName);
-      /*
-      var newLibrary = { name: tagName, slug: tagName, visibility: 'secret' };
-      var promise = libraryService.createLibrary(newLibrary).then(function (resp) {
-        libraryService.fetchLibrarySummaries(true).then(function () {
-          $rootScope.$emit('changedLibrary');
-        });
-      });
-
-      // then copy keeps to that library
-      $window.alert('Copying keeps to ' + tagName);
-      var libraryId = _.find(libraryService.librarySummaries, function (lib) {
-        return lib.name === 'tagName';
-      }).id;
-      libraryService.copyKeepsFromTagToLibrary(libraryId, tagName);
-      */
-    };
 
     $scope.removeTag = function (tag) {
       var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');

@@ -9,14 +9,8 @@ angular.module('kifi')
     var more = true;
     var offset = 0;
     var pageSize = 10;
-    var prevSort = '';
 
     var manageTagRemoteService = new Clutch(function (sort) {
-      if (prevSort !== sort) {
-        offset = 0;
-        prevSort = sort;
-        list.length = 0;
-      }
       return $http.get(routeService.pageTags + '?sort=' + sort + '&offset=' + offset + '&pageSize=' + pageSize
         ).then(function (res) {
         if (res.data.tags.length === 0) {
@@ -30,6 +24,12 @@ angular.module('kifi')
     });
 
     var api = {
+      reset: function () {
+        list.length = 0;
+        offset = 0;
+        more = true;
+        manageTagRemoteService.expireAll();
+      },
       getMore: function (sort) {
         return manageTagRemoteService.get(sort, offset);
       },
