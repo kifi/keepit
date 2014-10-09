@@ -50,12 +50,12 @@ class ExtSearchController @Inject() (
   }
 
   def search2(
-    extVersion: KifiExtVersion,
     query: String,
     maxHits: Int,
     filter: Option[String],
     lastUUIDStr: Option[String],
     context: Option[String],
+    extVersion: Option[KifiExtVersion],
     debug: Option[String] = None) = UserAction { request =>
 
     val libraryContextFuture = getLibraryContextFuture(None, None, request)
