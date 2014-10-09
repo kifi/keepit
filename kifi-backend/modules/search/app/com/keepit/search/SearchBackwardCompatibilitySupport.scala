@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.concurrent.ExecutionContext.fj
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
@@ -10,13 +11,14 @@ import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
 import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
     augmentationCommander: AugmentationCommander,
     mainSearcherFactory: MainSearcherFactory,
     monitoredAwait: MonitoredAwait) {
+
+  implicit private[this] val defaultExecutionContext = fj
 
   private def isSecret(lib: Id[Library], librarySearcher: Searcher): Boolean = {
     librarySearcher.getLongDocValue(LibraryFields.visibilityField, lib.id) match {
