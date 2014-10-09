@@ -5,10 +5,9 @@ import com.keepit.commanders.{ RecommendationsCommander, LocalUserExperimentComm
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.RecommendationClientType
-import com.keepit.model.{ NormalizedURI, UriRecommendationScores, ExperimentType, UriRecommendationFeedback }
+import com.keepit.model.{ NormalizedURI, UriRecommendationScores, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import scala.concurrent.Future
 import com.google.inject.Inject
 
 class RecommendationsController @Inject() (
