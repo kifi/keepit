@@ -285,16 +285,17 @@ class SearchCommanderImpl @Inject() (
 
     val libraryContext = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
 
-    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
-    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
-
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
-      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, firstLang, KifiShardResult.empty, Set(), None))
+      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, Lang("en"), KifiShardResult.empty, Set(), None))
     }
+
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
 
     val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
     timing.presearch
 
