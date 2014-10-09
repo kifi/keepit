@@ -20,13 +20,6 @@ class SearchBackwardCompatibilitySupport @Inject() (
 
   implicit private[this] val defaultExecutionContext = fj
 
-  private def isSecret(lib: Id[Library], librarySearcher: Searcher): Boolean = {
-    librarySearcher.getLongDocValue(LibraryFields.visibilityField, lib.id) match {
-      case Some(visibility) => visibility == LibraryFields.Visibility.SECRET
-      case None => false
-    }
-  }
-
   private def getCollectionExternalIds(shard: Shard[NormalizedURI], userId: Id[User], uriId: Id[NormalizedURI]): Option[Seq[ExternalId[Collection]]] = {
     val collectionSearcher = mainSearcherFactory.getCollectionSearcher(shard, userId)
     val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
@@ -47,25 +40,12 @@ class SearchBackwardCompatibilitySupport @Inject() (
           BasicSearchHit(Some(hit.title), hit.url)
         }
 
-        var libIds = Set.empty[Id[Library]]
-        var sharingUserIds = Set.empty[Id[User]]
-        augmentedItem.keep.foreach {
-          case (lib, usrOpt, _) =>
-            libIds += lib
-            if (usrOpt.isDefined) sharingUserIds += usrOpt.get
-        }
-        augmentedItem.moreKeeps.foreach {
-          case (libOpt, usrOpt) =>
-            if (libOpt.isDefined) libIds += libOpt.get
-            if (usrOpt.isDefined) sharingUserIds += usrOpt.get
-        }
         // keeperCount is not strictly the number of users. It is the number of sharing friends + the number of discoverable/published libraries owned by others
-        val keeperCount = sharingUserIds.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
-        sharingUserIds -= userId
+        val keeperCount = augmentedItem.keepers.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
 
-        sharingUserIds.foreach { friendId => friendStats.add(friendId.id, hit.score) }
+        augmentedItem.friends.foreach { friendId => friendStats.add(friendId.id, hit.score) }
 
-        val isPrivate = libIds.forall(isSecret(_, librarySearcher))
+        val isPrivate = augmentedItem.isSecret(librarySearcher) getOrElse true
 
         DetailedSearchHit(
           uriId.id,
@@ -74,7 +54,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
           isMyBookmark,
           isFriendsBookmark,
           isPrivate,
-          sharingUserIds.toSeq,
+          augmentedItem.friends,
           hit.score,
           hit.score,
           new Scoring(hit.score, 0.0f, 0.0f, 0.0f, false)
@@ -92,7 +72,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
     val librarySearcher = libraryIndexer.getSearcher
 
     val future = augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
-      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
+      val augmenter = AugmentedItem(userId, friendIds.map(Id[User](_)), Set.empty[Id[Library]], augmentationResponse.scores) _
 
       (result.hits zip items).map {
         case (hit, item) =>
