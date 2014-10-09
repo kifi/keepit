@@ -1,15 +1,5 @@
 @(align: String = "center", width: Int = 169)
 @import com.keepit.common.mail.template.helpers._
-<table width="@width" border="0" cellspacing="0" cellpadding="0" align="@align" bgcolor="#41c381">
-  <tr>
-    <td align="left" valign="middle" width="8">
-      <img src='@assetUrl("left.png")' width="8" height="40" alt="" style="display:block;max-width:8px;max-height:80px;" border="0" />
-    </td>
-    <td align="center" valign="middle" style="font-family:Arial,sans-serif;font-size:16px;color:#ffffff;font-weight:bold;">
-      <a href='@findMoreFriendsUrl("findMoreFriendsBtn")' target="_blank" style="font-family:Arial, sans-serif;font-size:16px;line-height:26px;color:#ffffff;font-weight:bold;text-decoration:none;display:block;">Find More Friends</a>
-    </td>
-    <td align="right" valign="middle" width="8" bgcolor="#ffffff">
-      <img src='@assetUrl("right.png")' width="8" height="40" alt="" style="display:block;max-width:8px;max-height:80px;" border="0" />
-    </td>
-  </tr>
-</table>
+@email.tags.roundedContainer(width, 40, 8, "77C187", align) {
+<a href='@findMoreFriendsUrl("findMoreFriendsBtn")' target="_blank" style="font-family:Arial, sans-serif;font-size:16px;line-height:26px;color:#ffffff;font-weight:bold;text-decoration:none;display:block;">Find More Friends</a>
+}

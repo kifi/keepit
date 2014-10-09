@@ -1,24 +1,48 @@
-<div class="kf-main-library-keeps">
-  <div class="kf-library-card-header" ng-show="!loading">
-    <div kf-library-card
-      library="library"
-      username="username"
-      library-slug="librarySlug"
-      loading="loading"
+<div>
+  <!-- Library page -->
+  <div class="kf-main-library-keeps">
+    <div class="kf-library-card-header" ng-show="!loading">
+      <div kf-library-card
+        library="library"
+        username="username"
+        library-slug="librarySlug"
+        loading="loading"
+        toggle-edit="toggleEdit"
+        recommendation="false"
+      ></div>
+    </div>
+
+    <div kf-keeps
+      keeps="keeps"
+      keeps-loading="loading"
+      keeps-has-more="hasMore"
+      scroll-disabled="!hasMore"
+      scroll-distance="scrollDistance"
+      scroll-next="getNextKeeps()"
+      edit-mode="editMode"
       toggle-edit="toggleEdit"
-      recommendation="false"
+      update-selected-count="updateSelectedCount(numSelected)"
     ></div>
   </div>
 
-  <div kf-keeps
-    keeps="keeps"
-    keeps-loading="loading"
-    keeps-has-more="hasMore"
-    scroll-disabled="!hasMore"
-    scroll-distance="scrollDistance"
-    scroll-next="getNextKeeps()"
-    edit-mode="editMode"
-    toggle-edit="toggleEdit"
-    update-selected-count="updateSelectedCount(numSelected)"
-  ></div>
+
+  <!-- Permission Denied -->
+  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied'">
+    Permission denied.
+  </div>
+
+
+    <!-- Needs to log in -->
+  <div class="kf-main-library-keeps" ng-if="page === 'login'">
+    <p>This is a private library. If you were invited, enter the passphrase sent to you in the invitation email.</p>
+    <div>
+      <input class="" ng-model="passphrase.value" type="text" name="name" placeholder="Passphrase" autocomplete="off" novalidate>
+      <input type="submit" ng-click="submitPassPhrase()" value="Get access">
+      <div>Example: person string wind</div>
+      <div class="kf-lib-access-error" ng-if="$error.name">
+        {{$error.name}}
+      </div>
+    </div>
+  </div>
+
 </div>

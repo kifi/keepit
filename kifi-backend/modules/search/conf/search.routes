@@ -1,16 +1,26 @@
 ##########################################
+# Search Admin
+##########################################
+GET         /admin/search/instance         @com.keepit.controllers.search.SearchAdminController.instance()
+
+##########################################
 # Search Extension API
 ##########################################
+# Note:     /search will be deprecated when libraries launch
 GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
-GET         /ext/search           @com.keepit.controllers.ext.ExtSearchController.search2(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, debug: Option[String])
+GET         /ext/search                    @com.keepit.controllers.ext.ExtSearchController.search2(q: String, n: Int ?= 5, f: Option[String], u: Option[String], c: Option[String], v: Option[KifiExtVersion], debug: Option[String])
+
+# Note:     /search/warmUp is deprecated, was last used in extension 3.2.16
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
-GET         /search/instance      @com.keepit.controllers.ext.ExtSearchController.instance()
+POST        /ext/search/prime              @com.keepit.controllers.ext.ExtSearchController.warmUp()
+
 GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
+
+# Note:     /search/events routes are deprecated, were last used in extension 3.2.16
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
 POST        /search/events/searched        @com.keepit.controllers.ext.ExtSearchEventController.searched()
-POST        /search/events/browsed        @com.keepit.controllers.ext.ExtSearchEventController.updateBrowsingHistory()
-GET         /search/users/page        @com.keepit.controllers.ext.ExtUserSearchController.page(query: String, filter: Option[String], pageNum: Int, pageSize: Int)
-GET         /search/users/search        @com.keepit.controllers.ext.ExtUserSearchController.search(query: String, filter: Option[String], context: Option[String], maxHits: Int)
+POST        /ext/search/events/searched    @com.keepit.controllers.ext.ExtSearchEventController.searched()
+POST        /ext/search/events/clicked     @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
 
 ##########################################
 # Mobile V1

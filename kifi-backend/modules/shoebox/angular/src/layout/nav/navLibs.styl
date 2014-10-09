@@ -135,6 +135,9 @@
   left: 6px
   top: 3px
 
+.kf-sort-libs
+  position: relative
+
 .kf-sort-libs-button
   width: 24px
   height: 25px
@@ -142,22 +145,21 @@
   margin-right: 14px
   box-sizing: border-box
   border-radius: 0 4px 4px 0
-
-.kf-sort-libs-hover-area
-  width: 32px
-  height: 40px
+  cursor: pointer
   position: relative
-  top: -20px
-  left: -5px
+  background-color: #eeeeee
+  border: 1px solid #e6e6e6
+
+  &.on
+    background-color: #ffffff
+    border: 1px solid blueColor
 
 .dropdown-menu-content
-  width: 120px
-  position: relative
-  left: -70px
-  top: -30px
+  position: absolute
+  top: 30px
+  left: 130px
+  width: 115px
   z-index: 1
-  border: 1px solid #e6e6e6
-  border-radius: 8px
 
 .dropdown-menu-content > li:first-child
   border-radius: 8px 8px 0 0
@@ -166,11 +168,12 @@
   border-radius: 0 0 8px 8px
 
 .dropdown-option
+  position: relative
   height: 36px
-  width: 120px
+  width: 100%
   padding-top: 11px
   box-sizing: border-box
-  border-bottom: 1px solid separatorColor
+  border: 1px solid #e6e6e6
   background-color: #fff
   text-align: center
   font-size: 11px
@@ -179,11 +182,16 @@
   cursor: pointer
 
 .dropdown-option:hover
-  padding-top: 10px
-  padding-bottom: 9px
+  box-sizing: border-box
   border: 1px solid blueColor
   background-color: #fff
 
 .dropdown-option:active
   color: #fff
   background-color: blueColor
+
+.dropdown-option-check
+  position: absolute
+  left: 5px
+  top: 10px
+

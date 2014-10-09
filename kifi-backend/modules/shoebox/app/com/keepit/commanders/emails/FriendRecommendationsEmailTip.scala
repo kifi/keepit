@@ -17,11 +17,17 @@ import scala.util.Random
 
 object FriendRecommendationsEmailTip {
   val FRIEND_RECOS_TO_QUERY = 20
-  val MAX_RECOS_TO_SHOW = 5
+  val MAX_RECOS_TO_SHOW = 3
   val MIN_RECOS_TO_SHOW = 3
 }
 
-sealed case class FriendReco(userId: Id[User], avatarUrl: String, mutualFriendsCount: Int)
+case class FriendReco(userId: Id[User], avatarUrl: String, mutualFriendsCount: Int) {
+  val mutualFriendsLine = mutualFriendsCount match {
+    case 0 => "Kifi user"
+    case 1 => "1 mutual friend"
+    case x if x > 1 => s"$x mutual friends"
+  }
+}
 
 class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
@@ -39,7 +45,8 @@ class FriendRecommendationsEmailTip @Inject() (
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
-    abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true) flatMap {
+    val friendIdsOptF = abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOS_TO_QUERY, bePatient = true)
+    friendIdsOptF flatMap {
       case Some(userIds) if userIds.size >= MIN_RECOS_TO_SHOW =>
         getManyUserImageUrls(userIds: _*) map { imageUrls =>
           userIds.sortBy { friendUserId =>

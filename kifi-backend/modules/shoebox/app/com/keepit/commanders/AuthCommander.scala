@@ -297,6 +297,10 @@ class AuthCommander @Inject() (
         log.warn(s"[exchangeToken] failed to obtain exchange token. status=${res.statusText} resp=${res.body} oauth2Info=$oauth2Info; config=$config")
         oauth2Info
       }
+    } recover {
+      case t: Throwable =>
+        airbrakeNotifier.notify(s"[exchangeToken] Caught exception $t during exchange attempt. Cause=${t.getCause}. Fallback to $oauth2Info", t)
+        oauth2Info
     }
   }
 
