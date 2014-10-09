@@ -82,9 +82,9 @@ class WebsiteSearchController @Inject() (
         }
 
         augment(augmentationCommander, userId, kifiPlainResult).flatMap {
-          case (infos, scores) =>
-            val futureUsers = shoeboxClient.getBasicUsers(infos.flatMap(_.keeps.flatMap(_.keptBy)).distinct)
-            val libraries = getLibraryNames(libraryIndexer.getSearcher, infos.flatMap(_.keeps.flatMap(_.keptIn)).distinct).map {
+          case augmentedItems =>
+            val futureUsers = shoeboxClient.getBasicUsers(augmentedItems.flatMap(_.keepers).distinct)
+            val libraries = getLibraryNames(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries).distinct).map {
               case (libId, name) =>
                 libId -> BasicLibrary(Library.publicId(libId), name)
             }
@@ -92,8 +92,8 @@ class WebsiteSearchController @Inject() (
               users <- futureUsers
               summaries <- futureUriSummaries
             } yield JsArray(
-              (kifiPlainResult.hits zip infos).map {
-                case (hit, info) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), info, scores, users, libraries)
+              (kifiPlainResult.hits zip augmentedItems).map {
+                case (hit, augmentedItem) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), augmentedItem, users, libraries)
               }
             )
         }
@@ -148,59 +148,31 @@ class WebsiteSearchController @Inject() (
 
 object WebsiteSearchController {
 
-  import java.text.Normalizer
-  import scala.collection.mutable
-
   case class BasicLibrary(libId: PublicId[Library], name: String)
   object BasicLibrary {
     implicit val format = Json.format[BasicLibrary]
   }
 
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private def normalize(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
+  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentedItem: AugmentedItem, allUsers: Map[Id[User], BasicUser], allLibraries: Map[Id[Library], BasicLibrary]): JsObject = {
 
-  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentationInfo: AugmentationInfo, scores: AugmentationScores, users: Map[Id[User], BasicUser], libraries: Map[Id[Library], BasicLibrary]): JsObject = {
-    val (myRestrictedKeeps, moreRestrictedKeeps) = augmentationInfo.keeps.partition(_.keptBy == Some(userId))
-
-    // Keeps
-    val myKeeps = myRestrictedKeeps.flatMap(_.keptIn).sortBy(scores.byLibrary).map(libraries(_))
-
+    val myKeeps: Seq[BasicLibrary] = augmentedItem.myKeeps.map(myKeep => allLibraries(myKeep.keptIn.get))
     val moreKeeps = {
-      var uniqueKeepers = mutable.HashSet[Id[User]]()
-      uniqueKeepers += userId
-      moreRestrictedKeeps.sortBy(keep => (keep.keptBy.map(scores.byUser), keep.keptIn.map(scores.byLibrary))).collect {
+      import scala.collection.mutable
+      var uniqueKeepers = mutable.Set[Id[User]]()
+      augmentedItem.moreKeeps.collect {
         case RestrictedKeepInfo(_, keptIn, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
           uniqueKeepers += keeperId
-          Json.obj("user" -> users(keeperId), "library" -> keptIn.map(libraries(_)))
+          Json.obj("user" -> allUsers(keeperId), "library" -> keptIn.map(allLibraries(_)))
       }
     }
-
-    val otherKeeps = augmentationInfo.otherDiscoverableKeeps + augmentationInfo.otherPublishedKeeps
-
-    // Tags
-    val primaryTags = {
-      val primaryKeep = kifiShardHit.libraryId.flatMap { libId => augmentationInfo.keeps.find(_.keptIn.map(_.id == libId).getOrElse(false)) }
-      primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)))
-    }
-
-    val moreTags = {
-      var uniqueNormalizedTags = mutable.HashSet() ++ primaryTags.map(normalize)
-      augmentationInfo.keeps.map(_.tags).flatten.toSeq.sortBy(-scores.tagScores.getOrElse(_, 0f)).filter { tag =>
-        val normalizedTag = normalize(tag)
-        val showTag = !uniqueNormalizedTags.contains(normalizedTag)
-        uniqueNormalizedTags += normalizedTag
-        showTag
-      }
-    }
-
-    val tags = primaryTags ++ moreTags
+    val otherKeeps = augmentedItem.otherDiscoverableKeeps + augmentedItem.otherPublishedKeeps
 
     Json.obj(
       "title" -> kifiShardHit.title,
       "url" -> kifiShardHit.url,
       "score" -> kifiShardHit.finalScore,
       "summary" -> summary,
-      "tags" -> tags,
+      "tags" -> augmentedItem.tags,
       "myKeeps" -> myKeeps,
       "moreKeeps" -> moreKeeps,
       "otherKeeps" -> otherKeeps

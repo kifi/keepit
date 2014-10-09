@@ -86,14 +86,12 @@ trait SearchControllerUtil {
       Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, userId: Id[User], kifiPlainResult: KifiPlainResult): Future[(Seq[AugmentationInfo], AugmentationScores)] = {
+  def augment(augmentationCommander: AugmentationCommander, userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.augmentation(augmentationRequest).map { augmentationResponse =>
-      (items.map(augmentationResponse.infos(_)), augmentationResponse.scores)
-    }
+    augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
   }
 
   def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
