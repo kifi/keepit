@@ -146,6 +146,7 @@ angular.module('kifi')
           });
           scope.selection = scope.selection || {};
           scope.selection.library = _.find(scope.libraries, { 'name': 'Main Library' });
+          scope.libSelectTopOffset = 110;
         }
 
         scope.resetAndHide = function () {

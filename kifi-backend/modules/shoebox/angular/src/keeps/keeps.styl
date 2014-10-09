@@ -40,13 +40,13 @@
   &.two
     .kf-shadow-keep-last
       top: 40px
-    
+
   &.three
     .kf-shadow-keep-second
       top: 40px
     .kf-shadow-keep-last
       top: 80px
-    
+
   &.more
     .kf-shadow-keep-ellipsis
       top: 40px
@@ -103,30 +103,40 @@
   .kf-keep
     margin-top: 0
 
+//
+// Add keep modal
+//
 .kf-add-keep-body
   width: 500px
   text-align: left
   padding: 5px
 
 .kf-add-keep-input
-  width: 100%
+  width: 440px
+  margin: 10px 15px
+  border: 2px solid #e7eaee
+  border-radius: 6px
+  font-size: 12px
+  padding: 12px
+  box-sizing: border-box
 
 .kf-add-keep-hint
 .kf-add-keep-error
   color: textLightGrey
-  font-size: 15px
+  font-size: 13px
 
 .kf-add-keep-hint
   color: textLightGrey
 
 .kf-add-keep-error
   color: redColor
+  padding-left: 18px
 
 .kf-add-keep-private-container
   border: 1px dotted transparent
   padding: 2px
   display: inline-block
-  
+
 .kf-add-keep-private-container:focus
   border-color: #ddd
 
@@ -134,16 +144,6 @@
   margin-left: 10px
 
 .kf-add-keep-modal
-  input
-    border: defaultBorder
-    border-radius: 3px
-    font-size: 14px
-    padding: 10px
-    box-sizing: border-box
-    margin: 10px 0
-  /*[placeholder]:focus::-webkit-input-placeholder
-    color: transparent*/ // This makes it difficult to figure out what "Add a keep" is for
-
   .dialog-body-wrap
     margin-bottom: 0
 

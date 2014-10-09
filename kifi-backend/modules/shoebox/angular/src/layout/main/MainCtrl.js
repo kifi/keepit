@@ -5,9 +5,10 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
-  'modalService',
+  'modalService', 'libraryService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService, modalService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService,
+    modalService, libraryService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -15,6 +16,22 @@ angular.module('kifi')
     $scope.editMode = {
       enabled: false
     };
+
+    // For populating libraries in the import modals.
+    $scope.librariesEnabled = libraryService.isAllowed();
+
+    $scope.librariesEnabled = false;
+
+    if ($scope.librariesEnabled) {
+      libraryService.fetchLibrarySummaries(true).then(function () {
+        $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          return lib.access !== 'read_only';
+        });
+        $scope.selection = $scope.selection || {};
+        $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+        $scope.libSelectTopOffset = 220;
+      });
+    }
 
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
@@ -121,6 +138,46 @@ angular.module('kifi')
           break;
       }
     });
+
+    $scope.importBookmarksToLibrary = function (library) {
+      $scope.forceClose = true;
+
+      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // the next modal.
+      $scope.$evalAsync(function () {
+        // var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+        // if (!kifiVersion) {
+        //   modalService.open({
+        //     template: 'common/modal/importBookmarksErrorModal.tpl.html'
+        //   });
+        //   return;
+        // }
+
+        // $analytics.eventTrack('user_clicked_page', {
+        //   'type': 'browserImport',
+        //   'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
+        // });
+
+        // var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        // var message = 'import_bookmarks';
+        // if (makePublic) {
+        //   message = 'import_bookmarks_public';
+        // }
+        // if (event) {
+        //   event.source.postMessage(message, $scope.msgEvent.origin);
+        // } else {
+        //   $window.postMessage(message, '*');
+        // }
+
+        debugger;
+        modalService.open({
+          template: 'common/modal/importBookmarksInProgressModal.tpl.html',
+          scope: $scope
+        });
+
+      });
+    };
 
     $scope.importBookmarks = function (makePublic) {
       $scope.forceClose = true;
