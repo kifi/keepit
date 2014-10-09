@@ -24,7 +24,7 @@ object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int)
+case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, uniqueKeepers: Int = -1)
 object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }
