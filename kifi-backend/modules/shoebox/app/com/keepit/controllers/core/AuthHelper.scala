@@ -29,7 +29,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ ActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.{ UserRequest, ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -71,7 +71,7 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+  def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
       socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
@@ -245,17 +245,21 @@ class AuthHelper @Inject() (
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       {
         case efi: EmailPassFinalizeInfo =>
-          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
-          authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
-            case (user, email, newIdentity) =>
-              sw.stop()
-              sw.logTime()
-              finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-          }
+          handleEmailPassFinalizeInfo(efi)
       }
     )
+  }
+
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo)(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
+    val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
+    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+      case (user, email, newIdentity) =>
+        sw.stop()
+        sw.logTime()
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
+    }
   }
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {

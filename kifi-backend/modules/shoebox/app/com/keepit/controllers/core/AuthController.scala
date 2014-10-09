@@ -11,7 +11,8 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SocialId, UserIdentity, SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
+import com.kifi.macros.json
 
 import play.api.Play._
 import play.api.libs.json.{ JsNumber, Json }
@@ -21,7 +22,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.InviteCommander
+import com.keepit.commanders.{ AuthCommander, EmailPassFinalizeInfo, InviteCommander }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,7 +31,6 @@ import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, He
 import com.keepit.social.providers.ProviderController
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure }
 
 object AuthController {
   val LinkWithKey = "linkWith"
@@ -39,10 +39,41 @@ object AuthController {
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
 
+@json case class EmailSignupInfo(email: String)
+
+@json case class UserPassFinalizeInfo( // todo(ray): add followLibrary
+    private val email: String,
+    password: String,
+    firstName: String,
+    lastName: String,
+    picToken: Option[String],
+    picWidth: Option[Int],
+    picHeight: Option[Int],
+    cropX: Option[Int],
+    cropY: Option[Int],
+    cropSize: Option[Int]) {
+  val emailAddress = EmailAddress(email)
+}
+
+object UserPassFinalizeInfo {
+  implicit def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
+    EmailPassFinalizeInfo(
+      info.firstName,
+      info.lastName,
+      info.picToken,
+      info.picWidth,
+      info.picHeight,
+      info.cropX,
+      info.cropY,
+      info.cropSize
+    )
+}
+
 class AuthController @Inject() (
     db: Database,
     clock: Clock,
     authHelper: AuthHelper,
+    authCommander: AuthCommander,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     actionAuthenticator: ActionAuthenticator,
@@ -96,6 +127,47 @@ class AuthController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
       case Some(oauth2Info) =>
         authHelper.doAccessTokenSignup(providerName, oauth2Info)
+    }
+  }
+
+  // one-step sign-up
+  def emailSignup() = Action.async(parse.tolerantJson) { implicit request =>
+    log.info(s"body=${request.body}")
+    request.body.asOpt[UserPassFinalizeInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
+      case Some(info) =>
+        val hasher = Registry.hashers.currentHasher
+        val session = request.session
+        val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
+        authHelper.checkForExistingUser(info.emailAddress) collect {
+          case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
+            val identity = sui.credentials.get
+            val matches = hasher.matches(identity.passwordInfo.get, new String(info.password))
+            if (!matches) {
+              Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
+            } else {
+              val user = db.readOnlyMaster { implicit s => userRepo.get(sui.userId.get) }
+              if (user.state != UserStates.INCOMPLETE_SIGNUP) {
+                Authenticator.create(identity).fold(
+                  error => Future.successful(Status(INTERNAL_SERVER_ERROR)("0")),
+                  authenticator =>
+                    Future.successful(
+                      Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
+                        .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                        .withCookies(authenticator.toCookie)
+                    )
+                )
+              } else {
+                authHelper.handleEmailPassFinalizeInfo(info)(AuthenticatedRequest(identity, user.id.get, user, request))
+              }
+            }
+        } getOrElse {
+          val pInfo = hasher.hash(new String(info.password))
+          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, request.identityOpt, info.emailAddress, pInfo, isComplete = false)
+          val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+          authHelper.handleEmailPassFinalizeInfo(info)(AuthenticatedRequest(newIdentity, userId, user, request))
+        }
     }
   }
 

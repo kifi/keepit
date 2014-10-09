@@ -113,7 +113,7 @@ class AuthCommander @Inject() (
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
     email: EmailAddress, passwordInfo: PasswordInfo,
-    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = timing(s"[saveUserPasswordIdentity($userIdOpt, $email)]") {
+    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
@@ -201,7 +201,6 @@ class AuthCommander @Inject() (
     }
 
   def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
-    require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val resultFuture = SafeFuture {
