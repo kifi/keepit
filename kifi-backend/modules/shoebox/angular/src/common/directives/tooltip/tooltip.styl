@@ -1,0 +1,32 @@
+.kf-tooltip-body {
+  position: relative
+  z-index: 10000
+}
+
+.kf-tooltip-bg {
+  position: absolute
+  z-index: 9999
+  width: 100%
+  height: 100%
+}
+
+.kf-tooltip {
+  position: absolute
+  visibility: hidden
+  z-index: 9998
+  opacity: 0
+  transition: opacity 0.5s, visibility 0s 0.5s
+}
+
+
+.kf-tooltipped {
+  position: relative
+}
+
+.kf-tooltipped:hover {
+  .kf-tooltip {
+    transition: opacity 0.5s
+    visibility: visible
+    opacity: 1
+  }
+}
