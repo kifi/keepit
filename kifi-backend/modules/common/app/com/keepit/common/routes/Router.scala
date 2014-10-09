@@ -205,11 +205,6 @@ object Search extends Service {
 
     def searchWithConfig() = ServiceRoute(POST, "/internal/searchWithConfig")
 
-    def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/leaveOneOut", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
-    def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/allSubsets", Param("queryText", queryText), Param("stem", stem), Param("useSketch", useSketch))
-    def semanticSimilarity(query1: String, query2: String, stem: Boolean) = ServiceRoute(GET, "/internal/search/semanticVector/similarity", Param("query1", query1), Param("query2", query2), Param("stem", stem))
-    def visualizeSemanticVector() = ServiceRoute(POST, "/internal/search/semanticVector/visualize")
-    def semanticLoss(queryText: String) = ServiceRoute(GET, "/internal/search/semanticVector/semanticLoss", Param("queryText", queryText))
     def indexInfoList() = ServiceRoute(GET, "/internal/search/indexInfo/listAll")
     def updateUserGraph() = ServiceRoute(POST, "/internal/search/userGraph/update")
     def updateSearchFriendGraph() = ServiceRoute(POST, "/internal/search/searchFriendGraph/update")
