@@ -1,7 +1,5 @@
 package com.keepit.controllers.core
 
-import java.util.UUID
-
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import com.keepit.common.controller.{ ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator }
@@ -13,7 +11,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SocialId, UserIdentity, SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
 import com.kifi.macros.json
 
 import play.api.Play._
@@ -32,8 +30,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
 
-import scala.concurrent.{ Await, Future }
-import scala.util.{ Success, Failure }
+import scala.concurrent.Future
 
 object AuthController {
   val LinkWithKey = "linkWith"
