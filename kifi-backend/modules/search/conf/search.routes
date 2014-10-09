@@ -8,7 +8,7 @@ GET         /admin/search/instance         @com.keepit.controllers.search.Search
 ##########################################
 # Note:     /search will be deprecated when libraries launch
 GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
-GET         /ext/search                    @com.keepit.controllers.ext.ExtSearchController.search2(v: KifiExtVersion, q: String, n: Int, f: Option[String], u: Option[String], c: Option[String], debug: Option[String])
+GET         /ext/search                    @com.keepit.controllers.ext.ExtSearchController.search2(q: String, n: Int ?= 5, f: Option[String], u: Option[String], c: Option[String], v: Option[KifiExtVersion], debug: Option[String])
 
 # Note:     /search/warmUp is deprecated, was last used in extension 3.2.16
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
