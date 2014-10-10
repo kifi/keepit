@@ -20,8 +20,6 @@ angular.module('kifi')
     // For populating libraries in the import modals.
     $scope.librariesEnabled = libraryService.isAllowed();
 
-    $scope.librariesEnabled = false;
-
     if ($scope.librariesEnabled) {
       libraryService.fetchLibrarySummaries(true).then(function () {
         $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
@@ -110,10 +108,18 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      modalService.open({
-        template: 'common/modal/importBookmarksModal.tpl.html',
-        scope: $scope
-      });
+      if ($scope.librariesEnabled) {
+         modalService.open({
+          template: 'common/modal/importBookmarksLibraryModal.tpl.html',
+          scope: $scope
+        });
+      } else {
+        modalService.open({
+          template: 'common/modal/importBookmarksModal.tpl.html',
+          scope: $scope
+        });
+      }
+
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
@@ -170,11 +176,17 @@ angular.module('kifi')
         //   $window.postMessage(message, '*');
         // }
 
-        debugger;
+        if ($scope.librariesEnabled) {
+         modalService.open({
+          template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
+          scope: $scope
+        });
+      } else {
         modalService.open({
           template: 'common/modal/importBookmarksInProgressModal.tpl.html',
           scope: $scope
         });
+      }
 
       });
     };
