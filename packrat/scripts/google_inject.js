@@ -669,6 +669,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       users[0] = $.extend({secret: true}, users[0]);
     }
     return {
+      url: hit.url,
       titleHtml: hit.title ?
         boldSearchTerms(hit.title, hit.matches.title) :
         formatTitleFromUrl(hit.url, hit.matches.url, bolded),
