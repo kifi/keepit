@@ -262,7 +262,7 @@ class LibraryCommander @Inject() (
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
           val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
-            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = true))
+            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = library.isDisjoint))
           keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
         }
         val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
