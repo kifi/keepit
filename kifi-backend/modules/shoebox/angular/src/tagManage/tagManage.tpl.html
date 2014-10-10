@@ -6,7 +6,6 @@
       <div class="manage-tag-container">
       	<div class="manage-tag-header">
 
-
       		<div class="manage-tag-search-box">
       			<div class="manage-tag-input-box" ng-class="{ 'focused': isFilterFocused }">
 			        <a class="manage-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
@@ -25,13 +24,13 @@
       		<ul class="manage-tag-list">
       			<li class="manage-tag-row" ng-repeat="tag in tagsToShow">
       				<div class="manage-tag-row-name-section">
-                                    <div class="manage-tag-row-name">{{tag.name}}</div>
-                              </div>
-                              <span class="manage-tag-row-num-keeps-section">
-                                    <ng-pluralize count="tag.keeps | number:0"
-                                          when="{'0': 'no keeps', 'one': '1 keep', 'other':'{} keeps'}">
-                                    </ng-pluralize>
-                              </span>
+                <div class="manage-tag-row-name">{{tag.name}}</div>
+              </div>
+              <span class="manage-tag-row-num-keeps-section">
+                <ng-pluralize count="tag.keeps | number:0"
+                      when="{'0': 'no keeps', 'one': '1 keep', 'other':'{} keeps'}">
+                </ng-pluralize>
+              </span>
       				<span class="manage-tag-row-links-section">
       					<span class="manage-tag-row-link-convert" kf-keep-to-library-widget ng-click="changeSelection(tag.name); showWidget()">
       						Convert to library
@@ -44,7 +43,7 @@
       		</ul>
       	</div>
 
-            <span ng-click="manageTagScrollNext()" ng-hide="isTagScrollDisabled()" class="kf-show-more">Show more</span>
+        <span ng-click="manageTagScrollNext()" ng-hide="isTagScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 
     </div>

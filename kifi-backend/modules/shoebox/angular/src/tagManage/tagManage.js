@@ -33,8 +33,8 @@ angular.module('kifi')
     };
 
     $scope.$watch(function () {
-        return $scope.selectedSort;
-      }, function () {
+      return $scope.selectedSort;
+    }, function () {
       manageTagService.reset();
       manageTagService.getMore($scope.selectedSort);
     });
@@ -113,6 +113,7 @@ angular.module('kifi')
     // Manage Tags
     //
     $scope.removeTag = function (tag) {
+      // todo (aaron): Get a nicer looking window thing
       var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
       if (choice) {
         tagService.remove(tag);
