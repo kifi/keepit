@@ -67,5 +67,15 @@ class LongArraySetTest extends Specification {
       // iterator
       s.iterator.toSet === positive
     }
+
+    "iterate using foreachLong" in {
+      val s = LongArraySet.from(unsorted)
+      s.size === 10
+
+      var result = Set.empty[Long]
+      s.foreachLong { v => result += v }
+
+      result === s
+    }
   }
 }

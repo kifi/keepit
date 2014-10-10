@@ -19,8 +19,8 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
   def findIndex(key: Long): Int
 
   def foreachLong(f: Long => Unit): Unit = {
-    var i = 0;
-    while (i < a.length) {
+    var i = 0
+    while (i < a.length) { // use while for performance
       f(a(i))
       i += 1
     }
