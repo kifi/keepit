@@ -102,11 +102,11 @@ angular.module('kifi')
                 returnAction();
               }
             })['catch'](function (err) {
-              $log.log('Save library: fetch new summaries errored: ' + err);
+              $log.log('Save library: fetch new summaries errored: ' + JSON.stringify(err));
             });
           })['catch'](function (err) {
             submitting = false;
-            $log.log('Save library: submit is false on error: ' + err);
+            $log.log('Save library: submit is false on error: ' + JSON.stringify(err));
 
             var error = err.data && err.data.error;
             $log.log('Save library error: ' + error);
