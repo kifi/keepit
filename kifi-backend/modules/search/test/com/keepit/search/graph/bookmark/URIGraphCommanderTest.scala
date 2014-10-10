@@ -28,7 +28,7 @@ class URIGraphCommanderTest extends Specification with SearchTestInjector with S
         saveBookmarksByURI(user1_private, isPrivate = true)
 
         val store = mkStore(uris)
-        val (shardedUriGraphIndexer, _, _, userGraphIndexer, _, mainSearcherFactory, _, _) = initIndexes(store)
+        val (shardedUriGraphIndexer, _, _, userGraphIndexer, _, mainSearcherFactory, _, _, _) = initIndexes(store)
         shardedUriGraphIndexer.update()
         userGraphIndexer.update()
 

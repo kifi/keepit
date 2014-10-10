@@ -29,7 +29,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
   def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: KifiShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
     val uriId = augmentedItem.uri
     val isMyBookmark = ((hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0)
-    val isFriendsBookmark = (!isMyBookmark && (hit.visibility & Visibility.NETWORK) != 0)
+    val isFriendsBookmark = ((hit.visibility & Visibility.NETWORK) != 0)
 
     shards.find(_.contains(uriId)) match {
       case Some(shard) =>
