@@ -89,9 +89,10 @@ angular.module('kifi')
             scope.$error = {};
 
             submitting = false;
-            $log.log('Save library: submit is false');
+            $log.log('Save library: submit is false on good response.');
 
             libraryService.fetchLibrarySummaries(true).then(function () {
+              $log.log('Save library: fetched new summaries.');
               $rootScope.$emit('changedLibrary');
               scope.close();
 
@@ -100,12 +101,15 @@ angular.module('kifi')
               } else {
                 returnAction();
               }
+            })['catch'](function (err) {
+              $log.log('Save library: fetch new summaries errored: ' + err);
             });
           })['catch'](function (err) {
             submitting = false;
-            $log.log('Save library: submit is false');
+            $log.log('Save library: submit is false on error: ' + err);
 
             var error = err.data && err.data.error;
+            $log.log('Save library error: ' + error);
             switch (error) {
               case 'library name already exists for user':  // deprecated
               case 'library_name_exists':
@@ -121,6 +125,9 @@ angular.module('kifi')
               case 'invalid library slug':  // deprecated
               case 'invalid_slug':
                 scope.$error.general = 'The URL you picked isn\'t valid. Try using only letters and numbers.';
+                break;
+              default:
+                scope.close();
                 break;
             }
           });
