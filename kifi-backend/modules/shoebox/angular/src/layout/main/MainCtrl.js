@@ -128,10 +128,17 @@ angular.module('kifi')
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
-      modalService.open({
-        template: 'common/modal/importBookmarkFileModal.tpl.html',
-        scope: $scope
-      });
+      if ($scope.librariesEnabled) {
+         modalService.open({
+          template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
+          scope: $scope
+        });
+      } else {
+        modalService.open({
+          template: 'common/modal/importBookmarkFileModal.tpl.html',
+          scope: $scope
+        });
+      }
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
