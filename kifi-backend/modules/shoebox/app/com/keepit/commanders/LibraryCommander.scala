@@ -624,6 +624,15 @@ class LibraryCommander @Inject() (
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
+
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {
+    db.readWrite { implicit s =>
+      libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
+        libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
+      }
+    }
+  }
+
 }
 
 sealed abstract class LibraryError(val message: String)
