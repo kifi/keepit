@@ -678,7 +678,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       users: users,
       usersMore: hit.keepersTotal - users.length,
       usersPlural: hit.keepersTotal > 1,
-      userName: hit.keepersTotal === 1 && users.length ? (users[0].id === response.me.id ? 'You' : users[0].firstName + ' ' + users[0].lastName) : '',
+      usersName: hit.keepersTotal === 1 && users.length ? (users[0].id === response.me.id ? 'You' : users[0].firstName + ' ' + users[0].lastName) : '',
       libraries: hit.libraries,
       librariesMore: hit.librariesOmitted,
       tags: hit.tags
@@ -687,23 +687,6 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   function intoOrElse(arr, other) {
     return function (i) { return i >= 0 ? arr[i] : other; };
-  }
-
-  function formatCountHtml(kept, priv, friends, others) {
-    return kept && !friends && !others ?
-      "You kept this" + priv :
-      [kept ? "You" + priv : "", friends, others]
-        .filter(function(v) {return v})
-        .join(" + ") + " kept this";
-  }
-
-  function plural(n, term) {
-    return n + " " + term + (n == 1 ? "" : "s");
-  }
-
-  function pluralLambda(text, render) {
-    text = render(text);
-    return text + (text.substr(0, 2) == "1 " ? "" : "s");
   }
 
   function boldSearchTerms(text, matches) {
