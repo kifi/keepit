@@ -70,7 +70,7 @@ angular.module('kifi')
     };
 
     $scope.navigateToManageTags = function () {
-      $location.path('/tags');
+      $location.path('/tags/manage');
     };
 
   }
