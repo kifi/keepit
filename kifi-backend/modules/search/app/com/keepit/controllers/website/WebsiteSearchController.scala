@@ -84,13 +84,13 @@ class WebsiteSearchController @Inject() (
         augment(augmentationCommander, userId, kifiPlainResult).flatMap {
           case augmentedItems =>
             val futureUsers = shoeboxClient.getBasicUsers(augmentedItems.flatMap(_.keepers).distinct)
-            val libraries = getBasicLibraries(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries).toSet)
+            val allLibraries = getBasicLibraries(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries.map(_._1)).toSet)
             for {
-              users <- futureUsers
+              allUsers <- futureUsers
               summaries <- futureUriSummaries
             } yield JsArray(
               (kifiPlainResult.hits zip augmentedItems).map {
-                case (hit, augmentedItem) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), augmentedItem, users, libraries)
+                case (hit, augmentedItem) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), augmentedItem, allUsers, allLibraries)
               }
             )
         }

@@ -89,7 +89,7 @@ class ExtSearchController @Inject() (
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       augment(augmentationCommander, userId, kifiPlainResult).flatMap { augmentedItems =>
         val allKeepersShown = augmentedItems.map(_.relatedKeepers.take(maxKeepersShown))
-        val allLibrariesShown = augmentedItems.map(_.keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _) => (libraryId, keeperId) }.take(maxLibrariesShown))
+        val allLibrariesShown = augmentedItems.map(_.libraries.take(maxLibrariesShown))
         val uniqueUsersShown = (allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).distinct
         val futureUsers = shoeboxClient.getBasicUsers(uniqueUsersShown.filterNot(_ == userId))
         val libraryById = getBasicLibraries(libraryIndexer.getSearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
@@ -107,7 +107,7 @@ class ExtSearchController @Inject() (
               val keepersTotal = augmentedItem.keepersTotal
 
               val librariesShown = allLibrariesShown(itemIndex).map { case (libraryId, keeperId) => (libraryIndexById(libraryId), userIndexById(keeperId)) }
-              val librariesOmitted = augmentedItem.keeps.size - librariesShown.size
+              val librariesOmitted = augmentedItem.libraries.size - librariesShown.size
 
               val tagsShown = augmentedItem.tags.take(maxTagsShown)
               val tagsOmitted = augmentedItem.tags.size - tagsShown.size
