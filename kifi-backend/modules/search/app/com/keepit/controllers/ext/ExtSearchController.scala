@@ -9,16 +9,13 @@ import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
-import com.keepit.search.{ RestrictedKeepInfo, AugmentationCommander, SearchCommander }
+import com.keepit.search.{ AugmentationCommander, SearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import com.keepit.common.crypto.PublicIdConfiguration
 import play.api.libs.json.JsBoolean
 import play.api.libs.json.JsObject
-
-import java.math.BigDecimal
 
 object ExtSearchController {
   private[ExtSearchController] val maxKeepersShown = 20
@@ -26,7 +23,8 @@ object ExtSearchController {
   private[ExtSearchController] val maxTagsShown = 15
 
   @inline private def canBeOmitted(value: JsValue): Boolean = value match {
-    case JsNull | JsBoolean(false) | JsString("") | JsArray(Seq()) | JsNumber(BigDecimal.ZERO) => true
+    case JsNull | JsBoolean(false) | JsString("") | JsArray(Seq()) => true
+    case JsNumber(zero) if zero.equals(0) => true
     case _ => false
   }
 
