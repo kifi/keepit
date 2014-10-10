@@ -189,8 +189,8 @@ class AuthHelper @Inject() (
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
 
-    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
     libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
