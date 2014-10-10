@@ -515,6 +515,8 @@ class LibraryCommander @Inject() (
           badKeeps += keep -> LibraryError.AlreadyExistsInDest
         }
       }
+      if (badKeeps.size != keeps.size)
+        libraryRepo.updateLastKept(library.id.get)
     }
     badKeeps.toSeq
   }
