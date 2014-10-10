@@ -415,6 +415,9 @@ div.kifi-res-menu-item {
   background-size: contain;
   border-radius: 50%;
 }
+.kifi-res-user:not(.kifi-secret) {
+  box-shadow: inset 0 0 1px rgba(0,0,0,.2);
+}
 .kifi-res-user.kifi-secret {
   width: 43px;
   -moz-box-sizing: border-box;
@@ -459,7 +462,6 @@ div.kifi-res-menu-item {
   position: relative;
   vertical-align: middle;
   height: 23px;
-  max-width: 150px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -509,7 +511,6 @@ div.kifi-res-menu-item {
 .kifi-res-tag {
   display: inline-block;
   margin-left: 0;
-  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

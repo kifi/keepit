@@ -20,7 +20,7 @@
       {{#usersMore}}
         <a class="kifi-res-users-more" href="javascript:">+ {{usersMore}}</a>
       {{/usersMore}}
-      <span class="kifi-res-users-kept-this">kept this</span>
+      <span class="kifi-res-users-kept-this">{{userName}} kept this</span>
     {{/users.length}}
     {{^users.length}}
       <span class="kifi-res-users-kept-this">{{usersMore}} {{#usersPlural}}people{{/usersPlural}}{{^usersPlural}}person{{/usersPlural}} kept this</span>

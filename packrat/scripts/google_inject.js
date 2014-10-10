@@ -678,8 +678,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       users: users,
       usersMore: hit.keepersTotal - users.length,
       usersPlural: hit.keepersTotal > 1,
+      userName: hit.keepersTotal === 1 && users.length ? (users[0].id === response.me.id ? 'You' : users[0].firstName + ' ' + users[0].lastName) : '',
       libraries: hit.libraries,
-      librariesMore: hit.librariesOmitted - hit.libraries.length,
+      librariesMore: hit.librariesOmitted,
       tags: hit.tags
     };
   }
