@@ -131,7 +131,7 @@ class ExtSearchController @Inject() (
       }
     }
 
-    val augmentationEnumerator = safelyFlatten(augmentationFuture.map(augmentationJson => Enumerator(Json.stringify(augmentationJson)))(immediate))
+    val augmentationEnumerator = reactiveEnumerator(Seq(augmentationFuture.map(Json.stringify)(immediate)))
 
     val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(augmentationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
 
