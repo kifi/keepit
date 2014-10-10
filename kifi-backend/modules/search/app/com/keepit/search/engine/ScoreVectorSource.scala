@@ -168,13 +168,14 @@ class UriFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
-      val uriId = uriIdDocValues.get(docId)
       val libId = libraryIdDocValues.get(docId)
+      val visibility = keepVisibilityEvaluator(docId, libId)
 
-      if (idFilter.findIndex(uriId) < 0) {
-        val visibility = keepVisibilityEvaluator(docId, libId)
+      if (visibility != Visibility.RESTRICTED) {
+        val uriId = uriIdDocValues.get(docId)
 
-        if (visibility != Visibility.RESTRICTED) {
+        if (idFilter.findIndex(uriId) < 0) {
+
           val boost = {
             if ((visibility & Visibility.OWNER) != 0) getRecencyBoost(recencyScorer, docId) + 0.2f // recency boost [1.0, recencyBoost]
             else if ((visibility & Visibility.MEMBER) != 0) 1.1f
@@ -207,9 +208,10 @@ class UriFromKeepsScoreVectorSource(
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
           val uriId = uriIdDocValues.get(docId)
-          val keepId = idMapper.getId(docId)
 
           if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+            val keepId = idMapper.getId(docId)
+
             // write to the buffer
             output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
             writer.putLong(uriId, keepId)

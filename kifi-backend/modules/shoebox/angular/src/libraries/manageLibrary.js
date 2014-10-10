@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManageLibrary', ['$location', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService',
-  function ($location, $window, $rootScope, friendService, libraryService, profileService) {
+.directive('kfManageLibrary', ['$location', '$log', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService',
+  function ($location, $log, $window, $rootScope, friendService, libraryService, profileService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -67,6 +67,7 @@ angular.module('kifi')
 
         scope.saveLibrary = function () {
           if (submitting) {
+            $log.log('Save library: returning because submitting');
             return;
           }
 
@@ -76,6 +77,7 @@ angular.module('kifi')
           }
 
           submitting = true;
+          $log.log('Save library: submit is true');
           var promise;
           if (scope.modifyingExistingLibrary && scope.library.id) {
             promise = libraryService.modifyLibrary(scope.library);
@@ -85,7 +87,10 @@ angular.module('kifi')
 
           promise.then(function (resp) {
             scope.$error = {};
+
             submitting = false;
+            $log.log('Save library: submit is false');
+
             libraryService.fetchLibrarySummaries(true).then(function () {
               $rootScope.$emit('changedLibrary');
               scope.close();
@@ -98,6 +103,8 @@ angular.module('kifi')
             });
           })['catch'](function (err) {
             submitting = false;
+            $log.log('Save library: submit is false');
+
             var error = err.data && err.data.error;
             switch (error) {
               case 'library name already exists for user':  // deprecated

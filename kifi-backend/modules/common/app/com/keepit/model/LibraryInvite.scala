@@ -64,9 +64,9 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
 
   def generatePassPhrase(): String = {
     // each word has length 4-8
-    val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length));
-    val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length));
-    val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length));
+    val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length))
+    val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length))
+    val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length))
     randomAdverb + " " + randomAdjective + " " + randomNoun
   }
 }
@@ -90,7 +90,8 @@ object HashedPassPhrase {
       new Writes[HashedPassPhrase] { def writes(o: HashedPassPhrase) = JsString(o.value) })
 
   def generateHashedPhrase(value: String): HashedPassPhrase = {
-    HashedPassPhrase(CryptoSupport.generateHexSha256(value))
+    val cleaned = value.toLowerCase.replaceAll("[^a-z]", "")
+    HashedPassPhrase(CryptoSupport.generateHexSha256(cleaned))
   }
 }
 
