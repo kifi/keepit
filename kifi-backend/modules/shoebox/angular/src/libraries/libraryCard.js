@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -142,6 +142,10 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
+          if (platformService.isSupportedMobilePlatform()) {
+            platformService.goToAppOrStore($location.absUrl());
+            return;
+          }
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
               // TODO(yiping): make a better error message. One idea is to update
