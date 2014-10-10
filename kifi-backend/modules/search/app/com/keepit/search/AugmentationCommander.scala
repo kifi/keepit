@@ -22,7 +22,6 @@ import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import java.text.Normalizer
-import com.keepit.controllers.util.SearchControllerUtil.BasicLibrary
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -199,7 +198,7 @@ class AugmentationCommanderImpl @Inject() (
   }
 }
 
-case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
+class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
   def isSecret(isSecretLibrary: Id[Library] => Boolean) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(isSecretLibrary)
@@ -207,7 +206,7 @@ case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds:
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
   private lazy val sortedKeeps = info.keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
-  lazy val (myKeeps, moreKeeps) = AugmentedItem.classifyKeeps(userId, friendIds, libraryIds, sortedKeeps)
+  lazy val (myKeeps, moreKeeps) = AugmentedItem.classifyKeeps(userId, allFriends, allLibraries, sortedKeeps)
 
   def keeps = myKeeps ++ moreKeeps
   def otherPublishedKeeps: Int = info.otherPublishedKeeps
@@ -218,6 +217,7 @@ case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds:
   lazy val libraries = sortedKeeps.collect { case RestrictedKeepInfo(_, Some(libraryId), _, _) => libraryId }
 
   // Keepers
+
   lazy val keepers = {
     val uniqueKeepers = MutableSet[Id[User]]()
     sortedKeeps.collect {
@@ -226,7 +226,10 @@ case class AugmentedItem(userId: Id[User], friendIds: Set[Id[User]], libraryIds:
         keeperId
     }
   }
-  lazy val friends = keepers.filter(friendIds.contains)
+
+  lazy val (relatedKeepers, otherKeepers) = keepers.partition(keeperId => allFriends.contains(keeperId) || userId == keeperId)
+
+  def keepersTotal = info.keepersTotal
 
   // Tags
   private lazy val primaryTags = primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
@@ -266,4 +269,7 @@ object AugmentedItem {
   private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
   @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
+  def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) = {
+    new AugmentedItem(userId, allFriends, allLibraries, scores)(item, info)
+  }
 }
