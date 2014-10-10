@@ -19,7 +19,7 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  private[library] def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
+  def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     val fetchSize = commitBatchSize
     fetchIndexables(sequenceNumber, fetchSize).map {

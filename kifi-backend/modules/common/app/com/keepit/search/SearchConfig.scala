@@ -44,7 +44,7 @@ object SearchConfig {
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "0",
       "myLibraryBoost" -> "1.5",
-      "newEngine" -> "false"
+      "newEngine" -> "true"
     )
   private[this] val descriptions =
     Map[String, String](
