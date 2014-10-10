@@ -24,7 +24,7 @@
       		<ul class="manage-tag-list">
       			<li class="manage-tag-row" ng-repeat="tag in tagsToShow">
       				<div class="manage-tag-row-name-section">
-                <div class="manage-tag-row-name">{{tag.name}}</div>
+                <div class="manage-tag-row-name" ng-click="navigateToTag(tag.name)">{{tag.name}}</div>
               </div>
               <span class="manage-tag-row-num-keeps-section">
                 <ng-pluralize count="tag.keeps | number:0"

@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location',
+  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location) {
     $scope.selectedSort = 'name';
 
     $scope.libraries = [];
@@ -55,7 +55,7 @@ angular.module('kifi')
             return lib.access !== 'read_only';
           });
           $scope.selection = $scope.selection || {};
-          $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+          $scope.selection.library = _.find($scope.libraries, { 'kind': 'system_main' });
         });
       }
     });
@@ -118,6 +118,12 @@ angular.module('kifi')
         tagService.remove(tag);
         _.remove($scope.tagsToShow, function(t) { return t === tag; });
       }
+    };
+
+    $scope.navigateToTag = function (tagName) {
+      debugger;
+      //$location.path('/find?q=tag:' + tagName);
+      $location.path('/find').search('q','tag:' + tagName);
     };
 
   }
