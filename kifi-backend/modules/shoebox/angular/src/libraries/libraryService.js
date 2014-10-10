@@ -168,7 +168,7 @@ angular.module('kifi')
       },
 
       createLibrary: function (opts) {
-        var required = ['name', 'visibility', 'description', 'slug'];
+        var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
           return opts[v] === undefined;
         });
@@ -180,7 +180,7 @@ angular.module('kifi')
       },
 
       modifyLibrary: function (opts) {
-        var required = ['name', 'visibility', 'description', 'slug'];
+        var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
           return opts[v] === undefined;
         });
