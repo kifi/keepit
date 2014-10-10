@@ -167,7 +167,6 @@ class AuthController @Inject() (
 
   // one-step sign-up
   def emailSignup() = Action.async(parse.tolerantJson) { implicit request =>
-    log.info(s"body=${request.body}")
     request.body.asOpt[UserPassFinalizeInfo] match {
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
