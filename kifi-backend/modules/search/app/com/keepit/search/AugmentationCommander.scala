@@ -205,22 +205,20 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
-  private lazy val sortedKeeps = info.keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
-  lazy val (myKeeps, moreKeeps) = AugmentedItem.classifyKeeps(userId, allFriends, allLibraries, sortedKeeps)
-
-  def keeps = myKeeps ++ moreKeeps
+  lazy val (myKeeps, moreKeeps) = AugmentedItem.sortKeeps(userId, allFriends, allLibraries, scores, info.keeps)
+  lazy val keeps = myKeeps ++ moreKeeps
   def otherPublishedKeeps: Int = info.otherPublishedKeeps
   def otherDiscoverableKeeps: Int = info.otherDiscoverableKeeps
 
   // Libraries
 
-  lazy val libraries = sortedKeeps.collect { case RestrictedKeepInfo(_, Some(libraryId), _, _) => libraryId }
+  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _) => (libraryId, keeperId) }
 
   // Keepers
 
   lazy val keepers = {
     val uniqueKeepers = MutableSet[Id[User]]()
-    sortedKeeps.collect {
+    keeps.collect {
       case RestrictedKeepInfo(_, _, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
         uniqueKeepers += keeperId
         keeperId
@@ -248,7 +246,10 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 }
 
 object AugmentedItem {
-  private[AugmentedItem] def classifyKeeps(userId: Id[User], friends: Set[Id[User]], libraries: Set[Id[Library]], sortedKeeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
+  private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
+
+    val sortedKeeps = keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
+
     val myKeeps = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyLibraries = new ListBuffer[RestrictedKeepInfo]()
     val keepsFromMyFriends = new ListBuffer[RestrictedKeepInfo]()
