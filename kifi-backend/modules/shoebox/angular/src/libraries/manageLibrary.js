@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfManageLibrary', ['$location', '$log', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService',
-  function ($location, $log, $window, $rootScope, friendService, libraryService, profileService) {
+.directive('kfManageLibrary', ['$location', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService',
+  function ($location, $window, $rootScope, friendService, libraryService, profileService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -67,7 +67,6 @@ angular.module('kifi')
 
         scope.saveLibrary = function () {
           if (submitting) {
-            $log.log('Save library: returning because submitting');
             return;
           }
 
@@ -77,7 +76,6 @@ angular.module('kifi')
           }
 
           submitting = true;
-          $log.log('Save library: submit is true');
           var promise;
           if (scope.modifyingExistingLibrary && scope.library.id) {
             promise = libraryService.modifyLibrary(scope.library);
@@ -89,10 +87,8 @@ angular.module('kifi')
             scope.$error = {};
 
             submitting = false;
-            $log.log('Save library: submit is false on good response.');
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $log.log('Save library: fetched new summaries.');
               $rootScope.$emit('changedLibrary');
               scope.close();
 
@@ -101,15 +97,11 @@ angular.module('kifi')
               } else {
                 returnAction();
               }
-            })['catch'](function (err) {
-              $log.log('Save library: fetch new summaries errored: ' + JSON.stringify(err));
             });
           })['catch'](function (err) {
             submitting = false;
-            $log.log('Save library: submit is false on error: ' + JSON.stringify(err));
 
             var error = err.data && err.data.error;
-            $log.log('Save library error: ' + error);
             switch (error) {
               case 'library name already exists for user':  // deprecated
               case 'library_name_exists':
