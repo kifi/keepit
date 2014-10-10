@@ -244,7 +244,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numCollaborators":0,
              |"numFollowers":0
            |},
-           |"access":"owner"
+           |"membership":"owner"
           }""".stripMargin))
 
         val user2 = db.readWrite { implicit s =>
@@ -280,7 +280,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numCollaborators":0,
              |"numFollowers":0
            |},
-           |"access":"none"
+           |"membership":"none"
           }""".stripMargin))
       }
     }
@@ -363,7 +363,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numCollaborators":0,
                |"numFollowers":0
              |},
-             |"access":"owner"
+             |"membership":"owner"
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
