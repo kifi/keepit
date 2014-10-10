@@ -240,6 +240,10 @@ angular.module('kifi')
         return $http.post(routeService.authIntoLibrary(username, slug, authToken), {'passPhrase': passPhrase}).then(function (resp) {
           return resp;
         });
+      },
+
+      copyKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName));
       }
     };
 

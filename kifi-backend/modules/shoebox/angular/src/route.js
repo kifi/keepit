@@ -41,6 +41,9 @@ angular.module('kifi')
     }).when('/keep/:keepId', {
       templateUrl: 'keep/keepView.tpl.html',
       controller: 'KeepViewCtrl'
+    }).when('/tags', {
+      templateUrl: 'tagManage/tagManage.tpl.html',
+      controller: 'ManageTagCtrl'
     })
     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
     .when('/:username/:librarySlug', {

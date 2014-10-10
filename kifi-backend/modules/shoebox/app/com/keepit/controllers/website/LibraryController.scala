@@ -98,7 +98,7 @@ class LibraryController @Inject() (
       }.flatten.getOrElse {
         "none"
       }
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "access" -> accessStr))
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
@@ -121,7 +121,7 @@ class LibraryController @Inject() (
             }.flatten.getOrElse {
               "none"
             }
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "access" -> accessStr))
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })
       case Left((respCode, msg)) =>

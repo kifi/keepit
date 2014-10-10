@@ -11,6 +11,8 @@ angular.module('kifi')
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
        *  selection - an object whose 'library' property will be the selected library.
+       * Optional:
+       *  clickAction() - a function that can be called once a library is selected
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -67,6 +69,9 @@ angular.module('kifi')
           // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
+            if (_.isFunction(scope.clickAction)) {
+              scope.clickAction();
+            }
             return;
           }
         }
