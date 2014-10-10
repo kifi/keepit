@@ -121,8 +121,6 @@ angular.module('kifi')
     };
 
     $scope.navigateToTag = function (tagName) {
-      debugger;
-      //$location.path('/find?q=tag:' + tagName);
       $location.path('/find').search('q','tag:' + tagName);
     };
 
