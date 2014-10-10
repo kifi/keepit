@@ -21,8 +21,8 @@ import play.api.libs.json.JsObject
 import java.math.BigDecimal
 
 object ExtSearchController {
-  private[ExtSearchController] val maxKeepersShown = 15
-  private[ExtSearchController] val maxLibrariesShown = 15
+  private[ExtSearchController] val maxKeepersShown = 20
+  private[ExtSearchController] val maxLibrariesShown = 10
   private[ExtSearchController] val maxTagsShown = 15
 
   @inline private def canBeOmitted(value: JsValue): Boolean = value match {
