@@ -60,6 +60,7 @@ class AuthHelper @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
+    libraryCommander: LibraryCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     secureSocialClientIds: SecureSocialClientIds,
@@ -189,6 +190,8 @@ class AuthHelper @Inject() (
     }
 
     libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
+    libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
@@ -222,14 +225,25 @@ class AuthHelper @Inject() (
       formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
       {
         case sfi: SocialFinalizeInfo =>
-          require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-          val identity = request.identityOpt.get
-          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-          val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
-          finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, None)
+          handleSocialFinalizeInfo(sfi, None)
       })
+  }
+
+  def doTokenFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
+    request.body.asOpt[TokenFinalizeInfo] match {
+      case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
+      case Some(info) => handleSocialFinalizeInfo(info, info.libraryPublicId)
+    }
+  }
+
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: Request[JsValue]): Result = {
+    require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+    val identity = request.identityOpt.get
+    val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
+    val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
