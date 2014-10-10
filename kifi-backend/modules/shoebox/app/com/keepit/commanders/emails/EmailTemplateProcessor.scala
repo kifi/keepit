@@ -12,11 +12,12 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName }
-import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, UserRepo, User }
+import com.keepit.model.{ Library, LibraryRepo, NotificationCategory, UserEmailAddressRepo, UserRepo, User }
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsValue }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
+import views.html.admin.library
 
 import scala.concurrent.Future
 
@@ -35,6 +36,7 @@ trait EmailTemplateProcessor {
 
 class EmailTemplateProcessorImpl @Inject() (
     db: Database,
+    libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     emailAddressRepo: UserEmailAddressRepo,
@@ -44,7 +46,7 @@ class EmailTemplateProcessorImpl @Inject() (
 
   /* for the lack of a better name, this is just a trait that encapsulates
      the type of object(s) needed to replace a placeholder */
-  trait NeededObject
+  sealed trait NeededObject
 
   object NothingNeeded extends NeededObject
 
@@ -52,7 +54,10 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class UserNeeded(id: Id[User]) extends NeededObject
 
-  case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String])
+  case class LibraryNeeded(id: Id[Library]) extends NeededObject
+
+  case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
+    libraries: Map[Id[Library], Library])
 
   def process(emailToSend: EmailToSend) = {
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
@@ -67,23 +72,29 @@ class EmailTemplateProcessorImpl @Inject() (
         case Right(fromNameStr) => fromNameStr
       }
 
-      val needs = getNeededObjects(htmlBody.body, emailToSend) ++
-        textBody.map { text => getNeededObjects(text.body, emailToSend) }.getOrElse(Set.empty) ++
-        getNeededObjects(emailToSend.subject, emailToSend) ++
-        fromName.map { text => getNeededObjects(text, emailToSend) }
+      val needs: Set[NeededObject] = {
+        val needsByHtml = getNeededObjects(htmlBody.body, emailToSend)
+        val needsByText = textBody map (text => getNeededObjects(text.body, emailToSend)) getOrElse Set.empty
+        val needsBySubject = getNeededObjects(emailToSend.subject, emailToSend)
+        val needsByFromName = fromName.map { text => getNeededObjects(text, emailToSend) } getOrElse Set.empty
+        needsByHtml ++ needsByText ++ needsBySubject ++ needsByFromName
+      }
 
       val userIds = needs.collect { case UserNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
+      val libraryIds = needs.collect { case LibraryNeeded(id) => id }
 
       val usersF = getUsers(userIds.toSeq)
       val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
+      val librariesF = getLibraries(libraryIds)
 
       for {
         users <- usersF
         userImageUrls <- userImageUrlsF
         tipHtmlOpt <- tipHtmlF
+        libraries <- librariesF
       } yield {
-        val input = DataNeededResult(users = users, imageUrls = userImageUrls)
+        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries)
         val includedTip = tipHtmlOpt.map(_._1)
         ProcessedEmailResult(
           toUser = emailToSend.to.left.toOption,
@@ -120,11 +131,16 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def user = input.users(userId)
       @inline def basicUser = BasicUser.fromUser(user)
 
+      // only call if Id[Library] is expected as the first argument
+      @inline def libraryId = tagArgs(0).as[Id[Library]]
+      @inline def library: Library = input.libraries(libraryId)
+
       tagWrapper.label match {
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
+        case tags.libraryName => library.name
         case tags.unsubscribeUrl =>
           getUnsubUrl(emailToSend.to match {
             case Left(userId) => db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
@@ -155,7 +171,7 @@ class EmailTemplateProcessorImpl @Inject() (
   }
 
   // used to gather the types of objects we need to replace the tags with real values
-  private def getNeededObjects(text: String, emailToSend: EmailToSend) = {
+  private def getNeededObjects(text: String, emailToSend: EmailToSend): Set[NeededObject] = {
     tagRegex.findAllMatchIn(text).map[NeededObject] { rMatch =>
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
@@ -167,6 +183,9 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
+        case tags.libraryName =>
+          val libId = tagArgs(0).as[Id[Library]]
+          LibraryNeeded(libId)
         case _ => NothingNeeded
       }
     }.toSet
@@ -175,6 +194,11 @@ class EmailTemplateProcessorImpl @Inject() (
   private def getUsers(userIds: Seq[Id[User]]) = {
     db.readOnlyMasterAsync { implicit s => userRepo.getUsers(userIds) }
   }
+
+  private def getLibraries(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], Library]] =
+    db.readOnlyMasterAsync { implicit s =>
+      libraryIds.map(id => id -> libraryRepo.get(id)).toMap
+    }
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {
     Future.sequence(

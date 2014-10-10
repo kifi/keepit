@@ -37,7 +37,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeFeedDigestEmailQueueModule())
+    FakeFeedDigestEmailQueueModule(),
+    FakeSearchServiceClientModule())
 
   "FeedDigestEmailSender" should {
 
@@ -199,10 +200,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42text must contain("15 min")
 
         // TopicAttribution
-        mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
-        mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
-        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
-        mail42text must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
+        mail42body must contain("interested in: Searching")
+        mail42body must contain("interested in: Reading")
+        mail42text must contain("interested in: Searching")
+        mail42text must contain("interested in: Reading")
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
@@ -256,9 +257,11 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         sumU43.recommendations.size === 3
         sumU43.mailSent === true
-        sumU43.recommendations(0).sourceReco.id.get === uriModels(0)._2.id.get
-        sumU43.recommendations(1).sourceReco.id.get === uriModels(1)._2.id.get
-        sumU43.recommendations(2).sourceReco.id.get === uriModels(2)._2.id.get
+
+        def recoId(index: Int) = sumU43.recommendations(index).uriRecommendation.id.get
+        recoId(0) === uriModels(0)._2.id.get
+        recoId(1) === uriModels(1)._2.id.get
+        recoId(2) === uriModels(2)._2.id.get
       }
     }
   }
