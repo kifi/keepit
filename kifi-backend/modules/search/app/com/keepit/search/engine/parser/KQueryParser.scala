@@ -3,7 +3,6 @@ package com.keepit.search.engine.parser
 import org.apache.lucene.index.Term
 import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
@@ -14,7 +13,6 @@ import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class KQueryParser(
     analyzer: Analyzer,
@@ -105,7 +103,7 @@ class KQueryParser(
 
   private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
     phraseDetectionConsolidator((queryText, lang)) { _ =>
-      SafeFuture { phraseDetector.detectAll(phStemmedTerms) }
+      Future.successful { phraseDetector.detectAll(phStemmedTerms) }
     }
   }
 }
