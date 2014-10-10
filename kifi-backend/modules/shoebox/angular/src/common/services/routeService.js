@@ -126,9 +126,6 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },
       createLibrary: route('/libraries/add'),
-      copyKeepsFromTagToLibrary: function(libraryId, tagName) {
-        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
-      },
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
       },
@@ -146,6 +143,9 @@ angular.module('kifi')
       },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
+      },
+      copyKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
       }
     };
   }
