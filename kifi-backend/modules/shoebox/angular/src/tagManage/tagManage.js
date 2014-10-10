@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$rootScope',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $rootScope) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http',
+  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http) {
     $scope.selectedSort = 'name';
 
     $scope.libraries = [];
