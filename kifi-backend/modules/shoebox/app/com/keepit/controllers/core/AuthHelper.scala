@@ -1,6 +1,7 @@
 package com.keepit.controllers.core
 
 import com.keepit.commanders.emails.ResetPasswordEmailSender
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
 import com.google.inject.Inject
 import play.api.mvc._
@@ -29,7 +30,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ ActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.{ UserRequest, ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -71,7 +72,7 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+  def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
       socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
@@ -166,7 +167,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
@@ -187,6 +188,7 @@ class AuthHelper @Inject() (
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
 
+    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
@@ -226,7 +228,7 @@ class AuthHelper @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfo(request).build
           val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
           val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
-          finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+          finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, None)
       })
   }
 
@@ -245,17 +247,18 @@ class AuthHelper @Inject() (
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       {
         case efi: EmailPassFinalizeInfo =>
-          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
-          authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
-            case (user, email, newIdentity) =>
-              sw.stop()
-              sw.logTime()
-              finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-          }
+          handleEmailPassFinalizeInfo(efi, None)
       }
     )
+  }
+
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
+    val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+      case (user, email, newIdentity) =>
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId)
+    }
   }
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {

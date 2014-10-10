@@ -40,21 +40,19 @@ class SearchBackwardCompatibilitySupport @Inject() (
           BasicSearchHit(Some(hit.title), hit.url)
         }
 
-        // keeperCount is not strictly the number of users. It is the number of sharing friends + the number of discoverable/published libraries owned by others
-        val keeperCount = augmentedItem.keepers.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
-
-        augmentedItem.friends.foreach { friendId => friendStats.add(friendId.id, hit.score) }
+        val friends = augmentedItem.relatedKeepers.filter(_ != userId)
+        friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
         val isPrivate = augmentedItem.isSecret(LibraryIndexable.isSecret(libraryIndexer.getSearcher, _))
 
         DetailedSearchHit(
           uriId.id,
-          keeperCount,
+          augmentedItem.keepersTotal,
           basicSearchHit,
           isMyBookmark,
           isFriendsBookmark,
           isPrivate,
-          augmentedItem.friends,
+          friends,
           hit.score,
           hit.score,
           new Scoring(hit.score, 0.0f, 0.0f, 0.0f, false)

@@ -76,14 +76,4 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
-
-  override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
-
-  override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
-
-  override def semanticLoss(query: String): Future[Map[String, Float]] = ???
 }
