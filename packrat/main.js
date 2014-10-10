@@ -541,7 +541,7 @@ api.port.on({
     if (!d) {
       api.tabs.emit(tab, 'kept', {fail: true});
     } else {
-      var libraryId = data.libraryId || libraryIds[data.secret ? 1 : 0];
+      var libraryId = data.libraryId || mySysLibIds[data.secret ? 1 : 0];
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
         title: data.title,
@@ -552,9 +552,9 @@ api.port.on({
       }, function done(keep) {
         log('[keep:done]', keep);
         // main and secret are mutually exclusive
-        var i = libraryIds.indexOf(libraryId);
+        var i = mySysLibIds.indexOf(libraryId);
         if (i >= 0) {
-          d.keeps = d.keeps.filter(libraryIdIsNot(libraryIds[1 - i]));
+          d.keeps = d.keeps.filter(libraryIdIsNot(mySysLibIds[1 - i]));
         }
         var j = d.keeps.findIndex(libraryIdIs(libraryId));
         if (j >= 0) {
@@ -574,7 +574,7 @@ api.port.on({
       });
       if (!data.libraryId && !d.keeps.length) {
         // assume success for instant tile flip on active tab
-        api.tabs.emit(tab, 'kept', {kept: libraryId === libraryIds[0] ? 'public' : 'private'});
+        api.tabs.emit(tab, 'kept', {kept: libraryId === mySysLibIds[0] ? 'public' : 'private'});
       }
       storeRecentLib(libraryId);
     }
@@ -605,7 +605,7 @@ api.port.on({
     var d = pageData[tab.nUri];
     ajax('GET', '/ext/libraries', function (o) {
       libraries = o.libraries;
-      libraries.filter(idIsIn(libraryIds)).forEach(setProp('system', true));
+      libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
       respond({keeps: keeps, libraries: o.libraries});
@@ -1676,20 +1676,22 @@ function searchOnServer(request, respond) {
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: 5,
-    lastUUID: request.lastUUID,
-    context: request.context,
-    kifiVersion: api.version,
+    n: 5,
+    u: request.lastUUID,
+    c: request.context,
+    v: api.version,
     w: request.whence};
 
-  ajax('search', 'GET', '/search', params, function (resp) {
-    log('[searchOnServer] %i hits', resp.hits.length);
-    respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
+  ajax('search', 'GET', '/ext/search', params, function (resp) {
+    var o = resp[0];
+    log('[searchOnServer] %i hits, show:', o.hits.length, o.show);
+    respond(pimpSearchResponse(resp, request.filter, o.hits.length < params.n && (params.c || params.f)));
   });
   return true;
 }
 
-function pimpSearchResponse(o, filter, noMore) {
+function pimpSearchResponse(resp, filter, noMore) {
+  var o = resp[0];
   o.filter = filter;
   o.me = me;
   o.prefs = prefs || {maxResults: 1};
@@ -1701,7 +1703,27 @@ function pimpSearchResponse(o, filter, noMore) {
   if (noMore) {
     o.mayHaveMore = false;
   }
+  o.hits.forEach(pimpSearchHit.bind(null, resp[1].hits, resp[1].libraries));
+  o.users = resp[1].users;
+  o.libraries = resp[1].libraries;
   return o;
+}
+
+function pimpSearchHit(hits, libs, hit, i) {
+  extend(hit, hits[i]);
+
+  // remove my system libraries
+  var hitLibs = hit.libraries;
+  if (hitLibs) {
+    for (var j = 0; j < hitLibs.length;) {
+      var k = hitLibs[j];
+      if (mySysLibIds.indexOf(libs[k].id) >= 0) {
+        hitLibs.splice(j, 2);
+      } else {
+        j += 2;
+      }
+    }
+  }
 }
 
 function kifify(tab) {
@@ -1925,14 +1947,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource, makePublic) {
         log('[postBookmarks] resp:', o);
       });
   });
-}
-
-function clone(o) {
-  var c = {};
-  for (var k in o) {
-    c[k] = o[k];
-  }
-  return c;
 }
 
 function whenTabFocused(tab, key, callback) {
@@ -2269,6 +2283,16 @@ function idToThread(id) {
 function setProp(name, val) {
   return function (o) { o[name] = val; };
 }
+function extend(o, o1) {
+  for (var k in o1) {
+    o[k] = o1[k];
+  }
+  return o;
+}
+function clone(o) {
+  return extend({}, o);
+}
+
 function makeObjectsForEmailAddresses(id) {
   return id.indexOf('@') < 0 ? id : {kind: 'email', email: id};
 }
@@ -2364,7 +2388,7 @@ function sameOrLikelyRedirected(url1, url2) {
 
 // ===== Session management
 
-var me, libraryIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
+var me, mySysLibIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   var origInstId = stored('installation_id');
@@ -2381,7 +2405,7 @@ function authenticate(callback, retryMs) {
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user);
-    libraryIds = data.libraryIds;
+    mySysLibIds = data.libraryIds;
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(
@@ -2428,7 +2452,7 @@ function clearSession() {
       delete tab.focusCallbacks;
     });
   }
-  me = libraryIds = prefs = experiments = eip = null;
+  me = mySysLibIds = prefs = experiments = eip = null;
   if (socket) {
     socket.close();
     socket = null;

@@ -167,7 +167,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       var showAny = Boolean(resp.show && resp.hits.length && (resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || resp.context === 'guide') || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc);
-      resp.hits.forEach(processHit, resp);
+      unpack(resp);
       if (!resp.hits.length) resp.mayHaveMore = false;
 
       if (!newFilter || newFilter.who === 'a') {
@@ -321,14 +321,14 @@ if (searchUrlRe.test(document.URL)) !function () {
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
           "hit": isKifi ? {
-            "isMyBookmark": hit.isMyBookmark,
-            "isPrivate": hit.isPrivate,
-            "count": hit.count,
-            "keepers": hit.users.map(function (u) {return u.id}),
-            "tags": hit.bookmark.tags,
-            "title": hit.bookmark.title,
-            "titleMatches": (hit.bookmark.matches.title || []).length,
-            "urlMatches": (hit.bookmark.matches.url || []).length
+            "isMyBookmark": hit.keepers.length > 0 && hit.keepers[0].id === response.me.id,
+            "isPrivate": hit.secret || false,
+            "count": hit.keepersTotal,
+            "keepers": hit.keepers.map(function (u) {return u.id}),
+            "tags": hit.tags || [],
+            "title": hit.title,
+            "titleMatches": hit.matches.title.length,
+            "urlMatches": hit.matches.url.length
           } : null,
           "refinements": refinements,
           "pageSession": pageSession
@@ -391,7 +391,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
     var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
     url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
-    for (var i = matches && matches.length; i--;) {
+    for (var i = matches.length; i--;) {
       matches[i][0] -= strippedSchemeLen;
     }
     return boldSearchTerms(url, matches);
@@ -552,9 +552,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   function attachResults() {
     $res.find('.kifi-res-box')
       .append(render('html/search/google_hits', {
-          results: response.hits,
-          origin: response.origin,
-          self: response.me,
+          hits: response.hits.map(renderDataForHit),
           images: api.url('images'),
           filter: response.filter && response.filter.who !== 'a',
           mayHaveMore: response.mayHaveMore
@@ -575,7 +573,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
           log('[onPrefetchResponse]');
-          resp.hits.forEach(processHit, resp);
+          unpack(resp);
 
           response.nextHits = resp.hits;
           response.nextUUID = resp.uuid;
@@ -621,7 +619,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     delete response.nextContext;
 
     for (var i = 0; i < hits.length; i++) {
-      hitHtml.push(render('html/search/google_hit', $.extend({self: response.me, images: api.url('images')}, hits[i])));
+      hitHtml.push(render('html/search/google_hit', renderDataForHit(hits[i])));
     }
     $(hitHtml.join(''))
     .css({visibility: 'hidden', height: 0, margin: 0})
@@ -639,27 +637,54 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
   }
 
-  function processHit(hit) { // this is response in which hit arrived
+  function unpack(resp) {
+    resp.users || (resp.users = []);
+    resp.libraries || (resp.libraries = []);
+    resp.hits.forEach(unpackHit, resp);
+  }
+
+  function unpackHit(hit) {  // 'this' is response in which hit arrived
     hit.uuid = this.uuid;
-    var matches = hit.bookmark.matches || (hit.bookmark.matches = {});
+    var matches = hit.matches || (hit.matches = {});
+    matches.title || (matches.title = []);
+    matches.url || (matches.url = []);
+    var userForIndex = intoOrElse(this.users, this.me);
+    hit.keepers = (hit.keepers || []).map(userForIndex);
+    if (hit.libraries) {
+      var indexes = hit.libraries;
+      var libs = hit.libraries = new Array(indexes.length / 2);
+      for (var i = 0, j = 0; i < libs.length; i++, j += 2) {
+        libs[i] = $.extend({keeper: userForIndex(indexes[j + 1])}, this.libraries[indexes[j]]);
+      }
+    } else {
+      hit.libraries = [];
+    }
+    hit.tags || (hit.tags = []);
+  }
 
-    hit.titleHtml = hit.bookmark.title ?
-      boldSearchTerms(hit.bookmark.title, matches.title) :
-      formatTitleFromUrl(hit.bookmark.url, matches.url, bolded);
-    hit.descHtml = formatDesc(hit.bookmark.url, matches.url);
-    hit.scoreText = ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '';
+  function renderDataForHit(hit) {
+    var who = (response.filter || {}).who;
+    var users = hit.keepers.slice(0, who === 'm' ? 1 : 8);
+    if (hit.secret) {
+      users[0] = $.extend({secret: true}, users[0]);
+    }
+    return {
+      titleHtml: hit.title ?
+        boldSearchTerms(hit.title, hit.matches.title) :
+        formatTitleFromUrl(hit.url, hit.matches.url, bolded),
+      descHtml: formatDesc(hit.url, hit.matches.url),
+      score: ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '',
+      users: users,
+      usersMore: hit.keepersTotal - users.length,
+      usersPlural: hit.keepersTotal > 1,
+      libraries: hit.libraries,
+      librariesMore: hit.librariesOmitted - hit.libraries.length,
+      tags: hit.tags
+    };
+  }
 
-    var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
-    hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
-    hit.displayUsers = who == "m" ? [] :
-      (ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) : hit.users).slice(0, 8);
-
-    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
-    hit.whoKeptHtml = formatCountHtml(
-      hit.isMyBookmark,
-      hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",
-      hit.users.length ? "<a class=kifi-res-friends href=javascript:>" + plural(hit.users.length, "friend") + "</a>" : "",
-      numOthers ? plural(numOthers, "other") : "");
+  function intoOrElse(arr, other) {
+    return function (i) { return i >= 0 ? arr[i] : other; };
   }
 
   function formatCountHtml(kept, priv, friends, others) {
@@ -680,7 +705,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   function boldSearchTerms(text, matches) {
-    for (var i = matches && matches.length; i--;) {
+    for (var i = matches.length; i--;) {
       var match = matches[i];
       var start = match[0];
       if (start >= 0) {
