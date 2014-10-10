@@ -13,6 +13,7 @@ import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.StaticQuery
+import com.keepit.typeahead.UserHashtagTypeaheadCommander
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
@@ -32,6 +33,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
   def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
+  def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
 }
 
 @Singleton
@@ -42,7 +44,8 @@ class CollectionRepoImpl @Inject() (
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
-  val clock: Clock)
+  val clock: Clock,
+  typeahead: UserHashtagTypeaheadCommander)
     extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import db.Driver.simple._
@@ -138,6 +141,7 @@ class CollectionRepoImpl @Inject() (
 
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection = {
     val collection = get(collectionId)
+    session.onTransactionSuccess { typeahead.delete(collection.userId) }
     if (isNewKeep) {
       save(collection withLastKeptTo clock.now())
     } else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) {
@@ -177,6 +181,13 @@ class CollectionRepoImpl @Inject() (
     query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
       (CollectionSummary(row._1, row._2, row._3), row._4)
     }
+  }
+
+  def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+    val query = sql"select c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc where kc.collection_id = c.id and user_id=${userId} and kc.state = ${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count"
+    query.as[(Hashtag, Int)].list.map { row => (row._1, row._2) }
   }
 }
 

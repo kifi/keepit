@@ -22,7 +22,7 @@ object LibraryHashtagTypeahead {
   implicit val format = Json.format[LibraryHashtagTypeahead]
 }
 
-class HashtagTypeahead @Inject() (
+class LibraryHashtagTypeaheadCommander @Inject() (
     val airbrake: AirbrakeNotifier,
     cache: LibraryHashtagTypeaheadCache,
     clock: Clock,

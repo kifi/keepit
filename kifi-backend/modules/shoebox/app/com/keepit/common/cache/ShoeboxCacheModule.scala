@@ -11,7 +11,7 @@ import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.typeahead.{ LibraryHashtagTypeaheadCache, KifiUserTypeaheadCache, SocialUserTypeaheadCache }
+import com.keepit.typeahead.{ UserHashtagTypeaheadCache, LibraryHashtagTypeaheadCache, KifiUserTypeaheadCache, SocialUserTypeaheadCache }
 import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
 import com.keepit.graph.model._
 
@@ -305,4 +305,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def libraryHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryHashtagTypeaheadCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def userHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UserHashtagTypeaheadCache(stats, accessLog, (outerRepo, 7 days))
 }
