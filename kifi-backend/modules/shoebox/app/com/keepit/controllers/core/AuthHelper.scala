@@ -60,6 +60,7 @@ class AuthHelper @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
+    libraryCommander: LibraryCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     secureSocialClientIds: SecureSocialClientIds,
@@ -189,6 +190,8 @@ class AuthHelper @Inject() (
     }
 
     libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
+    libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
