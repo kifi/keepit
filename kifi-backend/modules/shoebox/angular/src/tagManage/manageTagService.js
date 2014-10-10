@@ -8,7 +8,7 @@ angular.module('kifi')
     var list = [];
     var more = true;
     var offset = 0;
-    var pageSize = 10;
+    var pageSize = 100;
 
     var manageTagRemoteService = new Clutch(function (sort) {
       return $http.get(routeService.pageTags + '?sort=' + sort + '&offset=' + offset + '&pageSize=' + pageSize

@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$rootScope',
+  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $rootScope) {
     $scope.selectedSort = 'name';
 
     $scope.libraries = [];
@@ -11,7 +11,7 @@ angular.module('kifi')
 
     $scope.tagList = manageTagService.list;
     $scope.tagsLoaded = false;
-    $scope.selectedTagName = '';
+    $scope.selectedTag = {};
 
     //
     // Smart Scroll
@@ -61,15 +61,14 @@ angular.module('kifi')
     });
 
     $scope.clickAction = function () {
-      if ($scope.selectedTagName !== '') {
-        var data = {};
-        var config = {};
-        $http.post(routeService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTagName), data, config);
-      }
+      var data = {};
+      var config = {};
+      $http.post(routeService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name), data, config);
+      libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
     };
 
-    $scope.changeSelection = function (name) {
-      $scope.selectedTagName = name;
+    $scope.changeSelection = function (tag) {
+      $scope.selectedTag = tag;
     };
 
     //
