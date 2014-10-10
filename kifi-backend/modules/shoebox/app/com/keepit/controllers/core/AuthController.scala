@@ -23,7 +23,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.{ AuthCommander, EmailPassFinalizeInfo, InviteCommander }
+import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, EmailPassFinalizeInfo, InviteCommander }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -70,6 +70,38 @@ object UserPassFinalizeInfo {
       info.cropY,
       info.cropSize
     )
+}
+
+@json case class TokenFinalizeInfo(
+    private val email: String,
+    firstName: String,
+    lastName: String,
+    val password: String,
+    picToken: Option[String],
+    picHeight: Option[Int],
+    picWidth: Option[Int],
+    cropX: Option[Int],
+    cropY: Option[Int],
+    cropSize: Option[Int],
+    libraryPublicId: Option[PublicId[Library]]) {
+  val emailAddress = EmailAddress(email)
+}
+
+object TokenFinalizeInfo {
+  implicit def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
+    SocialFinalizeInfo(
+      info.emailAddress,
+      info.firstName,
+      info.lastName,
+      info.password.toCharArray,
+      info.picToken,
+      info.picHeight,
+      info.picWidth,
+      info.cropX,
+      info.cropY,
+      info.cropSize
+    )
+  }
 }
 
 class AuthController @Inject() (
@@ -367,6 +399,11 @@ class AuthController @Inject() (
   def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
     unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
+  )
+
+  def tokenFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
+    authenticatedAction = authHelper.doTokenFinalizeAccountAction(_),
+    unauthenticatedAction = authHelper.doTokenFinalizeAccountAction(_)
   )
 
   def OkStreamFile(filename: String) =
