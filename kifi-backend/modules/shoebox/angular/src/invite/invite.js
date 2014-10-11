@@ -225,6 +225,8 @@ angular.module('kifi')
         $document.on('click', clickOutside);
 
         scope.showCantFindFriendModal = function () {
+          scope.search.showDropdown = false;
+
           modalService.open({
             template: 'invite/cantFindFriendModal.tpl.html',
             modalData: { searchFriendName: scope.search.name }

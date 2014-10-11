@@ -183,18 +183,10 @@ angular.module('kifi')
         //   $window.postMessage(message, '*');
         // }
 
-        if ($scope.librariesEnabled) {
-         modalService.open({
+        modalService.open({
           template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
           scope: $scope
         });
-      } else {
-        modalService.open({
-          template: 'common/modal/importBookmarksInProgressModal.tpl.html',
-          scope: $scope
-        });
-      }
-
       });
     };
 
