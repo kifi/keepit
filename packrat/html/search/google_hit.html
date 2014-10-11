@@ -15,11 +15,9 @@
     <span class="kifi-res-users"></span>
     {{#users.length}}
       {{#users}}
-        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
+        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
       {{/users}}
-      {{#usersMore}}
-        <a class="kifi-res-users-more" href="javascript:">+ {{usersMore}}</a>
-      {{/usersMore}}
+      <a class="kifi-res-users-n" href="javascript:">{{usersMore}}</a>
       {{^libraries.length}}
         {{^tags.length}}
           <span class="kifi-res-users-kept-this">{{usersName}} kept this</span>
@@ -34,15 +32,14 @@
       {{#libraries}}
         <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
       {{/libraries}}
-      {{#librariesMore}}
-        <a class="kifi-res-libs-more" href="javascript:">+ {{librariesMore}}</a>
-      {{/librariesMore}}
+      <a class="kifi-res-libs-n" href="javascript:">{{librariesMore}}</a>
     {{/libraries.length}}
     {{#tags.length}}
       <span class="kifi-res-tags"></span>
       {{#tags}}
         <span class="kifi-res-tag">{{.}}</span>
       {{/tags}}
+      <a class="kifi-res-tags-n" href="javascript:">{{tagsMore}}</a>
     {{/tags.length}}
   </div>
 </li>
