@@ -61,10 +61,14 @@ angular.module('kifi')
     });
 
     $scope.clickAction = function () {
-      var data = {};
-      var config = {};
-      $http.post(routeService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name), data, config);
-      libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
+      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
+        libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
+        // todo: (aaron) make alert window prettier
+        $window.alert($scope.selectedTag.name + ' keeps added to ' + $scope.selection.library.name + '!');
+        libraryService.getLibraryById($scope.selection.library.id, true).then(function() {
+          $location.path($scope.selection.library.url);
+        });
+      });
     };
 
     $scope.changeSelection = function (tag) {
