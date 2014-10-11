@@ -22,6 +22,7 @@ import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
 import java.text.Normalizer
+import com.keepit.search.graph.library.LibraryIndexable
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -201,7 +202,7 @@ class AugmentationCommanderImpl @Inject() (
 class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
-  def isSecret(isSecretLibrary: Id[Library] => Boolean) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(isSecretLibrary)
+  def isSecret(librarySearcher: Searcher) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _))
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }

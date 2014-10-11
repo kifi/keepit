@@ -9,13 +9,14 @@ import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
-import com.keepit.search.{ AugmentationCommander, SearchCommander }
+import com.keepit.search.{ AugmentedItem, AugmentationCommander, SearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.json.JsBoolean
 import play.api.libs.json.JsObject
+import com.keepit.common.db.Id
 
 object ExtSearchController {
   private[ExtSearchController] val maxKeepersShown = 20
@@ -93,13 +94,17 @@ class ExtSearchController @Inject() (
         val futureUsers = shoeboxClient.getBasicUsers(userIds)
         val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-        val libraryById = getBasicLibraries(libraryIndexer.getSearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
-        val (libraryIds, libraries) = libraryById.toSeq.unzip
+        val libraryIds = allLibrariesShown.flatMap(_.map(_._1)).distinct
         val libraryIndexById = libraryIds.zipWithIndex.toMap
+        val librarySearcher = libraryIndexer.getSearcher
+        val libraries = {
+          val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
+          libraryIds.map(libraryById(_))
+        }
 
         val hitsJson = augmentedItems.zipWithIndex.map {
           case (augmentedItem, itemIndex) =>
-            val secret = augmentedItem.isSecret(libraryById(_).isSecret)
+            val secret = augmentedItem.isSecret(librarySearcher)
 
             val keepersShown = allKeepersShown(itemIndex).map(userIndexById(_))
             val keepersOmitted = augmentedItem.relatedKeepers.size - keepersShown.size
