@@ -89,7 +89,7 @@ class ExtSearchController @Inject() (
         val allKeepersShown = augmentedItems.map(_.relatedKeepers.take(maxKeepersShown))
         val allLibrariesShown = augmentedItems.map(_.libraries.take(maxLibrariesShown))
 
-        val userIds = (allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).distinct.filterNot(_ == userId)
+        val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
         val futureUsers = shoeboxClient.getBasicUsers(userIds)
         val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
