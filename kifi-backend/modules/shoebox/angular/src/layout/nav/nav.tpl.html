@@ -120,7 +120,11 @@
                                      'other':' {} followers'}"></ng-pluralize>
               </div>
             </div>
+            <div kf-tooltip position="right">
+              <div kf-library-mini-card></div>
+            </div>
           </a>
+
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">

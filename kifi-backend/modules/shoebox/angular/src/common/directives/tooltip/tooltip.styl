@@ -11,22 +11,15 @@
 }
 
 .kf-tooltip {
-  position: absolute
+  position: fixed
   visibility: hidden
   z-index: 9998
   opacity: 0
   transition: opacity 0.5s, visibility 0s 0.5s
 }
 
-
-.kf-tooltipped {
-  position: relative
-}
-
-.kf-tooltipped:hover {
-  .kf-tooltip {
+.kf-tooltipped:hover > .kf-tooltip {
     transition: opacity 0.5s
     visibility: visible
     opacity: 1
-  }
 }

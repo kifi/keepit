@@ -8,39 +8,85 @@ angular.module('kifi')
       restrict: 'A',
       transclude: true,
       templateUrl: 'common/directives/tooltip/tooltip.tpl.html',
+      replace: true,
       link: function (scope, element, attrs) {
 
         var container = element.parent();
+        container.addClass("kf-tooltipped");
+        var $w = angular.element($window);
 
-        function ensureCorrectPositioning() {
-          var el = angular.element(element.children()[0])
+        var el = element;
 
-          console.log("blahhhhhhhh");
 
-          switch (attrs.position) {
+        function fullyOnScreen(){
+          var viewportWidth = $w.innerWidth();
+          var viewportHeight = $w.innerHeight();
+          var elemPos = el[0].getBoundingClientRect();
+          return elemPos.top > 0 && elemPos.bottom < viewportHeight && elemPos.left > 0 && elemPos.right < viewportWidth;
+        }
+
+        function applyPosition(pos) {
+          var parentPos = container[0].getBoundingClientRect();
+          switch (pos) {
             case 'top':
-              el.css('bottom',container.outerHeight());
+              el.css({
+                'top': parentPos.top - el.outerHeight(),
+                'left': parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth()
+              });
               break;
             case 'bottom':
-              el.css('top', container.outerHeight());
+              el.css({
+                'top': parentPos.top + container.outerHeight(),
+                'left': parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth()
+              });
               break;
             case 'left':
-              el.css('right', container.outerWidth());
-              el.css('top', 0);
+              el.css({
+                'top': parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(),
+                'left': parentPos.left - el.outerWidth()
+              });
               break;
             case 'right':
-              el.css('left', container.outerWidth());
-              el.css('top', 0);
+              el.css({
+                'top': parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(),
+                'left': parentPos.left + container.outerWidth()
+              });
               break;
           }
+        }
+
+
+        function ensureCorrectPositioning() {
+          var pos = attrs.position;
+
+          var poss = _.filter(['top', 'right', 'bottom', 'left'], function (p) {
+            return p!=pos;
+          });
+          poss.push(pos)
+
+          applyPosition(pos);
+
+          for (var i=0; i<poss.length && !fullyOnScreen(); i++) {
+            applyPosition(poss[i]);
+          }
+
+
 
 
         }
 
-        container.on("mouseenter", ensureCorrectPositioning);
+        function trackScroll() {
+          if (el.css('visibility') === 'visible') {
+            ensureCorrectPositioning();
+          }
+        }
+
+        container.on('mouseenter', ensureCorrectPositioning);
+        $w.on('scroll', trackScroll);
 
         scope.$on('$destroy', function () {
           container.off("mouseenter", ensureCorrectPositioning);
+          $w.off('scroll', trackScroll);
         });
 
       }
