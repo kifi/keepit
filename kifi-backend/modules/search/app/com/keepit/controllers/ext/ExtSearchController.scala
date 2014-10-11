@@ -88,41 +88,43 @@ class ExtSearchController @Inject() (
       augment(augmentationCommander, userId, kifiPlainResult).flatMap { augmentedItems =>
         val allKeepersShown = augmentedItems.map(_.relatedKeepers.take(maxKeepersShown))
         val allLibrariesShown = augmentedItems.map(_.libraries.take(maxLibrariesShown))
-        val uniqueUsersShown = (allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).distinct
-        val futureUsers = shoeboxClient.getBasicUsers(uniqueUsersShown.filterNot(_ == userId))
+
+        val userIds = (allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).distinct.filterNot(_ == userId)
+        val futureUsers = shoeboxClient.getBasicUsers(userIds)
+        val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
+
         val libraryById = getBasicLibraries(libraryIndexer.getSearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
         val (libraryIds, libraries) = libraryById.toSeq.unzip
         val libraryIndexById = libraryIds.zipWithIndex.toMap
+
+        val hitsJson = augmentedItems.zipWithIndex.map {
+          case (augmentedItem, itemIndex) =>
+            val secret = augmentedItem.isSecret(libraryById(_).isSecret)
+
+            val keepersShown = allKeepersShown(itemIndex).map(userIndexById(_))
+            val keepersOmitted = augmentedItem.relatedKeepers.size - keepersShown.size
+            val keepersTotal = augmentedItem.keepersTotal
+
+            val librariesShown = allLibrariesShown(itemIndex).map { case (libraryId, keeperId) => (libraryIndexById(libraryId), userIndexById(keeperId)) }
+            val librariesOmitted = augmentedItem.libraries.size - librariesShown.size
+
+            val tagsShown = augmentedItem.tags.take(maxTagsShown)
+            val tagsOmitted = augmentedItem.tags.size - tagsShown.size
+
+            val fullJson = Json.obj(
+              "secret" -> JsBoolean(secret),
+              "keepers" -> keepersShown,
+              "keepersOmitted" -> keepersOmitted,
+              "keepersTotal" -> keepersTotal,
+              "libraries" -> librariesShown.flatMap { case (libraryIndex, keeperIndex) => Seq(libraryIndex, keeperIndex) },
+              "librariesOmitted" -> librariesOmitted,
+              "tags" -> tagsShown,
+              "tagsOmitted" -> tagsOmitted
+            )
+            compactJson(fullJson)
+        }
         futureUsers.map { usersById =>
-          val (userIds, users) = usersById.toSeq.unzip
-          val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
-          val hitsJson = augmentedItems.zipWithIndex.map {
-            case (augmentedItem, itemIndex) =>
-              val secret = augmentedItem.isSecret(libraryById(_).isSecret)
-
-              val keepersShown = allKeepersShown(itemIndex).map(userIndexById(_))
-              val keepersOmitted = augmentedItem.relatedKeepers.size - keepersShown.size
-              val keepersTotal = augmentedItem.keepersTotal
-
-              val librariesShown = allLibrariesShown(itemIndex).map { case (libraryId, keeperId) => (libraryIndexById(libraryId), userIndexById(keeperId)) }
-              val librariesOmitted = augmentedItem.libraries.size - librariesShown.size
-
-              val tagsShown = augmentedItem.tags.take(maxTagsShown)
-              val tagsOmitted = augmentedItem.tags.size - tagsShown.size
-
-              val fullJson = Json.obj(
-                "secret" -> JsBoolean(secret),
-                "keepers" -> keepersShown,
-                "keepersOmitted" -> keepersOmitted,
-                "keepersTotal" -> keepersTotal,
-                "libraries" -> librariesShown.flatMap { case (libraryIndex, keeperIndex) => Seq(libraryIndex, keeperIndex) },
-                "librariesOmitted" -> librariesOmitted,
-                "tags" -> tagsShown,
-                "tagsOmitted" -> tagsOmitted
-              )
-              compactJson(fullJson)
-          }
-
+          val users = userIds.map(usersById(_))
           val librariesJson = libraries.map { library => compactJson(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret)) }
           Json.obj("hits" -> hitsJson, "libraries" -> librariesJson, "users" -> users)
         }
