@@ -183,10 +183,17 @@ angular.module('kifi')
         //   $window.postMessage(message, '*');
         // }
 
-        modalService.open({
-          template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
-          scope: $scope
-        });
+        // Fake check. To do: use real endpoints to determine which modal to open.
+        if (library) {
+          modalService.open({
+            template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
+            scope: $scope
+          });
+        } else {
+          modalService.open({
+            template: 'common/modal/importBookmarksErrorModal.tpl.html'
+          });
+        }
       });
     };
 
@@ -331,6 +338,23 @@ angular.module('kifi')
           $scope.importFileStatus = 'Hm, couldn’t upload your file. Try picking it again.';
         }
       }
+    };
+
+    $scope.importBookmarkFileToLibrary = function (library) {
+      $scope.forceClose = true;
+
+      $scope.$evalAsync(function () {
+        // This check is a fake check. Remove when we have real endpoints.
+        if (library) {
+          modalService.open({
+            template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
+          });
+        } else {
+          modalService.open({
+            template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+          });
+        }
+      });
     };
 
     $scope.cancelBookmarkUpload = function () {
