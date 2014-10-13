@@ -540,26 +540,15 @@ div.kifi-res-menu-item {
   margin-left: 0;
 }
 
-.kifi-res-private {
-  margin: 0 1px;
-  padding: 0 5px;
+.kifi-res-mk-hover {
   border-radius: 4px;
-  background-color: #e8e8e8;
-  color: #999;
-}
-a.kifi-res-friends {
-  color: inherit !important;
-  text-decoration: none !important;
-  position: relative;
-}
-.kifi-res-friends-hover {
   position: absolute;
   padding: 4px 8px;
   background-color: #282828;
   color: #fff;
   font-size: 11px;
   cursor: default;
-  z-index: 99;
+  z-index: 999;
   opacity: 0;
   -webkit-transform: translate(0,3px);
   transform: translate(0,3px);
@@ -567,28 +556,29 @@ a.kifi-res-friends {
   transition: opacity linear, transform ease-in-out;
   transition-duration: 120ms;
 }
-.kifi-res-friends-hover.kifi-showing {
+.kifi-res-mk-hover.kifi-showing {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
   transition-duration: 60ms;
 }
-.kifi-res-friends-hover::after {
+.kifi-res-mk-hover::after {
   content: ' ';
   position: absolute;
   left: 50%;
-  margin-left: -4px;
+  margin-left: -5px;
   bottom: -5px;
   width: 0;
   height: 0;
   border-style: solid;
   border-color: #282828 transparent;
-  border-width: 5px 4px 0;
+  border-width: 5px 5px 0;
 }
-.kifi-res-friends-list {
+.kifi-res-mk-list {
   margin: 0;
 }
-.kifi-res-friends-name {
+.kifi-res-mk-name,
+.kifi-res-mk-others {
   display: block;
   list-style: none;
   padding: 0;

@@ -513,12 +513,19 @@ if (searchUrlRe.test(document.URL)) !function () {
           hideAfter: 4000,
           click: 'toggle'});
       });
-    }).hoverfu('.kifi-res-users-more', function (configureHover) {
+    }).hoverfu('.kifi-res-users-n', function (configureHover) {
       var $a = $(this);
-      var users = $a.closest('.kifi-res-why').data('users');
-      render('html/search/friends', {friends: response.hits[i].users}, function (html) {
+      var data = $a.closest('.kifi-res-why').data();
+      var keepersPictured = data.users.filter(isNotDuplicate);
+      var keepers = data.raw.keepers.filter(function (u) {
+        return !keepersPictured.some(idIs(u.id));
+      });
+      render('html/search/more_keepers', {
+        keepers: keepers,
+        others: +$a.text() - keepers.length
+      }, function (html) {
         configureHover(html, {
-          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'},
+          position: {my: 'center bottom-9', at: 'center top', of: $a, collision: 'none'},
           click: 'toggle'});
       });
     }).on('mouseover', '.kifi-res-more-a', function () {
@@ -568,12 +575,12 @@ if (searchUrlRe.test(document.URL)) !function () {
         google_hit: 'google_hit'
       }));
     $res.find('.kifi-res-box').append($hits);
-    $hits.find('.kifi-res-why').get().forEach(stashHitData, hitsData);
+    $hits.find('.kifi-res-why').get().forEach(stashHitData, [response.hits, hitsData]);
     log('[attachResults] done');
   }
 
   function stashHitData(el, i) {
-    $(el).data(this[i]);
+    $(el).data(this[1][i]).data('raw', this[0][i]);
   }
 
   function prefetchMore() {
@@ -641,7 +648,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     .appendTo($res.find('#kifi-res-list'));
 
     var $whys = $hits.find('.kifi-res-why');
-    $whys.get().forEach(stashHitData, hitsData);
+    $whys.get().forEach(stashHitData, [hits, hitsData]);
     $whys.each(makeWhyFit);
 
     $hits.css({visibility: '', height: '', margin: '', display: 'none'})
@@ -690,6 +697,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
     hit.libraries.forEach(markKeeperAsDupeIn(users));
     return {
+      raw: hit,
       url: hit.url,
       titleHtml: hit.title ?
         boldSearchTerms(hit.title, hit.matches.title) :
@@ -697,7 +705,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       descHtml: formatDesc(hit.url, hit.matches.url),
       score: ~response.experiments.indexOf('show_hit_scores') ? String(Math.round(hit.score * 100) / 100) : '',
       users: users,
-      usersMore: hit.keepersTotal - (users.length - users.filter(isDuplicate).length) || '',
+      usersMore: hit.keepersTotal - users.filter(isNotDuplicate).length || '',
       usersPlural: hit.keepersTotal > 1,
       usersName: hit.keepersTotal === 1 && users.length ? (users[0].id === response.me.id ? 'You' : users[0].firstName + ' ' + users[0].lastName) : '',
       libraries: hit.libraries,
@@ -853,15 +861,18 @@ if (searchUrlRe.test(document.URL)) !function () {
   function getOffsetWidth(el) {
     return el.offsetWidth;
   }
-
+  function idIs(id) {
+    return function (o) {return o.id === id};
+  }
   function hasKeeperId(id) {
     return function (lib) { return lib.keeper.id === id; };
   }
-
   function isDuplicate(o) {
     return o.duplicate;
   }
-
+  function isNotDuplicate(o) {
+    return !o.duplicate;
+  }
   function intoOrElse(arr, other) {
     return function (i) { return i >= 0 ? arr[i] : other; };
   }
