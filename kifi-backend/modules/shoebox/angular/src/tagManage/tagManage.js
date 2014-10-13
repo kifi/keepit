@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location', 'modalService',
+  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location, modalService) {
     $scope.selectedSort = 'name';
 
     $scope.libraries = [];
@@ -63,11 +63,11 @@ angular.module('kifi')
     $scope.clickAction = function () {
       libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
-        // todo: (aaron) make alert window prettier
-        $window.alert($scope.selectedTag.name + ' keeps added to ' + $scope.selection.library.name + '!');
-        libraryService.getLibraryById($scope.selection.library.id, true).then(function() {
-          $location.path($scope.selection.library.url);
-        });
+        libraryService.getLibraryById($scope.selection.library.id, true); // invalidates cache
+      });
+      modalService.open({
+        template: 'tagManage/tagToLibModal.tpl.html',
+        modalData: { library : $scope.selection.library }
       });
     };
 
