@@ -2,7 +2,7 @@ package com.keepit.search.augmentation
 
 import com.keepit.model.{ Hashtag, Library, NormalizedURI, User }
 import com.keepit.common.db.Id
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.search.graph.keep.{ KeepRecord, ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term
@@ -34,6 +34,7 @@ trait AugmentationCommander {
   def getAugmentedItems(itemAugmentationRequest: ItemAugmentationRequest): Future[Map[AugmentableItem, AugmentedItem]]
 }
 
+@Singleton
 class AugmentationCommanderImpl @Inject() (
     activeShards: ActiveShards,
     shardedKeepIndexer: ShardedKeepIndexer,

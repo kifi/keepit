@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.common.http._
 import com.google.inject.Inject
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.heimdal._
@@ -40,10 +41,14 @@ class ExtSearchEventController @Inject() (
         contextBuilder += ("guided", true)
       }
       SearchEngine.get(resultSource) match {
-        case SearchEngine.Kifi => {
-          val kifiHitContext = (json \ "hit").as[KifiHitContext]
+        case SearchEngine.Kifi =>
+          val kifiHitContext = try {
+            (json \ "hit").as[KifiHitContext]
+          } catch {
+            case e: Exception =>
+              throw new Exception(s"""Can't parse json "$json" by user agent ${request.userAgentOpt} or user ${request.userId}""")
+          }
           searchEventCommander.clickedKifiResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, isDemo, clickedAt, kifiHitContext)(contextBuilder.build)
-        }
         case theOtherGuys =>
           searchEventCommander.clickedOtherResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, clickedAt, theOtherGuys)(contextBuilder.build)
       }

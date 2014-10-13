@@ -8,7 +8,7 @@ package object http {
 
   implicit class PimpedResult[A](request: Request[A]) {
     def userAgentOpt: Option[UserAgent] = request.headers.get(USER_AGENT).map { agentString =>
-      UserAgent.fromString(agentString)
+      UserAgent(agentString)
     }
   }
 }

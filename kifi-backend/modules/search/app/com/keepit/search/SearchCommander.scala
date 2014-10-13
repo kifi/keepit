@@ -5,7 +5,7 @@ import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger,
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 import scala.util.Try
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext._
@@ -86,6 +86,7 @@ trait SearchCommander {
   def warmUp(userId: Id[User]): Unit
 }
 
+@Singleton
 class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,

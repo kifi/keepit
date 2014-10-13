@@ -205,18 +205,65 @@ input::-ms-clear
   margin-left: 10px
 
 .import-modal
+.import-file-modal
+  .dialog-body
+    padding: 0
+
+.import-modal
 
   .import-star-to-kifi
+    margin: 12px 168px 16px
     width: 127px
     height: 37px
-    margin: 12px 168px 16px
 
   .dialog-text
+    padding: 10px 30px
+    font-size: 14px
+    line-height: 1.2
+    color: kifiBlack
     text-align: left
 
   button
     width: 160px
     margin: 10px
+
+// For libraries enabled mode only.
+.import-modal.libraries-enabled
+  .import-button
+    margin: 0
+    width: 150px
+
+  .import-library-explanation
+    border-bottom: 1px solid #e7e7e7
+    padding: 35px 27px
+    text-align: left
+
+    .import-bookmarks-icon
+      display: inline-block
+      margin: 0 20px 0 0
+      width: 139px
+      height: 50px
+      background-repeat: no-repeat
+
+    .dialog-text
+      display: inline-block
+      padding: 0
+      width: 316px
+      font-size: 14px
+      line-height: 1.2
+      color: kifiBlack
+
+  .import-library-selection
+    margin: 20px 0
+
+  .add-keep-to-library-dropdown
+    margin: 10px auto 0
+
+.import-error-text
+  padding: 0 20px
+  font-size: 14px
+  line-height: 1.2
+  color: kifiBlack
 
 .import-file-modal
 
@@ -229,18 +276,23 @@ input::-ms-clear
     cursor: pointer
 
   .import-kippt-to-kifi
-    width: 127px
+    display: block
+    margin: 20px auto 30px
     height: 37px
-    margin: 0px 168px 30px
+
+  .file-import-info
+    padding: 0 25px
 
   .file-import-well
     background-color: #eff2f7
     border-radius: 10px
     padding: 10px 20px 15px 20px
-    margin: 20px -20px
+    margin: 20px 10px 30px
 
   .file-import-inner
     padding: 20px 20px 0
+    color: #333
+    font-size: 14px
 
     ul
       list-style: initial
@@ -248,6 +300,11 @@ input::-ms-clear
   .import-how-to
     font-weight: 800
     margin: 10px 0
+
+  .import-file-progress
+    color: #333
+    font-size: 14px
+    padding: 0 20px
 
   h3.pitch
     font-size: 14px
@@ -275,6 +332,89 @@ input::-ms-clear
     width: 145px
     margin: 5px 10px
 
+// For libraries enabled mode only
+.import-file-modal.libraries-enabled
+  font-size: 14px
+  line-height: 1.4
+  color: kifiBlack
+
+  .import-library-explanation
+    border-bottom: 1px solid #e7e7e7
+    padding: 20px 27px
+    text-align: left
+
+    .import-file-others-icon
+      position: relative  // placeholder for now.
+
+    .arrow-right-icon
+      display: inline-block
+      margin: 0 10px 0 15px
+      width: 27px
+      height: 22px
+      background-repeat: no-repeat
+      vertical-align: middle
+
+    .kifi-clover-icon
+      display: inline-block
+      margin-right: 25px
+      width: 49px
+      height: 50px
+      background-repeat: no-repeat
+      vertical-align: middle
+
+    .dialog-text
+      display: inline-block
+      padding: 0
+      width: 280px
+      font-size: 14px
+      line-height: 1.4
+      color: kifiBlack
+      vertical-align: middle
+
+  .import-library-how-to
+    padding: 0 27px
+    font-size: 14px
+    line-height: 1.4
+    color: kifiBlack
+
+  .import-library-how-to-heading
+  .import-library-how-to-row-heading
+    color: #5c6373
+    font-weight: 700
+
+  .import-library-how-to-heading
+    margin-bottom: 5px
+
+  .import-library-how-to-row
+    border-bottom: 1px solid #e7e7e7
+    height: 40px
+
+  .import-library-how-to-row-heading
+    padding-top: 10px
+    width: 55px
+    vertical-align: top
+
+  .import-library-how-to-row-content
+    padding: 10px 0
+    width: 430px
+
+  .bookmark-file-upload
+    opacity: 0
+    visibility: hidden
+    position: absolute
+    top: -3000px
+
+  .bookmark-file-upload-name
+  .bookmark-file-upload-status
+    display: block
+    padding-left: 10px
+
+  .bookmark-file-upload-status
+    color: redColor
+
+  .add-keep-to-library-dropdown
+    margin: 10px auto 15px
+
 .kf-empty-state
 
   .sprite-add-link
@@ -296,3 +436,8 @@ input::-ms-clear
 
     &:hover
       text-decoration: underline
+
+.install-extension-error
+  .dialog-body-wrap
+    .dialog-body
+      padding-top: 50px

@@ -3,6 +3,7 @@ package com.keepit.common.net
 import com.keepit.common.logging.Logging
 import net.sf.uadetector.service.UADetectorServiceFactory
 import net.sf.uadetector.{ ReadableUserAgent => SFUserAgent }
+import play.api.mvc.{ Request => PlayRequest }
 
 case class UserAgent(
     userAgent: String,
@@ -36,7 +37,10 @@ object UserAgent extends Logging {
   private def normalize(str: String): String = if (str == "unknown") "" else str
   private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
 
-  def fromString(userAgent: String): UserAgent = {
+  def apply(request: PlayRequest[_]): UserAgent = fromString(request.headers.get("user-agent").getOrElse(""))
+  def apply(request: String): UserAgent = fromString(request)
+
+  private def fromString(userAgent: String): UserAgent = {
     userAgent match {
       case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
