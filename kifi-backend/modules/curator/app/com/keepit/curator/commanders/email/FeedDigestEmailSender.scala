@@ -17,7 +17,7 @@ import com.keepit.curator.model.{ TopicAttribution, UriRecommendation, UriRecomm
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.search.{ AugmentableItem, ItemAugmentationRequest, ItemAugmentationResponse, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
@@ -27,6 +27,7 @@ import play.twirl.api.Html
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Random, Success }
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)

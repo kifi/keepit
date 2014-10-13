@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.augmentation
 
 import com.keepit.model.{ Hashtag, Library, NormalizedURI, User }
 import com.keepit.common.db.Id
@@ -16,13 +16,12 @@ import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.zookeeper.ServiceInstance
-import com.keepit.search.AugmentationCommander.DistributionPlan
 import com.keepit.common.logging.Logging
 import org.apache.lucene.util.BytesRef
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.core._
-import java.text.Normalizer
-import com.keepit.search.graph.library.LibraryIndexable
+import com.keepit.search.{ Searcher, LibraryContext, DistributedSearchServiceClient }
+import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -196,82 +195,5 @@ class AugmentationCommanderImpl @Inject() (
         }
     }
     AugmentationScores(libraryScores.toMap, userScores.toMap, tagScores.toMap)
-  }
-}
-
-class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
-  def uri: Id[NormalizedURI] = item.uri
-  def keep = primaryKeep
-  def isSecret(librarySearcher: Searcher) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _))
-
-  // Keeps
-  private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
-  lazy val (myKeeps, moreKeeps) = AugmentedItem.sortKeeps(userId, allFriends, allLibraries, scores, info.keeps)
-  lazy val keeps = myKeeps ++ moreKeeps
-  def otherPublishedKeeps: Int = info.otherPublishedKeeps
-  def otherDiscoverableKeeps: Int = info.otherDiscoverableKeeps
-
-  // Libraries
-
-  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _) => (libraryId, keeperId) }
-
-  // Keepers
-
-  lazy val keepers = {
-    val uniqueKeepers = MutableSet[Id[User]]()
-    keeps.collect {
-      case RestrictedKeepInfo(_, _, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
-        uniqueKeepers += keeperId
-        keeperId
-    }
-  }
-
-  lazy val (relatedKeepers, otherKeepers) = keepers.partition(keeperId => allFriends.contains(keeperId) || userId == keeperId)
-
-  def keepersTotal = info.keepersTotal
-
-  // Tags
-  private lazy val primaryTags = primaryKeep.toSeq.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
-  private lazy val myTags = myKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
-  private lazy val moreTags = moreKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_))).toSeq
-
-  def tags = {
-    val uniqueNormalizedTags = MutableSet[String]()
-    (myTags.iterator ++ primaryTags.iterator ++ moreTags.iterator).filter { tag =>
-      val normalizedTag = AugmentedItem.normalizeTag(tag)
-      val showTag = !uniqueNormalizedTags.contains(normalizedTag)
-      uniqueNormalizedTags += normalizedTag
-      showTag
-    }.toSeq
-  }
-}
-
-object AugmentedItem {
-  private[AugmentedItem] def sortKeeps(userId: Id[User], friends: Set[Id[User]], libraries: Set[Id[Library]], scores: AugmentationScores, keeps: Seq[RestrictedKeepInfo]) = { // this method should be stable
-
-    val sortedKeeps = keeps.sortBy(keep => (keep.keptBy.map(-scores.byUser(_)), keep.keptIn.map(-scores.byLibrary(_)))) // sort primarily by most relevant user
-
-    val myKeeps = new ListBuffer[RestrictedKeepInfo]()
-    val keepsFromMyLibraries = new ListBuffer[RestrictedKeepInfo]()
-    val keepsFromMyFriends = new ListBuffer[RestrictedKeepInfo]()
-    val otherKeeps = new ListBuffer[RestrictedKeepInfo]()
-    sortedKeeps.foreach { keep =>
-      val keepCategory = {
-        if (keep.keptBy.exists(_ == userId)) myKeeps
-        else if (keep.keptIn.exists(libraries.contains)) keepsFromMyLibraries
-        else if (keep.keptBy.exists(friends.contains)) keepsFromMyFriends
-        else otherKeeps
-      }
-      keepCategory += keep
-    }
-    val moreKeeps = keepsFromMyLibraries ++ keepsFromMyFriends ++ otherKeeps
-    (myKeeps.toList, moreKeeps.toList)
-  }
-
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
-
-  def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) = {
-    new AugmentedItem(userId, allFriends, allLibraries, scores)(item, info)
   }
 }

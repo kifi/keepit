@@ -31,4 +31,11 @@ package object json {
     )
   }
 
+  @inline private def canBeOmitted(value: JsValue): Boolean = value match {
+    case JsNull | JsBoolean(false) | JsString("") | JsArray(Seq()) => true
+    case JsNumber(zero) if zero == 0 => true
+    case _ => false
+  }
+
+  def minify(fullJson: JsObject): JsObject = JsObject(fullJson.fields.filterNot { case (key, value) => canBeOmitted(value) })
 }

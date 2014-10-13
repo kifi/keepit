@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.augmentation
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._

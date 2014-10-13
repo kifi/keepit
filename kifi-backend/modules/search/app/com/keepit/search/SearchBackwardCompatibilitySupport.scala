@@ -11,6 +11,7 @@ import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
