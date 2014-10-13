@@ -13,7 +13,7 @@ object ExternalId {
 
   def verifyIdFormat(id: String): Unit = {
     if (!ExternalId.UUIDPattern.pattern.matcher(id).matches()) {
-      throw new Exception(s"external id $id does not match uuid pattern")
+      throw new Exception(s"""external id "$id" does not match uuid pattern""")
     }
   }
 
