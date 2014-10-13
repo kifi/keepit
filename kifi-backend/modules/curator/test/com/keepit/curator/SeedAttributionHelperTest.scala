@@ -14,6 +14,11 @@ import org.specs2.mutable.Specification
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.search.augmentation._
+import com.keepit.curator.model.ScoredSeedItem
+import scala.Some
+import com.keepit.curator.model.CuratorKeepInfo
+import com.keepit.curator.model.UriScores
 
 class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
 

@@ -22,6 +22,7 @@ import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.routes.Search
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentationCommander }
 
 class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,

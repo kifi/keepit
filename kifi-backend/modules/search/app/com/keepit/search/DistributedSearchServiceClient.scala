@@ -14,6 +14,7 @@ import scala.collection.mutable.ListBuffer
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest }
 
 trait DistributedSearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH

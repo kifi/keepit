@@ -30,12 +30,6 @@ object BinaryFormat {
   implicit val sliderHistoryBinaryFormat = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer
 }
 
-object TraversableFormat {
-  private def materialize[U, T <: Traversable[U]](implicit traversableFormatter: Format[T]) = traversableFormatter
-  def seq[U](implicit formatter: Format[U]) = materialize[U, Seq[U]]
-  def set[U](implicit formatter: Format[U]) = materialize[U, Set[U]]
-}
-
 trait Serializer[T] {
   def writes(value: Option[T]): Any
   def reads(obj: Any): Option[T]

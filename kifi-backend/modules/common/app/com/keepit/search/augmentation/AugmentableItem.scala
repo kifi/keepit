@@ -1,9 +1,9 @@
-package com.keepit.search
+package com.keepit.search.augmentation
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
 import play.api.libs.json._
-import com.keepit.serializer.TupleFormat
+import com.keepit.common.json.TupleFormat
 
 case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
 
