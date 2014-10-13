@@ -270,7 +270,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
-  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
+  def collections: Option[Seq[String]] = (json \ "tags").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => id.as[String]) } // were ExternalId[Collection], moving to inlined hashtags
   def bookmarkId: Option[ExternalId[Keep]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Keep])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {

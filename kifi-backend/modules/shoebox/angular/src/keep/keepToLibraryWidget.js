@@ -11,8 +11,10 @@ angular.module('kifi')
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
        *  selection - an object whose 'library' property will be the selected library.
-       * Optional:
-       *  clickAction() - a function that can be called once a library is selected
+       *
+       *  Optional properties on parent scope:
+       *   clickAction() - a function that can be called once a library is selected
+       *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -126,7 +128,7 @@ angular.module('kifi')
           $compile(widget)(scope);
 
           // Set position.
-          var top = element.offset().top - 100;
+          var top = element.offset().top - (scope.libSelectTopOffset || 0);
           var left = element.offset().left;
           widget.css({top: top + 'px', left: left + 'px'});
 

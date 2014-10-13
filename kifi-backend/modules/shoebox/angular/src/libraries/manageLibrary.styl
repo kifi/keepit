@@ -16,60 +16,16 @@ manage-lib-button =
   .dialog-content
     padding-bottom: 0
 
-  .dialog-x
-    top: 15px
-    right: 20px
-    width: 18px
-    height: 18px
-
-    &:hover
-      cursor: pointer
-
-    &::before
-    &::after
-      content: ' '
-      position: absolute;
-      left: 50%
-      top: 1px
-      bottom: 1px
-      border-radius: 2px
-      width: 3px;
-      background: #c7c7c7
-      font-size: 0
-
-    &::before
-      transform: translate(-1px) rotate(45deg)
-
-    &::after
-      transform: translate(-1px) rotate(-45deg)
-
-    &:hover::before
-    &:hover::after
-    &:focus::before
-    &:focus::after
-      background: #aaa
-
-    &:active::before
-    &:active::after
-      background: #888
-
   .dialog-body-wrap
     margin: 0
     padding: 0
 
   .dialog-body
-    padding: 0 30px 15px
+    padding: 0
     overflow: hidden
 
-  .dialog-header
-    padding: 10px 30px
-    background-color: kifiBlack
-    font-family: Helvetica, Arial, sans-serif
-    font-size: 18px
-    font-style: normal
-    font-weight: bold
-    color: #fff
-    text-align: left
+  .dialog-text
+    padding: 0 20px
 
   .manage-lib-input-wrapper
     margin-bottom: 15px
@@ -203,11 +159,11 @@ manage-lib-button =
     color: secondaryTextGray
 
   .manage-lib-create-button
-    {manage-lib-button}
+    // {manage-lib-button}
     margin: 0 auto
 
   .manage-lib-save-button
-    {manage-lib-button}
+    // {manage-lib-button}
     float: right
 
   .manage-lib-delete-link
