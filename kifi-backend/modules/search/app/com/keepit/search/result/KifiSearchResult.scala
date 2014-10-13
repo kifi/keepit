@@ -6,7 +6,7 @@ import com.keepit.common.net.URISanitizer
 import com.keepit.model._
 import com.keepit.search.engine.result.KifiShardHit
 import com.keepit.search.{ Lang, ArticleSearchResult, Scoring, SearchConfigExperiment }
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import com.keepit.social.BasicUser
 import play.api.libs.json._
 import play.api.libs.json.Json.toJsFieldJsValueWrapper

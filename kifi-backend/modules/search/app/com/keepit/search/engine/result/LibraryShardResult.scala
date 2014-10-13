@@ -4,7 +4,7 @@ import com.keepit.model.{ Keep, Library }
 import com.keepit.common.db.{ Id }
 import play.api.libs.json.Json
 import com.keepit.search.graph.keep.KeepRecord
-import com.keepit.serializer.TupleFormat
+import com.keepit.common.json.TupleFormat
 
 case class LibraryShardHit(
   id: Id[Library],
