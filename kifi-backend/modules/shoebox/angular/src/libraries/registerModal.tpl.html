@@ -1,0 +1,33 @@
+<div kf-modal class="kf-register-modal">
+    <div class="">
+        <a class="dialog-x sprite-close-x-icon" ng-click="close()"></a>
+        <div class="register-modal-wrap">
+            <div class="dialog-body">
+              <div class="kf-register-header">Join Kifi to get updates to this library</div>
+
+              <div class="register-modal-social-block">
+                <div class="kf-fb-register-button">Continue with Facebook</div>
+                <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>
+              </div>
+
+              <div class="kf-or-separator">
+                <div class="kf-or-separator-circle">OR</div>
+                <div class="kf-modal-line"></div>
+              </div>
+
+              <div class="kf-register-header">Continue with email</div>
+              <input type="text" name="email" placeholder="Email"> <input type="submit" value="Continue">
+
+              <div>Already a member of Kifi? Log in.</div>
+
+            </div>
+        </div>
+
+
+
+        <div class="dialog-buttons ng-scope">
+            <button class="dialog-cancel ng-binding ng-scope" ng-click="closeAndCancel()" ng-if="withCancel" tabindex="0">Cancel</button>
+            <button class="kf-action-button ng-binding dialog-warn" ng-class="{'dialog-warn': withWarning}" ng-click="closeAndAction()" tabindex="0">Ok</button>
+        </div>
+    </div>
+</div>
