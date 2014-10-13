@@ -157,6 +157,14 @@ angular.module('kifi')
 
         $document.on('keydown', processKey);
         safeFocus();
+
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+              return lib.access !== 'read_only';
+            });
+          }
+        });
       }
     };
   }
