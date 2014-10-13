@@ -6,7 +6,8 @@ import com.keepit.search.{ Searcher }
 import java.text.Normalizer
 import com.keepit.search.graph.library.LibraryIndexable
 import play.api.libs.json.{ JsBoolean, Json, JsObject }
-import scala.collection.mutable.{ ListBuffer, Set => MutableSet }
+import scala.collection.mutable.{ ListBuffer }
+import com.keepit.common.Collection
 
 class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
@@ -26,14 +27,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 
   // Keepers
 
-  lazy val keepers = {
-    val uniqueKeepers = MutableSet[Id[User]]()
-    keeps.collect {
-      case RestrictedKeepInfo(_, _, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
-        uniqueKeepers += keeperId
-        keeperId
-    }
-  }
+  lazy val keepers = Collection.dedupBy(keeps.flatMap(_.keptBy))(identity)
 
   lazy val (relatedKeepers, otherKeepers) = keepers.partition(keeperId => allFriends.contains(keeperId) || userId == keeperId)
 
@@ -44,15 +38,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
   private lazy val myTags = myKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
   private lazy val moreTags = moreKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_))).toSeq
 
-  def tags = {
-    val uniqueNormalizedTags = MutableSet[String]()
-    (myTags.iterator ++ primaryTags.iterator ++ moreTags.iterator).filter { tag =>
-      val normalizedTag = AugmentedItem.normalizeTag(tag)
-      val showTag = !uniqueNormalizedTags.contains(normalizedTag)
-      uniqueNormalizedTags += normalizedTag
-      showTag
-    }.toSeq
-  }
+  def tags = Collection.dedupBy(myTags ++ primaryTags ++ moreTags)(AugmentedItem.normalizeTag)
 }
 
 object AugmentedItem {
