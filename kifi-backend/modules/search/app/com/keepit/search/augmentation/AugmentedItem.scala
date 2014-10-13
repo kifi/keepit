@@ -94,7 +94,7 @@ object AugmentedItem {
         val keepersTotal = augmentedItem.keepersTotal
 
         val librariesShown = allLibrariesShown(itemIndex).flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
-        val librariesOmitted = augmentedItem.libraries.size - librariesShown.size
+        val librariesOmitted = augmentedItem.libraries.size - librariesShown.size / 2
 
         val tagsShown = augmentedItem.tags.take(maxTagsShown)
         val tagsOmitted = augmentedItem.tags.size - tagsShown.size
