@@ -4,40 +4,59 @@ angular.module('kifi')
 
 .controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location', 'modalService',
   function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location, modalService) {
-    $scope.selectedSort = 'name';
-
     $scope.libraries = [];
     $scope.selected = {};
 
-    $scope.tagList = manageTagService.list;
-    $scope.tagsLoaded = false;
+    $scope.selectedSort = 'name';
+    $scope.tagList = [];
     $scope.selectedTag = {};
+    $scope.more = false;
+    $scope.offset = 0;
 
     //
     // Smart Scroll
     //
     $scope.$watch(function () {
-      return manageTagService.list.length || !manageTagService.hasMore();
+      return $scope.tagList;
     }, function (res) {
       if (res) {
-        $scope.tagsLoaded = true;
         $scope.tagsToShow = $scope.tagList;
       }
     });
     $scope.tagsScrollDistance = '100%';
     $scope.isTagScrollDisabled = function () {
-      return !manageTagService.hasMore();
+      return !$scope.more;
     };
     $scope.manageTagScrollNext = function () {
-      manageTagService.getMore($scope.selectedSort);
+      getPage();
     };
+
 
     $scope.$watch(function () {
       return $scope.selectedSort;
     }, function () {
+      $scope.tagList.length = 0;
+      $scope.offset = 0;
+      $scope.more = true;
       manageTagService.reset();
-      manageTagService.getMore($scope.selectedSort);
+      getPage();
     });
+
+    var loading = false;
+    function getPage() {
+      if (loading) { return; }
+      loading = true;
+      manageTagService.getMore($scope.selectedSort, $scope.offset).then(function (tags) {
+        loading = false;
+        if (tags.length === 0) {
+          $scope.more = false;
+        } else {
+          $scope.more = true;
+          $scope.offset += 1;
+          $scope.tagList.push.apply($scope.tagList, tags);
+        }
+      });
+    }
 
     //
     // Keeping to Library
