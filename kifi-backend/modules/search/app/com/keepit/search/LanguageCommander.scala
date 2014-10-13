@@ -11,7 +11,7 @@ import scala.concurrent.Future
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepLangs }
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.common.logging.Logging
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,6 +29,7 @@ trait LanguageCommander {
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]]
 }
 
+@Singleton
 class LanguageCommanderImpl @Inject() (
     searchClient: DistributedSearchServiceClient,
     searchFactory: SearchFactory,
