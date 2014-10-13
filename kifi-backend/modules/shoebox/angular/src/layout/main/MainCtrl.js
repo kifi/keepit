@@ -5,9 +5,10 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
   'injectedState', '$rootScope', '$analytics', 'installService', 'profileService', '$q', 'routeService',
-  'modalService',
+  'modalService', 'libraryService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService, modalService) {
+    injectedState, $rootScope, $analytics, installService, profileService, $q, routeService,
+    modalService, libraryService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -15,6 +16,20 @@ angular.module('kifi')
     $scope.editMode = {
       enabled: false
     };
+
+    // For populating libraries in the import modals.
+    $scope.librariesEnabled = libraryService.isAllowed();
+
+    if ($scope.librariesEnabled) {
+      libraryService.fetchLibrarySummaries(true).then(function () {
+        $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          return lib.access !== 'read_only';
+        });
+        $scope.selection = $scope.selection || {};
+        $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+        $scope.libSelectTopOffset = 220;
+      });
+    }
 
     $scope.enableSearch = function () {
       $scope.searchEnabled = true;
@@ -93,10 +108,18 @@ angular.module('kifi')
     handleInjectedState(injectedState.state);
 
     function initBookmarkImport(count, msgEvent) {
-      modalService.open({
-        template: 'common/modal/importBookmarksModal.tpl.html',
-        scope: $scope
-      });
+      if ($scope.librariesEnabled) {
+         modalService.open({
+          template: 'common/modal/importBookmarksLibraryModal.tpl.html',
+          scope: $scope
+        });
+      } else {
+        modalService.open({
+          template: 'common/modal/importBookmarksModal.tpl.html',
+          scope: $scope
+        });
+      }
+
       $scope.msgEvent = (msgEvent && msgEvent.origin && msgEvent.source && msgEvent) || false;
     }
 
@@ -105,10 +128,17 @@ angular.module('kifi')
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
-      modalService.open({
-        template: 'common/modal/importBookmarkFileModal.tpl.html',
-        scope: $scope
-      });
+      if ($scope.librariesEnabled) {
+         modalService.open({
+          template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
+          scope: $scope
+        });
+      } else {
+        modalService.open({
+          template: 'common/modal/importBookmarkFileModal.tpl.html',
+          scope: $scope
+        });
+      }
     }
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
@@ -121,6 +151,26 @@ angular.module('kifi')
           break;
       }
     });
+
+    $scope.importBookmarksToLibrary = function (library) {
+      $scope.forceClose = true;
+
+      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // the next modal.
+      $scope.$evalAsync(function () {
+        // Fake check. To do: use real endpoints to determine which modal to open.
+        if (library) {
+          modalService.open({
+            template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
+            scope: $scope
+          });
+        } else {
+          modalService.open({
+            template: 'common/modal/importBookmarksErrorModal.tpl.html'
+          });
+        }
+      });
+    };
 
     $scope.importBookmarks = function (makePublic) {
       $scope.forceClose = true;
@@ -263,6 +313,23 @@ angular.module('kifi')
           $scope.importFileStatus = 'Hm, couldn’t upload your file. Try picking it again.';
         }
       }
+    };
+
+    $scope.importBookmarkFileToLibrary = function (library) {
+      $scope.forceClose = true;
+
+      $scope.$evalAsync(function () {
+        // This check is a fake check. Remove when we have real endpoints.
+        if (library) {
+          modalService.open({
+            template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
+          });
+        } else {
+          modalService.open({
+            template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+          });
+        }
+      });
     };
 
     $scope.cancelBookmarkUpload = function () {
