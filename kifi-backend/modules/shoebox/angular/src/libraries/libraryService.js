@@ -115,16 +115,6 @@ angular.module('kifi')
         return libraryByIdService.get(libraryId);
       },
 
-      getLibraryByPath: function (path) { // path is of the form /username/library-slug
-        var split = path.split('/').filter(function (a) { return a.length !== 0; });
-        var username = split[0];
-        var slug = split[1];
-        if (!username || !slug) {
-          return $q.reject({'error': 'invalid_path'});
-        }
-        return libraryByUserSlugService.get(username, slug);
-      },
-
       getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
         if (invalidateCache) {
           libraryByUserSlugService.expire(username, slug, authToken);
