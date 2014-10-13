@@ -19,10 +19,10 @@ object Collection {
   }
 
   def dedupBy[A, B](items: Seq[A])(toKey: A => B): Seq[A] = { // stable
-    val hashSet = new scala.collection.mutable.HashSet[B]
+    val alreadySeen = new scala.collection.mutable.HashSet[B]
     items.filter { item =>
       val key = toKey(item)
-      !hashSet(key) tap { notSeen => if (notSeen) hashSet += key }
+      !alreadySeen(key) tap { notSeen => if (notSeen) alreadySeen += key }
     }
   }
 }
