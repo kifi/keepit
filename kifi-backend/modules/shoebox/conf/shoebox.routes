@@ -215,11 +215,11 @@ GET     /m/1/user/$id<[0-9a-f-]{36}> 			      @com.keepit.controllers.mobile.Mob
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET    /m/1/discover/                           @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
+GET     /m/1/discover/                          @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
 
-GET     /m/1/recos/top                          @com.keepit.controllers.website.MobileRecommendationsController.topRecos(more: Boolean, recency: Float)
-GET     /m/1/recos/public                       @com.keepit.controllers.website.MobileRecommendationsController.topPublicRecos()
-POST    /m/1/recos/trash                        @com.keepit.controllers.website.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
+GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
+POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
 
 ##########################################

@@ -183,7 +183,7 @@ class AuthHelper @Inject() (
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey) getOrElse {
       request.request.headers.get(USER_AGENT).flatMap { agentString =>
-        val agent = UserAgent.fromString(agentString)
+        val agent = UserAgent(agentString)
         if (agent.canRunExtensionIfUpToDate) Some("/install") else None
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
