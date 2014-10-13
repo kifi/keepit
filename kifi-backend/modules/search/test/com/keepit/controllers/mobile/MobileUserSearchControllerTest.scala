@@ -1,11 +1,12 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.actor.FakeActorSystemModule
 
 import play.api.test.FakeRequest
@@ -56,6 +57,8 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
   def modules = {
     Seq(
       FakeActorSystemModule(),
+      FakeUserActionsModule(),
+      FakeHttpClientModule(),
       FakeActionAuthenticatorModule(),
       FakeShoeboxServiceModule(),
       PlayAppConfigurationModule()
@@ -73,6 +76,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
         path === "/m/1/search/users/search?query=woody&maxHits=3"
 
+        inject[FakeUserActionsHelper].setUser(users.head)
         val request = FakeRequest("GET", path)
 
         val controller = inject[MobileUserSearchController]
@@ -113,8 +117,8 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("firstNa", None, 0, 10).toString
         path === "/m/1/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
+        inject[FakeUserActionsHelper].setUser(users.head)
         val request = FakeRequest("GET", path)
-
         val controller = inject[MobileUserSearchController]
         val result = controller.pageV1("firstNa", None, 0, 10)(request)
         status(result) must equalTo(OK)
@@ -166,6 +170,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("woody@fox.com", None, 0, 10).toString
         path === "/m/1/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
+        inject[FakeUserActionsHelper].setUser(users.head)
         val request = FakeRequest("GET", path)
         val controller = inject[MobileUserSearchController]
         val result = controller.pageV1("woody@fox.com", None, 0, 10)(request)

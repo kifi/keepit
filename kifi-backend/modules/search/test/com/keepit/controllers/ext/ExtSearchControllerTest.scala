@@ -8,7 +8,7 @@ import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
@@ -30,6 +30,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
     Seq(
       FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
+      FakeUserActionsModule(),
       FixedResultIndexModule(),
       PlayAppConfigurationModule(),
       FakeCryptoModule()
@@ -43,7 +44,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         path === "/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)

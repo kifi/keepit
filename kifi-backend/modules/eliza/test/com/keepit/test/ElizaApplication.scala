@@ -1,5 +1,6 @@
 package com.keepit.test
 
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.eliza.{ ElizaServiceTypeModule, FakeElizaServiceClientModule }
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.keepit.common.db.TestDbInfo
@@ -37,6 +38,8 @@ trait ElizaTestInjector extends TestInjector with DbInjectionHelper with ElizaIn
     ElizaServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
+    FakeUserActionsModule(),
+    FakeHttpClientModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
     FakeSlickModule(TestDbInfo.dbInfo),

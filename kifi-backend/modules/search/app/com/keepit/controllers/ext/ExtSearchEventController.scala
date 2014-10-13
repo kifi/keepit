@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.keepit.common.http._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
@@ -14,13 +14,13 @@ import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
 
 class ExtSearchEventController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   searchEventCommander: SearchEventCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+    extends UserActions with SearchServiceController with Logging {
 
-  def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
+  def clickedSearchResult = UserAction(parse.tolerantJson) { request =>
     val clickedAt = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -56,7 +56,7 @@ class ExtSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJson { request =>
+  def searched = UserAction(parse.tolerantJson) { request =>
     val time = clock.now()
     val userId = request.userId
     val json = request.body

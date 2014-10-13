@@ -1,6 +1,6 @@
 package com.keepit.controllers.site
 
-import com.keepit.common.controller.{ ElizaServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller.{ ElizaServiceController, WebsiteController, UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.slick.Database
@@ -18,11 +18,11 @@ import com.keepit.eliza.commanders.MessagingCommander
 
 class ChatterController @Inject() (
     messagingCommander: MessagingCommander,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     threadRepo: MessageThreadRepo,
-    db: Database) extends WebsiteController(actionAuthenticator) with ElizaServiceController {
+    db: Database) extends UserActions with ElizaServiceController {
 
-  def getChatter() = JsonAction.authenticatedParseJsonAsync { request =>
+  def getChatter() = UserAction.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
       Ok(res.headOption.map {
