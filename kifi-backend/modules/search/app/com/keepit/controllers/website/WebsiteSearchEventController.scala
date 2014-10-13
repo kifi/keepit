@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ WebsiteController, SearchServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ WebsiteController, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
@@ -12,13 +12,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.akka.SafeFuture
 
 class WebsiteSearchEventController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   searchEventCommander: SearchEventCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends WebsiteController(actionAuthenticator) with SearchServiceController with Logging {
+    extends UserActions with SearchServiceController with Logging {
 
-  def clickedKifiResult = JsonAction.authenticatedParseJson { request =>
+  def clickedKifiResult = UserAction(parse.tolerantJson) { request =>
     val clickedAt = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -36,7 +36,7 @@ class WebsiteSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJson { request =>
+  def searched = UserAction(parse.tolerantJson) { request =>
     val time = clock.now()
     val userId = request.userId
     val json = request.body

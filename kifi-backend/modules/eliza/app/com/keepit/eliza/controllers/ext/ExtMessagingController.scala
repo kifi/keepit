@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{ ElizaServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ ElizaServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -27,7 +27,7 @@ import scala.concurrent.Future
 class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     notificationRouter: WebSocketRouter,
     amazonInstanceInfo: AmazonInstanceInfo,
     threadRepo: MessageThreadRepo,
@@ -40,9 +40,9 @@ class ExtMessagingController @Inject() (
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    val accessLog: AccessLog) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
+    val accessLog: AccessLog) extends UserActions with ElizaServiceController {
 
-  def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
+  def sendMessageAction() = UserAction.async(parse.tolerantJson) { request =>
     val o = request.body
     val extVersion = (o \ "extVersion").asOpt[String]
     val (title, text, source) = (
@@ -81,7 +81,7 @@ class ExtMessagingController @Inject() (
 
   }
 
-  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
+  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
     val tStart = currentDateTime
     val o = request.body
     val (text, source) = (
@@ -98,7 +98,7 @@ class ExtMessagingController @Inject() (
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
   }
 
-  def getEmailPreview(msgExtId: String) = AnyAction.authenticatedAsync { request =>
+  def getEmailPreview(msgExtId: String) = UserAction.async { request =>
     emailCommander.getEmailPreview(ExternalId[Message](msgExtId)).map(Ok(_))
   }
 

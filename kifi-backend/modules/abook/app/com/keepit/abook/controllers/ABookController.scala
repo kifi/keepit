@@ -2,7 +2,7 @@ package com.keepit.abook.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.controller.{ WebsiteController, ABookServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ WebsiteController, ABookServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.mvc.Action
@@ -53,7 +53,7 @@ object GmailABookOwnerInfo {
 
 import Logging._
 class ABookController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     s3: ABookRawInfoStore,
     abookInfoRepo: ABookInfoRepo,
@@ -62,7 +62,7 @@ class ABookController @Inject() (
     typeahead: EContactTypeahead,
     abookCommander: ABookCommander,
     contactsUpdater: ABookImporterPlugin,
-    richConnectionCommander: LocalRichConnectionCommander) extends WebsiteController(actionAuthenticator) with ABookServiceController {
+    richConnectionCommander: LocalRichConnectionCommander) extends UserActions with ABookServiceController {
 
   // gmail
   def importContacts(userId: Id[User]) = Action.async(parse.json) { request =>
