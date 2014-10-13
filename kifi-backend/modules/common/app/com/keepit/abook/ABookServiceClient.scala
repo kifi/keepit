@@ -42,7 +42,6 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit]
   def refreshAllFilters(): Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
@@ -199,13 +198,6 @@ class ABookServiceClientImpl @Inject() (
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => () }
-  }
-
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = {
-    implicit val userIdFormat = Id.format[User]
-    implicit val socialIdFormat = Id.format[SocialUserInfo]
-    val json = Json.obj("userId" -> userId, "friendSocialId" -> friend.left.toOption, "friendEmailAddress" -> friend.right.toOption)
-    call(ABook.internal.blockRichConnection, json).map(_ => ())
   }
 
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = {

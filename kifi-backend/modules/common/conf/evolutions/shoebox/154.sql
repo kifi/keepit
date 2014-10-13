@@ -4,8 +4,6 @@
 
 ALTER TABLE bookmark ADD is_primary BOOLEAN DEFAULT TRUE;
 
-ALTER TABLE bookmark ADD CONSTRAINT user_id_primary_uri_id UNIQUE (user_id, is_primary, uri_id);
-
 -- MySQL:
 -- ALTER TABLE bookmark DROP KEY user_id;
 -- ALTER TABLE bookmark DROP KEY user_id_2;

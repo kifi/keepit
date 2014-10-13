@@ -5,9 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.model._
 import com.keepit.search.engine.result.KifiShardHit
-import com.keepit.search.ArticleSearchResult
-import com.keepit.search.Scoring
-import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.{ Lang, ArticleSearchResult, Scoring, SearchConfigExperiment }
 import com.keepit.serializer.TraversableFormat
 import com.keepit.social.BasicUser
 import play.api.libs.json._
@@ -15,6 +13,7 @@ import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import scala.math.BigDecimal.double2bigDecimal
 import scala.math.BigDecimal.int2bigDecimal
 import scala.math.BigDecimal.long2bigDecimal
+import com.keepit.search.index.{ Analyzer, DefaultAnalyzer }
 
 class KifiSearchResult(val json: JsObject) extends AnyVal {
 }
@@ -56,6 +55,7 @@ object KifiSearchResult extends Logging {
   def v2(
     uuid: ExternalId[ArticleSearchResult],
     query: String,
+    lang: Lang,
     hits: Seq[KifiShardHit],
     myTotal: Int,
     friendsTotal: Int,
@@ -68,7 +68,7 @@ object KifiSearchResult extends Logging {
       new KifiSearchResult(JsObject(List(
         "uuid" -> JsString(uuid.toString),
         "query" -> JsString(query),
-        "hits" -> toKifiSearchHitsV2(hits),
+        "hits" -> toKifiSearchHitsV2(query, lang, hits),
         "myTotal" -> JsNumber(myTotal),
         "friendsTotal" -> JsNumber(friendsTotal),
         "mayHaveMore" -> JsBoolean(mayHaveMoreHits),
@@ -84,16 +84,17 @@ object KifiSearchResult extends Logging {
     }
   }
 
-  def toKifiSearchHitsV2(hits: Seq[KifiShardHit]): JsArray = {
+  def toKifiSearchHitsV2(query: String, lang: Lang, hits: Seq[KifiShardHit]): JsArray = {
+    val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
+    val terms = Highlighter.getQueryTerms(query, analyzer)
     val v2Hits = hits.map { h =>
-      val json = JsObject(List(
+      var json = JsObject(List(
         "title" -> h.titleJson,
         "url" -> h.urlJson
       ))
-      h.externalIdJson match {
-        case v: JsString => json + ("keepId" -> v)
-        case _ => json
-      }
+      h.externalIdJson.asOpt[JsString].foreach { v => json = json + ("keepId" -> v) }
+      getMatches(analyzer, terms, h).foreach { matches => json = json + ("matches" -> matches) }
+      json
     }
     JsArray(v2Hits)
   }
@@ -106,6 +107,19 @@ object KifiSearchResult extends Logging {
     JsObject(List(
       "hits" -> JsArray(v2Infos)
     ))
+  }
+
+  def getMatches(analyzer: Analyzer, terms: Set[String], hit: KifiShardHit): Option[JsObject] = {
+    var matchesJson = Json.obj()
+
+    def add(name: String, content: String) = {
+      val matches = Highlighter.highlight(content, analyzer, "", terms)
+      if (matches.nonEmpty) { matchesJson = matchesJson + (name -> Highlighter.formatMatches(matches)) }
+    }
+
+    add("title", hit.title)
+    add("url", hit.url)
+    Some(matchesJson).filter(_.keys.nonEmpty)
   }
 }
 
@@ -256,19 +270,15 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
-  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
+  def collections: Option[Seq[String]] = (json \ "tags").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => id.as[String]) } // were ExternalId[Collection], moving to inlined hashtags
   def bookmarkId: Option[ExternalId[Keep]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Keep])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
     var matchesJson = Json.obj()
 
-    def add(name: String, matches: Option[Seq[(Int, Int)]]) = {
-      matches match {
-        case Some(matches) =>
-          if (matches.nonEmpty) {
-            matchesJson = matchesJson + (name -> JsArray(matches.map(h => Json.arr(h._1, (h._2 - h._1)))))
-          }
-        case _ =>
+    def add(name: String, matchesOpt: Option[Seq[(Int, Int)]]) = {
+      matchesOpt.foreach { matches =>
+        if (matches.nonEmpty) { matchesJson = matchesJson + (name -> Highlighter.formatMatches(matches)) }
       }
     }
 

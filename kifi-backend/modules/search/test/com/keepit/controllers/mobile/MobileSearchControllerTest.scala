@@ -219,7 +219,7 @@ class FixedResultSearchCommander extends SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): KifiShardResult = ???
+    debug: Option[String]): Future[KifiShardResult] = ???
 
   def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
   def warmUp(userId: Id[User]): Unit = {}

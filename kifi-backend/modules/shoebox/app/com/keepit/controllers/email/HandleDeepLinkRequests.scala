@@ -60,7 +60,7 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
       if (agentString == null || agentString.isEmpty) {
         (false, false)
       } else {
-        val agent = UserAgent.fromString(agentString)
+        val agent = UserAgent(agentString)
         (agent.isIphone, agent.isKifiIphoneApp)
       }
     } getOrElse (false, false)

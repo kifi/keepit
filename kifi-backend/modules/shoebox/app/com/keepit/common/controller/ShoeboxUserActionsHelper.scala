@@ -8,21 +8,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ UserRepo, SocialUserInfoRepo, User, ExperimentType, SocialUserInfo }
+import com.keepit.social.{ SocialNetworkType, SocialId }
 import play.api.mvc.{ WrappedRequest, Request, Controller }
 import securesocial.core.{ UserService, SecureSocial, Identity }
 
 import scala.concurrent.Future
-
-trait ShoeboxSecureSocialHelper {
-  def getSecureSocialUserFromRequest[A](implicit request: Request[A]): Option[Identity] = {
-    for (
-      authenticator <- SecureSocial.authenticatorFromRequest;
-      user <- UserService.find(authenticator.identityId)
-    ) yield {
-      user
-    }
-  }
-}
 
 @Singleton
 class ShoeboxUserActionsHelper @Inject() (
@@ -32,7 +22,7 @@ class ShoeboxUserActionsHelper @Inject() (
     suiRepo: SocialUserInfoRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,
-    val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with ShoeboxSecureSocialHelper with Logging {
+    val kifiInstallationCookie: KifiInstallationCookie) extends Controller with UserActionsHelper with SecureSocialHelper with Logging {
 
   override def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest[A](request, () => getSecureSocialUserFromRequest)
 
@@ -52,5 +42,17 @@ class ShoeboxUserActionsHelper @Inject() (
     db.readOnlyMaster { implicit s => Some(userRepo.get(extId)) }
   }
 
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful {
+    db.readOnlyMaster { implicit s => suiRepo.getByUser(userId).headOption.flatMap(_.credentials) }
+  }
+
+  def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)
+
+  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = Future.successful {
+    val socialUser = db.readOnlyMaster { implicit s =>
+      suiRepo.get(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
+    }
+    socialUser.userId
+  }
+
 }

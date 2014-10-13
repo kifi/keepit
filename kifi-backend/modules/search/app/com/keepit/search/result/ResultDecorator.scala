@@ -162,6 +162,8 @@ object Highlighter extends Logging {
       emptyMatches
     }
   }
+
+  def formatMatches(matches: Seq[(Int, Int)]): JsArray = JsArray(matches.map(h => Json.arr(h._1, (h._2 - h._1))))
 }
 
 case class DecoratedResult(

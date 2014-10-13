@@ -10,6 +10,8 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Result
 
@@ -201,6 +203,22 @@ class ExtLibraryController @Inject() (
         case _ =>
           Forbidden(Json.obj("error" -> "permission_denied"))
       }
+    }
+  }
+
+  def searchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = UserAction.async { request =>
+    Library.decodePublicId(libraryPubId).toOption map { libraryId =>
+      db.readOnlyMaster { implicit session =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
+      } map { _ =>
+        keepsCommander.searchTags(libraryId, query, limit) map { tags =>
+          Ok(Json.toJson(tags))
+        }
+      } getOrElse {
+        Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))
+      }
+    } getOrElse {
+      Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
     }
   }
 

@@ -17,6 +17,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.scraper.ScrapeScheduler
+import org.joda.time.DateTime
 import play.api.libs.json.Json
 
 import scala.util.{ Failure, Random, Success, Try }
@@ -29,6 +30,7 @@ class KeepInterner @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
+  libraryRepo: LibraryRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   urlRepo: URLRepo,
@@ -110,13 +112,13 @@ class KeepInterner @Inject() (
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source, installationId)
+    if (persistedBookmarksWithUris.nonEmpty) db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
     val createdKeeps = persistedBookmarksWithUris collect {
       case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
     }
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
     }
-
     keptAnalytics.keptPages(userId, createdKeeps, context)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
@@ -131,6 +133,7 @@ class KeepInterner @Inject() (
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
+      db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
       bookmark
     }
   }
@@ -190,8 +193,12 @@ class KeepInterner @Inject() (
   private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
     installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
 
-    // todo: swap getPrimaryByUriAndUser to use libraries
-    val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
+    val currentBookmarkOpt = if (library.isDisjoint)
+      keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
+    else
+      keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+
+    val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
         val savedKeep = bookmark.copy(
@@ -209,7 +216,7 @@ class KeepInterner @Inject() (
         (false, wasInactiveKeep, savedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get))
+        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint)
         (true, false, keepRepo.save(keep))
     }
     if (wasInactiveKeep) {

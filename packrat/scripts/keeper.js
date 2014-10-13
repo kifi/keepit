@@ -356,7 +356,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       keepBox.onHidden.add(onKeepBoxHidden);
     });
   }
-
   function onKeepBoxHide() {
     endStickyKeepBox();
     if (window.pane) {
@@ -369,6 +368,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       hideSlider('keepBox');
     }
   }
+
   function onToasterHide() {
     endStickyToaster();
     if (window.pane) {

@@ -14,6 +14,9 @@ body
   font-family: Helvetica, Arial, sans-serif
   min-width: 800px
 
+  &.modal-open
+    overflow: hidden
+
 *, :after, :before
   box-sizing: content-box
 
@@ -76,8 +79,12 @@ a[href]
   text-align: start
   background-color: appBackgroundColor
 
-.kf-col-island
-  max-width: appMaxWidth
+.kf-logged-in .kf-col-island
+  max-width: userAppMaxWidth
+  margin: 0 auto
+
+.kf-logged-out .kf-col-island
+  max-width: nonUserAppMaxWidth
   margin: 0 auto
 
 .kf-col
@@ -96,3 +103,18 @@ a[href]
   padding: 2px 0 0
   border-bottom: separatorBorder
   margin: 10px 0
+
+.ng-cloak
+  display: none !important
+
+@font-face
+  font-family: 'Merriweather'
+  font-style: normal
+  font-weight: 400
+  src: local('Merriweather'), url(https://djty7jcqog9qu.cloudfront.net/fonts/mw400-2.woff) format('woff')
+
+@font-face
+  font-family: 'Merriweather'
+  font-style: normal
+  font-weight: 700
+  src: local('Merriweather Bold'), local('Merriweather-Bold'), url(https://djty7jcqog9qu.cloudfront.net/fonts/mw700-2.woff) format('woff')

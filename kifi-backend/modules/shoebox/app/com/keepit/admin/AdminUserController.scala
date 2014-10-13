@@ -32,8 +32,7 @@ import play.api.libs.json._
 import play.api.mvc.{ AnyContent, Result }
 
 import views.html
-import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.socialusers.SocialUserTypeahead
+import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahead }
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.abook.model.RichContact
 
@@ -98,6 +97,7 @@ class AdminUserController @Inject() (
     userCredRepo: UserCredRepo,
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
+    kifiUserTypeahead: KifiUserTypeahead,
     systemAdminMailSender: SystemAdminMailSender,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
@@ -424,6 +424,7 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(userId))
   }
 
+  //todo: this code may become hard to maintain, should be unified with the production path
   def connectUsers(user1: Id[User]) = AdminUserPage { implicit request =>
     val user2 = Id[User](request.body.asFormUrlEncoded.get.apply("user2").head.toLong)
     db.readWrite { implicit session =>
@@ -440,11 +441,13 @@ class AdminUserController @Inject() (
             socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
         }
       }
-
+      userConnectionRepo.addConnections(user1, Set(user2), requested = true)
       eliza.sendToUser(user1, Json.arr("new_friends", Set(basicUserRepo.load(user2))))
       eliza.sendToUser(user2, Json.arr("new_friends", Set(basicUserRepo.load(user1))))
-
-      userConnectionRepo.addConnections(user1, Set(user2), requested = true)
+    }
+    Seq(user1, user2) foreach { userId =>
+      socialUserTypeahead.refresh(userId)
+      kifiUserTypeahead.refresh(userId)
     }
     Redirect(routes.AdminUserController.userView(user1))
   }
@@ -879,7 +882,8 @@ class AdminUserController @Inject() (
     val (owner, accessToLibs) = db.readOnlyReplica { implicit session =>
       val owner = userRepo.get(ownerId)
       val libs = libraryRepo.getByUser(ownerId).filter(pair => showSecrets || !(pair._2.visibility == LibraryVisibility.SECRET))
-      (owner, libs)
+      val accessToLibs: Seq[(LibraryAccess, Library)] = for (libPair <- libs) yield { (libPair._1.access, libPair._2) }
+      (owner, accessToLibs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))
   }

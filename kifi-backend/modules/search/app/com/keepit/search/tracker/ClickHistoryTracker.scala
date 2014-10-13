@@ -1,6 +1,8 @@
 package com.keepit.search.tracker
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.keepit.common.store._
 import com.amazonaws.services.s3.AmazonS3
@@ -9,14 +11,21 @@ import com.keepit.common.store.S3Bucket
 import com.keepit.common.cache.{ BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import com.keepit.search.MultiHashFilter
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 case class ClickedURI(id: Id[NormalizedURI])
 case class ClickHistoryBuilder(tableSize: Int, numHashFuncs: Int, minHits: Int) extends MultiHashFilterBuilder[ClickedURI]
 
 @ImplementedBy(classOf[ClickHistoryTrackerImpl])
-trait ClickHistoryTracker extends MultiHashTracker[Id[User], ClickedURI]
+trait ClickHistoryTracker extends MultiHashTracker[Id[User], ClickedURI] {
+  private[this] val clickHistoryReqConsolidator = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
+
+  def getClickHistoryFuture(userId: Id[User]) = clickHistoryReqConsolidator(userId) { userId =>
+    SafeFuture(getMultiHashFilter(userId))
+  }
+}
 
 @Singleton
 class ClickHistoryTrackerImpl @Inject() (val store: ClickHistoryStore, val builder: ClickHistoryBuilder)

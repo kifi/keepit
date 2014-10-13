@@ -7,17 +7,17 @@ import java.util.Arrays
 import LocalAlignment._
 import com.keepit.common.logging.Logging
 
-trait LocalAlignment {
+abstract class LocalAlignment {
   def begin(): Unit
   def end(): Unit
-  def update(id: Int, position: Int, weight: Float = 1.0f): Unit
-  def single(id: Int, weight: Float = 1.0f): Float
+  def update(id: TermId, position: Int, weight: Float = 1.0f): Unit
+  def single(id: TermId, weight: Float = 1.0f): Float
   def score: Float
   def maxScore: Float
 }
 
 object LocalAlignment {
-  def apply(termIds: Array[Int], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, gapPenalty: Float): LocalAlignment = {
+  def apply(termIds: Array[TermId], phraseMatcher: Option[PhraseMatcher], phraseBoost: Float, gapPenalty: Float): LocalAlignment = {
     val localAlignment = new BasicLocalAlignment(termIds, gapPenalty)
     phraseMatcher match {
       case Some(phraseMatcher) => new PhraseAwareLocalAlignment(phraseMatcher, phraseBoost, localAlignment)
@@ -32,10 +32,14 @@ object LocalAlignment {
   case class PhraseMatch(pos: Int, len: Int) extends Match
   case class TermMatch(pos: Int) extends Match { val len = 1 }
 
-  class PhraseMatcher(dict: Seq[(Seq[Int], Match)]) extends AhoCorasick[Int, Match](dict)
+  case class TermId(id: Int)
+  private[this] val termIds = (0 until 32).map(TermId(_)).toArray
+  def intToTermId(id: Int) = if (id < termIds.length) termIds(id) else TermId(id)
+
+  class PhraseMatcher(dict: Seq[(Seq[TermId], Match)]) extends AhoCorasick[TermId, Match](dict)
 }
 
-class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalAlignment {
+class BasicLocalAlignment(termIds: Array[TermId], gapPenalty: Float) extends LocalAlignment {
   // Find all partial sequence matches (possible phrases) using the dynamic programming.
   // This is similar to a local alignment matching in bioinformatics, but we disallow gaps.
   // We give a weight to each term occurrence using a local alignment score, thus, a term in a
@@ -64,7 +68,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
     lastPos = -1
   }
 
-  def update(termId: Int, curPos: Int, weight: Float = 1.0f): Unit = {
+  def update(termId: TermId, curPos: Int, weight: Float = 1.0f): Unit = {
     if (lastPos < curPos) dist = curPos - lastPos
     // update run lengths and local scores
     var prevRun = 0.0f
@@ -85,22 +89,23 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
 
   def end(): Unit = {}
 
-  def single(termId: Int, weight: Float = 1.0f) = weight
+  def single(termId: TermId, weight: Float = 1.0f) = weight
 
   def score: Float = alignmentScore
 }
 
 class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float, localAlignment: LocalAlignment, nonPhraseWeight: Float = 0.3f) extends LocalAlignment with Logging {
+  private[this] val invalidTermId = TermId(-1)
   private[this] val bufSize = phraseMatcher.maxLength
   private[this] var bufferedPos = -1
   private[this] var processedPos = -1
   private[this] var adjustment = 0
-  private[this] var lastId = -1
-  private[this] val ids = new Array[Int](bufSize)
+  private[this] var lastId = invalidTermId
+  private[this] val ids = new Array[TermId](bufSize)
   private[this] val matching = new Array[Boolean](bufSize)
   private[this] var state: State[Match] = phraseMatcher.initialState
   private[this] var matchedPhrases = Set.empty[Match]
-  private[this] var dictSize = phraseMatcher.size
+  private[this] val dictSize = phraseMatcher.size
 
   private[this] def flush(): Unit = {
     while (processedPos < bufferedPos) { processOnePosition() }
@@ -108,21 +113,36 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
 
   @inline private[this] def processOnePosition(): Unit = {
     processedPos += 1
-    val weight = if (matching(processedPos % bufSize)) 1.0f else nonPhraseWeight
-    localAlignment.update(ids(processedPos % bufSize), processedPos, weight)
+    val index = processedPos % bufSize
+    val weight = if (matching(index)) 1.0f else nonPhraseWeight
+    localAlignment.update(ids(index), processedPos, weight)
   }
 
   def begin(): Unit = {
     bufferedPos = -1
     processedPos = -1
     adjustment = 0
-    lastId = -1
+    lastId = invalidTermId
     state = phraseMatcher.initialState
     matchedPhrases = Set.empty[Match]
     localAlignment.begin()
   }
 
-  def update(termId: Int, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
+  private[this] val onMatch: (Int, Match) => Unit = { (curPos, aMatch) =>
+    val aMatchLen = aMatch.len
+    var i = curPos - min(bufSize, aMatchLen)
+    while (i < curPos) {
+      i += 1
+      if (i < 0) {
+        log.error(s"i=$i curPos=$curPos aMatch.len=${aMatchLen}")
+      } else {
+        matching(i % bufSize) = true
+      }
+    }
+    if (aMatchLen > 1) matchedPhrases += aMatch
+  }
+
+  def update(termId: TermId, rawPos: Int, weight: Float = 1.0f): Unit = { // weight is ignored
     if (rawPos == bufferedPos) {
       if (termId == lastId) return // dedup
       adjustment += 1
@@ -137,23 +157,12 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
       processOnePosition()
     }
     bufferedPos = pos
-    ids(pos % bufSize) = termId
-    matching(pos % bufSize) = false
+    val index = pos % bufSize
+    ids(index) = termId
+    matching(index) = false
 
     state = phraseMatcher.next(termId, state)
-    state.check(pos, onMatch = {
-      case (curPos, aMatch) =>
-        var i = curPos - min(bufSize, aMatch.len)
-        while (i < curPos) {
-          i += 1
-          if (i < 0) {
-            log.error(s"i=$i curPos=$curPos aMatch.len=${aMatch.len}")
-          } else {
-            matching(i % bufSize) = true
-          }
-        }
-        if (aMatch.len > 1) matchedPhrases += aMatch
-    })
+    state.check(pos, onMatch)
   }
 
   def end(): Unit = {
@@ -161,7 +170,7 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     localAlignment.end()
   }
 
-  def single(termId: Int, weight: Float = 1.0f) = {
+  def single(termId: TermId, weight: Float = 1.0f) = {
     state = phraseMatcher.initialState
     state = phraseMatcher.next(termId, state)
     localAlignment.single(termId, if (state.matched) 1.0f else nonPhraseWeight)

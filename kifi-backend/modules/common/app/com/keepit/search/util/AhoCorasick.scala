@@ -1,12 +1,13 @@
 package com.keepit.search.util
 
+import scala.collection.immutable.HashMap
 import scala.collection.mutable.Queue
 import scala.annotation.tailrec
 import scala.math._
 
 object AhoCorasick {
 
-  trait State[D] {
+  abstract class State[D] {
     def check(position: Int, onMatch: (Int, D) => Unit): Unit
     def matched: Boolean
     def reset(): State[D]
@@ -19,10 +20,10 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
   import AhoCorasick.State
 
   private class StateImpl extends State[D] {
-    var nextStates: Map[I, StateImpl] = Map()
+    var nextStates: HashMap[I, StateImpl] = HashMap.empty[I, StateImpl]
     var failState: StateImpl = null
-    var hasMatch = false
-    var data: Option[D] = None
+    private[this] var hasMatch = false
+    private[this] var data: Option[D] = None
 
     def next(item: I): Option[StateImpl] = nextStates.get(item)
 
@@ -44,7 +45,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
     }
 
     private[AhoCorasick] def setFailState(state: StateImpl) = {
-      hasMatch |= state.hasMatch
+      hasMatch |= state.matched
       failState = state
     }
 

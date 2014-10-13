@@ -34,9 +34,9 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService',
+  '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService', 'keepDecoratorService',
   'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
-  function ($document, $rootScope, $rootElement, installService, keepActionService,
+  function ($document, $rootScope, $rootElement, installService, keepActionService, keepDecoratorService,
             libraryService, modalService, recoActionService, tagService, undoService, util) {
     return {
       restrict: 'A',
@@ -112,12 +112,24 @@ angular.module('kifi')
         }
 
         function keepOne (keep, isPrivate) {
-          keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
-             keep.buildKeep(keptItem);
-             keep.makeKept();
-             libraryService.addToLibraryCount(keep.libraryId, 1);
-             tagService.addToKeepCount(1);
-           });
+          if (scope.librariesEnabled) {
+            keepActionService.keepToLibrary([keep.url], keep.libraryId).then(function (resp) {
+              var keptItem = resp && resp.keeps && resp.keeps[0];
+
+              if (keptItem) {
+                keep.buildKeep(keptItem);
+                keep.makeKept();
+                libraryService.addToLibraryCount(keep.libraryId, 1);
+              }
+            });
+          } else {
+            keepActionService.keepOne(keep, isPrivate).then(function (keptItem) {
+              keep.buildKeep(keptItem);
+              keep.makeKept();
+
+              tagService.addToKeepCount(1);
+             });
+          }
 
           if (_.isFunction(scope.keepCallback)) {
             scope.keepCallback({ 'keep': keep });
@@ -192,7 +204,7 @@ angular.module('kifi')
           }
 
           var i = 0;
-          var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
+          var low = 200, high = cardWidth - 140; // text must be minimum 200px wide, max total-80
           var guess = (high - low) / 2 + low;
           var res = calcHeightDelta(guess);
           var bestRes = res;
@@ -214,9 +226,11 @@ angular.module('kifi')
             var $content = element.find('.kf-keep-content-line');
             //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
             $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-            element.find('.kf-keep-info').css({
-              'height': calcTextHeight + 'px'
-            }).addClass('kf-dyn-positioned');
+            if (calcTextHeight > 20) {
+              element.find('.kf-keep-info').css({
+                'height': calcTextHeight + 'px'
+              }).addClass('kf-dyn-positioned');
+            }
 
             $content.find('.kf-keep-image').on('error', function () {
               $content.find('.kf-keep-small-image').hide();
@@ -226,7 +240,7 @@ angular.module('kifi')
 
         function maybeSizeImage(keep) {
           if (keep && keep.summary) {
-            var hasImage = keep.summary.imageWidth > 50 && keep.summary.imageHeight > 50;
+            var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
             if (hasImage && keep.summary.description && keep.hasSmallImage) {
               keep.sizeCard = null;
               keep.calcSizeCard = sizeImage;
@@ -271,16 +285,54 @@ angular.module('kifi')
         };
 
         scope.unkeep = function (keep) {
-          keepActionService.unkeepOne(keep).then(function () {
-            keep.makeUnkept();
+          if (scope.librariesEnabled) {
+            keepActionService.unkeepFromLibrary(keep.libraryId, keep.id).then(function () {
+              keep.makeUnkept();
 
-            undoService.add('Keep deleted.', function () {
-              keepOne(keep);
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
+
+              libraryService.addToLibraryCount(keep.libraryId, -1);
             });
+          } else {
+            keepActionService.unkeepOne(keep).then(function () {
+              keep.makeUnkept();
 
-            libraryService.addToLibraryCount(keep.libraryId, -1);
-            tagService.addToKeepCount(-1);
+              undoService.add('Keep deleted.', function () {
+                keepOne(keep);
+              });
+
+              tagService.addToKeepCount(-1);
+            });
+          }
+        };
+
+        scope.showKeepingToLibrary = function () {
+          scope.keepingToLibrary = true;
+        };
+
+        scope.keepToLibrary = function (keep) {
+          scope.data.selectedLibraryIds.forEach(function (libraryId) {
+            keepActionService.keepToLibrary([keep.url], libraryId).then(function (result) {
+              if (result.failures && result.failures.length) {
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
+              } else {
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  keep.buildKeep(keep);
+                  keep.makeKept();
+
+                  libraryService.fetchLibrarySummaries(true);
+                  libraryService.addToLibraryCount(libraryId, 1);
+                });
+              }
+            });
           });
+
+          scope.keepingToLibrary = false;
         };
 
         scope.getSingleSelectedKeep = function (keep) {
@@ -341,8 +393,15 @@ angular.module('kifi')
 
         scope.$watch(function () {
           return libraryService.librarySummaries.length;
-        }, function () {
-          scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
+        }, function (newVal) {
+          if (newVal) {
+            scope.keep.libraryInfo = libraryService.getLibraryInfoById(scope.keep.libraryId);
+
+            scope.libraries = _.filter(libraryService.librarySummaries, function(library) {
+              return (library.access !== 'read_only') && (library.id !== scope.keep.libraryId);
+            });
+            scope.data = {};
+          }
         });
 
         // Dragging.

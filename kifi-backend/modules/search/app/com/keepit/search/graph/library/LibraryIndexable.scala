@@ -1,9 +1,10 @@
 package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
+import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model.{ LibraryVisibility, User, LibraryMembership, Library }
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
-import com.keepit.search.LangDetector
+import com.keepit.search.{ Searcher, LangDetector }
 
 object LibraryFields {
   val nameField = "t"
@@ -31,7 +32,17 @@ object LibraryFields {
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) extends Indexable[Library, Library] {
+object LibraryIndexable {
+  def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = {
+    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).exists(_ == LibraryFields.Visibility.SECRET)
+  }
+
+  def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
+    librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
+  }
+}
+
+class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]) extends Indexable[Library, Library] {
 
   val id = library.id.get
   val sequenceNumber = library.seq

@@ -249,7 +249,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             scRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser3.id.get))
           }
 
-          inject[UserConnectionCreator].updateUserConnections(user1.id.get)
+          Await.ready(inject[UserConnectionCreator].updateUserConnections(user1.id.get), Duration(5, "seconds"))
 
           // should be 1 instead of 2 b/c user1 and user2 are "unfriended"
           outbox.size === 1

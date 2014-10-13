@@ -7,55 +7,79 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.User
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.core._
 
 import scala.concurrent._
 import scala.concurrent.duration._
 
-trait Typeahead[E, I] extends Logging {
+trait PersonalTypeahead[T, E, I] {
+  def ownerId: Id[T]
+  def filter: PrefixFilter[E]
+  def getInfos(infoIds: Seq[Id[E]]): Future[Seq[I]]
+}
+
+object PersonalTypeahead {
+  def apply[T, E, I](id: Id[T], prefixFilter: PrefixFilter[E], infoGetter: Seq[Id[E]] => Future[Seq[I]]) = new PersonalTypeahead[T, E, I] {
+    val ownerId = id
+    val filter = prefixFilter
+    def getInfos(infoIds: Seq[Id[E]]): Future[Seq[I]] = infoGetter(infoIds)
+  }
+}
+
+trait Typeahead[T, E, I, P <: PersonalTypeahead[T, E, I]] extends Logging {
+
+  protected val refreshRequestConsolidationWindow: Duration
+
+  protected val fetchRequestConsolidationWindow: Duration
 
   protected def airbrake: AirbrakeNotifier
 
-  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[E]]
+  protected def get(ownerId: Id[T]): Future[Option[P]]
 
-  protected def getInfos(ids: Seq[Id[E]]): Future[Seq[I]]
+  protected def create(ownerId: Id[T]): Future[P]
 
-  protected def getAllInfosForUser(id: Id[User]): Future[Seq[I]]
-
-  protected def extractId(info: I): Id[E]
+  protected def invalidate(typeahead: P): Unit
 
   protected def extractName(info: I): String
 
-  def topN(userId: Id[User], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
+  protected def buildFilter(id: Id[T], allInfos: Seq[(Id[E], I)]): PrefixFilter[E] = {
+    timing(s"buildFilter($id)") {
+      val builder = new PrefixFilterBuilder[E]
+      allInfos.foreach { case (infoId, info) => builder.add(infoId, extractName(info)) }
+      val filter = builder.build
+      log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
+      filter
+    }
+  }
+
+  def topN(ownerId: Id[T], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
     if (query.trim.length <= 0) Future.successful(Seq.empty) else {
       implicit val fj = ExecutionContext.fj
-      getPrefixFilter(userId) flatMap { prefixFilterOpt =>
-        prefixFilterOpt match {
-          case None =>
-            log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
-            Future.successful(Seq.empty)
-          case Some(filter) =>
-            if (filter.isEmpty) {
-              log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
-              Future.successful(Seq.empty)
-            } else {
-              val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-              getInfos(filter.filterBy(queryTerms)).map { infos =>
-                topNWithInfos(infos, queryTerms, limit)
-              }
-            }
+      getOrElseCreate(ownerId) flatMap { typeahead =>
+        if (typeahead.filter.isEmpty) {
+          log.info(s"[asyncTopN($ownerId,$query)] filter is EMPTY")
+          Future.successful(Seq.empty)
+        } else {
+          val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+          typeahead.getInfos(typeahead.filter.filterBy(queryTerms)).map { infos =>
+            topNWithInfos(infos, queryTerms, limit)
+          }
         }
       }
     }
   }
 
-  private[this] val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
+  private[this] lazy val consolidateFetchReq = new RequestConsolidator[Id[T], P](fetchRequestConsolidationWindow)
 
-  private[this] def getPrefixFilter(userId: Id[User]): Future[Option[PrefixFilter[E]]] = {
-    consolidateFetchReq(userId) { id =>
-      getOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
+  private[this] def getOrElseCreate(ownerId: Id[T]): Future[P] = {
+    implicit val fj = ExecutionContext.fj
+    consolidateFetchReq(ownerId) { id =>
+      get(id).flatMap {
+        case Some(typeahead) => Future.successful(typeahead)
+        case None => doRefresh(id)
+      }
     }
   }
 
@@ -75,40 +99,35 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  private[this] val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
+  private[this] lazy val consolidateRefreshReq = new RequestConsolidator[Id[T], P](refreshRequestConsolidationWindow)
 
-  protected def build(id: Id[User]): Future[PrefixFilter[E]] = {
-    consolidateBuildReq(id) { id =>
-      timing(s"buildFilter($id)") {
-        val builder = new PrefixFilterBuilder[E]
-        getAllInfosForUser(id).map { allInfos =>
-          allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
-          val filter = builder.build
-          log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
-          filter
-        }(ExecutionContext.fj)
+  private def doRefresh(ownerId: Id[T]): Future[P] = {
+    implicit val fj = ExecutionContext.fj
+    consolidateRefreshReq(ownerId) { id =>
+      create(id).map { typeahead =>
+        invalidate(typeahead)
+        typeahead
       }
     }
   }
 
-  def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
+  def refresh(ownerId: Id[T]): Future[Unit] = {
+    doRefresh(ownerId).imap(_ => Unit)
+  }
 
-  def refreshByIds(userIds: Seq[Id[User]]): Future[Unit] = { // consider using zk and/or sqs to track progress
-    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${userIds.length})")
+  def refreshByIds(ownerIds: Seq[Id[T]]): Future[Unit] = { // consider using zk and/or sqs to track progress
+    implicit val prefix = LogPrefix(s"refreshByIds(#ids=${ownerIds.length})")
     implicit val fj = ExecutionContext.fj
 
     log.infoP(s"begin re-indexing users ...")
-    FutureHelpers.chunkySequentialExec(userIds) { userId =>
-      refresh(userId) map { filter =>
-        log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
+    FutureHelpers.chunkySequentialExec(ownerIds) { ownerId =>
+      refresh(ownerId) map { filter =>
+        log.infoP(s"done with re-indexing ${ownerId}; filter=${filter}")
       }
     } map { _ =>
-      log.infoP(s"done with re-indexing for ${userIds.length} users: ${userIds.take(3).toString} ... ${userIds.takeRight(3).toString}")
+      log.infoP(s"done with re-indexing for ${ownerIds.length} users: ${ownerIds.take(3).toString} ... ${ownerIds.takeRight(3).toString}")
     }
   }
-
-  def refreshAll(): Future[Unit]
-
 }
 
 object TypeaheadHit {

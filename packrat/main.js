@@ -792,7 +792,7 @@ api.port.on({
     });
   },
   log_search_event: function(data) {
-    ajax('search', 'POST', '/search/events/' + data[0], data[1]);
+    ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
@@ -2028,7 +2028,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 api.on.beforeSearch.add(throttle(primeSearch, 50000));
 function primeSearch(whence) {
   if (me && enabled('search')) {
-    ajax('search', 'GET', '/search/warmUp', {w: whence});
+    ajax('search', 'POST', '/ext/search/prime' + ('agos'.indexOf(whence) >= 0 ? '?w=' + whence : ''));
   }
 }
 

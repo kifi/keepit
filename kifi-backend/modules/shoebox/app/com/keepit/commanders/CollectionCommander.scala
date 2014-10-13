@@ -15,6 +15,7 @@ import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
+import com.keepit.typeahead.HashtagTypeahead
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -63,6 +64,26 @@ class CollectionCommander @Inject() (
     }
     log.info(s"Returning collection and keep counts for $userId")
     collections
+  }
+
+  def pageCollections(sort: String, offset: Int, pageSize: Int, userId: Id[User]) = {
+    log.info(s"Getting all collections for $userId (sort $sort)")
+    db.readOnlyMaster { implicit s =>
+      sort match {
+        case "num_keeps" =>
+          collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize).map { summary =>
+            BasicCollection.fromCollection(summary._1, Some(summary._2))
+          }
+        case "name" =>
+          val sortedTags = collectionRepo.getByUserSortedByName(userId, offset, pageSize)
+          val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
+          sortedTags.map { c => BasicCollection.fromCollection(c.summary, bmCounts.get(c.id.get).orElse(Some(0))) }
+        case _ => // default is "last_kept"
+          val sortedTags = collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
+          val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
+          sortedTags.map { c => BasicCollection.fromCollection(c.summary, bmCounts.get(c.id.get).orElse(Some(0))) }
+      }
+    }
   }
 
   def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
@@ -151,7 +172,7 @@ class CollectionCommander @Inject() (
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
           if (existingExternalId.isEmpty) {
-            s.onTransactionSuccess { searchClient.updateURIGraph() }
+            s.onTransactionSuccess { searchClient.updateKeepIndex() }
             val newColl = collectionRepo.save(Collection(userId = userId, name = name))
             updateCollectionOrdering(userId)
             keptAnalytics.createdTag(newColl, context)
@@ -175,7 +196,7 @@ class CollectionCommander @Inject() (
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.deletedTag(collection, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
@@ -184,7 +205,7 @@ class CollectionCommander @Inject() (
       updateCollectionOrdering(collection.userId)
     }
     keptAnalytics.undeletedTag(collection, context)
-    searchClient.updateURIGraph()
+    searchClient.updateKeepIndex()
   }
 
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = {

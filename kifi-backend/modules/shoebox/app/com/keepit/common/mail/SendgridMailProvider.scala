@@ -19,7 +19,6 @@ import play.api.Play.current
 import play.api.http.ContentTypes
 import com.keepit.heimdal._
 import play.api.libs.json.JsString
-import scala.Some
 import play.api.libs.json.JsObject
 import com.keepit.common.time._
 

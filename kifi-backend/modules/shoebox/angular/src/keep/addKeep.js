@@ -110,7 +110,7 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
+            return keepActionService.keepToLibrary([url], scope.selection.library.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
@@ -126,10 +126,10 @@ angular.module('kifi')
                   keep.makeKept();
 
                   libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
+                  libraryService.addToLibraryCount(scope.selection.library.id, 1);
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.data.selectedLibraryId), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selection.library.id), keep);
                   scope.resetAndHide();
                 });
               }
@@ -144,10 +144,9 @@ angular.module('kifi')
           scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
             return lib.access !== 'read_only';
           });
-          scope.data = scope.data || {};
-          scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
-            return lib.name === 'Main Library';
-          }).id;
+          scope.selection = scope.selection || {};
+          scope.selection.library = _.find(scope.libraries, { 'name': 'Main Library' });
+          scope.libSelectTopOffset = 110;
         }
 
         scope.resetAndHide = function () {

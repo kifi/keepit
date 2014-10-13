@@ -4,8 +4,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.search.Searcher
 import com.keepit.search.article.ArticleRecord
-import com.keepit.search.engine.result.KifiResultCollector.HitQueue
-import com.keepit.search.engine.result.{ KifiShardResult, KifiShardHit, KifiResultCollector }
+import com.keepit.search.engine.result.{ Hit, HitQueue, KifiShardResult, KifiShardHit }
 import com.keepit.search.graph.keep.{ KeepFields, KeepRecord }
 import org.apache.lucene.index.Term
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -31,7 +30,7 @@ abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, tim
     articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uriId)
   }
 
-  def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
+  def toKifiShardHit(h: Hit): KifiShardHit = {
     if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.secondaryId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.secondaryId}"))

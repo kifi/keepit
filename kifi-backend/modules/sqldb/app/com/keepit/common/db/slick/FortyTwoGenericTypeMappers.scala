@@ -46,7 +46,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val restrictionMapper = MappedColumnType.base[Restriction, String](_.context, Restriction.apply)
   implicit val issuerMapper = MappedColumnType.base[OAuth2TokenIssuer, String](_.name, OAuth2TokenIssuer.apply)
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
-  implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
+  implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.apply)
   implicit val emailAddressMapper = MappedColumnType.base[EmailAddress, String](_.address, EmailAddress.apply)
   implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map { e => e.address } mkString (","), v => v.trim match {
     case "" => Nil
@@ -141,6 +141,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = SetParameter { case (seq, parameters) => seq.foreach(pconv(_, parameters)) }
 
   implicit val setSeqStringParameter = setSeqParameter[String]
+  implicit val setSeqLongParameter = setSeqParameter[Long]
   implicit val setDateTimeParameter = setParameterFromMapper[DateTime]
   implicit val setSeqDateTimeParameter = setSeqParameter[DateTime]
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]

@@ -30,6 +30,7 @@ class ABookRecommendationCommander @Inject() (
     emailInviteRecommendationRepo: EmailInviteRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
+    oldWTICommander: WTICommander,
     clock: Clock) extends Logging {
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
@@ -48,7 +49,7 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
-  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
+  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Unit = {
     db.readWrite { implicit session =>
       (irrelevantFriendId, network) match {
         case (Right(socialUserId), FACEBOOK) => facebookInviteRecommendationRepo.recordIrrelevantRecommendation(userId, socialUserId)
@@ -59,6 +60,7 @@ class ABookRecommendationCommander @Inject() (
         case unsupportedNetwork => throw new IllegalArgumentException(s"Cannot hide unsupported invite recommendation: $unsupportedNetwork")
       }
     }
+    oldWTICommander.blockRichConnection(userId, irrelevantFriendId.swap)
   }
 
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
@@ -74,7 +76,7 @@ class ABookRecommendationCommander @Inject() (
   def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
     val futureSocialAccounts = shoebox.getSocialUserInfosByUserId(userId)
     val futureFriends = shoebox.getFriends(userId)
-    val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
+    val futureFriendRequests = shoebox.getFriendRequestsRecipientIdBySender(userId)
     val futureInvitations = shoebox.getInvitations(userId)
     val (irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
       (
@@ -97,7 +99,7 @@ class ABookRecommendationCommander @Inject() (
       val invitedEmailAccounts = db.readOnlyMaster { implicit session => emailAccountRepo.getByAddresses(invitedEmailAddresses: _*).values.map(_.id.get) }
       IrrelevantPeople(
         userId,
-        irrelevantUsers -- friends -- friendRequests.map(_.recipientId),
+        irrelevantUsers -- friends -- friendRequests,
         irrelevantFacebookAccounts -- userSocialAccounts -- invitedSocialAccounts,
         irrelevantLinkedInAccounts -- userSocialAccounts -- invitedSocialAccounts,
         (irrelevantEmailAccounts -- invitedEmailAccounts).map(EmailAccount.toEmailAccountInfoId)
@@ -108,7 +110,7 @@ class ABookRecommendationCommander @Inject() (
   private def generateFutureFriendRecommendations(userId: Id[User], bePatient: Boolean = false): Future[Option[Stream[(Id[User], Double)]]] = {
     val futureRelatedUsers = graph.getSociallyRelatedEntities(userId, bePatient).map(_.map(_.users))
     val futureFriends = shoebox.getFriends(userId)
-    val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
+    val futureFriendRequests = shoebox.getFriendRequestsRecipientIdBySender(userId)
     val futureFakeUsers = shoebox.getAllFakeUsers()
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
       friendRecommendationRepo.getIrrelevantRecommendations(userId)
@@ -120,7 +122,7 @@ class ABookRecommendationCommander @Inject() (
         friendRequests <- futureFriendRequests
         fakeUsers <- futureFakeUsers
       } yield {
-        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers + userId
+        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests ++ fakeUsers + userId
         Some(relatedUsers.related.toStream.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) })
       }
     }

@@ -27,6 +27,9 @@ trait SearchServiceClient extends ServiceClient {
 
   def warmUpUser(userId: Id[User]): Unit
 
+  def updateKeepIndex(): Unit
+  def updateLibraryIndex(): Unit
+
   def updateURIGraph(): Unit
   def reindexURIGraph(): Unit
 
@@ -49,7 +52,6 @@ trait SearchServiceClient extends ServiceClient {
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
-  def correctSpelling(text: String, enableBoost: Boolean): Future[String]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
@@ -64,11 +66,6 @@ trait SearchServiceClient extends ServiceClient {
 
   def searchWithConfig(userId: Id[User], query: String, maxHits: Int, config: SearchConfig): Future[Seq[(String, String, String)]]
 
-  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
-  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]]
-  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float]
-  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]]
-  def semanticLoss(query: String): Future[Map[String, Float]]
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
@@ -89,6 +86,15 @@ class SearchServiceClientImpl(
 
   def warmUpUser(userId: Id[User]): Unit = {
     call(Search.internal.warmUpUser(userId))
+  }
+
+  def updateKeepIndex(): Unit = {
+    broadcast(Search.internal.updateKeepIndex())
+    broadcast(Search.internal.updateURIGraph())
+  }
+
+  def updateLibraryIndex(): Unit = {
+    broadcast(Search.internal.updateLibraryIndex())
   }
 
   def updateURIGraph(): Unit = {
@@ -216,13 +222,6 @@ class SearchServiceClientImpl(
     call(Common.internal.version()).map(r => r.body)
   }
 
-  def correctSpelling(text: String, enableBoost: Boolean): Future[String] = {
-    call(Search.internal.correctSpelling(text, enableBoost)).map { r =>
-      val suggests = r.json.as[JsArray].value.map { x => Json.fromJson[ScoredSuggest](x).get }
-      suggests.map { x => x.value + ", " + x.score }.mkString("\n")
-    }
-  }
-
   def showUserConfig(id: Id[User]): Future[SearchConfig] = {
     call(Search.internal.showUserConfig(id)).map { r =>
       val param = Json.fromJson[Map[String, String]](r.json).get
@@ -251,37 +250,6 @@ class SearchServiceClientImpl(
       r.json.as[JsArray].value.map { js =>
         ((js \ "uriId").as[Long].toString, (js \ "title").as[String], (js \ "url").as[String])
       }
-    }
-  }
-
-  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
-    call(Search.internal.leaveOneOut(queryText, stem, useSketch)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
-    call(Search.internal.allSubsets(queryText, stem, useSketch)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = {
-    call(Search.internal.semanticSimilarity(query1, query2, stem)).map { r =>
-      Json.fromJson[Float](r.json).get
-    }
-  }
-
-  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = {
-    val payload = Json.toJson(queries)
-    call(Search.internal.visualizeSemanticVector(), payload).map { r =>
-      Json.fromJson[Seq[String]](r.json).get
-    }
-  }
-
-  def semanticLoss(query: String): Future[Map[String, Float]] = {
-    call(Search.internal.semanticLoss(query)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
     }
   }
 
@@ -317,13 +285,4 @@ class SearchServiceClientImpl(
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
-}
-
-class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
-  def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
-  def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
-  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
-  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
-
-  def build: JsObject = JsObject(params)
 }

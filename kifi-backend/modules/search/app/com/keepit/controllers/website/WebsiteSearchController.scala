@@ -3,23 +3,26 @@ package com.keepit.controllers.website
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.keepit.controllers.util.SearchControllerUtil
-import com.keepit.controllers.util.SearchControllerUtil.nonUser
+import com.keepit.controllers.util.SearchControllerUtil.{ BasicLibrary, nonUser }
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.iteratee.Enumerator
 import com.google.inject.Inject
 import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.search.{ LibrarySearchCommander, AugmentationCommander, SearchCommander }
+import com.keepit.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexer }
-import com.keepit.search.graph.keep.KeepIndexer
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
 import play.api.libs.json.JsArray
-import com.keepit.model.Library
+import com.keepit.model._
+import com.keepit.social.BasicUser
+import com.keepit.search.engine.result.KifiShardHit
+import com.keepit.search.util.IdFilterCompressor
+import com.keepit.common.db.{ Id }
+import com.keepit.common.core._
+import com.keepit.controllers.website.WebsiteSearchController._
 
 class WebsiteSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -63,7 +66,7 @@ class WebsiteSearchController @Inject() (
     context: Option[String],
     auth: Option[String],
     debug: Option[String] = None,
-    withUriSummary: Boolean = false) = MaybeUserAction { request =>
+    withUriSummary: Boolean = false) = MaybeUserAction.async { request =>
 
     val libraryContextFuture = getLibraryContextFuture(library, auth, request)
     val acceptLangs = getAcceptLangs(request)
@@ -71,26 +74,32 @@ class WebsiteSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
+    searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
+      val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) Future.successful(JsArray()) else {
+        val futureUriSummaries = {
+          val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
+          shoeboxClient.getUriSummaries(uriIds)
+        }
 
-    val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
-
-    var decorationFutures: List[Future[String]] = Nil
-
-    if (userId != nonUser) {
-      val augmentationFuture = plainResultFuture.flatMap(augment(augmentationCommander, libraryIndexer.getSearcher)(userId, _).map(Json.stringify)(immediate))
-      decorationFutures = augmentationFuture :: decorationFutures
+        augment(augmentationCommander, userId, kifiPlainResult).flatMap {
+          case augmentedItems =>
+            val futureUsers = shoeboxClient.getBasicUsers(augmentedItems.flatMap(_.keepers).distinct)
+            val allLibraries = getBasicLibraries(libraryIndexer.getSearcher, augmentedItems.flatMap(_.libraries.map(_._1)).toSet)
+            for {
+              allUsers <- futureUsers
+              summaries <- futureUriSummaries
+            } yield JsArray(
+              (kifiPlainResult.hits zip augmentedItems).map {
+                case (hit, augmentedItem) => toWebsiteSearchHit(hit, userId, summaries(Id(hit.id)), augmentedItem, allUsers, allLibraries)
+              }
+            )
+        }
+      }
+      futureWebsiteSearchHits.imap { hits =>
+        val websiteSearchResult = Json.obj("uuid" -> kifiPlainResult.uuid, "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter), "hits" -> hits)
+        Ok(websiteSearchResult)
+      }
     }
-
-    if (withUriSummary) {
-      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
-    }
-
-    val decorationEnumerator = reactiveEnumerator(decorationFutures)
-
-    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
-
-    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
   //external (from the website)
@@ -112,13 +121,8 @@ class WebsiteSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
     librarySearchCommander.librarySearch(userId, acceptLangs, experiments, query, filter, context, maxHits, None, debugOpt).map { libraryShardResult =>
-      val libraries = {
-        val librarySearcher = libraryIndexer.getSearcher
-        libraryShardResult.hits.map(_.id).map { libId =>
-          libId -> LibraryRecord.retrieve(librarySearcher, libId)
-        }.toMap
-      }
-
+      val librarySearcher = libraryIndexer.getSearcher
+      val libraries = libraryShardResult.hits.map(_.id).map { libId => libId -> LibraryIndexable.getRecord(librarySearcher, libId) }.toMap
       val json = JsArray(libraryShardResult.hits.map { hit =>
         val library = libraries(hit.id)
         Json.obj(
@@ -131,5 +135,36 @@ class WebsiteSearchController @Inject() (
       })
       Ok(Json.toJson(json))
     }
+  }
+}
+
+object WebsiteSearchController {
+
+  private implicit val basicLibraryWrites = Writes[BasicLibrary] { library => Json.obj("libId" -> library.id, "name" -> library.name) }
+
+  def toWebsiteSearchHit(kifiShardHit: KifiShardHit, userId: Id[User], summary: URISummary, augmentedItem: AugmentedItem, allUsers: Map[Id[User], BasicUser], allLibraries: Map[Id[Library], BasicLibrary]): JsObject = {
+
+    val myKeeps: Seq[BasicLibrary] = augmentedItem.myKeeps.map(myKeep => allLibraries(myKeep.keptIn.get))
+    val moreKeeps = {
+      import scala.collection.mutable
+      var uniqueKeepers = mutable.Set[Id[User]]()
+      augmentedItem.moreKeeps.collect {
+        case RestrictedKeepInfo(_, keptIn, Some(keeperId), _) if !uniqueKeepers.contains(keeperId) =>
+          uniqueKeepers += keeperId
+          Json.obj("user" -> allUsers(keeperId), "library" -> keptIn.map(allLibraries(_)))
+      }
+    }
+    val otherKeeps = augmentedItem.otherDiscoverableKeeps + augmentedItem.otherPublishedKeeps
+
+    Json.obj(
+      "title" -> kifiShardHit.title,
+      "url" -> kifiShardHit.url,
+      "score" -> kifiShardHit.finalScore,
+      "summary" -> summary,
+      "tags" -> augmentedItem.tags,
+      "myKeeps" -> myKeeps,
+      "moreKeeps" -> moreKeeps,
+      "otherKeeps" -> otherKeeps
+    )
   }
 }
