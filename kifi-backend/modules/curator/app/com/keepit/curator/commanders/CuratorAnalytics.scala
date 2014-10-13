@@ -8,20 +8,29 @@ import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRep
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
 import com.keepit.common.logging.Logging
+import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.model.ExperimentType
+import com.keepit.common.akka.SafeFuture
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Future
 
 @Singleton
 class CuratorAnalytics @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient) extends Logging {
+    heimdal: HeimdalServiceClient,
+    userExperimentCommander: RemoteUserExperimentCommander) extends Logging {
 
   def trackDeliveredItems(items: Seq[UriRecommendation], client: Option[RecommendationClientType]): Unit = {
     val clientType = client.getOrElse(RecommendationClientType.Unknown)
     items.foreach { item =>
       val context = toRecoUserActionContext(item, clientType)
-      val event = toHeimdalEvent(context)
-      heimdal.trackEvent(event)
+      new SafeFuture(toHeimdalEvent(context).map { event =>
+        heimdal.trackEvent(event)
+      })
     }
   }
 
@@ -29,9 +38,10 @@ class CuratorAnalytics @Inject() (
     log.info(s"[analytics] Received user $userId reco feedback on $uriId to track: $feedback")
     val contexts = toRecoUserActionContexts(userId, uriId, feedback)
     contexts.foreach { context =>
-      val event = toHeimdalEvent(context)
-      log.info(s"[analytics] Sending event: $event")
-      heimdal.trackEvent(event)
+      new SafeFuture(toHeimdalEvent(context).map { event =>
+        log.info(s"[analytics] Sending event: $event")
+        heimdal.trackEvent(event)
+      })
     }
     if (contexts.isEmpty) log.info(s"[analytics] nothing to do for user $userId reco feedback on $uriId to track: $feedback")
   }
@@ -70,16 +80,22 @@ class CuratorAnalytics @Inject() (
     }
   }
 
-  private def toHeimdalEvent(context: RecommendationUserActionContext): UserEvent = {
-    val contextBuilder = heimdalContextBuilder()
-    contextBuilder += ("userId", context.userId.id)
-    contextBuilder += ("uriId", context.uriId.id)
-    contextBuilder += ("master_score", context.truncatedMasterScore)
-    contextBuilder += ("client_type", context.clientType.value)
-    contextBuilder += ("action", context.userAction.value)
-    context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
-    context.keepers.foreach { userIds => contextBuilder += ("keepers", userIds.map { _.id }) }
-    UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
+  private def toHeimdalEvent(context: RecommendationUserActionContext): Future[UserEvent] = {
+    userExperimentCommander.getExperimentsByUser(context.userId).map { experiments =>
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder += ("userId", context.userId.id)
+      contextBuilder += ("uriId", context.uriId.id)
+      contextBuilder += ("master_score", context.truncatedMasterScore)
+      contextBuilder += ("client_type", context.clientType.value)
+      contextBuilder += ("action", context.userAction.value)
+
+      contextBuilder += ("experiments", experiments.map(_.value).toSeq)
+      contextBuilder += ("userStatus", ExperimentType.getUserStatus(experiments))
+
+      context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
+      context.keepers.foreach { userIds => contextBuilder += ("keepers", userIds.map { _.id }) }
+      UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
+    }
   }
 
 }
