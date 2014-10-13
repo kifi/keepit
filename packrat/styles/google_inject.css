@@ -532,12 +532,14 @@ div.kifi-res-menu-item {
   content: ', ';
 }
 
-.kifi-kcard {
+.kifi-res-user-card {
   z-index: 999;
 }
-.kifi-res-user:first-of-type+.kifi-who-text {
-  margin-left: 10px;
+.kifi-res-user-card>.kifi-kcard-tri {
+  left: 38px;
+  margin-left: 0;
 }
+
 .kifi-res-private {
   margin: 0 1px;
   padding: 0 5px;

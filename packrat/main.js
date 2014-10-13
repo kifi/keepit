@@ -533,7 +533,7 @@ api.port.on({
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
     var d = pageData[tab.nUri];
-    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: 0} : {keepers: []});
+    respond(d ? {kept: d.kept, keepers: d.keepers.filter(idIsNot(me.id)), otherKeeps: 0} : {keepers: []});
   },
   keep: function (data, respond, tab) {
     log('[keep]', data);

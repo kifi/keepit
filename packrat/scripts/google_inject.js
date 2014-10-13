@@ -499,26 +499,27 @@ if (searchUrlRe.test(document.URL)) !function () {
         var val = $v.data('val');
         search(false, {who: val});
       }
-    }).hoverfu('.kifi-face.kifi-friend', function (configureHover) {
+    }).hoverfu('.kifi-res-user', function (configureHover) {
       var $a = $(this);
-      var i = $a.closest("li.g").prevAll("li.g").length;
-      var j = $a.prevAll(".kifi-friend").length;
-      var friend = response.hits[i].users[j];
-      render("html/friend_card", {
-        friend: friend
-      }, function (html) {
+      var i = $a.prevAll('.kifi-res-user').length;
+      var user = $a.closest('.kifi-res-why').data('users')[i];
+      render('html/friend_card', $.extend({
+        self: user.id === response.me.id,
+        className: 'kifi-res-user-card'
+      }, user), function (html) {
         configureHover(html, {
-          position: {my: "center bottom-12", at: "center top", of: $a, collision: "none"},
+          position: {my: 'left-46 bottom-16', at: 'left top', of: $a, collision: 'none'},
           canLeaveFor: 600,
           hideAfter: 4000,
-          click: "toggle"});
+          click: 'toggle'});
       });
-    }).hoverfu('.kifi-res-friends', function (configureHover) {
-      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
-      render("html/search/friends", {friends: response.hits[i].users}, function(html) {
+    }).hoverfu('.kifi-res-users-more', function (configureHover) {
+      var $a = $(this);
+      var users = $a.closest('.kifi-res-why').data('users');
+      render('html/search/friends', {friends: response.hits[i].users}, function (html) {
         configureHover(html, {
-          position: {my: "center bottom-8", at: "center top", of: $a, collision: "none"},
-          click: "toggle"});
+          position: {my: 'center bottom-8', at: 'center top', of: $a, collision: 'none'},
+          click: 'toggle'});
       });
     }).on('mouseover', '.kifi-res-more-a', function () {
       $(this).closest('.kifi-res-more').addClass('kifi-over');

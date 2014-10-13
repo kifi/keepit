@@ -2,9 +2,9 @@
   position: absolute;
   background-color: #fff;
   color: #faf9f9;
-  box-shadow: rgba(103,130,156,.35) 2px 3px;
-  border: 1px solid #b8c5d2;
-  border-radius: 3px !important;
+  box-shadow: 1px 2px 16px rgba(0,0,0,.12);
+  border: 1px solid #dadae2;
+  border-radius: 4px !important;
   padding: 1px;
   text-align: left;
   cursor: default;
@@ -22,57 +22,62 @@
   transition-duration: 60ms;
 }
 .kifi-kcard-top {
-  display: table;
-  table-layout: fixed;
-  border-collapse: collapse;
+  position: relative;
+  height: 110px;
+  min-width: 150px;
   max-width: 320px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 24px 15px 0 110px;
 }
 .kifi-kcard-pic {
-  display: table-cell;
-  height: 72px;
-  width: 72px;
-  border-radius: 2px 0 0 2px !important;
-}
-.kifi-kcard-info {
-  display: table-cell;
-  vertical-align: middle;
-  padding: 0 14px;
-  font-size: 12px;
-  line-height: 13px;
-  color: #808080;
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  height: 80px;
+  width: 80px;
+  border-radius: 50% !important;
+  background-size: contain;
+  box-shadow: inset 0 0 2px rgba(0,0,0,.1);
 }
 .kifi-kcard-name {
-  font-size: 16px;
   line-height: 18px;
-  color: #444;
+  font-size: 15px;
+  font-weight: bold;
+  -webkit-font-smoothing: antialiased;
+  color: #333;
   margin-bottom: 4px;
 }
 .kifi-kcard-desc {
-  color: #929496;
+  line-height: 15px;
+  font-size: 13px;
+  font-weight: normal;
+  color: #8092a6;
 }
 .kifi-kcard-tri {
   position: absolute;
-  height: 14px;
-  width: 28px;
-  bottom: -14px;
+  height: 18px;
+  width: 36px;
+  bottom: -18px;
   left: 50%;
-  margin-left: -14px;
+  margin-left: -18px;
   overflow: hidden;
   border-color: inherit;
 }
 .kifi-kcard-tri::after {
-  content: ' ';
+  content: '';
   position: absolute;
-  height: 14px;
-  width: 14px;
-  left: 7px;
-  top: -7px;
+  height: 18px;
+  width: 18px;
+  left: 9px;
+  top: -9px;
   -webkit-transform: rotate(45deg);
   transform: rotate(45deg);
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  box-shadow: rgba(103, 130, 156, .35) 2px 1px;
+  box-shadow: 1px 2px 12px rgba(0,0,0,.1);
   border: 1px solid;
   border-color: inherit;
+  border-radius: 0 0 2px;
   background-color: #fff;
 }

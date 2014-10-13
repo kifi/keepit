@@ -308,9 +308,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
       var friend = keepers.filter(idIs($pic.data('id')))[0];
-      render('html/friend_card', {
-        friend: friend
-      }, function (html) {
+      render('html/friend_card', friend, function (html) {
         configureHover(html, {
           mustHoverFor: 100, hideAfter: 4000, click: 'toggle', parent: $tip,
           position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
