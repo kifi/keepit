@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.keepit.social.BasicUser
 import com.keepit.model._
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, MobileController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, MobileController }
 import com.google.inject.Inject
 import com.keepit.search.SearchServiceClient
 import com.keepit.graph.GraphServiceClient
@@ -18,16 +18,16 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileDiscoveryController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     searchClient: SearchServiceClient,
     graphClient: GraphServiceClient,
     db: Database,
     uriRepo: NormalizedURIRepo,
     basicUserRepo: BasicUserRepo,
     uriSummaryCommander: URISummaryCommander,
-    airbrake: AirbrakeNotifier) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
-  def discover(withPageInfo: Boolean, limit: Int = -1) = JsonAction.authenticatedAsync { request =>
+  def discover(withPageInfo: Boolean, limit: Int = -1) = UserAction.async { request =>
     if (!request.experiments.contains(ExperimentType.ADMIN)) {
       airbrake.notify(new IllegalStateException(s"Non admin mobile user ${request.userId} has been given access to the internal graph feed!"))
       Future.successful(Unauthorized)

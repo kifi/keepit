@@ -2,7 +2,6 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
-import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -13,7 +12,6 @@ import com.keepit.model.NormalizedURI
 
 @Singleton
 class DuplicateDocumentsProcessor @Inject() (
-    actionAuthenticator: ActionAuthenticator,
     db: Database,
     duplicateDocumentRepo: DuplicateDocumentRepo,
     uriIntegrityPlugin: UriIntegrityPlugin) extends Logging {

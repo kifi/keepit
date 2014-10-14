@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator }
+import com.keepit.common.controller.{ AuthenticatedRequest, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
@@ -92,7 +92,7 @@ class InviteCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     postOffice: LocalPostOffice,
     emailAddressRepo: UserEmailAddressRepo,
     socialConnectionRepo: SocialConnectionRepo,
