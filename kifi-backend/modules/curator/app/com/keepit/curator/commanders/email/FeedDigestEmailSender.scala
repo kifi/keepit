@@ -112,8 +112,8 @@ trait DigestItem {
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
 
-  def viewPageUrl(content: String) =
-    if (isForQa) uri.url
+  def viewPageUrl(content: String): Html =
+    if (isForQa) Html(uri.url)
     else urlWithTracking(s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}", content)
 
   val sendPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
@@ -121,9 +121,7 @@ trait DigestItem {
 
   val reasonHeader: Option[Html]
 
-  private def urlWithTracking(url: String, content: String) = {
-    s"$url&${EmailTrackingParam.paramName}=${trackingParam(content)}"
-  }
+  private def urlWithTracking(url: String, content: String) = Html(s"$url&${EmailTrackingParam.paramName}=${trackingParam(content)}")
 }
 
 case class DigestRecommendationItem(uriRecommendation: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
