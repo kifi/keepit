@@ -371,7 +371,7 @@ POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImpo
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
-GET     /site/keeps/count           @com.keepit.controllers.website.HomeController.getKeepsCount
+GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 
 
 ##########################################
