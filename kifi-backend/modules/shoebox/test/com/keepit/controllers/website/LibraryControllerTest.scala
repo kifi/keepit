@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ RawBookmarksWithCollection, RawBookmarkRepresentation, FullLibraryInfo, LibraryInfo }
+import com.keepit.commanders.{ RawBookmarksWithCollection, RawBookmarkRepresentation, FullLibraryInfo, LibraryInfo, UsernameOps }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -205,7 +205,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val (user1, lib1) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu"))))
-
           val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user1, library)
@@ -291,18 +290,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu"))))
-          val user2 = userRepo.save(User(firstName = "AyAy", lastName = "Ron", createdAt = t1, username = Some(Username("ayayron"))))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
-          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          (user1, user2, library)
+        val (user1, lib1) = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu")), normalizedUsername = Some(UsernameOps.normalize("ahsu"))))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
+          libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          (user, library)
         }
 
-        val unInput = "ahsu"
+        val unInput = user1.username.get.value
         val badUserInput = "ahsuifhwoifhweof"
         val extInput = user1.externalId.id
-        val slugInput = "lib1"
+        val slugInput = lib1.slug.value
         inject[FakeUserActionsHelper].setUser(user1)
 
         db.readOnlyMaster { implicit s =>
