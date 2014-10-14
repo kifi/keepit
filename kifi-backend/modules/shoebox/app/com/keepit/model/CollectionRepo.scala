@@ -173,7 +173,7 @@ class CollectionRepoImpl @Inject() (
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
     import StaticQuery.interpolation
     import scala.collection.JavaConversions._
-    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc where kc.collection_id = c.id and user_id=${userId} and kc.state = ${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count desc limit ${size} offset ${page * size}"
+    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count desc limit ${size} offset ${page * size}"
     query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
       (CollectionSummary(row._1, row._2, row._3), row._4)
     }

@@ -258,34 +258,6 @@ class LibraryCommander @Inject() (
     canViewLibrary(userId, library, accessToken, passCode)
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
-    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(libraryId)
-      val ownerId = library.ownerId
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
-      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
-      val keeps = tagOpt match {
-        case None => Seq.empty
-        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
-      }
-      (library, ownerId, memTo, tagOpt, keeps)
-    }
-    (memTo, tagOpt) match {
-      case (_, None) => Left(LibraryFail("tag_not_found"))
-      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
-      case (_, Some(tag)) =>
-        def saveKeep(k: Keep, s: RWSession): Unit = {
-          implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
-            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = library.isDisjoint))
-          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-        }
-        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
-        Right(badKeeps.toSeq)
-    }
-  }
-
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
@@ -510,7 +482,7 @@ class LibraryCommander @Inject() (
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
       // todo: make more performant
-      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet
+      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet // note only contains ACTIVE keeps
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
@@ -537,6 +509,46 @@ class LibraryCommander @Inject() (
     badKeeps.toSeq
   }
 
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val ownerId = library.ownerId
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
+      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
+      val keeps = tagOpt match {
+        case None => Seq.empty
+        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
+      }
+      (library, ownerId, memTo, tagOpt, keeps)
+    }
+    (memTo, tagOpt) match {
+      case (_, None) => Left(LibraryFail("tag_not_found"))
+      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
+        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
+      case (_, Some(tag)) =>
+        def saveKeep(k: Keep, s: RWSession): Unit = {
+          implicit val session = s
+          keepRepo.getPrimaryByUriAndLibrary(k.uriId, libraryId) match {
+            case Some(k) if k.state == KeepStates.INACTIVE =>
+              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getOpt(k.id.get, tag.id.get) match {
+                case Some(ktc) =>
+                  keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+                case None =>
+                  keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = tag.id.get))
+              }
+            case None =>
+              val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
+                userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = library.isDisjoint))
+              keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+            case _ => // if active keep already exists in library (do nothing)
+          }
+        }
+        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
+        Right(badKeeps.toSeq)
+    }
+  }
+
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
@@ -549,10 +561,19 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-            userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
-          keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
-            keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
+          keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
+            case Some(k) if k.state == KeepStates.INACTIVE =>
+              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
+                keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = k2c.collectionId))
+              }
+            case None =>
+              val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
+                userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
+                keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
+              }
+            case _ => // if active keep already exists in library (do nothing)
           }
         }
 
