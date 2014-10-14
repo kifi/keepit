@@ -223,8 +223,10 @@ class FeedDigestEmailSender @Inject() (
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
+      // TODO(josh) fix bug getting keeps from library (https://fortytwo.airbrake.io/projects/99522/groups/1266393588775530264/notices/1266393588775530263)
+      //keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
     } yield {
+      val keepsFromLibrary = Seq[DigestLibraryItem]()
       if (recos.size >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
       else {
         log.info(s"NOT sending digest email to $userId; 0 worthy recos")
