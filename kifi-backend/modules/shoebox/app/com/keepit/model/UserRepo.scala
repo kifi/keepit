@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.Username
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
