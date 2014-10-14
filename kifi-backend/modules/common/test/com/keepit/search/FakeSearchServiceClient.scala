@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
+import com.keepit.search.augmentation.{ AugmentationScores, ItemAugmentationResponse, ItemAugmentationRequest }
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
@@ -77,13 +78,14 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
-  override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
-
-  override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
-
-  override def semanticLoss(query: String): Future[Map[String, Float]] = ???
+  override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
+    ItemAugmentationResponse(
+      infos = Map.empty,
+      scores = AugmentationScores(
+        libraryScores = Map.empty,
+        userScores = Map.empty,
+        tagScores = Map.empty
+      )
+    )
+  }
 }

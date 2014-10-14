@@ -47,7 +47,7 @@ class ShardedKeepIndexer(
 
   val fetchSize = 200
 
-  private[keep] def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
+  def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     fetchIndexables(sequenceNumber, fetchSize).map {
       case Some((shardedIndexables, maxSeq, exhausted)) =>

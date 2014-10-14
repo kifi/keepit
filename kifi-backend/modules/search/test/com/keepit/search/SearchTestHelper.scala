@@ -17,7 +17,7 @@ import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.graph.library.LibraryIndexer
-import com.keepit.search.index.VolatileIndexDirectory
+import com.keepit.search.index.{ Indexer, VolatileIndexDirectory }
 import com.keepit.search.phrasedetector._
 import com.keepit.search.user.UserIndexer
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
@@ -52,7 +52,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
   }
 
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards, injector: Injector) = {
-
     val articleIndexers = activeShards.local.map { shard =>
       val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
@@ -116,7 +115,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       inject[MonitoredAwait],
       fortyTwoServices)
 
-    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory, shardedKeepIndexer)
+    (shardedUriGraphIndexer, shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {

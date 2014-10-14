@@ -58,7 +58,7 @@ class InstallExtensionTipTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit rw =>
           inject[KifiInstallationRepo].save(KifiInstallation(userId = user.id.get,
             version = KifiExtVersion(1, 1),
-            userAgent = UserAgent.fromString("Chrome/26.0.1410.65"),
+            userAgent = UserAgent("Chrome/26.0.1410.65"),
             platform = KifiInstallationPlatform.Extension
           ))
         }

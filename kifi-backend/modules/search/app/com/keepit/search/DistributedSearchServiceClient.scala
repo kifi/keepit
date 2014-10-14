@@ -7,18 +7,14 @@ import com.keepit.model.{ User, NormalizedURI }
 import scala.concurrent.Future
 import com.keepit.search.engine.result.LibraryShardResult
 import com.keepit.common.db.Id
-import play.api.libs.json._
 import com.keepit.common.routes.{ Search, ServiceRoute }
 import com.keepit.common.net.{ HttpClient, ClientResponse }
 import com.google.inject.Inject
 import scala.collection.mutable.ListBuffer
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import com.keepit.search.sharding.Shard
-import com.keepit.common.routes.ServiceRoute
-import play.api.templates.Html
+import play.api.libs.json._
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest }
 
 trait DistributedSearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -180,4 +176,13 @@ class DistributedSearchServiceClientImpl @Inject() (
   def call(userId: Id[User], uriId: Id[NormalizedURI], url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     distRouter.call(userId, uriId, url, body)
   }
+}
+
+class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
+  def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
+  def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
+  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
+  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
+
+  def build: JsObject = JsObject(params)
 }

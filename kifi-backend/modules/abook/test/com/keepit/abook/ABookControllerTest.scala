@@ -1,7 +1,8 @@
 package com.keepit.abook
 
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsModule }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.FakeHttpClientModule
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -25,6 +26,8 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
     FakeSimpleQueueModule(),
     FakeABookImporterPluginModule(),
     FakeABookStoreModule(),
+    FakeUserActionsModule(),
+    FakeHttpClientModule(),
     FakeActionAuthenticatorModule()
   )
 

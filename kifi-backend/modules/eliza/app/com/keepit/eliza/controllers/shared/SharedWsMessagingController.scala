@@ -5,7 +5,7 @@ import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, ExperimentType, KifiExtVersion }
-import com.keepit.common.controller.{ BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -28,7 +28,7 @@ class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
   notificationCommander: NotificationCommander,
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   protected val websocketRouter: WebSocketRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
   threadRepo: MessageThreadRepo,
@@ -43,7 +43,7 @@ class SharedWsMessagingController @Inject() (
   protected val userExperimentCommander: RemoteUserExperimentCommander,
   val accessLog: AccessLog,
   val shoutdownListener: WebsocketsShutdownListener)
-    extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
+    extends UserActions with AuthenticatedWebSocketsController {
 
   protected def onConnect(socket: SocketInfo): Unit = {
     websocketRouter.registerUserSocket(socket)

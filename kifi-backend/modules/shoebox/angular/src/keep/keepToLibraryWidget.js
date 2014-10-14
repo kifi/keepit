@@ -3,14 +3,20 @@
 angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
-  '$rootElement', '$compile', '$document', '$filter', '$templateCache', '$timeout', 'keyIndices',
-  function ($rootElement, $compile, $document, $filter, $templateCache, $timeout, keyIndices) {
+  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout',
+  'keyIndices', 'libraryService', 'util',
+  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout,
+    keyIndices, libraryService, util) {
     return {
       restrict: 'A',
       /*
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
        *  selection - an object whose 'library' property will be the selected library.
+       *
+       *  Optional properties on parent scope:
+       *   clickAction() - a function that can be called once a library is selected
+       *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -23,12 +29,16 @@ angular.module('kifi')
         var justScrolled = false;
         var removeTimeout = null;
         var resetJustScrolledTimeout = null;
+        var newLibraryNameInput = null;
+        var submitting = false;
 
 
         //
         // Scope data.
         //
         scope.search = {};
+        scope.showCreate = false;
+        scope.newLibrary = {};
 
 
         //
@@ -67,6 +77,9 @@ angular.module('kifi')
           // highlight on their selection.
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
+            if (_.isFunction(scope.clickAction)) {
+              scope.clickAction();
+            }
             return;
           }
         }
@@ -121,7 +134,7 @@ angular.module('kifi')
           $compile(widget)(scope);
 
           // Set position.
-          var top = element.offset().top - 100;
+          var top = element.offset().top - (scope.libSelectTopOffset || 0);
           var left = element.offset().left;
           widget.css({top: top + 'px', left: left + 'px'});
 
@@ -134,6 +147,9 @@ angular.module('kifi')
           scope.libraries[selectedIndex].selected = true;
           libraryList = widget.find('.library-select-list');
           searchInput = widget.find('.keep-to-library-search-input');
+          scope.showCreate = false;
+          scope.newLibrary = {};
+          newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
           // Focus on search input.
           searchInput.focus();
@@ -199,6 +215,41 @@ angular.module('kifi')
           }
         };
 
+        scope.showCreatePanel = function () {
+          scope.showCreate = true;
+
+          // Wait for the creation panel to be shown, and then focus on the
+          // input.
+          $timeout(function () {
+            newLibraryNameInput.focus();
+          }, 0);
+        };
+
+        scope.hideCreatePanel = function () {
+          scope.showCreate = false;
+        };
+
+        scope.createLibrary = function (library) {
+          if (submitting || !library.name || (library.name.length < 3)) {
+            return;
+          }
+
+          library.slug = util.generateSlug(library.name);
+          library.visibility = library.visibility || 'published';
+
+          libraryService.createLibrary(library).then(function () {
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('changedLibrary');
+
+              scope.$evalAsync(function () {
+                scope.selection.library = _.find(scope.libraries, { 'name': library.name });
+                removeWidget();
+              });
+            });
+          })['finally'](function () {
+            submitting = false;
+          });
+        };
 
         //
         // Clean up.

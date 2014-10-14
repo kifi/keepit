@@ -12,25 +12,28 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json._
 import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.JsObject
-import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer, LibraryRecord, LibraryFields }
+import play.api.libs.json.{ Writes, Json, JsObject }
+import com.keepit.search.graph.library.{ LibraryIndexable }
 
 import scala.util.{ Failure, Success }
+import com.keepit.common.json
+import com.keepit.search.augmentation._
+
+case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
+object BasicLibrary {
+  implicit val writes = Writes[BasicLibrary] { library =>
+    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret))
+  }
+}
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
-  case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
-  implicit val basicLibraryWrites = Writes[BasicLibrary] { library =>
-    val json = Json.obj("libId" -> library.id, "name" -> library.name)
-    if (library.isSecret) json + ("secret" -> JsBoolean(true)) else json
-  }
 }
 
 trait SearchControllerUtil {
