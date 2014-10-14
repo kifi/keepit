@@ -5,7 +5,7 @@ import com.amazonaws.services.s3.model.PutObjectResult
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
-import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.{ UserActionsHelper }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -67,7 +67,7 @@ trait S3ImageStore {
 
 @Singleton
 class S3ImageStoreImpl @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     userValueRepo: UserValueRepo,
     override val s3Client: AmazonS3,

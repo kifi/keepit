@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, _ }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
@@ -20,7 +20,6 @@ import scala.util.{ Failure, Success, Try }
 
 class ExtLibraryController @Inject() (
   db: Database,
-  actionAuthenticator: ActionAuthenticator,
   libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,

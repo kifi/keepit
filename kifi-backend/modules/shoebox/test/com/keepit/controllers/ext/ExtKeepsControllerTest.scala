@@ -42,7 +42,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeKeepImportsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
@@ -111,7 +111,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val path = routes.ExtBookmarksController.unkeep(k1.externalId).url
         path === s"/ext/keeps/${k1.externalId}/unkeep"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path)
         val result = extBookmarksController.unkeep(k1.externalId)(request)
         status(result) must equalTo(OK);
@@ -185,7 +185,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val path = routes.ExtBookmarksController.removeTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/removeFromKeep"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.removeTag(collections(0).externalId)(request)
         status(result) must equalTo(OK)
@@ -254,7 +254,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK)
@@ -313,7 +313,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val path = routes.ExtBookmarksController.addTag(collections(0).externalId).url
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK);

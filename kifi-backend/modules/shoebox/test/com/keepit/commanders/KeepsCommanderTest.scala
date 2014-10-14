@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
@@ -31,7 +31,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule() ::
     FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
-    FakeActionAuthenticatorModule() ::
+    FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::

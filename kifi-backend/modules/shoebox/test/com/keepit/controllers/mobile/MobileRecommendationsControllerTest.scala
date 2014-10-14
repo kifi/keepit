@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ FakeShoeboxCommandersModule, FakeRecommendationsCommander, RecommendationsCommander }
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
-import com.keepit.common.controller.{ FakeUserActionsHelper, UserActionsHelper }
+import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
@@ -49,6 +49,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeActorSystemModule(),
+    FakeUserActionsModule(),
     FakeShoeboxCommandersModule()
   )
 

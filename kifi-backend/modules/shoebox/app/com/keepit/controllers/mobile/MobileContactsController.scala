@@ -4,18 +4,18 @@ import com.google.inject.Inject
 
 import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, UserActions, UserActionsHelper }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsString }
 import com.keepit.abook.model.RichContact
 
 class MobileContactsController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   typeaheadCommander: TypeaheadCommander)
-    extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def search(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
+  def search(q: String, n: Int) = UserAction.async { request =>
     new SafeFuture({
       typeaheadCommander.queryNonUserContacts(request.userId, q, n)
     }) map { contacts =>

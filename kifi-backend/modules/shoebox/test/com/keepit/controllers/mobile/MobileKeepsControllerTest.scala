@@ -98,10 +98,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         uris.size === 2
       }
 
+      inject[FakeUserActionsHelper].setUser(user)
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.removeTag(collections(0).externalId).url
       path === s"/m/1/tags/${collections(0).externalId}/removeFromKeep"
 
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = inject[MobileBookmarksController].removeTag(collections(0).externalId)(request)
       status(result) must equalTo(OK)
@@ -160,7 +161,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addTag(collections(0).externalId).url
       path === s"/m/1/tags/${collections(0).externalId}/addToKeep"
 
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = inject[MobileBookmarksController].addTag(collections(0).externalId)(request)
       status(result) must equalTo(OK);
@@ -214,7 +215,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addTag(collections(0).externalId).url
       path === s"/m/1/tags/${collections(0).externalId}/addToKeep"
 
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = inject[MobileBookmarksController].addTag(collections(0).externalId)(request)
       status(result) must equalTo(OK)
@@ -287,7 +288,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-      inject[FakeActionAuthenticator].setUser(user1)
+      inject[FakeUserActionsHelper].setUser(user1)
       val request = FakeRequest("GET", path)
       val result = inject[MobileBookmarksController].allKeeps(
         before = None,
@@ -357,7 +358,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
 
-      inject[FakeActionAuthenticator].setUser(u1)
+      inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
       val result = inject[MobileBookmarksController].allKeeps(
         before = None,
@@ -430,7 +431,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
       Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
-      inject[FakeActionAuthenticator].setUser(u1)
+      inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
       val result = inject[MobileBookmarksController].allKeeps(
         before = Some(keeps1(1).externalId.toString),
@@ -515,6 +516,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
       keeps.size === 2
 
+      inject[FakeUserActionsHelper].setUser(user)
       val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
@@ -569,7 +571,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       path === "/m/1/collections/create"
 
       val json = Json.obj("name" -> JsString("my tag"))
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val request = FakeRequest("POST", path).withJsonBody(json)
       val result = inject[MobileBookmarksController].saveCollection()(request)
       status(result) must equalTo(OK);
@@ -605,7 +607,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allCollections().url
         path === "/m/1/collections/all"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[MobileBookmarksController].allCollections(sort = "last_kept")(request)
         status(result) must equalTo(OK);
@@ -650,7 +652,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path).withBody(json)
         val result = inject[MobileBookmarksController].keepMultiple()(request)
         status(result) must equalTo(OK);
@@ -697,7 +699,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("POST", path).withBody(json)
         val result = inject[MobileBookmarksController].addKeeps()(request)
         status(result) must equalTo(OK);
@@ -725,7 +727,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
@@ -792,7 +794,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val keepJson = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
@@ -860,7 +862,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeepWithTags().url
         path === "/m/1/keeps/addWithTags"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request1 = FakeRequest("POST", path).withBody(Json.obj("keep" -> keep1ToCollections._1, "tagNames" -> keep1ToCollections._2))
         val result1 = inject[MobileBookmarksController].addKeepWithTags()(request1)
         status(result1) must equalTo(OK);

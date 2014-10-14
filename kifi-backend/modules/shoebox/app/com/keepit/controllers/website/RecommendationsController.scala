@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.controller.{ UserActionsHelper, ActionAuthenticator, ShoeboxServiceController, UserActions, WebsiteController }
+import com.keepit.common.controller.{ UserActionsHelper, UserActions, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.RecommendationClientType
@@ -12,12 +12,11 @@ import play.api.libs.json.Json
 
 class RecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    actionAuthenticator: ActionAuthenticator,
     commander: RecommendationsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
-    db: Database) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with UserActions {
+    db: Database) extends UserActions with ShoeboxServiceController {
 
-  def adHocRecos(n: Int) = JsonAction.authenticatedParseJsonAsync { request =>
+  def adHocRecos(n: Int) = UserAction.async(parse.tolerantJson) { request =>
     val scores = request.body.as[UriRecommendationScores]
     commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
   }
@@ -28,18 +27,18 @@ class RecommendationsController @Inject() (
     }
   }
 
-  def topPublicRecos() = JsonAction.authenticatedAsync { request =>
+  def topPublicRecos() = UserAction.async { request =>
     commander.topPublicRecos(request.userId).map { recos =>
       Ok(Json.toJson(recos))
     }
   }
 
-  def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
+  def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = UserAction.async(parse.tolerantJson) { request =>
     val feedback = request.body.as[UriRecommendationFeedback]
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def trash(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedAsync { request =>
+  def trash(id: ExternalId[NormalizedURI]) = UserAction.async { request =>
     commander.updateUriRecommendationFeedback(request.userId, id, UriRecommendationFeedback(trashed = Some(true))).map(fkis => Ok(Json.toJson(fkis)))
   }
 

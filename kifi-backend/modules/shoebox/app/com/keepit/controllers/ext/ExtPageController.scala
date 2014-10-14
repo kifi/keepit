@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 
 import com.keepit.commanders._
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.common.net.URI
 import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -11,11 +11,11 @@ import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
 class ExtPageController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   pageCommander: PageCommander)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def getPageDetails() = JsonAction.authenticatedParseJson { request =>
+  def getPageDetails() = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     if (url.isEmpty) throw new Exception(s"empty url for json ${request.body} for user ${request.user}")
     URI.parse(url) match {
@@ -28,7 +28,7 @@ class ExtPageController @Inject() (
     }
   }
 
-  def getPageInfo() = JsonAction.authenticatedParseJsonAsync { request =>
+  def getPageInfo() = UserAction.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     URI.parse(url) match {
       case Success(uri) =>
