@@ -21,7 +21,9 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
   private def crypt(value: Long, cipher: Cipher): Long = {
     val buffer = ByteBuffer.allocate(8)
     buffer.putLong(0, reverseBytes(value))
-    val bytes: Array[Byte] = cipher.doFinal(buffer.array)
+    val bytes: Array[Byte] = synchronized {
+      cipher.doFinal(buffer.array)
+    }
     buffer.rewind
     buffer.put(bytes)
     buffer.rewind
