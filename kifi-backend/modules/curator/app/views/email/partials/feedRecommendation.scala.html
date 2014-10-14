@@ -5,20 +5,15 @@
     <tr>
         <td valign="top">
             <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+                @email.tags.trSpacer(10)
+                @reco.reasonHeader.map { reasonHeader =>
                 <tr>
-                    <td height="8" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                </tr>
-                <tr>
-                    <td align="center" style="font-family:Arial,sans-serif;font-size:16px;color:#92938d;text-align:center;line-height:20px;font-weight:bold;">
-                        @reco.reasonHeader.map { reasonHeader =>
+                    <td align="center" style="font-family:Arial,sans-serif;font-size:18px;color:#92938d;text-align:center;line-height:24px;font-weight:bold;">
                           @reasonHeader
-                        }
                     </td>
                 </tr>
-                <tr>
-                    <td height="17" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                </tr>
-
+                }
+                @email.tags.trSpacer(17)
                 <tr>
                     <td align="center" valign="top" width="535">
                         <a href="@reco.viewPageUrl" target="_blank">
@@ -26,10 +21,7 @@
                         </a>
                     </td>
                 </tr>
-
-                <tr>
-                    <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
-                </tr>
+                @email.tags.trSpacer(14)
                 <tr>
                     <td valign="top">
                         <table width="672" border="0" cellspacing="0" cellpadding="0" class="wrapper">
@@ -42,12 +34,13 @@
                                                 <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl">@reco.title</a>
                                             </td>
                                         </tr>
+                                        @email.tags.trSpacer(4)
                                         <tr>
                                             <td align="left" class="num1">
                                                 <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</a>
                                                 <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">·</span>
                                                 @reco.readTime.map { readTime =>
-                                                <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
+                                                <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
                                                 }
                                             </td>
                                         </tr>
