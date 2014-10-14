@@ -129,7 +129,7 @@ class HomeController @Inject() (
     context.addRequestInfo(request)
     context += ("type", "landing")
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    val uriNoProto = request.uri.replaceFirst("^https?:", "")
+    val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
     Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
 
