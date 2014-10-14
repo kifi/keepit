@@ -123,7 +123,7 @@ angular.module('kifi')
         return;
       }
       if (emailInfo.isVerified) {
-        return profileService.setNewPrimaryEmail($scope.me, emailInfo.address);
+        return profileService.setNewPrimaryEmail(emailInfo.address);
       }
       // email is available || (not primary && not pending primary && not verified)
       emailToBeSaved = email;

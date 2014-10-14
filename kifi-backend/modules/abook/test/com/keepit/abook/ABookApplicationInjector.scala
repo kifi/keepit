@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageMod
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.controller.FakeUserActionsModule
 import com.google.inject.util.Modules
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
 import com.keepit.common.actor.FakeSchedulerModule
@@ -23,7 +23,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
       FakeFortyTwoModule(),
       FakeDiscoveryModule(),
       FakeSlickModule(TestDbInfo.dbInfo),
-      FakeActionAuthenticatorModule(),
+      FakeUserActionsModule(),
       FakeABookStoreModule(),
       FakeABookImporterPluginModule(),
       FakeAbookRepoChangeListenerModule()

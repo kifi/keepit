@@ -19,7 +19,9 @@ class EmailTipProvider @Inject() (
     peopleRecommendationsTip: FriendRecommendationsEmailTip,
     connectNetworkTip: ConnectNetworkTip,
     installExtensionTip: InstallExtensionTip,
-    importGmail: ImportGmailContacts) {
+    importGmail: ImportGmailContacts,
+    keepFromEmailTip: KeepFromEmailTip,
+    bookmarkImportTip: BookmarkImportTip) {
 
   def getTipHtml(emailToSend: EmailToSend) = {
     val userIdOpt = emailToSend.to.fold(userId => Some(userId), { emailAddr =>
@@ -54,6 +56,8 @@ class EmailTipProvider @Inject() (
         case EmailTip.ConnectLinkedIn => connectNetwork(LINKEDIN)
         case EmailTip.ImportGmailContacts => importGmail.render(emailToSend)
         case EmailTip.InstallExtension => installExtensionTip.render(emailToSend, userId)
+        case EmailTip.KeepFromEmail => keepFromEmailTip.render(emailToSend)
+        case EmailTip.BookmarkImport => bookmarkImportTip.render(emailToSend)
         case _ => Future.successful(None)
       }
       htmlOptF map ((tip, _))

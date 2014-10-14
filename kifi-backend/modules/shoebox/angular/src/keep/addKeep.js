@@ -146,6 +146,7 @@ angular.module('kifi')
           });
           scope.selection = scope.selection || {};
           scope.selection.library = _.find(scope.libraries, { 'name': 'Main Library' });
+          scope.libSelectTopOffset = 110;
         }
 
         scope.resetAndHide = function () {
@@ -156,6 +157,14 @@ angular.module('kifi')
 
         $document.on('keydown', processKey);
         safeFocus();
+
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+              return lib.access !== 'read_only';
+            });
+          }
+        });
       }
     };
   }

@@ -6,7 +6,7 @@ import com.keepit.common.time._
 import com.keepit.common.cache.{ JsonCacheImpl, PrimitiveCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 
 case class KeepToCollection(
     id: Option[Id[KeepToCollection]] = None,

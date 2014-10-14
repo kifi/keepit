@@ -7,7 +7,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import play.api.libs.json._
 
 case class UserExperiment(

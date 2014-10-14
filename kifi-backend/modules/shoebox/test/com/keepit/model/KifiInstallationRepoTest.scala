@@ -18,7 +18,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             userId = user.id.get,
             version = KifiExtVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
-            userAgent = UserAgent.fromString("my browser"),
+            userAgent = UserAgent("my browser"),
             platform = KifiInstallationPlatform.Extension))
           (user, installExt)
         }
@@ -40,7 +40,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             userId = user.id.get,
             version = KifiExtVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
-            userAgent = UserAgent.fromString("my other browser"),
+            userAgent = UserAgent("my other browser"),
             platform = KifiInstallationPlatform.Extension))
         }
 
@@ -58,7 +58,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             userId = user.id.get,
             version = KifiIPhoneVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
-            userAgent = UserAgent.fromString("my iphone"),
+            userAgent = UserAgent("my iphone"),
             platform = KifiInstallationPlatform.IPhone))
         }
 
@@ -67,7 +67,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             userId = user.id.get,
             version = KifiAndroidVersion("1.1.1"),
             externalId = ExternalId[KifiInstallation](),
-            userAgent = UserAgent.fromString("my android"),
+            userAgent = UserAgent("my android"),
             platform = KifiInstallationPlatform.Android))
         }
 

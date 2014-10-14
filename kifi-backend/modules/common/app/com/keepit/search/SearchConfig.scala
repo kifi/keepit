@@ -44,7 +44,7 @@ object SearchConfig {
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "0",
       "myLibraryBoost" -> "1.5",
-      "newEngine" -> "false"
+      "newEngine" -> "true"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -118,7 +118,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     }
   }
 
-  private var userConfig = Map.empty[Id[User], SearchConfig]
+  private[this] var userConfig = Map.empty[Id[User], SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId, defaultConfig)
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }

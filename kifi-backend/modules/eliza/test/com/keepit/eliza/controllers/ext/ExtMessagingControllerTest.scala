@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers.ext
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
@@ -35,7 +35,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUrbanAirshipModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeCryptoModule(),
     FakeScraperServiceClientModule(),
     FakeElizaStoreModule(),
@@ -56,7 +56,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         path === "/eliza/messages"
 
         val controller = inject[ExtMessagingController]
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val input = Json.parse(s"""
           {
             "title": "Search Experiments",
@@ -156,7 +156,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 
         val controller = inject[ExtMessagingController]
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val createThreadJson = Json.parse(s"""
           {
             "title": "Search Experiments",

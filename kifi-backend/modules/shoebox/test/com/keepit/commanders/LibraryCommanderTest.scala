@@ -409,7 +409,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
-            authToken = "token", passPhrase = "blarg"))
+            authToken = "token", passPhrase = "blarg bob fred"))
         }
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
@@ -417,7 +417,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // test can view if non-user provides correct authtoken & passphrase
         libraryCommander.canViewLibrary(None, libScience) === false
         libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("blarg"))) === true
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("wrong one"))) === false
+        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
+          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("Blarg bobfRed"))) === true
       }
     }
 
@@ -758,6 +760,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val site3 = "http://www.mcdonalds.com/"
 
         val (tag1, tag2, libUSA) = db.readWrite { implicit s =>
+          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val libUSA2 = libraryRepo.save(Library(name = "USA2", slug = LibrarySlug("usa2"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA2.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
@@ -766,15 +774,18 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
+          // 2 keeps in 'Murica', but one is inactive (unkept before)
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint, state = KeepStates.INACTIVE))
+
+          // one keep in 'Science'
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = None, inDisjointLib = false)) // libraryId == None (?)
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = libUSA2.id, inDisjointLib = libUSA2.isDisjoint))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
@@ -786,31 +797,38 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
 
-          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
-          keepRepo.count === 3
           collectionRepo.count(userCaptain.id.get) === 2
+          keepRepo.count === 3
           keepToCollectionRepo.count === 6
           (tag1, tag2, libUSA)
         }
 
         val libraryCommander = inject[LibraryCommander]
         libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("Canada")).isLeft === true
-        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("USA")) //move keeps with "USA" to library "USA"
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("USA")) //copy 3 keeps to library "USA"
         res1.isRight === true
-        res1.right.get.length === 0
+        res1.right.get.length === 0 // three successes
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 3
-          keepToCollectionRepo.count === 6
+          keepRepo.count === 6
+          keepToCollectionRepo.count === 9
         }
 
-        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //move keeps with "Murica" to library "Murica"
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //copy 3 keeps to library "Murica"
         res2.isRight === true
-        res2.right.get.unzip._1.map(_.title.get).sorted === Seq()
+        res2.right.get.length === 1 // one failed keep, one keep activated and one keep added (Library "Murica" already has Reddit active Keep)
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 3
-          keepToCollectionRepo.count === 6
+          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.count === 7
+          keepToCollectionRepo.count === 10
+        }
+
+        val res3 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //try again (there should be 4 keeps tagged "Murica" now)
+        res3.isRight === true
+        res3.right.get.length === 4 // all 4 should fail since library already has all 3 URIs
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.count === 7
+          keepToCollectionRepo.count === 10
         }
       }
     }

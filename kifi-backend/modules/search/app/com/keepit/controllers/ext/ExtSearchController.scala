@@ -9,12 +9,19 @@ import com.keepit.controllers.util.SearchControllerUtil
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
-import com.keepit.search.{ AugmentationCommander, SearchCommander }
+import com.keepit.search.{ SearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.Json
-import scala.concurrent.Future
+import play.api.libs.json._
+import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
+import com.keepit.common.json
+
+object ExtSearchController {
+  private[ExtSearchController] val maxKeepersShown = 20
+  private[ExtSearchController] val maxLibrariesShown = 10
+  private[ExtSearchController] val maxTagsShown = 15
+}
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -24,6 +31,8 @@ class ExtSearchController @Inject() (
     searchCommander: SearchCommander,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
+
+  import ExtSearchController._
 
   def search(
     query: String,
@@ -67,7 +76,29 @@ class ExtSearchController @Inject() (
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
-    val augmentationEnumerator = reactiveEnumerator(Seq.empty)
+    val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
+      augment(augmentationCommander, userId, kifiPlainResult).flatMap { augmentedItems =>
+        val librarySearcher = libraryIndexer.getSearcher
+
+        val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+
+        val futureUsers = shoeboxClient.getBasicUsers(userIds)
+
+        val hitsJson = allSecondaryFields.map(json.minify)
+
+        val libraries = {
+          val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
+          libraryIds.map(libraryById(_))
+        }
+
+        futureUsers.map { usersById =>
+          val users = userIds.map(usersById(_))
+          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
+        }
+      }
+    }
+
+    val augmentationEnumerator = reactiveEnumerator(Seq(augmentationFuture.map(Json.stringify)(immediate)))
 
     val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(augmentationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
 
@@ -80,4 +111,3 @@ class ExtSearchController @Inject() (
     Ok
   }
 }
-

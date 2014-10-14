@@ -15,7 +15,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
@@ -23,10 +23,10 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.Collection.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Promise, Future }
-import scala.util.{ Success, Failure }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -264,14 +264,6 @@ class TypeaheadCommander @Inject() (
         val nf: Future[Seq[NetworkTypeAndHit]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[NetworkTypeAndHit]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)
-    }
-  }
-
-  private def dedupBy[A, B](items: Seq[A])(by: A => B): Seq[A] = {
-    val hashSet = new collection.mutable.HashSet[B]
-    items.filter { item =>
-      val elem = by(item)
-      !hashSet(elem) tap { notSeen => if (notSeen) hashSet += elem }
     }
   }
 

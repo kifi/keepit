@@ -9,6 +9,7 @@
     </div>
     <div class="kf-header-right">
       <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
+      <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-if="librariesEnabled" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
       <div class="kf-header-icon-hover-container">
         <a href="/friends" class="kf-header-icon-friends sprite sprite-friends">Friends</a>
         <menu class="kf-dropdown-menu">
@@ -16,7 +17,7 @@
           <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/invite')}" href="javascript:" ng-click="navigateToInvite()">Invite a friend to Kifi</a>
         </menu>
       </div>
-      <a href="/profile" class="sprite sprite-settings">Settings</div>
+      <a href="/profile" class="sprite sprite-settings">Settings</a>
     </div>
   </div>
 </div>

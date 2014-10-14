@@ -168,7 +168,7 @@ angular.module('kifi')
       },
 
       createLibrary: function (opts) {
-        var required = ['name', 'visibility', 'description', 'slug'];
+        var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
           return opts[v] === undefined;
         });
@@ -180,7 +180,7 @@ angular.module('kifi')
       },
 
       modifyLibrary: function (opts) {
-        var required = ['name', 'visibility', 'description', 'slug'];
+        var required = ['name', 'visibility', 'slug'];
         var missingFields = _.filter(required, function (v) {
           return opts[v] === undefined;
         });
@@ -240,6 +240,10 @@ angular.module('kifi')
         return $http.post(routeService.authIntoLibrary(username, slug, authToken), {'passPhrase': passPhrase}).then(function (resp) {
           return resp;
         });
+      },
+
+      copyKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName));
       }
     };
 

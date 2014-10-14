@@ -2,6 +2,8 @@ package com.keepit.commanders
 
 import java.util.concurrent.{ Callable, TimeUnit }
 
+import com.keepit.common.cache.TransactionalCaching.Implicits._
+
 import com.google.common.cache.{ CacheBuilder, Cache }
 import com.google.inject.{ Singleton, Inject }
 
@@ -35,7 +37,7 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.typeahead.{ HashtagHit, TypeaheadHit, HashtagTypeahead }
+import com.keepit.typeahead.{ UserHashtagTypeaheadCommander, LibraryHashtagTypeaheadCommander, HashtagHit, HashtagHitWithKeepCount, TypeaheadHit }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -140,6 +142,7 @@ class KeepsCommander @Inject() (
     db: Database,
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
+    globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
@@ -162,8 +165,27 @@ class KeepsCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
-    hashtagTypeahead: HashtagTypeahead,
+    libraryHashtagTypeahead: LibraryHashtagTypeaheadCommander,
+    searchServiceClient: SearchServiceClient,
+    userHashtagTypeahead: UserHashtagTypeaheadCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+
+  def getBookmarkCountsFuture(): Future[Int] = {
+    globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
+      Future.sequence(searchServiceClient.indexInfoList()).map { results =>
+        var countMap = Map.empty[String, Int]
+        results.flatMap(_._2).foreach { info =>
+          if (info.name.startsWith("BookmarkStore")) {
+            countMap.get(info.name) match {
+              case Some(count) if count >= info.numDocs =>
+              case _ => countMap += (info.name -> info.numDocs)
+            }
+          }
+        }
+        countMap.values.sum
+      }
+    }
+  }
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
     db.readOnlyMaster { implicit session =>
@@ -420,7 +442,7 @@ class KeepsCommander @Inject() (
     SafeFuture {
       searchClient.updateKeepIndex()
       keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
-      hashtagTypeahead.refresh(libraryId)
+      libraryHashtagTypeahead.refresh(libraryId)
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
@@ -452,7 +474,7 @@ class KeepsCommander @Inject() (
     val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateKeepIndex()
-    hashtagTypeahead.refreshByIds(deactivatedBookmarks.map(_.libraryId).flatten.distinct)
+    libraryHashtagTypeahead.refreshByIds(deactivatedBookmarks.map(_.libraryId).flatten.distinct)
     deactivatedKeepInfos
   }
 
@@ -526,7 +548,7 @@ class KeepsCommander @Inject() (
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
-    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -536,7 +558,7 @@ class KeepsCommander @Inject() (
     }
     keptAnalytics.rekeptPages(userId, keeps, context)
     searchClient.updateKeepIndex()
-    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     keeps.length
   }
 
@@ -648,7 +670,7 @@ class KeepsCommander @Inject() (
     }
     if (updateUriGraph) {
       searchClient.updateKeepIndex()
-      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+      libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
     result
   }
@@ -670,7 +692,7 @@ class KeepsCommander @Inject() (
       removed.toSet
     } tap { _ =>
       searchClient.updateKeepIndex()
-      hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+      libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }
   }
 
@@ -708,7 +730,7 @@ class KeepsCommander @Inject() (
         keep
       }
     }
-    keep.foreach(_.libraryId.foreach(hashtagTypeahead.refresh))
+    keep.foreach(_.libraryId.foreach(libraryHashtagTypeahead.refresh))
     searchClient.updateKeepIndex()
   }
 
@@ -725,7 +747,7 @@ class KeepsCommander @Inject() (
         keepRepo.save(keep) // notify keep index
       }
     }
-    hashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
+    libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     searchClient.updateKeepIndex()
   }
 
@@ -771,13 +793,18 @@ class KeepsCommander @Inject() (
         }
         Right((KeepInfo.fromKeep(keep), tags))
     }
-    hashtagTypeahead.refresh(libraryId)
+    libraryHashtagTypeahead.refresh(libraryId)
     keepsWithTags
   }
 
-  def searchTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+  def searchLibraryTags(libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[Hashtag]
-    hashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
+    libraryHashtagTypeahead.topN(libraryId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
+  }
+
+  def searchUserTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHitWithKeepCount]] = {
+    implicit val hitOrdering = TypeaheadHit.defaultOrdering[(Hashtag, Int)]
+    userHashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHitWithKeepCount.highlight(query, _))
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

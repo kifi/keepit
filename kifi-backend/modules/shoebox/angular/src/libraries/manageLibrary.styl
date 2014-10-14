@@ -16,60 +16,16 @@ manage-lib-button =
   .dialog-content
     padding-bottom: 0
 
-  .dialog-x
-    top: 15px
-    right: 20px
-    width: 18px
-    height: 18px
-
-    &:hover
-      cursor: pointer
-
-    &::before
-    &::after
-      content: ' '
-      position: absolute;
-      left: 50%
-      top: 1px
-      bottom: 1px
-      border-radius: 2px
-      width: 3px;
-      background: #c7c7c7
-      font-size: 0
-
-    &::before
-      transform: translate(-1px) rotate(45deg)
-
-    &::after
-      transform: translate(-1px) rotate(-45deg)
-
-    &:hover::before
-    &:hover::after
-    &:focus::before
-    &:focus::after
-      background: #aaa
-
-    &:active::before
-    &:active::after
-      background: #888
-
   .dialog-body-wrap
     margin: 0
     padding: 0
 
   .dialog-body
-    padding: 0 30px 15px
+    padding: 0
     overflow: hidden
 
-  .dialog-header
-    padding: 10px 30px
-    background-color: kifiBlack
-    font-family: Helvetica, Arial, sans-serif
-    font-size: 18px
-    font-style: normal
-    font-weight: bold
-    color: #fff
-    text-align: left
+  .dialog-text
+    padding: 0 20px
 
   .manage-lib-input-wrapper
     margin-bottom: 15px
@@ -125,17 +81,28 @@ manage-lib-button =
 
   .manage-lib-visibility
     position: relative
-    margin: 10px 0 20px
+    margin: 20px 0
     min-height: 90px
     overflow: hidden
 
+  .manage-lib-create-visibility-input-container
+    display: inline-block
+    margin: 0 15px 0 20px
+
+  .manage-lib-visibility-description
+    display: inline-block
+    width: 310px
+    vertical-align: top
+
+  .manage-lib-visibility-description-content
+    font-size: 15px
+    line-height: 18px
+
   .manage-lib-choice-card
-    position: relative
     display: inline-block
     margin-right: 15px
-    padding-top: 4px
     width: 80px
-    text-align: center
+    vertical-align: top
 
   .manage-lib-choice-card-img
     margin: 0 auto 5px
@@ -143,71 +110,12 @@ manage-lib-button =
     height: 77px
     background-repeat: no-repeat
 
-  .manage-lib-choice-input
-    display: none
-
-  .manage-lib-custom-radio
-    position: absolute
-    top: 52px
-    right: 5px
-    border: 1px solid #c7c7c7
-    border-radius: 100%
-    width: 30px
-    height: 30px
-    background-color: #fff
-    cursor: pointer
-    z-index: 3
-
-  .manage-lib-custom-radio-check
-    display: none
-
-    &::before
-    &::after
-      content: ' '
-      position: absolute;
-      border-radius: 2px
-      width: 4px;
-      background-color: kifiBlack
-      font-size: 0
-
-    &::before
-      left: 52%
-      top: 7px
-      bottom: 5px
-      transform: translate(-1px) rotate(45deg)
-
-    &::after
-      left: 28%
-      top: 14px
-      bottom: 8px
-      transform: translate(-1px) rotate(-45deg)
-
-  input.manage-lib-choice-input:checked ~ .manage-lib-custom-radio-check
-    display: block
-
-  .manage-lib-visibility-description
-    position: absolute
-    top: 0
-    right: 0
-    margin-left: 30px
-    width: 250px
-
-  .manage-lib-visibility-description-title
-    font-size: 15px
-    color: kifiBlack
-
-  .manage-lib-visibility-description-content
-    padding-top: 8px
-    font-size: 15px
-    line-height: 18px
-    color: secondaryTextGray
-
   .manage-lib-create-button
-    {manage-lib-button}
+    // {manage-lib-button}
     margin: 0 auto
 
   .manage-lib-save-button
-    {manage-lib-button}
+    // {manage-lib-button}
     float: right
 
   .manage-lib-delete-link

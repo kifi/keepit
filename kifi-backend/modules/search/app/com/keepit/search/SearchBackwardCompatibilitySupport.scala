@@ -11,6 +11,7 @@ import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
@@ -29,7 +30,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
   def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: KifiShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
     val uriId = augmentedItem.uri
     val isMyBookmark = ((hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0)
-    val isFriendsBookmark = (!isMyBookmark && (hit.visibility & Visibility.NETWORK) != 0)
+    val isFriendsBookmark = ((hit.visibility & Visibility.NETWORK) != 0)
 
     shards.find(_.contains(uriId)) match {
       case Some(shard) =>
@@ -40,21 +41,19 @@ class SearchBackwardCompatibilitySupport @Inject() (
           BasicSearchHit(Some(hit.title), hit.url)
         }
 
-        // keeperCount is not strictly the number of users. It is the number of sharing friends + the number of discoverable/published libraries owned by others
-        val keeperCount = augmentedItem.keepers.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
+        val friends = augmentedItem.relatedKeepers.filter(_ != userId)
+        friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
-        augmentedItem.friends.foreach { friendId => friendStats.add(friendId.id, hit.score) }
-
-        val isPrivate = augmentedItem.isSecret(LibraryIndexable.isSecret(libraryIndexer.getSearcher, _))
+        val isPrivate = augmentedItem.isSecret(libraryIndexer.getSearcher)
 
         DetailedSearchHit(
           uriId.id,
-          keeperCount,
+          augmentedItem.keepersTotal,
           basicSearchHit,
           isMyBookmark,
           isFriendsBookmark,
           isPrivate,
-          augmentedItem.friends,
+          friends,
           hit.score,
           hit.score,
           new Scoring(hit.score, 0.0f, 0.0f, 0.0f, false)
