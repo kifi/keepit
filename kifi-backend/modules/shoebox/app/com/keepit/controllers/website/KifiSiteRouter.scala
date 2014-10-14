@@ -11,6 +11,7 @@ import com.keepit.model._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
+import java.net.URLDecoder
 
 import scala.concurrent.Future
 
@@ -27,7 +28,7 @@ case class Path(requestPath: String) {
   } else {
     requestPath
   }
-  val split = path.split("/")
+  val split = path.split("/").map(URLDecoder.decode(_, "UTF-8"))
   val primary = split.head
   val secondary = split.tail.headOption
 }
