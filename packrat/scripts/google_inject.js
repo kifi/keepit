@@ -279,7 +279,9 @@ if (searchUrlRe.test(document.URL)) !function () {
     if ((ires = ires || document.getElementById('ires'))) {
       if ($res[0].nextElementSibling !== ires) {
         $res.insertBefore(ires);
-        $res.find('.kifi-res-why:not(.kifi-fitted)').each(makeWhyFit);
+        if (!$res[0].firstElementChild.classList.contains('kifi-collapsed')) {
+          $res.find('.kifi-res-why:not(.kifi-fitted)').each(makeWhyFit);
+        }
         if (!boundResHandlers) {
           setTimeout(bindResHandlers);
           boundResHandlers = true;
@@ -517,12 +519,25 @@ if (searchUrlRe.test(document.URL)) !function () {
       var $a = $(this);
       var data = $a.closest('.kifi-res-why').data();
       var keepersPictured = data.users.filter(isNotDuplicate);
-      var keepers = data.raw.keepers.filter(function (u) {
+      var moreKeepers = data.raw.keepers.filter(function (u) {
         return !keepersPictured.some(idIs(u.id));
       });
       render('html/search/more_keepers', {
-        keepers: keepers,
-        others: +$a.text() - keepers.length
+        keepers: moreKeepers,
+        others: +$a.text() - moreKeepers.length
+      }, function (html) {
+        configureHover(html, {
+          position: {my: 'center bottom-9', at: 'center top', of: $a, collision: 'none'},
+          click: 'toggle'});
+      });
+    }).hoverfu('.kifi-res-tags-n', function (configureHover) {
+      var $a = $(this);
+      var data = $a.closest('.kifi-res-why').data();
+      var nTagsListed = $a.prevAll('.kifi-res-tag').length;
+      var moreTags = data.tags.slice(nTagsListed);
+      render('html/search/more_tags', {
+        tags: moreTags,
+        others: +$a.text() - moreTags.length
       }, function (html) {
         configureHover(html, {
           position: {my: 'center bottom-9', at: 'center top', of: $a, collision: 'none'},
@@ -793,24 +808,15 @@ if (searchUrlRe.test(document.URL)) !function () {
       }
     }
 
-    var MIN_TAG_WIDTH = 100;
     while (pxToGo > 0) {
       var tagEls = tagEls || Array.prototype.slice.call(this.getElementsByClassName('kifi-res-tag'));
 
-      // shorten last tag to fit, min width 100px
-      var tagEl = tagEls[tagEls.length - 1];
-      var tagWidth = tagEl.offsetWidth;
-      var tagWidthDelta = tagWidth - MIN_TAG_WIDTH;
-      if (tagWidthDelta >= pxToGo) {
-        // ellide one tag name to fit
-        elStylesToSet.push([tagEl, 'maxWidth', tagWidth - pxToGo + 'px']);
-        pxToGo = 0;
-        break;
-      } else if (tagEls.length > 1) {
+      // remove or shorten last tag to fit
+      if (tagEls.length > 1) {
         // remove a tag
-        var el = tagEls.pop();
-        elsToRemove.push(el);
-        pxToGo -= tagWidth + 5;  // comma and space
+        var tagEl = tagEls.pop();
+        elsToRemove.push(tagEl);
+        pxToGo -= tagEl.offsetWidth;  // includes comma and space
 
         // increment omitted tag count
         if (!nTagsEl) {
@@ -821,17 +827,18 @@ if (searchUrlRe.test(document.URL)) !function () {
           }
         }
         nTags++;
-      } else {
+      } else if (tagEls.length) {
+        // shorten only tag name to fit
+        var tagEl = tagEls[0];
+        elStylesToSet.push([tagEl, 'maxWidth', tagEl.offsetWidth - pxToGo + 'px']);
+        pxToGo = 0;
         break;
       }
     }
 
-    if (nUsersEl) {
-      nUsersEl.textContent = nUsers;
-    }
-    if (nLibsEl) {
-      nLibsEl.textContent = nLibs;
-    }
+    (nUsersEl || {}).textContent = nUsers;
+    (nLibsEl || {}).textContent = nLibs;
+    (nTagsEl || {}).textContent = nTags;
     elsToRemove.forEach(function (el) { el.remove() });
     elClassesToRemove.forEach(function (op) { op[0].classList.remove(op[1]) });
     elStylesToSet.forEach(function (op) { op[0].style[op[1]] = op[2] });

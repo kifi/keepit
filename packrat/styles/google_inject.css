@@ -578,11 +578,20 @@ div.kifi-res-menu-item {
   margin: 0;
 }
 .kifi-res-mk-name,
-.kifi-res-mk-others {
+.kifi-res-mk-count {
   display: block;
   list-style: none;
   padding: 0;
   white-space: nowrap;
+}
+.kifi-res-mk-count:not(:first-child)::before {
+  content: '+ ' attr(data-n) ' ';
+}
+.kifi-res-mk-count:first-child::before {
+  content: attr(data-n) ' ';
+}
+.kifi-res-mk-count:not([data-n='1'])::after {
+  content: 's';
 }
 
 .kifi-res-end {
