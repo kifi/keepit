@@ -32,6 +32,10 @@
   font-weight: 500
   text-align: center
   line-height: 58px
+  cursor: pointer
+
+  &:hover
+    background-color: lighten(#4F6CA7, 10%)
 
 
 .kf-or-separator
@@ -57,17 +61,38 @@
   top: -20px
   z-index: 0
 
+.register-validation
+  position: relative
+
+.register-help-block
+  position: absolute
+  background-color: #3DA9F5
+  border-radius: 5px
+  padding: 3px 5px
+  width: auto
+  display: inline-block
+  left: 0
+  color: #fff
+  top: 35px
+  font-size: 13px
+  z-index: 10
+
+.register-help-block:before
+  position: absolute
+  top: -7px
+  left: 28px
+  display: inline-block
+  border-right: 7px solid transparent
+  border-bottom: 7px solid #3DA9F5
+  border-left: 7px solid transparent
+  border-bottom-color: #3DA9F5
+  content: ''
+  z-index: 10
+
 .register-email-form
   margin-top: 20px
 
-input.register-email-box
-  width: calc(100% - 210px)
-  background-color: rgba(255, 255, 255, 0.9)
-  border: 2px solid #E7EAEE
-  border-radius: 6px
-  color: #000
-  font-size: 14px
-  padding: 13px 20px
+.register-placeholder
 
   &::-webkit-input-placeholder
     font-size: 14px
@@ -89,7 +114,16 @@ input.register-email-box
     font-style: normal
     color: #C4CDD6
 
-.register-continue
+input.register-email-box
+  width: calc(100% - 210px)
+  background-color: #fff
+  border: 2px solid #E7EAEE
+  border-radius: 6px
+  color: #000
+  font-size: 14px
+  padding: 13px 20px
+
+.register-submit
   width: 150px
   background-color: #3DA9F5
   border-radius: 6px
@@ -100,12 +134,54 @@ input.register-email-box
   padding: 12px 0
   border: 0
   text-decoration: none
-  margin-left: 16px
 
   &:hover, &:active
     background-color: lighten(#3DA9F5, 10%)
+
+.register-continue
+  margin-left: 16px
 
 .register-tagline-login
   font-size: 15px
   margin-top: 25px
   color: #687A8D
+
+
+// 2nd page
+
+
+.register-field-wrap
+  padding: 9px 0
+
+.register-first-block
+  padding-top: 27px
+
+input.register-name-box
+  width: calc(50% - 55px)
+  background-color: #fff
+  border: 2px solid #E7EAEE
+  border-radius: 6px
+  color: #000
+  font-size: 14px
+  padding: 13px 20px
+
+  &.right-space
+    margin-right: 15px
+
+input.register-full-input
+  width: calc(100% - 50px)
+  background-color: #fff
+  border: 2px solid #E7EAEE
+  border-radius: 6px
+  color: #000
+  font-size: 14px
+  padding: 13px 20px
+
+.register-password-restrict
+  font-size: 15px
+  margin-top: 5px
+  color: #687a8d
+
+.register-field-submit-wrap
+  margin: 25px
+  text-align: center

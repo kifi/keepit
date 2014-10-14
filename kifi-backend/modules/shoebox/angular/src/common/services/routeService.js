@@ -113,6 +113,13 @@ angular.module('kifi')
       },
 
       ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialRegister: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+
+      ////////////////////////////
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),

@@ -1,28 +1,27 @@
 <div kf-modal class="kf-register-modal">
-    <div class="">
-        <a class="dialog-x sprite-close-x-icon" ng-click="close()"></a>
-        <div class="register-modal-wrap">
-            <div class="dialog-body">
-              <div class="kf-register-header">Join Kifi to get updates to this library</div>
+  <a class="dialog-x" ng-click="close()"></a>
+  <div class="register-modal-wrap">
+      <div class="dialog-body">
+        <div class="kf-register-header">Join Kifi to get updates to this library</div>
 
-              <div class="register-modal-social-block">
-                <div class="kf-fb-register-button">Continue with Facebook</div>
-                <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>
-              </div>
-
-              <div class="kf-or-separator">
-                <div class="kf-or-separator-circle">OR</div>
-                <div class="kf-modal-line"></div>
-              </div>
-
-              <div class="kf-register-header">Continue with email</div>
-              <div class="register-email-form">
-                <input type="text" name="email" placeholder="Email" class="register-email-box"> <input type="submit" value="Continue" class="register-continue">
-              </div>
-
-              <div class="register-tagline-login">Already a member of Kifi? <a href="https://www.kifi.com/login">Log in</a></div>
-
-            </div>
+        <div class="register-modal-social-block">
+          <div class="kf-fb-register-button" ng-click="fbAuth()" ng-mouseover="fbInit()">Continue with Facebook</div>
+          <div class="register-modal-we-are-nice">We will never post without your explicit permission.</div>
         </div>
-    </div>
+
+        <div class="kf-or-separator">
+          <div class="kf-or-separator-circle">OR</div>
+          <div class="kf-modal-line"></div>
+        </div>
+
+        <div class="kf-register-header">Continue with email</div>
+        <form name="regEmaiForm" class="register-email-form" ng-submit="submitEmail()">
+          <input type="email" name="email" ng-model="userData.email" placeholder="Email" class="register-email-box register-placeholder">
+          <input type="submit" value="Continue" class="register-submit register-continue">
+        </div>
+
+        <div class="register-tagline-login">Already a member of Kifi? <a href="https://www.kifi.com/login">Log in</a></div>
+
+      </div>
+  </div>
 </div>
