@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfTagLibrary', ['$location',
-  function ($location) {
+.directive('kfTagLibrary', ['$location', 'libraryService',
+  function ($location, libraryService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -15,7 +15,9 @@ angular.module('kifi')
         };
 
         scope.navigateToLibrary = function () {
-          $location.path(scope.modalData.library.url);
+          libraryService.getLibraryById(scope.modalData.library.id, true).then(function() { // invalidates cache
+            $location.path(scope.modalData.library.url);
+          });
           kfModalCtrl.close();
         };
       }

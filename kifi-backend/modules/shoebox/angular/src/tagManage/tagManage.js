@@ -82,7 +82,6 @@ angular.module('kifi')
     $scope.clickAction = function () {
       libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
-        libraryService.getLibraryById($scope.selection.library.id, true); // invalidates cache
       });
       modalService.open({
         template: 'tagManage/tagToLibModal.tpl.html',
@@ -144,7 +143,7 @@ angular.module('kifi')
     };
 
     $scope.navigateToTag = function (tagName) {
-      $location.path('/find').search('q','tag:' + tagName);
+      $location.path('/find').search('q', 'tag:' + tagName);
     };
 
   }
