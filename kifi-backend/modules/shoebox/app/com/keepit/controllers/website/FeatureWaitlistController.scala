@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, WebsiteController }
 import com.keepit.commanders.FeatureWaitlistCommander
 import com.keepit.common.db.ExternalId
 import com.keepit.model.FeatureWaitlistEntry
@@ -15,9 +15,9 @@ import play.api.mvc.Action
 import scala.concurrent.Future
 
 class FeatureWaitlistController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   commander: FeatureWaitlistCommander)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   def waitList() = Action.async(parse.tolerantJson) { request =>
     try {

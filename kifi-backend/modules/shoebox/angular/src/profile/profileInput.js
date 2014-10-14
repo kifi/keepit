@@ -45,14 +45,14 @@ angular.module('kifi')
         function onClickOutsideInput(event) {
           if (!angular.element(event.target).is('.profile-email-input, .profile-input-save')) {
             $document.off('mousedown', onClickOutsideInput);
-            scope.$apply(cancel);
+            scope.$evalAsync(cancel);
           }
         }
 
         function onFocusOutsideInput(event) {
           if (!angular.element(event.target).is('.profile-email-input, .profile-input-save')) {
             $window.removeEventListener('focus', onFocusOutsideInput, true);
-            scope.$apply(cancel);
+            scope.$evalAsync(cancel);
           }
         }
 
@@ -92,6 +92,8 @@ angular.module('kifi')
           scope.state.prevValue = scope.state.currentValue;
           updateValue(value);
           scope.state.editing = false;
+          $document.off('mousedown', onClickOutsideInput);
+          $window.removeEventListener('focus', onFocusOutsideInput, true);
 
           if (value === scope.state.prevValue) {
             return;

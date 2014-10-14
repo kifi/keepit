@@ -170,7 +170,7 @@ class KeepsCommander @Inject() (
     userHashtagTypeahead: UserHashtagTypeaheadCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
-  def getBookmarkCountsFuture(): Future[Int] = {
+  def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
       Future.sequence(searchServiceClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]

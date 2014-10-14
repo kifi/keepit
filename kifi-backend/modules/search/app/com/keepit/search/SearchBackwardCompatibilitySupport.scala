@@ -3,26 +3,41 @@ package com.keepit.search
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.concurrent.ExecutionContext.fj
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult }
-import com.keepit.search.graph.library.{ LibraryIndexable, LibraryFields, LibraryIndexer }
+import com.keepit.search.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
+import com.keepit.search.graph.library.LibraryIndexer
 import com.keepit.search.result._
-import com.keepit.search.sharding.Shard
-import com.google.inject.Inject
+import com.keepit.search.sharding.{ ShardedCollectionIndexer, Shard }
+import com.google.inject.{ Singleton, Inject }
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
+@Singleton
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
     augmentationCommander: AugmentationCommander,
-    mainSearcherFactory: MainSearcherFactory,
+    shardedCollectionIndexer: ShardedCollectionIndexer,
     monitoredAwait: MonitoredAwait) {
 
   implicit private[this] val defaultExecutionContext = fj
 
+  private[this] val collectionSearcherReqConsolidator = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
+
+  private def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = collectionSearcherReqConsolidator((shard, userId)) {
+    case (shard, userId) =>
+      Future.successful(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard)))
+  }
+
+  private def getCollectionSearcher(shard: Shard[NormalizedURI], userId: Id[User]): CollectionSearcherWithUser = {
+    Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
+  }
+
   private def getCollectionExternalIds(shard: Shard[NormalizedURI], userId: Id[User], uriId: Id[NormalizedURI]): Option[Seq[ExternalId[Collection]]] = {
-    val collectionSearcher = mainSearcherFactory.getCollectionSearcher(shard, userId)
+    val collectionSearcher = getCollectionSearcher(shard, userId)
     val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
     if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
   }

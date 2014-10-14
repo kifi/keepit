@@ -7,7 +7,7 @@ import play.api.test._
 import play.api.libs.json.Json
 
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator }
+import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
@@ -16,7 +16,7 @@ class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInject
 
   "ShoeboxDeepLinkController" should {
     "createDeepLink" in {
-      withDb(FakeActionAuthenticatorModule()) { implicit injector =>
+      withDb(FakeUserActionsModule()) { implicit injector =>
         val db = inject[Database]
         val userRepo = inject[UserRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -33,7 +33,7 @@ class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInject
           )
         }
 
-        inject[FakeActionAuthenticator].setUser(heinlein)
+        inject[FakeUserActionsHelper].setUser(heinlein)
 
         {
           val path = com.keepit.controllers.internal.routes.ShoeboxDeepLinkController.createDeepLink().toString()

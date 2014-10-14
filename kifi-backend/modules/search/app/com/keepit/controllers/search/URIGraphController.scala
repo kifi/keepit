@@ -28,7 +28,6 @@ class URIGraphController @Inject() (
 
   def updateURIGraph() = Action { implicit request =>
     uriGraphPlugin.update()
-    collectionGraphPlugin.update()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 

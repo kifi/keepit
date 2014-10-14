@@ -25,21 +25,6 @@ angular.module('kifi')
         scope.userHasEditedSlug = false;
         scope.$error = {};
 
-        scope.visibility = {
-          'published': {
-            'title': 'Published Library',
-            'content': 'This library is available for everyone to see. It also generates a dynamic public page to share with non-Kifi users.'
-          },
-          'secret': {
-            'title': 'Secret Library',
-            'content': 'This library is visible only to you and people you invite.'
-          },
-          'discoverable': {
-            'title': 'Discoverable Library',
-            'content': 'This library can surface in searches conducted by your Kifi friends.'
-          }
-        };
-
 
         //
         // Scope methods.

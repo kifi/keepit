@@ -39,7 +39,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),

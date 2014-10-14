@@ -41,7 +41,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),
@@ -101,7 +101,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           }
         }
 
-        inject[FakeActionAuthenticator].setUser(user1)
+        inject[FakeUserActionsHelper].setUser(user1)
         val request = FakeRequest("POST", path).withBody(Json.obj("url" -> "http://www.google.com"))
         val result = inject[MobilePageController].getPageDetails()(request)
 
@@ -175,7 +175,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           }
         }
 
-        inject[FakeActionAuthenticator].setUser(user1)
+        inject[FakeUserActionsHelper].setUser(user1)
         val request = FakeRequest("POST", path).withBody(Json.obj("url" -> "http://www.google.com"))
         val result = inject[MobilePageController].queryExtension(0, 1000)(request)
 

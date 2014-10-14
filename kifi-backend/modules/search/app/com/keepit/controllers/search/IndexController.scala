@@ -28,6 +28,7 @@ class IndexController @Inject() (
 
   def updateKeepIndex() = Action { implicit request =>
     keepIndexerPlugin.update()
+    collectionGraphPlugin.update() // still needed for compatibility support
     Ok
   }
 

@@ -91,7 +91,6 @@ class SearchServiceClientImpl(
 
   def updateKeepIndex(): Unit = {
     broadcast(Search.internal.updateKeepIndex())
-    broadcast(Search.internal.updateURIGraph())
   }
 
   def updateLibraryIndex(): Unit = {

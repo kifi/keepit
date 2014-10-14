@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
 import com.keepit.commanders.UserCommander
-import com.keepit.common.controller.{ BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ BrowserExtensionController, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -20,7 +20,7 @@ import scala.concurrent.Future
 import scala.math.{ max, min }
 
 class ExtPreferenceController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   urlPatternRepo: URLPatternRepo,
   userRepo: UserRepo,
@@ -29,7 +29,7 @@ class ExtPreferenceController @Inject() (
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
   userCommander: UserCommander)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   private case class UserPrefs(
     lookHereMode: Boolean,
@@ -49,7 +49,7 @@ class ExtPreferenceController @Inject() (
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  def getRules() = JsonAction.authenticated { request =>
+  def getRules() = UserAction { request =>
     db.readOnlyReplica { implicit s =>
       Ok(Json.obj(
         "slider_rules" -> Json.obj("version" -> "hy0e5ijs", "rules" -> Json.obj("url" -> 1, "shown" -> 1)), // ignored as of extension 3.2.11
@@ -57,32 +57,32 @@ class ExtPreferenceController @Inject() (
     }
   }
 
-  def setLookHereMode(on: Boolean) = JsonAction.authenticated { request =>
+  def setLookHereMode(on: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.lookHereMode.name, on))
     Ok(JsNumber(0))
   }
 
-  def setEnterToSend(enterToSend: Boolean) = JsonAction.authenticated { request =>
+  def setEnterToSend(enterToSend: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.enterToSend.name, enterToSend))
     Ok(JsNumber(0))
   }
 
-  def setMaxResults(n: Int) = JsonAction.authenticated { request =>
+  def setMaxResults(n: Int) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.maxResults.name, min(max(0, n), 3)))
     Ok(JsNumber(0))
   }
 
-  def setShowExtMsgIntro(show: Boolean) = JsonAction.authenticated { request =>
+  def setShowExtMsgIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
     Ok(JsNumber(0))
   }
 
-  def setEmailNotifyPreference(kind: ElectronicMailCategory, send: Boolean) = JsonAction.authenticated { request =>
+  def setEmailNotifyPreference(kind: ElectronicMailCategory, send: Boolean) = UserAction { request =>
     db.readWrite(implicit s => notifyPreferenceRepo.setNotifyPreference(request.user.id.get, kind, send))
     Ok(JsNumber(0))
   }
 
-  def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
+  def getPrefs(version: Int) = UserAction.async { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     val userId = request.user.id.get
@@ -100,7 +100,7 @@ class ExtPreferenceController @Inject() (
     }
   }
 
-  def setKeeperPositionOnSite() = JsonAction.authenticatedParseJson { request =>
+  def setKeeperPositionOnSite() = UserAction(parse.tolerantJson) { request =>
     val pos = request.body \ "pos"
     val host = (request.body \ "host").as[String]
 
@@ -121,7 +121,7 @@ class ExtPreferenceController @Inject() (
     Ok
   }
 
-  def setKeeperHiddenOnSite() = JsonAction.authenticatedParseJson { request =>
+  def setKeeperHiddenOnSite() = UserAction(parse.tolerantJson) { request =>
     val json = request.body
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]
