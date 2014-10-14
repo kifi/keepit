@@ -44,10 +44,7 @@
     </div>
     <div class="keep-to-library-create-heading">Make it private?</div>
     <div class="keep-to-library-create-visibility">
-      <label>
-        <input class="keep-to-library-create-visibility-input" type="checkbox" ng-model="newLibrary.visibility" ng-false-value="published" ng-true-value="secret">
-        <div class="keep-to-library-create-visibility-custom-input svg-checkmark"></div>
-      </label>
+      <span kf-library-visibility-checkbox library="newLibrary"></span>
       <span ng-switch="newLibrary.visibility">
         <span ng-switch-default>No, make it public.</span>
         <span ng-switch-when="secret">Yes, make it private.</span>

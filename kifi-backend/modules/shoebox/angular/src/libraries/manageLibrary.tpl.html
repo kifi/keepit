@@ -23,35 +23,20 @@
         </div>
 
         <div class="manage-lib-input-wrapper">
-          <div class="manage-lib-heading">Choose who can view your library</div>
+          <div class="manage-lib-heading">Who can see this library?</div>
             <div class="manage-lib-visibility">
-              <div class="manage-lib-choice-card">
-                <div class="manage-lib-choice-card-img svg-green-card-with-globe"></div>
-                <label class="manage-lib-custom-radio">
-                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="published">
-                  <span class="manage-lib-custom-radio-check"></span>
-                </label>
-                <span class="manage-lib-choice-card-text">Published</span>
+              <div class="manage-lib-create-visibility-input-container">
+                <span kf-library-visibility-checkbox library="library"></span>
               </div>
-              <div class="manage-lib-choice-card">
-                <div class="manage-lib-choice-card-img svg-red-card-with-lock"></div>
-                <label class="manage-lib-custom-radio">
-                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="secret">
-                  <span class="manage-lib-custom-radio-check"></span>
-                </label>
-                <span class="manage-lib-choice-card-text">Secret</span>
+
+              <div ng-switch="library.visibility" class="manage-lib-visibility-description">
+                <div ng-switch-default class="manage-lib-visibility-description-content">It's public. Everyone in the world can see and follow this public library.</div>
+                <div ng-switch-when="secret" class="manage-lib-visibility-description-content">Make it private. Only you and the people you invite to your private library can see its content.</div>
               </div>
-              <div class="manage-lib-choice-card">
-                <div class="manage-lib-choice-card-img svg-yellow-card-with-globe"></div>
-                <label class="manage-lib-custom-radio">
-                  <input type="radio" class="manage-lib-choice-input" ng-model="library.visibility" value="discoverable">
-                  <span class="manage-lib-custom-radio-check"></span>
-                </label>
-                <span class="manage-lib-choice-card-text">Discoverable</span>
-              </div>
-              <div class="manage-lib-visibility-description">
-                <span class="manage-lib-visibility-description-title">{{(visibility[library.visibility]).title}}:</span>
-                <div class="manage-lib-visibility-description-content">{{(visibility[library.visibility]).content}}</div>
+
+              <div ng-switch="library.visibility" class="manage-lib-choice-card">
+                <div ng-switch-default class="manage-lib-choice-card-img svg-public-library-icon"></div>
+                <div ng-switch-when="secret" class="manage-lib-choice-card-img svg-private-library-icon"></div>
               </div>
             </div>
         </div>
@@ -77,7 +62,7 @@
       </div>
 
       <div class="dialog-buttons">
-        <button class="manage-lib-create-button" ng-if="!modifyingExistingLibrary" ng-click="saveLibrary()">Create</button>
+        <button class="manage-lib-create-button" ng-if="!modifyingExistingLibrary" ng-click="saveLibrary()">Create Library</button>
         <button class="manage-lib-save-button" ng-if="modifyingExistingLibrary" ng-click="saveLibrary()">Save</button>
         <a ng-if="modifyingExistingLibrary" class="manage-lib-delete-link" href="javascript:" ng-click="deleteLibrary()">Delete library</a>
       </div>

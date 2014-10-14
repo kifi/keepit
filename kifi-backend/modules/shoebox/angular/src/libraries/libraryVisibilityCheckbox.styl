@@ -1,0 +1,40 @@
+.library-create-visibility-input
+  display: none
+
+.library-create-visibility-custom-input
+  position: relative
+  display: inline-block
+  margin: 0 15px
+  border-radius: 18px
+  width: 66px
+  height: 36px
+  background-position: 11px 50%
+  background-size: auto 12px
+  background-repeat: no-repeat
+  background-color: #e3e3e3
+  vertical-align: middle
+  transition: background-color 0.2s
+  cursor: pointer
+
+  &::after
+    position: absolute;
+    bottom: 4px
+    left: 4px
+    border-radius: 50%
+    width: 28px
+    height: 28px
+    background-color: #fff
+    box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
+    transition: transform 0.2s
+    content: '';
+
+  &:focus
+  &:hover
+    &::after
+      background-color: #fefcf1
+
+.library-create-visibility-input:checked ~ .library-create-visibility-custom-input
+  background-color: #f06463
+
+  &::after
+    transform: translate(30px)
