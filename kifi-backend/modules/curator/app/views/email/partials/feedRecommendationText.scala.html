@@ -10,6 +10,8 @@
 }
 @reco.description
 
-Visit Page: @reco.viewPageUrl
-@reco.keepers.message
+Visit Page: @reco.viewPageUrl("textLink")
+@reco.keepers.messageOpt.map{ message =>
+message
+}
 

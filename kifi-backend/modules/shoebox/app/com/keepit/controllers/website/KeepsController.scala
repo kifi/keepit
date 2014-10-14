@@ -459,4 +459,10 @@ class KeepsController @Inject() (
     val totalOpt = Try(total.map(_.toInt)).toOption.flatten
     Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
   }
+
+  def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>
+    bookmarksCommander.searchUserTags(request.userId, query, limit).map { hashTagResults =>
+      Ok(Json.obj("results" -> hashTagResults))
+    }
+  }
 }

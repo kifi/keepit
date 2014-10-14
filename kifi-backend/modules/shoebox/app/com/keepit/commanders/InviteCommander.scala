@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator }
+import com.keepit.common.controller.{ AuthenticatedRequest, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
@@ -92,7 +92,7 @@ class InviteCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     postOffice: LocalPostOffice,
     emailAddressRepo: UserEmailAddressRepo,
     socialConnectionRepo: SocialConnectionRepo,
@@ -423,20 +423,20 @@ class InviteCommander @Inject() (
   private def reportSentInvitation(request: Option[AuthenticatedRequest[_]], invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
     invite.senderUserId.foreach { senderId =>
       val contextBuilder = eventContextBuilder()
+      request.foreach(contextBuilder.addRequestInfo(_))
       contextBuilder += ("action", "sent")
       contextBuilder += ("socialNetwork", socialNetwork.toString)
       contextBuilder += ("inviteId", invite.externalId.id)
       contextBuilder += ("invitationNumber", invite.timesSent)
       contextBuilder += ("source", source)
+      contextBuilder += ("category", "kifiInvitation")
       invite.recipientEmailAddress.foreach { emailAddress => contextBuilder += ("recipientEmailAddress", emailAddress.toString) }
       invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
 
       // also send used_kifi event
-      val cb = eventContextBuilder()
-      cb += ("action", "invited")
-      request.foreach(cb.addRequestInfo(_))
-      heimdal.trackEvent(UserEvent(senderId, cb.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
+      contextBuilder += ("action", "invited")
+      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
     }
   }
 

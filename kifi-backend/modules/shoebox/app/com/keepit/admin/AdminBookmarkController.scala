@@ -1,34 +1,28 @@
 package com.keepit.controllers.admin
 
-import scala.collection.mutable.{ HashMap => MutableMap, SynchronizedMap }
-import scala.concurrent._
-import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.search.{ IndexInfo, SearchServiceClient }
-import com.keepit.common.controller.{ UserRequest, AdminUserActions, UserActionsHelper }
-import com.keepit.common.db._
+import com.keepit.commanders.{ KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
-import com.keepit.model._
-import com.keepit.model.KeepSource._
+import com.keepit.common.time._
+import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.mvc.AnyContent
 import views.html
-import com.keepit.common.db.Id
-import com.keepit.common.time._
-import play.api.mvc.{ AnyContent, Action }
-import com.keepit.commanders.{ LibraryCommander, URISummaryCommander, RichWhoKeptMyKeeps }
-import com.keepit.model.KeywordsSummary
-import com.keepit.model.KeepStates
+
+import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
+import scala.concurrent._
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
   scraper: ScrapeScheduler,
-  searchServiceClient: SearchServiceClient,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
@@ -37,6 +31,7 @@ class AdminBookmarksController @Inject() (
   libraryRepo: LibraryRepo,
   uriSummaryCommander: URISummaryCommander,
   libraryCommander: LibraryCommander,
+  keepCommander: KeepsCommander,
   clock: Clock)
     extends AdminUserActions {
 
@@ -206,7 +201,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = getBookmarkCountsFuture
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     val bookmarkTodayAllCountsFuture = future {
       timing("load bookmarks counts from today") {
@@ -242,21 +237,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  private def getBookmarkCountsFuture(): Future[Int] = {
-    Future.sequence(searchServiceClient.indexInfoList()).map { results =>
-      var countMap = Map.empty[String, Int]
-      results.flatMap(_._2).foreach { info =>
-        if (info.name.startsWith("BookmarkStore")) {
-          countMap.get(info.name) match {
-            case Some(count) if count >= info.numDocs =>
-            case _ => countMap += (info.name -> info.numDocs)
-          }
-        }
-      }
-      countMap.values.sum
-    }
-  }
-
   def userBookmarkKeywords = AdminUserPage.async { request =>
     val user = request.userId
     val uris = db.readOnlyReplica { implicit s =>
@@ -285,7 +265,7 @@ class AdminBookmarksController @Inject() (
     val PAGE_SIZE = 25
 
     val bmsFut = future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = getBookmarkCountsFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }

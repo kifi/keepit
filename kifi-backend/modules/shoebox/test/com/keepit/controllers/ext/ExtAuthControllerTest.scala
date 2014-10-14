@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.common.controller.{ AuthenticatedRequest, FakeActionAuthenticator }
+import com.keepit.common.controller.{ FakeUserActionsModule, AuthenticatedRequest, FakeActionAuthenticator }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -37,6 +37,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeExternalServiceModule(),
+    FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule()

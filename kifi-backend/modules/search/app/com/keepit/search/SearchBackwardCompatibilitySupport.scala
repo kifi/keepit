@@ -3,25 +3,41 @@ package com.keepit.search
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.concurrent.ExecutionContext.fj
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ Collection, Library, NormalizedURI, User }
 import com.keepit.search.engine.Visibility
 import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResult }
-import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
+import com.keepit.search.graph.collection.{ CollectionSearcher, CollectionSearcherWithUser }
+import com.keepit.search.graph.library.LibraryIndexer
 import com.keepit.search.result._
-import com.keepit.search.sharding.Shard
-import com.google.inject.Inject
+import com.keepit.search.sharding.{ ShardedCollectionIndexer, Shard }
+import com.google.inject.{ Singleton, Inject }
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
+@Singleton
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
     augmentationCommander: AugmentationCommander,
-    mainSearcherFactory: MainSearcherFactory,
+    shardedCollectionIndexer: ShardedCollectionIndexer,
     monitoredAwait: MonitoredAwait) {
 
   implicit private[this] val defaultExecutionContext = fj
 
+  private[this] val collectionSearcherReqConsolidator = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
+
+  private def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = collectionSearcherReqConsolidator((shard, userId)) {
+    case (shard, userId) =>
+      Future.successful(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard)))
+  }
+
+  private def getCollectionSearcher(shard: Shard[NormalizedURI], userId: Id[User]): CollectionSearcherWithUser = {
+    Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
+  }
+
   private def getCollectionExternalIds(shard: Shard[NormalizedURI], userId: Id[User], uriId: Id[NormalizedURI]): Option[Seq[ExternalId[Collection]]] = {
-    val collectionSearcher = mainSearcherFactory.getCollectionSearcher(shard, userId)
+    val collectionSearcher = getCollectionSearcher(shard, userId)
     val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
     if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
   }
@@ -29,7 +45,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
   def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: KifiShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
     val uriId = augmentedItem.uri
     val isMyBookmark = ((hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0)
-    val isFriendsBookmark = (!isMyBookmark && (hit.visibility & Visibility.NETWORK) != 0)
+    val isFriendsBookmark = ((hit.visibility & Visibility.NETWORK) != 0)
 
     shards.find(_.contains(uriId)) match {
       case Some(shard) =>
@@ -40,21 +56,19 @@ class SearchBackwardCompatibilitySupport @Inject() (
           BasicSearchHit(Some(hit.title), hit.url)
         }
 
-        // keeperCount is not strictly the number of users. It is the number of sharing friends + the number of discoverable/published libraries owned by others
-        val keeperCount = augmentedItem.keepers.size + augmentedItem.otherPublishedKeeps + augmentedItem.otherDiscoverableKeeps
+        val friends = augmentedItem.relatedKeepers.filter(_ != userId)
+        friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
-        augmentedItem.friends.foreach { friendId => friendStats.add(friendId.id, hit.score) }
-
-        val isPrivate = augmentedItem.isSecret(librarySearcher) getOrElse true
+        val isPrivate = augmentedItem.isSecret(libraryIndexer.getSearcher)
 
         DetailedSearchHit(
           uriId.id,
-          keeperCount,
+          augmentedItem.keepersTotal,
           basicSearchHit,
           isMyBookmark,
           isFriendsBookmark,
           isPrivate,
-          augmentedItem.friends,
+          friends,
           hit.score,
           hit.score,
           new Scoring(hit.score, 0.0f, 0.0f, 0.0f, false)

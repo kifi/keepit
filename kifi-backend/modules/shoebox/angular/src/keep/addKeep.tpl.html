@@ -1,23 +1,36 @@
 <div class="dialog-content">
-  <a class="dialog-x sprite-close-x-icon" ng-click="resetAndHide()"></a>
+  <a class="dialog-x" ng-click="resetAndHide()"></a>
   <div class="dialog-body-wrap">
-    <h1>Add a keep</h1>
+    <h1 class="dialog-header">Add a keep</h1>
+
     <div class="dialog-body dialog-centered">
       <div class="kf-add-keep-body">
-        <div class="kf-add-keep-hint" ng-show="!state.invalidUrl">Did you know: You can easily keep any page using the kifi keeper</div>
         <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL</div>
         <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
         <div class="kf-add-keep-private-container" ng-if="!librariesEnabled" tabindex="0"><span class="kf-add-keep-private-checkbox sprite" ng-class="{ 'sprite-checkbox-icon': !state.checkedPrivate, 'sprite-checkbox-icon-active': state.checkedPrivate }" ng-click="togglePrivate()"></span><span class="kf-add-keep-private-label">Private</span></div>
 
-        <div class="kf-add-keep-to-library" ng-if="librariesEnabled">
-          <span kf-keep-to-library-widget ng-click="showWidget()" class="sprite sprite-cards-small"></span>&nbsp;&nbsp;
-          <span>{{selection.library.name}}</span>
+        <!-- TODO(yiping): Use button instead of div. Styles have been cleaned up but we need a way to not trigger the form submission. -->
+        <!-- TODO(yiping): DRY this up. It's being used elsewhere too. -->
+        <div class="add-keep-to-library-dropdown" ng-if="librariesEnabled" kf-keep-to-library-widget ng-click="showWidget()">
+          <span ng-switch="selection.library.kind" class="keep-to-library-lib-icon-container">
+            <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
+            <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
+            <span ng-switch-default ng-switch="selection.library.visibility">
+              <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
+              <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
+
+              <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
+              <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
+            </span>
+          </span>
+          {{selection.library.name}}
+          <span class="add-keep-to-library-dropdown-arrow"></span>
         </div>
       </div>
     </div>
   </div>
   <div class="dialog-buttons">
     <button class="kf-action-button" ng-if="!librariesEnabled" ng-click="keepUrl()" tabindex="0">Keep it</button>
-    <button class="kf-action-button" ng-if="librariesEnabled" ng-click="keepToLibrary()" tabindex="0">Keep it</button>
+    <button class="kf-action-button" ng-if="librariesEnabled" ng-click="keepToLibrary()" tabindex="0">&#10084; Keep it</button>
   </div>
 </div>

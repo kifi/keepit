@@ -1,9 +1,9 @@
-package com.keepit.search
+package com.keepit.search.augmentation
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
 import play.api.libs.json._
-import com.keepit.serializer.TupleFormat
+import com.keepit.common.json.TupleFormat
 
 case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
 
@@ -24,7 +24,7 @@ object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int)
+case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, keepersTotal: Int = -1)
 object AugmentationInfo {
   implicit val format = Json.format[AugmentationInfo]
 }

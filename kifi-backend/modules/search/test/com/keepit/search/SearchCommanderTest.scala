@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.search.graph.keep.ShardedKeepIndexer
 import com.keepit.test._
 import org.specs2.mutable._
 import com.keepit.common.akka.MonitoredAwait
@@ -8,6 +9,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardSpecParser
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import com.keepit.search.augmentation.AugmentationCommanderImpl
 
 class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
@@ -21,9 +25,10 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer) = initIndexes(store)
+        val (graph, shardedCollectionIndexer, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
+        Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate()), Duration(60, SECONDS))
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()
@@ -33,6 +38,8 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         val searchConfig = noBoostConfig.overrideWith("myBookmarkBoost" -> "2", "sharingBoostInNetwork" -> "0.5", "sharingBoostOutOfNetwork" -> "0.1")
 
         val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
+        val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, searchFactory, inject[DistributedSearchServiceClient])
+        val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, shardedCollectionIndexer, inject[MonitoredAwait])
 
         val searchCommander = new SearchCommanderImpl(
           activeShards,
@@ -40,7 +47,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           languageCommander,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
-          inject[SearchBackwardCompatibilitySupport],
+          compatibilitySupport,
           inject[AirbrakeNotifier],
           inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],
@@ -52,7 +59,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           experiments = Set.empty,
           query = "keepit",
           filter = None,
-          maxHits = 3,
+          maxHits = 2,
           lastUUID = None,
           context = None,
           predefinedConfig = Some(searchConfig),

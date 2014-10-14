@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -40,24 +40,27 @@ angular.module('kifi')
 
           // 250px needed for other stuff in the parent's width.
           var maxFollowersToShow = Math.floor((parentWidth - 250) / widthPerFollowerPic);
-
           scope.numAdditionalFollowers = 0;
-          if (_.isArray(scope.library.followers)) {
-            // If we only have one additional follower that we can't fit in, then we can fit that one
-            // in if we don't show the additional-number-of-followers circle.
-            if (maxFollowersToShow === scope.library.followers.length - 1) {
-              maxFollowersToShow++;
-            }
 
-            if (maxFollowersToShow >= scope.library.followers.length) {
+          // If we only have one additional follower that we can't fit in, then we can fit that one
+          // in if we don't show the additional-number-of-followers circle.
+          if (maxFollowersToShow === scope.library.numFollowers - 1) {
+            maxFollowersToShow++;
+          }
+
+          scope.$evalAsync(function () {
+            if (maxFollowersToShow < 1) {
+              scope.followersToShow = [];
+              scope.numAdditionalFollowers = scope.library.numFollowers;
+            } else if (maxFollowersToShow >= scope.library.numFollowers) {
               scope.followersToShow = scope.library.followers;
             } else {
               scope.followersToShow = scope.library.followers.slice(0, maxFollowersToShow);
-              scope.numAdditionalFollowers = scope.library.followers.length - maxFollowersToShow;
+              scope.numAdditionalFollowers = scope.library.numFollowers - maxFollowersToShow;
             }
-          }
 
-          followerPicsDiv.width(maxFollowersToShow * widthPerFollowerPic);
+            followerPicsDiv.width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
+          });
         }
 
         // Data augmentation.
@@ -142,6 +145,10 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
+          if (platformService.isSupportedMobilePlatform()) {
+            platformService.goToAppOrStore($location.absUrl());
+            return;
+          }
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
               // TODO(yiping): make a better error message. One idea is to update

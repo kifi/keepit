@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.logging.Logging
 import scala.math._
 

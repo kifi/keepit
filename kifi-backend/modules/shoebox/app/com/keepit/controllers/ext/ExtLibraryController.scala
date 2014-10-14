@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, _ }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
@@ -20,7 +20,6 @@ import scala.util.{ Failure, Success, Try }
 
 class ExtLibraryController @Inject() (
   db: Database,
-  actionAuthenticator: ActionAuthenticator,
   libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
@@ -60,6 +59,22 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, request.user.externalId, lib.slug))))
+    }
+  }
+
+  def getLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
+        case Left((status, message)) => Status(status)(Json.obj("error" -> message))
+        case Right((library, owner, keepCount, followerCount)) => Ok(Json.obj(
+          "name" -> library.name,
+          "slug" -> library.slug,
+          "visibility" -> library.visibility,
+          "owner" -> owner,
+          "keeps" -> keepCount,
+          "followers" -> followerCount
+        ))
+      }
     }
   }
 
@@ -211,7 +226,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchTags(libraryId, query, limit) map { tags =>
+        keepsCommander.searchLibraryTags(libraryId, query, limit) map { tags =>
           Ok(Json.toJson(tags))
         }
       } getOrElse {

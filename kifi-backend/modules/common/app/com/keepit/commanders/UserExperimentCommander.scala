@@ -40,7 +40,7 @@ trait UserExperimentCommander {
 
   def addDynamicExperiments(userId: Id[User], statics: Set[ExperimentType]): Set[ExperimentType] = {
     try {
-      val newExperiments = innerGeneratorCache.get("key").map(_(userId, statics)).filter(_.isDefined).map(_.get).filter(_ != ExperimentType.ADMIN)
+      val newExperiments = innerGeneratorCache.get("key").flatMap(_(userId, statics)).filter(_ != ExperimentType.ADMIN)
       statics ++ newExperiments
     } catch {
       case t: Throwable => {

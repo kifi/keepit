@@ -4,8 +4,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress }
 import com.keepit.heimdal.{ ContextStringData, ContextData }
 import com.keepit.model.User
-import com.keepit.serializer.EitherFormat
 import play.twirl.api.Html
+import com.keepit.common.json.EitherFormat
 
 sealed trait EmailLayout { val name: String }
 

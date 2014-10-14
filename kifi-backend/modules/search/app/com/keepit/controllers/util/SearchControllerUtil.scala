@@ -12,18 +12,25 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json._
 import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.JsObject
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
+import play.api.libs.json.{ Writes, Json, JsObject }
+import com.keepit.search.graph.library.{ LibraryIndexable }
 
 import scala.util.{ Failure, Success }
-import com.keepit.search.graph.keep.{ KeepRecord, KeepFields }
+import com.keepit.common.json
+import com.keepit.search.augmentation._
+
+case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
+object BasicLibrary {
+  implicit val writes = Writes[BasicLibrary] { library =>
+    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret))
+  }
+}
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -32,6 +39,8 @@ object SearchControllerUtil {
 trait SearchControllerUtil {
 
   val shoeboxClient: ShoeboxServiceClient
+
+  implicit val publicIdConfig: PublicIdConfiguration
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
 
@@ -94,9 +103,10 @@ trait SearchControllerUtil {
     augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
+  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
     libraryIds.map { libId =>
-      libId -> LibraryRecord.retrieve(librarySearcher, libId).get.name
+      val name = LibraryIndexable.getRecord(librarySearcher, libId).get.name
+      libId -> BasicLibrary(Library.publicId(libId), name, LibraryIndexable.isSecret(librarySearcher, libId))
     }.toMap
   }
 

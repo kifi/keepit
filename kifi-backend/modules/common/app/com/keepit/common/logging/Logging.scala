@@ -3,7 +3,7 @@ package com.keepit.common.logging
 import com.keepit.macros.Location
 import play.modules.statsd.api.Statsd
 import play.api.Logger
-import scala.util.Random
+import java.util.Random
 
 case class LogPrefix(prefix: String) extends AnyVal {
   override def toString = prefix
@@ -33,7 +33,7 @@ class Timer(startTime: Long = System.currentTimeMillis()) {
  * https://github.com/typesafehub/play-plugins/blob/master/statsd/src/main/scala/play/modules/statsd/api/StatsdClient.scala
  */
 class LoggingStatsdClient(log: Logger) {
-  private lazy val random = new Random()
+  private[this] val random = new Random()
   private def nextFloat(): Float = random.nextFloat()
 
   /**

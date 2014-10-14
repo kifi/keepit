@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, UserActions, UserActionsHelper }
 import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
@@ -14,11 +14,11 @@ import com.keepit.commanders.emails.EmailOptOutCommander
 
 class EmailOptOutController @Inject() (
   db: Database,
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   emailOptOutRepo: EmailOptOutRepo,
   commander: EmailOptOutCommander,
   secureSocialClientIds: SecureSocialClientIds)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   def optOut(optOutToken: String) = Action { implicit request =>
     val email = commander.getEmailFromOptOutToken(optOutToken)

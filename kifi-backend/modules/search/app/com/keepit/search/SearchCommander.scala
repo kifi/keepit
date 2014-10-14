@@ -5,7 +5,7 @@ import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger,
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
 import scala.util.Try
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext._
@@ -86,6 +86,7 @@ trait SearchCommander {
   def warmUp(userId: Id[User]): Unit
 }
 
+@Singleton
 class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,
@@ -285,16 +286,17 @@ class SearchCommanderImpl @Inject() (
 
     val libraryContext = monitoredAwait.result(libraryContextFuture, 1 seconds, "getting library context")
 
-    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
-    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
-
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
-      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, firstLang, KifiShardResult.empty, Set(), None))
+      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, Lang("en"), KifiShardResult.empty, Set(), None))
     }
+
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
 
     val searchFilter = SearchFilter(filter, libraryContext, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
     timing.presearch
 

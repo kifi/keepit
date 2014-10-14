@@ -22,6 +22,8 @@ POST    /auth/email-finalize        @com.keepit.controllers.core.AuthController.
 POST    /auth/social-finalize       @com.keepit.controllers.core.AuthController.socialFinalizeAccountAction()
 POST    /auth/token-login/:provider  @com.keepit.controllers.core.AuthController.accessTokenLogin(provider: String)
 POST    /auth/token-signup/:provider @com.keepit.controllers.core.AuthController.accessTokenSignup(provider: String)
+POST    /auth/token-finalize         @com.keepit.controllers.core.AuthController.tokenFinalizeAccountAction()
+POST    /auth/email-signup           @com.keepit.controllers.core.AuthController.emailSignup()
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
@@ -126,6 +128,7 @@ POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteControl
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
+GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
 DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
 GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
@@ -195,6 +198,7 @@ POST    /m/1/password/change                    @com.keepit.controllers.mobile.M
 
 POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.MobileAuthController.registerIPhoneVersion()
 POST    /m/1/android/version/register           @com.keepit.controllers.mobile.MobileAuthController.registerAndroidVersion()
+POST    /m/1/android/store/params               @com.keepit.controllers.mobile.AndroidAppStoreParamsController.processAppStoreParams()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 
@@ -209,15 +213,16 @@ GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.M
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
 POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
-GET     /m/1/user/$id<[0-9a-f-]{36}> 			@com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
+GET     /m/1/user/$id<[0-9a-f-]{36}> 			      @com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
-GET    /m/1/discover/                           @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
+GET     /m/1/discover/                          @com.keepit.controllers.mobile.MobileDiscoveryController.discover(withPageInfo: Boolean ?= true, limit: Int ?= -1)
 
-GET     /m/1/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
-GET     /m/1/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
-POST    /m/1/recos/trash           @com.keepit.controllers.website.RecommendationsController.trash(id: ExternalId[NormalizedURI])
+GET     /m/1/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
+POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
+
 
 ##########################################
 # Website
@@ -285,6 +290,7 @@ POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsContro
 POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
+GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String)
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
@@ -308,6 +314,7 @@ POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.Libra
 DELETE  /site/libraries/:id/keeps/:keepId   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
 POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
+GET     /site/libraries/:id/tags/search  @com.keepit.controllers.website.LibraryController.searchLibraryTags(id: PublicId[Library], query: String, limit: Option[Int] = None)
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
@@ -364,8 +371,11 @@ POST    /site/user/pic              @com.keepit.controllers.website.UserControll
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
+GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
+
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
 
 ##########################################
 # Email-Link API
@@ -485,12 +495,6 @@ GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfo
 GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
 
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
-
-GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
-GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
-GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
-GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
-GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView

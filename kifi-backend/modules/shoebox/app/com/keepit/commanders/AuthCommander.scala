@@ -4,6 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -107,13 +108,15 @@ class AuthCommander @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
+    libraryCommander: LibraryCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
     email: EmailAddress, passwordInfo: PasswordInfo,
-    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = timing(s"[saveUserPasswordIdentity($userIdOpt, $email)]") {
+    firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
@@ -201,7 +204,6 @@ class AuthCommander @Inject() (
     }
 
   def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
-    require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val resultFuture = SafeFuture {
@@ -326,4 +328,16 @@ class AuthCommander @Inject() (
       NotFound(Json.obj("error" -> "user_not_found"))
     }
   }
+
+  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
+    Library.decodePublicId(libPubId) map { libId =>
+      libraryCommander.joinLibrary(userId, libId).fold(
+        libFail =>
+          airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),
+        library =>
+          log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+      )
+    }
+  }
+
 }

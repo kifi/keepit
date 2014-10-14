@@ -13,21 +13,21 @@ class KifiInstallationTest extends Specification {
         userId = Id[User](1),
         version = KifiIPhoneVersion("1.1.1"),
         externalId = ExternalId[KifiInstallation](),
-        userAgent = UserAgent.fromString("my iphone"),
+        userAgent = UserAgent("my iphone"),
         platform = KifiInstallationPlatform.IPhone) //cool!
 
       KifiInstallation(
         userId = Id[User](1),
         version = KifiIPhoneVersion("1.1.1"),
         externalId = ExternalId[KifiInstallation](),
-        userAgent = UserAgent.fromString("my iphone"),
+        userAgent = UserAgent("my iphone"),
         platform = KifiInstallationPlatform.Extension) should throwA[Exception]
 
       KifiInstallation(
         userId = Id[User](1),
         version = KifiExtVersion("1.1.1"),
         externalId = ExternalId[KifiInstallation](),
-        userAgent = UserAgent.fromString("my iphone"),
+        userAgent = UserAgent("my iphone"),
         platform = KifiInstallationPlatform.IPhone) should throwA[Exception]
     }
   }

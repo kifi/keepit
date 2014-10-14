@@ -4,7 +4,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig, S3ImageStore }
@@ -19,13 +19,13 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
 
 class UserPictureController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   suiRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
   imageStore: S3ImageStore,
   val config: S3ImageConfig)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>
     val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
@@ -52,7 +52,7 @@ class UserPictureController @Inject() (
     }
   }
 
-  def update() = HtmlAction.authenticatedAsync { request =>
+  def update() = UserAction.async { request =>
     if (request.experiments.contains(ExperimentType.ADMIN)) {
       Future.sequence(for {
         user <- db.readOnlyReplica { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }

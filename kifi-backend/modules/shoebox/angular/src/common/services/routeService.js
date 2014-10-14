@@ -54,6 +54,10 @@ angular.module('kifi')
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
+      pageTags: route('/collections/page'),
+      searchTags: function (query, limit) {
+        return route('/collections/search') + '?query=' + query + '&limit=' + limit;
+      },
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
@@ -142,6 +146,9 @@ angular.module('kifi')
       },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
+      },
+      copyKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
       }
     };
   }

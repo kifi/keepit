@@ -39,10 +39,10 @@ class HomeControllerTest extends Specification with ShoeboxTestInjector {
 
           val controller = inject[HomeController]
           val call = controller.iPhoneAppStoreRedirect()
-          val result = call(FakeRequest("GET", "https://www.kifi.com/invite?friend=03dfb0f0-24cb-11e4-8c21-0800200c9a66"))
+          val result = call(FakeRequest("GET", "/invite?friend=03dfb0f0-24cb-11e4-8c21-0800200c9a66"))
 
           val body = contentAsString(result)
-          body must contain("kifi://www.kifi.com/invite?friend=03dfb0f0-24cb-11e4-8c21-0800200c9a66")
+          body must contain("kifi:TEST_MODE/invite?friend=03dfb0f0-24cb-11e4-8c21-0800200c9a66")
         }
       }
     }

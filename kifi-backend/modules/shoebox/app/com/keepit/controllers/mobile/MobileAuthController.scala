@@ -2,28 +2,24 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.commanders.AuthCommander
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, MobileController }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.controller.{ ActionAuthenticator, MobileController, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
-import com.keepit.social.{ UserIdentity }
-import com.keepit.controllers.core.{ AuthController, AuthHelper }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.social.SocialNetworkType
-import com.keepit.model._
 import com.keepit.common.time.Clock
+import com.keepit.controllers.core.{ AuthController, AuthHelper }
+import com.keepit.model._
+import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import com.keepit.social.providers.ProviderController
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, Json }
-import play.api.mvc.{ Action, Cookie, Session, Result }
+import play.api.mvc.{ Action, Cookie, Result, Session }
+import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
-
-import securesocial.core.{ Authenticator, Events, IdentityId, IdentityProvider, LoginEvent }
-import securesocial.core.{ OAuth1Provider, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 class MobileAuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
@@ -47,7 +43,7 @@ class MobileAuthController @Inject() (
     val json = request.body
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiIPhoneVersion((json \ "version").as[String])
-    val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+    val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
     registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.IPhone)
   }
 
@@ -55,7 +51,7 @@ class MobileAuthController @Inject() (
     val json = request.body
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiAndroidVersion((json \ "version").as[String])
-    val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+    val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
     registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.Android)
   }
 

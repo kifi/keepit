@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import org.apache.lucene.index.{ AtomicReader, AtomicReaderContext, DirectoryReader, Term }
+import org.apache.lucene.index._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
@@ -36,7 +36,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def findAllIds(term: Term, buf: ArrayBuffer[Long] = new ArrayBuffer[Long]): Seq[Long] = {
+  def findPrimaryIds(term: Term, buf: ArrayBuffer[Long] = new ArrayBuffer[Long]): Seq[Long] = {
     foreachReader { reader =>
       val idMapper = reader.getIdMapper
       val td = reader.termDocsEnum(term)
@@ -44,6 +44,21 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
         var doc = td.nextDoc()
         while (doc != NO_MORE_DOCS) {
           buf += idMapper.getId(doc)
+          doc = td.nextDoc()
+        }
+      }
+    }
+    buf
+  }
+
+  def findSecondaryIds(term: Term, idField: String, buf: ArrayBuffer[Long] = new ArrayBuffer[Long]): Seq[Long] = {
+    foreachReader { reader =>
+      val idValues = reader.getNumericDocValues(idField)
+      val td = reader.termDocsEnum(term)
+      if (td != null) {
+        var doc = td.nextDoc()
+        while (doc != NO_MORE_DOCS) {
+          buf += idValues.get(doc)
           doc = td.nextDoc()
         }
       }

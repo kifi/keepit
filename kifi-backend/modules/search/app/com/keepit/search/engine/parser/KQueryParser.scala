@@ -3,7 +3,6 @@ package com.keepit.search.engine.parser
 import org.apache.lucene.index.Term
 import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
@@ -14,7 +13,6 @@ import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class KQueryParser(
     analyzer: Analyzer,
@@ -40,28 +38,24 @@ class KQueryParser(
   private[this] val proximityGapPenalty = config.asFloat("proximityGapPenalty")
   private[this] val proximityPowerFactor = config.asFloat("proximityPowerFactor")
 
-  var totalParseTime: Long = 0L
-
   def parse(queryText: CharSequence): Option[QueryEngineBuilder] = {
-    val tParse = System.currentTimeMillis
 
     val builderOpt = parser.parse(queryText).map { query =>
+      val engBuilder = new QueryEngineBuilder(query)
       val numTextQueries = parser.textQueries.size
 
-      if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity
-        new QueryEngineBuilder(query)
-      } else {
-        val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, parser.lang) else null
-
-        val engBuilder = new QueryEngineBuilder(query)
+      if (0 < numTextQueries && numTextQueries <= ProximityQuery.maxLength) { // no terms or too many terms, skip proximity/home page boost
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
-          val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
+
+          val phrases = monitoredAwait.result(detectPhrases(queryText, parser.lang), 3 seconds, "phrase detection")
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, 1f)) // disable phrase scoring for title. penalty could be too big
           engBuilder.addBoosterQuery(proxQ, proximityBoost)
+
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
+
           val homePageQuery = if (phTerms.size == 1) {
             new FixedScoreQuery(new TermQuery(new Term("home_page", phTerms(0).text)))
           } else {
@@ -70,12 +64,11 @@ class KQueryParser(
             new FixedScoreQuery(hpQ)
           }
           engBuilder.addBoosterQuery(homePageQuery, homePageBoost)
-        }
 
-        engBuilder
+        }
       }
+      engBuilder
     }
-    totalParseTime = System.currentTimeMillis - tParse
 
     builderOpt
   }
@@ -105,7 +98,7 @@ class KQueryParser(
 
   private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
     phraseDetectionConsolidator((queryText, lang)) { _ =>
-      SafeFuture { phraseDetector.detectAll(phStemmedTerms) }
+      Future.successful { phraseDetector.detectAll(phStemmedTerms) }
     }
   }
 }

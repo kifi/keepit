@@ -21,6 +21,7 @@ import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 import scala.collection.mutable.ListBuffer
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -90,7 +91,6 @@ class SearchServiceClientImpl(
 
   def updateKeepIndex(): Unit = {
     broadcast(Search.internal.updateKeepIndex())
-    broadcast(Search.internal.updateURIGraph())
   }
 
   def updateLibraryIndex(): Unit = {
@@ -253,37 +253,6 @@ class SearchServiceClientImpl(
     }
   }
 
-  def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
-    call(Search.internal.leaveOneOut(queryText, stem, useSketch)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = {
-    call(Search.internal.allSubsets(queryText, stem, useSketch)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = {
-    call(Search.internal.semanticSimilarity(query1, query2, stem)).map { r =>
-      Json.fromJson[Float](r.json).get
-    }
-  }
-
-  def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = {
-    val payload = Json.toJson(queries)
-    call(Search.internal.visualizeSemanticVector(), payload).map { r =>
-      Json.fromJson[Seq[String]](r.json).get
-    }
-  }
-
-  def semanticLoss(query: String): Future[Map[String, Float]] = {
-    call(Search.internal.semanticLoss(query)).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
     val url = Search.internal.indexInfoList()
     serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map {
@@ -316,13 +285,4 @@ class SearchServiceClientImpl(
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
     callUrl(url, new ServiceUri(instance, protocol, port, url.url), body)
   }
-}
-
-class SearchRequestBuilder(val params: ListBuffer[(String, JsValue)]) extends AnyVal {
-  def +=(name: String, value: String): Unit = { params += (name -> JsString(value)) }
-  def +=(name: String, value: Long): Unit = { params += (name -> JsNumber(value)) }
-  def +=(name: String, value: Boolean): Unit = { params += (name -> JsBoolean(value)) }
-  def +=(name: String, value: JsValue): Unit = { params += (name -> value) }
-
-  def build: JsObject = JsObject(params)
 }

@@ -12,7 +12,7 @@ import com.keepit.abook.model.EmailAccountInfo
 case class RelatedEntities[E, R](id: Id[E], related: Seq[(Id[R], Double)])
 
 object RelatedEntities {
-  import com.keepit.common.json._
+  import com.keepit.common.json.TupleFormat._
   implicit def format[E, R] = (
     (__ \ 'id).format[Id[E]] and
     (__ \ 'related).format[Seq[(Id[R], Double)]]
