@@ -774,13 +774,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          // two keeps in 'Murica'
+          // 2 keeps in 'Murica', but one is inactive (unkept before)
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint, state = KeepStates.INACTIVE))
 
           // one keep in 'Science'
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
@@ -815,7 +815,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //copy 3 keeps to library "Murica"
         res2.isRight === true
-        res2.right.get.length === 2 // two failed keeps, one success (Library "Murica" already has Reddit & Freedom Keeps)
+        res2.right.get.length === 1 // one failed keep, one keep activated and one keep added (Library "Murica" already has Reddit active Keep)
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
           keepRepo.count === 7

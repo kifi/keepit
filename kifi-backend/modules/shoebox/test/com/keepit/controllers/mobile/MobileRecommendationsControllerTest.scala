@@ -53,9 +53,9 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeShoeboxCommandersModule()
   )
 
-  "RecommendationsController" should {
+  "MobileRecommendationsController" should {
 
-    "update uri recommendation feedback" in {
+    "topRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Andrew", lastName = "C"))
@@ -70,6 +70,70 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
 
         val controller = inject[RecommendationsController]
         val result: Future[Result] = controller.topRecos(true, 0.75f)(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        val json = Json.parse(contentAsString(result))
+        json === Json.parse("[]")
+
+        val recoInfos = Seq(FullRecoInfo(
+          kind = RecoKind.Keep,
+          metaData = Some(RecoMetaData(attribution = Seq(RecoAttributionInfo(
+            kind = RecoAttributionKind.Keep,
+            name = Some("foo"),
+            url = Some("http://foo.com"),
+            when = Some(new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)))))),
+          itemInfo = UriRecoItemInfo(id = ExternalId[NormalizedURI]("0cb299dd-5b9e-47b1-8377-3692051dd972"),
+            title = Some("bar"),
+            url = "http://bar.com",
+            keepers = Seq(BasicUser(externalId = ExternalId[User]("aa25f5a8-8dea-4e56-82c1-a4dcf38f205c"),
+              firstName = "Joe",
+              lastName = "Smith",
+              pictureName = "asdf",
+              username = Some(Username("joe")))),
+            others = 12,
+            siteName = Some("fafa"),
+            summary = URISummary(title = Some("Yo!"))),
+          explain = Some("because :-)")))
+        inject[RecommendationsCommander].asInstanceOf[FakeRecommendationsCommander].recoInfos = recoInfos
+
+        val result2: Future[Result] = controller.topRecos(true, 0.75f)(request)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        val json2 = Json.parse(contentAsString(result2))
+        val expected =
+          """[{"kind":"keep",
+             "metaData":[
+               {"kind":"keep","name":"foo","url":"http://foo.com","when":1369972982001}
+             ],
+             "itemInfo":{"id":"0cb299dd-5b9e-47b1-8377-3692051dd972",
+             "title":"bar",
+             "url":"http://bar.com",
+             "keepers":[{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"}],
+             "others":12,
+             "siteName":"fafa",
+             "summary":{"title":"Yo!"}},
+             "explain":"because :-)"}]""".stripMargin
+        json2 === Json.parse(expected)
+
+      }
+    }
+
+    "topPublicRecos" in {
+      withDb(modules: _*) { implicit injector =>
+        val user = db.readWrite { implicit s =>
+          userRepo.save(User(firstName = "Andrew", lastName = "C"))
+        }
+
+        inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
+
+        val route = com.keepit.controllers.mobile.routes.MobileRecommendationsController.topPublicRecos().url
+        route === "/m/1/recos/public"
+
+        val request = FakeRequest("GET", route)
+
+        val controller = inject[RecommendationsController]
+        val result: Future[Result] = controller.topPublicRecos()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val json = Json.parse(contentAsString(result))

@@ -423,6 +423,7 @@ class InviteCommander @Inject() (
   private def reportSentInvitation(request: Option[AuthenticatedRequest[_]], invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
     invite.senderUserId.foreach { senderId =>
       val contextBuilder = eventContextBuilder()
+      request.foreach(contextBuilder.addRequestInfo(_))
       contextBuilder += ("action", "sent")
       contextBuilder += ("socialNetwork", socialNetwork.toString)
       contextBuilder += ("inviteId", invite.externalId.id)
@@ -434,10 +435,8 @@ class InviteCommander @Inject() (
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
 
       // also send used_kifi event
-      val cb = eventContextBuilder()
-      cb += ("action", "invited")
-      request.foreach(cb.addRequestInfo(_))
-      heimdal.trackEvent(UserEvent(senderId, cb.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
+      contextBuilder += ("action", "invited")
+      heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.USED_KIFI, invite.lastSentAt getOrElse invite.createdAt))
     }
   }
 

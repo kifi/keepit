@@ -6,13 +6,15 @@ import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.{ helpers, EmailToSend }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.NotificationCategory
+import com.keepit.model.{ LibraryVisibility, LibrarySlug, Library, LibraryRepo, NotificationCategory }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.twirl.api.Html
 import com.keepit.common.mail.template.helpers._
@@ -41,6 +43,13 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
           testFactory.createUsers()
         }
+
+        val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val library = db.readWrite { implicit rw =>
+          libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
+            visibility = LibraryVisibility.SECRET, ownerId = user1.id.get, createdAt = t1, memberCount = 1))
+        }
+
         val (id1, id2, id3, id4) = (user1.id.get, user2.id.get, user3.id.get, user4.id.get)
 
         val html1 = Html(s"""
@@ -49,6 +58,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           |<img src="${avatarUrl(id2)}" alt="${fullName(id2)}"/>
           |<img src="${avatarUrl(id3)}" alt="${fullName(id3)}"/>
           |<img src="${avatarUrl(id4)}" alt="${fullName(id4)}"/>
+          |Join my library: ${libraryName(library.id.get)}
           |<a href="$unsubscribeUrl">Unsubscribe Me</a>
           |<a href="${unsubscribeUrl(id3)}">Unsubscribe User</a>
           |<a href="${unsubscribeUrl(user3.primaryEmail.get)}">Unsubscribe Email</a>
@@ -57,6 +67,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         val text1 = Html(
           s"""
           |${firstName(id2)} ${lastName(id2)} and ${fullName(id1)} joined!
+          |Join my library: ${libraryName(library.id.get)}
           |${avatarUrl(id3)}
           |unsub1 $unsubscribeUrl
           |unsub2 ${unsubscribeUrl(id3)}
@@ -86,6 +97,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
         output must contain("privacy?utm_source=aboutFriends&utm_medium=email&utm_campaign=socialFriendJoined&utm_content=footerPrivacy")
         output must contain("<title>Test Email!!!</title>")
         output must contain("Aaron Paul and Bryan Cranston joined!")
+        output must contain("Join my library: Avengers Missions")
         output must contain("""<img src="https://cloudfront/users/1/pics/100/0.jpg" alt="Aaron Paul"/>""")
         output must contain("""<img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Bryan Cranston"/>""")
         output must contain("""<img src="https://cloudfront/users/3/pics/100/0.jpg" alt="Anna Gunn"/>""")
@@ -93,6 +105,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
 
         val text = processed.textBody.get.value
         text must contain("Bryan Cranston and Aaron Paul joined!")
+        text must contain("Join my library: Avengers Missions")
         text must contain("https://cloudfront/users/3/pics/100/0.jpg")
         text must contain("unsub1 https://www.kifi.com/unsubscribe/")
         text must contain("unsub2 https://www.kifi.com/unsubscribe/")

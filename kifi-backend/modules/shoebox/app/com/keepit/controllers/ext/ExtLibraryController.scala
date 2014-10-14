@@ -62,6 +62,22 @@ class ExtLibraryController @Inject() (
     }
   }
 
+  def getLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
+    decode(libraryPubId) { libraryId =>
+      libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
+        case Left((status, message)) => Status(status)(Json.obj("error" -> message))
+        case Right((library, owner, keepCount, followerCount)) => Ok(Json.obj(
+          "name" -> library.name,
+          "slug" -> library.slug,
+          "visibility" -> library.visibility,
+          "owner" -> owner,
+          "keeps" -> keepCount,
+          "followers" -> followerCount
+        ))
+      }
+    }
+  }
+
   def deleteLibrary(libraryPubId: PublicId[Library]) = UserAction { request =>
     decode(libraryPubId) { libraryId =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
@@ -210,7 +226,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchTags(libraryId, query, limit) map { tags =>
+        keepsCommander.searchLibraryTags(libraryId, query, limit) map { tags =>
           Ok(Json.toJson(tags))
         }
       } getOrElse {
