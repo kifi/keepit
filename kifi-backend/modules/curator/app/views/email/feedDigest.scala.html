@@ -1,6 +1,7 @@
 @(allRecos: com.keepit.curator.commanders.email.AllDigestItems)
 @import com.keepit.common.mail.template.helpers._
 
+@email.tags.contentWrapper() {
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
 <tr>
     <td>
@@ -12,7 +13,7 @@
                             <td height="25">&nbsp;</td>
                         </tr>
                         <tr>
-                            <td align="center" style="font-family:Arial, sans-serif; font-size:20px; text-align:center; color:#000000; line-height:18px; font-weight:bold;">This Week’s Recommended List</td>
+                            <td align="center" style="font-family:Arial,sans-serif;font-size:20px;text-align:center;color:#000000;line-height:18px;font-weight:bold;">This Week’s Recommended List</td>
                         </tr>
                         <tr>
                             <td height="21">&nbsp;</td>
@@ -49,3 +50,4 @@
 }
 
 </table>
+}
