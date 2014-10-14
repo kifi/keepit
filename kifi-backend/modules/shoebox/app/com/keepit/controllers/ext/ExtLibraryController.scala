@@ -227,7 +227,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchTags(libraryId, query, limit) map { tags =>
+        keepsCommander.searchLibraryTags(libraryId, query, limit) map { tags =>
           Ok(Json.toJson(tags))
         }
       } getOrElse {
