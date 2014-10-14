@@ -52,6 +52,22 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
+    db.readOnlyReplica { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      if (library.visibility == LibraryVisibility.PUBLISHED ||
+        library.ownerId == viewerUserId ||
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined) {
+        val owner = basicUserRepo.load(library.ownerId)
+        val keepCount = keepRepo.getCountByLibrary(library.id.get)
+        val followerCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+        Right(library, owner, keepCount, followerCount)
+      } else {
+        Left(403, "library_access_denied")
+      }
+    }
+  }
+
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
     val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>

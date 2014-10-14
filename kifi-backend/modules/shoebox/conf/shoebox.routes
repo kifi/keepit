@@ -128,6 +128,7 @@ POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteControl
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
+GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
 DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
 POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
 GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
