@@ -114,7 +114,7 @@ private class RawKeepImporterActor @Inject() (
               "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
             }
             val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-            bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, updateUriGraph = false)(context)
+            bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, updateIndex = false)(context)
           }
 
           /* The strategy here is to go through all the keeps, grabbing their tags, and generating a list
