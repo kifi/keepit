@@ -75,7 +75,7 @@ class HomeController @Inject() (
   def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
       } else if (!agent.screenCanFitWebApp) {
@@ -87,7 +87,7 @@ class HomeController @Inject() (
   def termsOfService = HtmlAction(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
       } else if (!agent.screenCanFitWebApp) {
@@ -103,7 +103,7 @@ class HomeController @Inject() (
   def privacyPolicy = HtmlAction(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
       } else if (!agent.screenCanFitWebApp) {
@@ -149,7 +149,7 @@ class HomeController @Inject() (
   private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
     val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent.fromString(agent)
+      UserAgent(agent)
     }
     if (linkWith.isDefined) {
       Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
@@ -177,9 +177,9 @@ class HomeController @Inject() (
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
       temporaryReportLandingLoad()
-      val agentOpt = request.headers.get("User-Agent").map(UserAgent.fromString)
-      if (agentOpt.exists(!_.screenCanFitWebApp)) {
-        val ua = agentOpt.get.userAgent
+      val agent: UserAgent = UserAgent(request)
+      if (!agent.screenCanFitWebApp) {
+        val ua = agent.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
           iPhoneAppStoreRedirectWithTracking
@@ -200,7 +200,7 @@ class HomeController @Inject() (
 
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
-      val parsed = UserAgent.fromString(ua)
+      val parsed = UserAgent(ua)
       (parsed.name, parsed.operatingSystemFamily, parsed.operatingSystemName, parsed.typeName, parsed.userAgent, parsed.version)
     }
     Ok(res.toString)
@@ -229,7 +229,7 @@ class HomeController @Inject() (
     }
     setHasSeenInstall()
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))

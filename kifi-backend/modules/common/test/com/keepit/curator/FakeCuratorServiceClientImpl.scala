@@ -18,7 +18,10 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 
-  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
+  var fakeTopRecos: Map[Id[User], Seq[RecoInfo]] = Map.empty
+
+  def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]] =
+    Future.successful(fakeTopRecos.get(userId).getOrElse(Seq[RecoInfo]()))
 
   def topPublicRecos(): Future[Seq[RecoInfo]] = Future.successful(Seq.empty)
 

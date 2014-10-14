@@ -6,7 +6,6 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import com.keepit.model.User
-import com.keepit.serializer.EitherFormat
 
 import org.joda.time.DateTime
 

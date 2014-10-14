@@ -118,7 +118,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     }
   }
 
-  private var userConfig = Map.empty[Id[User], SearchConfig]
+  private[this] var userConfig = Map.empty[Id[User], SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId, defaultConfig)
   def setUserConfig(userId: Id[User], config: SearchConfig) { userConfig = userConfig + (userId -> config) }
   def resetUserConfig(userId: Id[User]) { userConfig = userConfig - userId }

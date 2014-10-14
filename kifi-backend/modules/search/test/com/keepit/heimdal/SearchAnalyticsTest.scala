@@ -60,7 +60,7 @@ class SearchAnalyticsTest extends Specification {
       kifiHitContext.isPrivate === false
       kifiHitContext.keepCount === 10
       kifiHitContext.keepers === users.map(_.externalId)
-      kifiHitContext.tags === tags
+      kifiHitContext.tags === tags.map(_.id)
       kifiHitContext.titleMatches === 3
       kifiHitContext.urlMatches === 2
     }

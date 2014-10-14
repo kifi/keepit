@@ -40,24 +40,27 @@ angular.module('kifi')
 
           // 250px needed for other stuff in the parent's width.
           var maxFollowersToShow = Math.floor((parentWidth - 250) / widthPerFollowerPic);
-
           scope.numAdditionalFollowers = 0;
-          if (_.isArray(scope.library.followers)) {
-            // If we only have one additional follower that we can't fit in, then we can fit that one
-            // in if we don't show the additional-number-of-followers circle.
-            if (maxFollowersToShow === scope.library.followers.length - 1) {
-              maxFollowersToShow++;
-            }
 
-            if (maxFollowersToShow >= scope.library.followers.length) {
+          // If we only have one additional follower that we can't fit in, then we can fit that one
+          // in if we don't show the additional-number-of-followers circle.
+          if (maxFollowersToShow === scope.library.numFollowers - 1) {
+            maxFollowersToShow++;
+          }
+
+          scope.$evalAsync(function () {
+            if (maxFollowersToShow < 1) {
+              scope.followersToShow = [];
+              scope.numAdditionalFollowers = scope.library.numFollowers;
+            } else if (maxFollowersToShow >= scope.library.numFollowers) {
               scope.followersToShow = scope.library.followers;
             } else {
               scope.followersToShow = scope.library.followers.slice(0, maxFollowersToShow);
-              scope.numAdditionalFollowers = scope.library.followers.length - maxFollowersToShow;
+              scope.numAdditionalFollowers = scope.library.numFollowers - maxFollowersToShow;
             }
-          }
 
-          followerPicsDiv.width(maxFollowersToShow * widthPerFollowerPic);
+            followerPicsDiv.width(maxFollowersToShow >= 1 ? maxFollowersToShow * widthPerFollowerPic : 0);
+          });
         }
 
         // Data augmentation.

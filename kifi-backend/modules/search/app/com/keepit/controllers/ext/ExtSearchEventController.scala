@@ -1,7 +1,8 @@
 package com.keepit.controllers.ext
 
+import com.keepit.common.http._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
@@ -13,13 +14,13 @@ import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
 
 class ExtSearchEventController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   searchEventCommander: SearchEventCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
+    extends UserActions with SearchServiceController with Logging {
 
-  def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
+  def clickedSearchResult = UserAction(parse.tolerantJson) { request =>
     val clickedAt = currentDateTime
     val userId = request.userId
     val json = request.body
@@ -40,10 +41,14 @@ class ExtSearchEventController @Inject() (
         contextBuilder += ("guided", true)
       }
       SearchEngine.get(resultSource) match {
-        case SearchEngine.Kifi => {
-          val kifiHitContext = (json \ "hit").as[KifiHitContext]
+        case SearchEngine.Kifi =>
+          val kifiHitContext = try {
+            (json \ "hit").as[KifiHitContext]
+          } catch {
+            case e: Exception =>
+              throw new Exception(s"""Can't parse json "$json" by user agent ${request.userAgentOpt} or user ${request.userId}""")
+          }
           searchEventCommander.clickedKifiResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, isDemo, clickedAt, kifiHitContext)(contextBuilder.build)
-        }
         case theOtherGuys =>
           searchEventCommander.clickedOtherResult(userId, basicSearchContext, query, searchResultUrl, resultPosition, clickedAt, theOtherGuys)(contextBuilder.build)
       }
@@ -51,7 +56,7 @@ class ExtSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJson { request =>
+  def searched = UserAction(parse.tolerantJson) { request =>
     val time = clock.now()
     val userId = request.userId
     val json = request.body

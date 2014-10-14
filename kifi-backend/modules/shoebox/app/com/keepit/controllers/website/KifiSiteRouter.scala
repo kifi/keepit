@@ -81,9 +81,9 @@ class KifiSiteRouter @Inject() (
       case r: NonUserRequest[_] if r.identityOpt.isDefined =>
         Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
       case _ =>
-        val agentOpt = request.headers.get("User-Agent").map(UserAgent.fromString)
-        if (agentOpt.exists(!_.screenCanFitWebApp)) {
-          val ua = agentOpt.get.userAgent
+        val agent = UserAgent(request)
+        if (!agent.screenCanFitWebApp) {
+          val ua = agent.userAgent
           val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
           if (isIphone) {
             homeController.get.iPhoneAppStoreRedirectWithTracking(request)
@@ -126,7 +126,8 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     "profile" -> Seq(),
     "kifeeeed" -> Seq(),
     "find" -> Seq(),
-    "recommendations" -> Seq()
+    "recommendations" -> Seq(),
+    "tags/manage" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "friends" -> Seq(),

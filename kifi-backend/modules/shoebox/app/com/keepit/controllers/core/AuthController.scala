@@ -167,7 +167,6 @@ class AuthController @Inject() (
 
   // one-step sign-up
   def emailSignup() = Action.async(parse.tolerantJson) { implicit request =>
-    log.info(s"body=${request.body}")
     request.body.asOpt[UserPassFinalizeInfo] match {
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
@@ -292,7 +291,7 @@ class AuthController @Inject() (
     Redirect("/")
   }, unauthenticatedAction = { request =>
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
@@ -327,7 +326,7 @@ class AuthController @Inject() (
     }
 
     val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent.fromString(agent)
+      UserAgent(agent)
     }
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())

@@ -9,8 +9,8 @@ import com.keepit.model.{ SocialUserInfo, User }
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.SocialNetworkType
-import com.keepit.serializer.EitherFormat
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.json.EitherFormat
 
 class ABookRecommendationController @Inject() (
     abookRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {

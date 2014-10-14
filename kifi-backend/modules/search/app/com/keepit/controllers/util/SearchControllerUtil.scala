@@ -18,14 +18,22 @@ import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ Writes, Json, JsObject }
 import com.keepit.search.graph.library.{ LibraryIndexable }
 
 import scala.util.{ Failure, Success }
+import com.keepit.common.json
+import com.keepit.search.augmentation._
+
+case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
+object BasicLibrary {
+  implicit val writes = Writes[BasicLibrary] { library =>
+    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret))
+  }
+}
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
-  case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
 }
 
 trait SearchControllerUtil {

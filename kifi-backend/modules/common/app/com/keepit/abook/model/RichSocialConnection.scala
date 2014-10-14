@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.mail.EmailAddress
-import com.keepit.serializer.EitherFormat
+import com.keepit.common.json.EitherFormat
 
 object RichSocialConnectionStates extends States[RichSocialConnection]
 

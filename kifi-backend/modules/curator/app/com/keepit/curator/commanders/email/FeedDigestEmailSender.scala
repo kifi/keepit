@@ -12,12 +12,12 @@ import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.commanders.{ SeedAttributionHelper, RecommendationGenerationCommander, SeedIngestionCommander }
-import com.keepit.curator.model.{ TopicAttribution, UriRecommendation, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.commanders.{ SeedAttributionHelper, RecommendationGenerationCommander, SeedIngestionCommander, CuratorAnalytics }
+import com.keepit.curator.model.{ TopicAttribution, UriRecommendation, UriRecommendationRepo, UserAttribution, RecommendationClientType }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.search.{ AugmentableItem, ItemAugmentationRequest, ItemAugmentationResponse, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
@@ -27,6 +27,7 @@ import play.twirl.api.Html
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Random, Success }
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
@@ -84,8 +85,8 @@ trait DigestItemCandidate {
   val userAttribution: Option[UserAttribution]
 }
 
-case class DigestRecoCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution], recommendationId: Id[UriRecommendation],
-  userAttribution: Option[UserAttribution]) extends DigestItemCandidate
+case class DigestRecoCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution],
+  userAttribution: Option[UserAttribution], sourceReco: UriRecommendation) extends DigestItemCandidate
 
 case class DigestLibraryItemCandidate(keep: Keep, userAttribution: Option[UserAttribution]) extends DigestItemCandidate {
   val uriId = keep.uriId
@@ -115,7 +116,7 @@ trait DigestItem {
   val reasonHeader: Option[Html]
 }
 
-case class DigestRecommendationItem(topicOpt: Option[TopicAttribution], recommendationId: Id[UriRecommendation], uri: NormalizedURI, uriSummary: URISummary,
+case class DigestRecommendationItem(sourceReco: UriRecommendation, topicOpt: Option[TopicAttribution], uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
   val reasonHeader = topicOpt.map(t => Html(s"Recommended because it’s trending in a topic you’re interested in: ${t.topicName}"))
 }
@@ -151,6 +152,7 @@ class FeedDigestEmailSender @Inject() (
     serviceDiscovery: ServiceDiscovery,
     seedAttributionHelper: SeedAttributionHelper,
     queue: SQSQueue[SendFeedDigestToUserMessage],
+    curatorAnalytics: CuratorAnalytics,
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -251,7 +253,10 @@ class FeedDigestEmailSender @Inject() (
     shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.recommendationId, true))
+          digestRecos.foreach { digestReco =>
+            uriRecommendationRepo.incrementDeliveredCount(digestReco.sourceReco.id.get, true)
+          }
+          curatorAnalytics.trackDeliveredItems(digestRecos.map(_.sourceReco), Some(RecommendationClientType.Email))
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
       }
@@ -300,7 +305,7 @@ class FeedDigestEmailSender @Inject() (
     val uriRecosF = recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, rankStrategy.recommendationsToQuery, RECO_THRESHOLD)
     uriRecosF flatMap { recos =>
       val presortedRecos = recos.sorted(rankStrategy.ordering).map { reco =>
-        DigestRecoCandidate(uriId = reco.uriId, topic = reco.attribution.topic, recommendationId = reco.id.get, userAttribution = reco.attribution.user)
+        DigestRecoCandidate(uriId = reco.uriId, topic = reco.attribution.topic, userAttribution = reco.attribution.user, sourceReco = reco)
       }
       FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, getDigestReco)
     } map (_.flatten)
@@ -331,7 +336,7 @@ class FeedDigestEmailSender @Inject() (
       val keepers = getRecoKeepers(candidate)
       candidate match {
         case reco: DigestRecoCandidate =>
-          Some(DigestRecommendationItem(topicOpt = reco.topic, recommendationId = reco.recommendationId, uri = uri,
+          Some(DigestRecommendationItem(sourceReco = reco.sourceReco, topicOpt = reco.topic, uri = uri,
             uriSummary = summaries(uriId), keepers = keepers, config = config))
       }
     }
