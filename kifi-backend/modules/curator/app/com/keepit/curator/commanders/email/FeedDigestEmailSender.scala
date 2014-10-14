@@ -10,8 +10,8 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.template.helpers.{ libraryName, toHttpsUrl }
+import com.keepit.common.mail.template.helpers.{ libraryName, toHttpsUrl, trackingParam }
+import com.keepit.common.mail.template.{ EmailToSend, EmailTrackingParam }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationGenerationCommander, SeedAttributionHelper, SeedIngestionCommander }
 import com.keepit.curator.model.{ RecommendationClientType, UriRecommendation, UriRecommendationRepo, UserAttribution }
@@ -112,12 +112,18 @@ trait DigestItem {
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
 
-  // todo(josh) encode urls?? add more analytics information
-  val viewPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}"
+  def viewPageUrl(content: String) =
+    if (isForQa) uri.url
+    else urlWithTracking(s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}", content)
+
   val sendPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
   val keepUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
 
   val reasonHeader: Option[Html]
+
+  private def urlWithTracking(url: String, content: String) = {
+    s"$url&${EmailTrackingParam.paramName}=${trackingParam(content)}"
+  }
 }
 
 case class DigestRecommendationItem(uriRecommendation: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,

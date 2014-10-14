@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.controller.{ UserActionsHelper, ActionAuthenticator, ShoeboxServiceController, UserActions, WebsiteController }
+import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, UserActions, UserActionsHelper, WebsiteController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.RecommendationClientType

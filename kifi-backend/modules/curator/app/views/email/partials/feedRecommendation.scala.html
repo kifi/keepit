@@ -22,7 +22,7 @@
                 }
                 <tr>
                     <td align="center" valign="top" width="535">
-                        <a href="@reco.viewPageUrl" target="_blank">
+                        <a href="@reco.viewPageUrl("recoImage")" target="_blank">
                             <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="535" />
                         </a>
                     </td>
@@ -37,13 +37,13 @@
                                     <table width="513" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                                         <tr>
                                             <td align="left">
-                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl">@reco.title</a>
+                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl("recoTitle")">@reco.title</a>
                                             </td>
                                         </tr>
                                         @email.tags.trSpacer(4)
                                         <tr>
                                             <td align="left" class="num1">
-                                                <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</a>
+                                                <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</span>
                                                 <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;">·</span>
                                                 @reco.readTime.map { readTime =>
                                                 <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
@@ -59,7 +59,7 @@
                                         @email.tags.trSpacer(18)
                                         <tr>
                                             <td align="center" class="num2" valign="middle" style="line-height:16px;font-size:14px;color:#43a0f8;font-family:Arial,sans-serif;">
-                                                <a href="@reco.viewPageUrl" style="line-height:18px; font-size:16px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
+                                                <a href="@reco.viewPageUrl("viewPageLink")" style="line-height:18px; font-size:16px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
                                             </td>
                                         </tr>
                                         @email.tags.trSpacer(15)

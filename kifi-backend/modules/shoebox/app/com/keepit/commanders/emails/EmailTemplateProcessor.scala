@@ -7,7 +7,6 @@ import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
-import com.keepit.heimdal.ContextData
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
