@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ KeepsCommander, InviteCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
@@ -56,6 +56,7 @@ class HomeController @Inject() (
   userExperimentCommander: LocalUserExperimentCommander,
   curatorServiceClient: CuratorServiceClient,
   applicationConfig: FortyTwoConfig,
+  keepsCommander: KeepsCommander,
   siteRouter: KifiSiteRouter)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
@@ -70,6 +71,12 @@ class HomeController @Inject() (
 
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
+  }
+
+  def getKeepsCount = Action.async {
+    keepsCommander.getKeepsCountFuture() imap { count =>
+      Ok(count.toString)
+    }
   }
 
   def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
