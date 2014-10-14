@@ -1,5 +1,6 @@
 package com.keepit.curator.commanders.email
 
+import akka.actor.FSM.->
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -52,6 +53,7 @@ object DigestEmail {
 }
 
 trait RecoRankStrategy {
+  def name: String
   def recommendationsToQuery: Int
   val minRecommendationsToDeliver: Int = 2
   val maxRecommendationsToDeliver: Int = 3
@@ -60,6 +62,7 @@ trait RecoRankStrategy {
 
 object GeneralFeedDigestStrategy extends RecoRankStrategy {
   val recommendationsToQuery = 100
+  val name = "general"
 
   object ordering extends Ordering[UriRecommendation] {
     def compare(a: UriRecommendation, b: UriRecommendation) = ((b.masterScore - a.masterScore) * 1000).toInt
@@ -68,6 +71,7 @@ object GeneralFeedDigestStrategy extends RecoRankStrategy {
 
 object RecentInterestRankStrategy extends RecoRankStrategy {
   val recommendationsToQuery = 1000
+  val name = "recentInterest"
 
   object ordering extends Ordering[UriRecommendation] {
     def compare(a: UriRecommendation, b: UriRecommendation) = {
@@ -149,7 +153,7 @@ case class DigestItemKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0
   }
 }
 
-case class DigestMail(userId: Id[User], mailSent: Boolean, recommendations: Seq[DigestRecommendationItem], newKeeps: Seq[DigestLibraryItem] = Seq())
+case class DigestMail(userId: Id[User], mailSent: Boolean, recommendations: Seq[DigestRecommendationItem], newKeeps: Seq[DigestLibraryItem])
 
 @Singleton
 class FeedDigestEmailSender @Inject() (
@@ -193,7 +197,7 @@ class FeedDigestEmailSender @Inject() (
         messageOpt map { message =>
           try {
             sendToUser(message.body.userId) map { digestMail =>
-              if (digestMail.mailSent) log.info(s"[processQueue] consumed digest email for ${digestMail.userId}")
+              if (digestMail.mailSent) log.info(s"[processQueue] consumed digest email userId=${digestMail.userId}")
               else log.warn(s"[processQueue] digest email was not mailed: $digestMail")
               message.consume()
             } recover {
@@ -218,7 +222,7 @@ class FeedDigestEmailSender @Inject() (
   }
 
   def sendToUser(userId: Id[User], recoRankStrategy: RecoRankStrategy = GeneralFeedDigestStrategy): Future[DigestMail] = {
-    log.info(s"sending engagement feed email to $userId")
+    log.info(s"sendToUser userId=$userId recoRankStrategy=${recoRankStrategy.name}")
 
     val recosF = getRecommendationsForUser(userId, recoRankStrategy)
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
@@ -227,14 +231,13 @@ class FeedDigestEmailSender @Inject() (
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      // TODO(josh) fix bug getting keeps from library (https://fortytwo.airbrake.io/projects/99522/groups/1266393588775530264/notices/1266393588775530263)
-      //keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
+      keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
     } yield {
-      val keepsFromLibrary = Seq[DigestLibraryItem]()
-      if (recos.size >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
+      val totalItems = recos.size + keepsFromLibrary.size
+      if (totalItems >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
       else {
-        log.info(s"NOT sending digest email to $userId; 0 worthy recos")
-        Future.successful(DigestMail(userId = userId, mailSent = false, recommendations = Seq.empty))
+        log.info(s"NOT sending digest email: userId=$userId recos=${recos.size} libraryKeeps=${keepsFromLibrary.size} total=$totalItems")
+        Future.successful(DigestMail(userId = userId, mailSent = false, recommendations = Seq.empty, newKeeps = Seq.empty))
       }
     }
     digestRecoMailF.flatten
@@ -258,7 +261,7 @@ class FeedDigestEmailSender @Inject() (
       tips = Seq()
     )
 
-    log.info(s"sending email to $userId with ${digestRecos.size} keeps")
+    log.info(s"Sending Digest email: userId=$userId recos=${digestRecos.size} libraryKeeps=${newLibraryItems.size} isFacebookConnected=$isFacebookConnected")
     shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
@@ -267,7 +270,7 @@ class FeedDigestEmailSender @Inject() (
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
       }
-      DigestMail(userId, sent, digestRecos)
+      DigestMail(userId = userId, mailSent = sent, recommendations = digestRecos, newKeeps = newLibraryItems)
     }
   }
 
@@ -283,6 +286,11 @@ class FeedDigestEmailSender @Inject() (
     val qaEmailData = emailData.copy(
       toUser = myFakeUserId,
       recommendations = emailData.recommendations.map { item =>
+        val qaFriends = otherUserIds.take(item.keepers.friends.size)
+        val qaKeepers = qaFriends.take(item.keepers.friendsToShow.size)
+        item.copy(isForQa = true, keepers = item.keepers.copy(friends = qaFriends, friendsToShow = qaKeepers))
+      },
+      newLibraryItems = emailData.newLibraryItems.map { item =>
         val qaFriends = otherUserIds.take(item.keepers.friends.size)
         val qaKeepers = qaFriends.take(item.keepers.friendsToShow.size)
         item.copy(isForQa = true, keepers = item.keepers.copy(friends = qaFriends, friendsToShow = qaKeepers))
@@ -352,14 +360,21 @@ class FeedDigestEmailSender @Inject() (
    * this method assumes that all keeps are in library
    */
   private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
-    val request = ItemAugmentationRequest.uniform(userId, keeps.map(_.uriId).map { uriId => AugmentableItem(uriId) }: _*)
+    val request = ItemAugmentationRequest.uniform(userId, keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }: _*)
     val keepMap = keeps.map { k => (k.uriId, k.libraryId.get) -> k }.toMap
-    val augmentations: Future[ItemAugmentationResponse] = search.augmentation(request)
-    augmentations map { augmentations =>
-      val userAttributions = augmentations.infos map {
+    val augmentationsF: Future[ItemAugmentationResponse] = search.augmentation(request)
+    augmentationsF map { augmentations =>
+      val userAttributions = augmentations.infos.map {
         case (augmentableItem, augmentationInfo) =>
-          (augmentableItem.uri -> augmentableItem.keptIn.get) -> seedAttributionHelper.toUserAttribution(augmentationInfo)
-      }
+          augmentableItem.keptIn.flatMap { libId =>
+            Some((augmentableItem.uri, libId) -> seedAttributionHelper.toUserAttribution(augmentationInfo))
+          } orElse {
+            val keepOpt = keeps.find(_.uriId == augmentableItem.uri) // expected to be Some, if None then we have another problem
+            airbrake.notify(s"$augmentableItem unexpected keptIn is None for keep=$keepOpt userId=$userId")
+            None
+          }
+      }.toSeq.filter(_.isDefined).map(_.get).toMap
+
       keepMap.map {
         case (key, keep) =>
           userAttributions.get(key) map { userAttribution =>
