@@ -1,6 +1,5 @@
 package com.keepit.common.crypto
 
-import java.lang.{ Long => JLong }
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.db.Id
