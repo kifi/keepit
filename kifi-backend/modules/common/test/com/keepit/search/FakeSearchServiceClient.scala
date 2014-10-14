@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
+import com.keepit.search.augmentation.{ AugmentationScores, ItemAugmentationResponse, ItemAugmentationRequest }
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
@@ -76,4 +77,15 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
+
+  override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
+    ItemAugmentationResponse(
+      infos = Map.empty,
+      scores = AugmentationScores(
+        libraryScores = Map.empty,
+        userScores = Map.empty,
+        tagScores = Map.empty
+      )
+    )
+  }
 }
