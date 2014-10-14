@@ -132,7 +132,7 @@ angular.module('jun.facebook', [])
 					deferred.reject({'error': 'no_FB_on_page'});
 					FBPromise = null;
 				}
-			}
+			};
 
 			$timeout(failedToLoadHander, 5000);
 
