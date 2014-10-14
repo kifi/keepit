@@ -416,6 +416,13 @@ class LibraryController @Inject() (
     }
   }
 
+  def searchLibraryTags(pubId: PublicId[Library], query: String, limit: Option[Int] = None) = UserAction.async { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    keepsCommander.searchLibraryTags(libraryId, query, limit).map { hashTagResults =>
+      Ok(Json.obj("results" -> hashTagResults))
+    }
+  }
+
 }
 
 private object ImplicitHelper {
