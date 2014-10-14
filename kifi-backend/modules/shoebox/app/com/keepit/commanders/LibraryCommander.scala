@@ -625,7 +625,7 @@ class LibraryCommander @Inject() (
   def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug): Either[(Int, String), Library] = {
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](username).flatMap(userRepo.getOpt).orElse {
-        userRepo.getByUsername(Username(username))
+        userRepo.getNormalizedUsername(UsernameOps.normalize(username))
       }
     }
     ownerOpt match {
