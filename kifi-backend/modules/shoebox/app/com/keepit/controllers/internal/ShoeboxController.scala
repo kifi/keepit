@@ -481,7 +481,7 @@ class ShoeboxController @Inject() (
 
   def newKeepsInLibrary(userId: Id[User], max: Int) = Action { request =>
     val keeps = newKeepsInLibraryCommander.getLastViewdKeeps(userId, max)
-    Ok(Json.arr(keeps))
+    Ok(Json.toJson(keeps))
   }
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Action { request =>
