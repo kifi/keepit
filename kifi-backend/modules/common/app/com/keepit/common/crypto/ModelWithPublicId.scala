@@ -1,10 +1,15 @@
 package com.keepit.common.crypto
 
+import java.util.concurrent.{ Callable, TimeUnit }
 import javax.crypto.spec.IvParameterSpec
+import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
 import com.keepit.common.db.Id
+import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
+import java.lang.{Long => JLong}
 
+import scala.collection.JavaConverters
 import scala.collection.concurrent.TrieMap
 import scala.util.{ Success, Failure, Try }
 
@@ -58,9 +63,33 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val publicIdIvSpec: IvParameterSpec
 
+  //private val decryptCache: Cache[java.lang.Long, Try[java.lang.Long]] = CacheBuilder.newBuilder().concurrencyLevel(1).initialCapacity(1024).maximumSize(4096).build()
+  private def threadSafeDecrypt(id: Long, config: PublicIdConfiguration): Try[Long] = {
+    //    decryptCache.get(id, new Callable[Try[java.lang.Long]] {
+    //      def call() = synchronized {
+    //        Try(config.aes64bit(publicIdIvSpec).decrypt(id))
+    //      }
+    //    }).map(Long2long)
+    synchronized {
+      Try(config.aes64bit(publicIdIvSpec).decrypt(id))
+    }
+  }
+
+  //private val encryptCache: Cache[java.lang.Long, java.lang.Long] = CacheBuilder.newBuilder().concurrencyLevel(1).initialCapacity(1024).maximumSize(4096).build()
+  private def threadSafeEncrypt(id: Long, config: PublicIdConfiguration): Long = {
+    //    encryptCache.get(id, new Callable[java.lang.Long] {
+    //      def call() = synchronized {
+    //        Long.box(config.aes64bit(publicIdIvSpec).encrypt(id))
+    //      }
+    //    }).toLong
+    synchronized {
+      config.aes64bit(publicIdIvSpec).encrypt(id)
+    }
+  }
+
   def decodePublicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(publicIdPrefix)) {
-      Try(config.aes64bit(publicIdIvSpec).decrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)))).flatMap { id =>
+      threadSafeDecrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)), config).flatMap { id =>
         // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
         if (id > 0 && id < 100000000000L) {
           Success(Id[T](id))
@@ -74,6 +103,6 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   }
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
-    PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
+    PublicId[T](publicIdPrefix + Base62Long.encode(threadSafeEncrypt(id.id, config)))
   }
 }
