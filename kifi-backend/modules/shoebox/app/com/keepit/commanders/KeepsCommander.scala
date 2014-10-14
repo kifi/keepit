@@ -2,6 +2,8 @@ package com.keepit.commanders
 
 import java.util.concurrent.{ Callable, TimeUnit }
 
+import com.keepit.common.cache.TransactionalCaching.Implicits._
+
 import com.google.common.cache.{ CacheBuilder, Cache }
 import com.google.inject.{ Singleton, Inject }
 
@@ -140,6 +142,7 @@ class KeepsCommander @Inject() (
     db: Database,
     keepInterner: KeepInterner,
     searchClient: SearchServiceClient,
+    globalKeepCountCache: GlobalKeepCountCache,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
     uriRepo: NormalizedURIRepo,
@@ -163,8 +166,26 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     libraryHashtagTypeahead: LibraryHashtagTypeaheadCommander,
+    searchServiceClient: SearchServiceClient,
     userHashtagTypeahead: UserHashtagTypeaheadCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+
+  def getBookmarkCountsFuture(): Future[Int] = {
+    globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
+      Future.sequence(searchServiceClient.indexInfoList()).map { results =>
+        var countMap = Map.empty[String, Int]
+        results.flatMap(_._2).foreach { info =>
+          if (info.name.startsWith("BookmarkStore")) {
+            countMap.get(info.name) match {
+              case Some(count) if count >= info.numDocs =>
+              case _ => countMap += (info.name -> info.numDocs)
+            }
+          }
+        }
+        countMap.values.sum
+      }
+    }
+  }
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
     db.readOnlyMaster { implicit session =>
