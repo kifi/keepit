@@ -8,12 +8,19 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
+        curatorName: '&',
+        curatorImage: '&',
+        numKeeps: '&',
+        numFollowers: '&',
+        numNewKeeps: '&',
+        libraryName: '&',
+        visibilityIcon: '&'
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
 
-
       }
+
     };
   }
 ]);

@@ -121,7 +121,13 @@
               </div>
             </div>
             <div kf-tooltip position="right">
-              <div kf-library-mini-card></div>
+              <div kf-library-mini-card
+                curator-name="library.owner.firstName + ' ' + library.owner.lastName"
+                curator-image="library.owner.image"
+                library-name="library.firstLine + ' ' + library.secondLine"
+                num-keeps="library.numKeeps"
+                num-followers="library.numFollowers"
+              ></div>
             </div>
           </a>
 

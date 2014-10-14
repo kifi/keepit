@@ -8,10 +8,10 @@
   box-shadow: 5px 5px 7px 4px #ccc
   display: inline-block
   background-color: white
-  opacity: 0.9
+  opacity: 1.0
 
   hr
-    width: 90%
+    width: 95%
 
 .kf-library-mini-card-visbility
   background-color: #62BD70
@@ -41,6 +41,10 @@
   background-color: #262626
   border-radius: 5px 5px 0px 0px
 
+.kf-library-mini-card-name
+  font-size: 15px
+  color: black
+
 .kf-library-mini-card-stat
   display: inline-block
   height: 46px
@@ -50,8 +54,8 @@
 .kf-library-mini-card-divider
   background-color: #E2E7EC
   width: 1px
-  margin: 5px
-  height: 45px
+  margin: 11px
+  height: 33px
   display: inline-block
 
 .kf-library-mini-card-body
@@ -61,7 +65,8 @@
 
 
 .kf-library-mini-card-stat-title
-  font-weight: 100
+  font-weight: 400
+  font-size: 14px
   color: #4F5864
 
 .kf-library-mini-card-stat-num
@@ -70,5 +75,21 @@
   text-align: center
   color: #4F5864
 
+.kf-library-mini-card-button
+  color: #7eac4e
+  float: right
+  font-size: 12px
+  padding: 5px 11px
+  margin: -2px 10px
+  border-radius: 3px
+  background-color: #FBFBFB
+  border: 1px solid #bbb
+
+.kf-library-mini-card-button::before
+  content: "Following"
+
+.kf-library-mini-card-button:hover::before
+  content: "Unfollow"
+  color: #F06A6E
 
 

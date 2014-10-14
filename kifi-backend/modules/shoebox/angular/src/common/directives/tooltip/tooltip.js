@@ -17,6 +17,8 @@ angular.module('kifi')
 
         var el = element;
 
+        el.css('padding', '' + (attrs.padding || 0) + 'px');
+
 
         function fullyOnScreen(){
           var viewportWidth = $w.innerWidth();
