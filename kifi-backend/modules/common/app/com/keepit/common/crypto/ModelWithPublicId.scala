@@ -1,13 +1,12 @@
 package com.keepit.common.crypto
 
 import javax.crypto.spec.IvParameterSpec
-
 import com.keepit.common.db.Id
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.collection.concurrent.TrieMap
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Success, Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
   private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
@@ -59,21 +58,9 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val publicIdIvSpec: IvParameterSpec
 
-  private def threadSafeDecrypt(id: Long, config: PublicIdConfiguration): Try[Long] = {
-    synchronized {
-      Try(config.aes64bit(publicIdIvSpec).decrypt(id))
-    }
-  }
-
-  private def threadSafeEncrypt(id: Long, config: PublicIdConfiguration): Long = {
-    synchronized {
-      config.aes64bit(publicIdIvSpec).encrypt(id)
-    }
-  }
-
   def decodePublicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(publicIdPrefix)) {
-      threadSafeDecrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)), config).flatMap { id =>
+      Try(config.aes64bit(publicIdIvSpec).decrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)))).flatMap { id =>
         // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
         if (id > 0 && id < 100000000000L) {
           Success(Id[T](id))
@@ -87,6 +74,6 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   }
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
-    PublicId[T](publicIdPrefix + Base62Long.encode(threadSafeEncrypt(id.id, config)))
+    PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
   }
 }
