@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, ActionAuthenticator, SearchServiceController }
+import com.keepit.common.controller.{ MobileController, UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
@@ -18,7 +18,7 @@ class MobileUserSearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     filterFactory: UserSearchFilterFactory,
     shoeboxClient: ShoeboxServiceClient,
-    actionAuthenticator: ActionAuthenticator) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
+    val userActionsHelper: UserActionsHelper) extends UserActions with SearchServiceController with Logging {
 
   val EXCLUDED_EXPERIMENTS = Seq("fake")
 
@@ -30,7 +30,7 @@ class MobileUserSearchController @Inject() (
     }
   }
 
-  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
+  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = UserAction { request =>
     val userId = request.userId
     val userExps = request.experiments.map { _.value }
     log.info(s"user search: userId = $userId, userExps = ${userExps.mkString(" ")}")
@@ -60,7 +60,7 @@ class MobileUserSearchController @Inject() (
     Ok(JsArray(jsVals))
   }
 
-  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = JsonAction.authenticated { request =>
+  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = UserAction { request =>
     val userId = request.userId
     val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher

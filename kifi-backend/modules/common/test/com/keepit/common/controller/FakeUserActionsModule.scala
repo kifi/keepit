@@ -14,10 +14,14 @@ case class FakeUserActionsModule() extends UserActionsModule {
   def configure(): Unit = {
     bind[UserActionsHelper].to[FakeUserActionsHelper]
   }
+
+  @Singleton
+  @Provides
+  def userActionsHelper(impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(impCookie, installCookie)
+
 }
 
-@Singleton
-class FakeUserActionsHelper @Inject() (
+class FakeUserActionsHelper(
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
 

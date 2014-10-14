@@ -12,7 +12,6 @@ import com.keepit.common.routes.ABook
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.serializer.EitherFormat
 import com.keepit.social.SocialNetworkType
 import com.keepit.typeahead.TypeaheadHit
 import play.api.http.Status
@@ -21,6 +20,7 @@ import play.api.libs.json.{ JsArray, JsNumber, _ }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
+import com.keepit.common.json.EitherFormat
 
 trait ABookServiceClient extends ServiceClient {
 

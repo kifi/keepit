@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.site
 
 import com.keepit.eliza.commanders.{ NotificationCommander, MessagingCommander }
-import com.keepit.common.controller.{ WebsiteController, ElizaServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ WebsiteController, ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
 import com.keepit.heimdal._
 
@@ -13,10 +13,10 @@ import com.google.inject.Inject
 class WebsiteMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     notificationCommander: NotificationCommander,
-    actionAuthenticator: ActionAuthenticator,
-    heimdalContextBuilder: HeimdalContextBuilderFactory) extends WebsiteController(actionAuthenticator) with ElizaServiceController {
+    val userActionsHelper: UserActionsHelper,
+    heimdalContextBuilder: HeimdalContextBuilderFactory) extends UserActions with ElizaServiceController {
 
-  def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
+  def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
         notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = false)

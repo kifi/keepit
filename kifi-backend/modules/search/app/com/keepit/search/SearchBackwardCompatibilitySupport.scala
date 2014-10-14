@@ -11,6 +11,7 @@ import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
@@ -43,7 +44,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
         val friends = augmentedItem.relatedKeepers.filter(_ != userId)
         friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
-        val isPrivate = augmentedItem.isSecret(LibraryIndexable.isSecret(libraryIndexer.getSearcher, _))
+        val isPrivate = augmentedItem.isSecret(libraryIndexer.getSearcher)
 
         DetailedSearchHit(
           uriId.id,

@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
@@ -27,7 +27,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
 
   def modules = Seq(
     FakeActorSystemModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FixedResultIndexModule(),
     FakeHttpClientModule(),
     PlayAppConfigurationModule()
@@ -41,7 +41,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         path === "/m/1/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = mobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)

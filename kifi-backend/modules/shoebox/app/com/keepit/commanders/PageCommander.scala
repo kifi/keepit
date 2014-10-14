@@ -10,7 +10,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.search.{ RestrictedKeepInfo, AugmentableItem, ItemAugmentationRequest, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 
@@ -19,6 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
 
 class PageCommander @Inject() (
     db: Database,
