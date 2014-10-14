@@ -626,6 +626,9 @@ api.port.on({
       return lib;
     }));
   },
+  get_library: function (id, respond) {
+    ajax('GET', '/ext/libraries/' + id, respond, respond.bind(null, null));
+  },
   create_library: function (data, respond) {
     ajax('POST', '/ext/libraries', data, function (library) {
       if (libraries) {

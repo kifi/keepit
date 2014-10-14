@@ -530,6 +530,31 @@ if (searchUrlRe.test(document.URL)) !function () {
           position: {my: 'center bottom-9', at: 'center top', of: $a, collision: 'none'},
           click: 'toggle'});
       });
+    }).hoverfu('.kifi-res-lib', function (configureHover) {
+      var $a = $(this);
+      var i = $a.prevAll('.kifi-res-lib').length;
+      var library = $a.closest('.kifi-res-why').data('libraries')[i];
+      var details = $a.data('details');
+      render('html/library_card', $.extend({}, library, details), function (html) {
+        configureHover(html, {
+          position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
+          canLeaveFor: 600,
+          hideAfter: 4000,
+          click: 'toggle'});
+      });
+      if (!details) {
+        api.port.emit('get_library', library.id, function (o) {
+          $a.data('details', o);
+          var $card = ($a.data('hoverfu') || {}).$h;
+          if ($card) {
+            $card.find('.kifi-lc-pic').css('background-image', 'url(' + cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName + ')');
+            $card.find('.kifi-lc-owner').text(o.owner.firstName + ' ' + o.owner.lastName);
+            var $n = $card.find('.kifi-lc-count-n');
+            $n.first().text(o.keeps);
+            $n.last().text(o.followers);
+          }
+        });
+      }
     }).hoverfu('.kifi-res-tags-n', function (configureHover) {
       var $a = $(this);
       var data = $a.closest('.kifi-res-why').data();
@@ -732,6 +757,9 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   function makeWhyFit() {  // 'this' is .kifi-res-why element
     var pxToGo = (function (el, targetWidth) {
+      if (targetWidth === 0) {
+        throw Error('[makeWhyFit] targetWidth === 0 | ' + el.className + ' | ' + el.parentNode.className + ' | ' + el.parentNode.parentNode.className + ' | ' + el.parentNode.parentNode.parentNode.className);
+      }
       if (!el.hasChildNodes()) {
         el = el.previousElementSibling;
       }

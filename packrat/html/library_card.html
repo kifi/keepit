@@ -1,0 +1,10 @@
+<div class="kifi-lc {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}">
+  <div class="kifi-lc-pic"{{#owner}} style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"{{/owner}}></div>
+  <div class="kifi-lc-owner">{{#owner}}{{firstName}} {{lastName}}{{/owner}}</div>
+  <div class="kifi-lc-name {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}">{{name}}</div>
+  <div class="kifi-lc-counts">
+    <div class="kifi-lc-count">Keeps<div class="kifi-lc-count-n">{{keeps}}</div></div>
+    <div class="kifi-lc-count">Followers<div class="kifi-lc-count-n">{{followers}}</div></div>
+  </div>
+  <div class="kifi-lc-tri"></div>
+</div>
