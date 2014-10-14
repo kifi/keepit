@@ -55,6 +55,9 @@ angular.module('kifi')
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
       pageTags: route('/collections/page'),
+      searchTags: function (query, limit) {
+        return route('/collections/search') + '?query=' + query + '&limit=' + limit;
+      },
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
