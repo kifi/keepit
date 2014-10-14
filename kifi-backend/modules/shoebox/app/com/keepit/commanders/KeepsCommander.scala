@@ -643,7 +643,7 @@ class KeepsCommander @Inject() (
     } getOrElse 0
   }
 
-  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateUriGraph: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
+  def addToCollection(collectionId: Id[Collection], keeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${keeps.length})") {
     val result = db.readWrite { implicit s =>
       val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
       val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
@@ -668,7 +668,7 @@ class KeepsCommander @Inject() (
       }
       tagged
     }
-    if (updateUriGraph) {
+    if (updateIndex) {
       searchClient.updateKeepIndex()
       libraryHashtagTypeahead.refreshByIds(keeps.map(_.libraryId).flatten.distinct)
     }

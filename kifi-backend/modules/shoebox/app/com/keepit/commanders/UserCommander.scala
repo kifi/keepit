@@ -798,7 +798,7 @@ class UserCommander @Inject() (
   def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
     if (overrideRestrictions || UsernameOps.isValid(username.value)) {
       db.readWrite { implicit session =>
-        val existingUser = userRepo.getNormalizedUsername(UsernameOps.normalize(username.value))
+        val existingUser = userRepo.getByUsername(username)
 
         if (existingUser.isEmpty || existingUser.get.id.get == userId) {
           if (!readOnly) {
