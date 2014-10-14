@@ -164,6 +164,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def globalBookmarkCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new GlobalKeepCountCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 1 minute))
+
+  @Singleton
+  @Provides
   def socialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoCountCache(stats, accessLog, (outerRepo, 1 day))
 

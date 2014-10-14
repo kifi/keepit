@@ -568,14 +568,14 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)) {
       val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
-      val bmsCount = cacheProvider.userBookmarkCountCache.get(KeepCountKey(Some(userId)))
+      val bmsCount = cacheProvider.userBookmarkCountCache.get(KeepCountKey(userId))
 
       (friendsCount, bmsCount) match {
-        case (Some(f), Some(bm)) => {
+        case (Some(f), Some(bm)) =>
           val segment = UserSegmentFactory(bm, f)
           Future.successful(segment)
-        }
-        case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
+        case _ =>
+          call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
       }
     }
   }
