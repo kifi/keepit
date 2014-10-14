@@ -46,7 +46,13 @@
 </tr>
 
 @allRecos.recommendations.map { reco =>
-<tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
+  <tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
+}
+@if(allRecos.recommendations.nonEmpty && allRecos.newLibraryItems.nonEmpty) {
+  @email.tags.trHorizontalLine()
+}
+@allRecos.newLibraryItems.map { reco =>
+  <tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
 }
 
 </table>

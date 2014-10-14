@@ -5,15 +5,21 @@
     <tr>
         <td valign="top">
             <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                @email.tags.trSpacer(10)
+                @email.tags.trSpacer(17)
                 @reco.reasonHeader.map { reasonHeader =>
                 <tr>
-                    <td align="center" style="font-family:Arial,sans-serif;font-size:18px;color:#92938d;text-align:center;line-height:24px;font-weight:bold;">
-                          @reasonHeader
-                    </td>
+                  <td>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                      <td width="82">&nbsp;</td>
+                      <td align="center" style="font-family:Arial,sans-serif;font-size:18px;color:#92938d;text-align:center;line-height:24px;font-weight:bold;">
+                        @reasonHeader
+                      </td>
+                      <td width="77">&nbsp;</td>
+                    </table>
+                  </td>
                 </tr>
-                }
                 @email.tags.trSpacer(17)
+                }
                 <tr>
                     <td align="center" valign="top" width="535">
                         <a href="@reco.viewPageUrl" target="_blank">
