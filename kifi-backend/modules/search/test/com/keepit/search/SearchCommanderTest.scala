@@ -11,6 +11,7 @@ import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardSpecParser
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.AugmentationCommanderImpl
 
 class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 

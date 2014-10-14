@@ -16,6 +16,11 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.time._
 import org.joda.time.Minutes
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.typeahead.KifiUserTypeahead.UserUserTypeahead
+
+object KifiUserTypeahead {
+  type UserUserTypeahead = PersonalTypeahead[User, User, User]
+}
 
 class KifiUserTypeahead @Inject() (
     db: Database,
@@ -24,7 +29,7 @@ class KifiUserTypeahead @Inject() (
     store: KifiUserTypeaheadStore,
     userRepo: UserRepo,
     userConnectionRepo: UserConnectionRepo,
-    UserCache: UserIdCache) extends Typeahead[User, User, User, PersonalTypeahead[User, User, User]] with Logging { // User as info might be too heavy
+    UserCache: UserIdCache) extends Typeahead[User, User, User, UserUserTypeahead] with Logging { // User as info might be too heavy
   implicit val fj = ExecutionContext.fj
 
   protected val refreshRequestConsolidationWindow = 10 minutes
@@ -48,7 +53,7 @@ class KifiUserTypeahead @Inject() (
 
   protected def extractName(info: User): String = info.fullName
 
-  protected def invalidate(typeahead: PersonalTypeahead[User, User, User]): Unit = {
+  protected def invalidate(typeahead: UserUserTypeahead): Unit = {
     val userId = typeahead.ownerId
     val filter = typeahead.filter
     store += (userId -> filter)

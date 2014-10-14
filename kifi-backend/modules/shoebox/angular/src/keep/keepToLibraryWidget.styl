@@ -91,7 +91,7 @@ keep-to-library-lib-icon =
     background-color: #fcfcfc
 
   .library-select-list
-    max-height: 383px
+    max-height: 376px
     overflow-x: hidden
     overflow-y: scroll
 
@@ -119,3 +119,155 @@ keep-to-library-lib-icon =
 
   .keep-to-library-lib-icon
     {keep-to-library-lib-icon}
+    display: inline-block
+    width: 23px
+    height: 31px
+    background-repeat: no-repeat
+
+  .keep-to-library-create
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #f3f5f7
+    white-space: nowrap
+    overflow: hidden
+    cursor: pointer
+
+  .keep-to-library-create-header
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #fff
+    white-space: nowrap
+    overflow: hidden
+    cursor: pointer
+
+  .go-back-left-arrow
+    position: absolute
+    top: 13px
+    left: 15px
+    border-radius: 100%
+    width: 20px
+    height: 20px
+    background-color: #c8ced7
+    cursor: pointer
+
+    &:hover
+    &:focus
+      background-color: #bbc1ca
+
+    &:active
+      background-color: #afb5be
+
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      left: 47%
+      border-radius: 2px
+      width: 2px;
+      background: #fff
+      font-size: 0
+
+    &::before
+      top: 4px
+      bottom: 8px
+      transform: translate(-1px) rotate(45deg)
+
+    &::after
+      top: 8px
+      bottom: 4px
+      transform: translate(-1px) rotate(-45deg)
+
+  .keep-to-library-create-heading
+    box-sizing: border-box
+    padding: 8px 15px
+    font-weight: 600
+    background-color: #f3f5f7
+
+  .keep-to-library-create-name-input-container
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #fff
+    white-space: nowrap
+    overflow: hidden
+
+  .keep-to-library-create-name-input
+    border: none
+    width: 230px
+    font-size: 12px
+    placeholder secondaryTextGray
+
+  .keep-to-library-create-visibility
+    margin-top: 10px
+
+  .keep-to-library-create-visibility-input
+    display: none
+
+  .keep-to-library-create-visibility-custom-input
+    position: relative
+    display: inline-block
+    margin: 0 15px
+    border-radius: 18px
+    width: 66px
+    height: 36px
+    background-position: 11px 50%
+    background-size: auto 12px
+    background-repeat: no-repeat
+    background-color: #e3e3e3
+    vertical-align: middle
+    transition: background-color 0.2s
+    cursor: pointer
+
+    &::after
+      position: absolute;
+      bottom: 4px
+      left: 4px
+      border-radius: 50%
+      width: 28px
+      height: 28px
+      background-color: #fff
+      box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
+      transition: transform 0.2s
+      content: '';
+
+    &:focus
+    &:hover
+      &::after
+        background-color: #fefcf1
+
+  .keep-to-library-create-visibility-input:checked ~ .keep-to-library-create-visibility-custom-input
+      background-color: #f06463
+
+      &::after
+        transform: translate(30px)
+
+  .keep-to-library-visibility-explanation
+    padding: 15px 30px 35px
+
+  .keep-to-library-create-button-container
+    padding: 10px
+    background-color: #f3f5f7
+    text-align: center
+
+  .keep-to-library-create-button
+    width: 100px
+    padding: 5px 0
+    border: 1px solid rgba(166, 175, 189, 0.53)
+    border-radius: 6px
+    font-size: 12px
+    font-weight: 700
+    font-smoothing: antialiased
+    color: #5c6373
+    background: linear-gradient(to top, #f3f3f3, #fff)
+    cursor: pointer
+
+    &:hover
+      background: #e6e8ea
+
+    &:active
+      background: #dadcde

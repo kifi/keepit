@@ -19,6 +19,11 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import org.joda.time.Minutes
+import com.keepit.typeahead.SocialUserTypeahead.UserSocialUserTypeahead
+
+object SocialUserTypeahead {
+  type UserSocialUserTypeahead = PersonalTypeahead[User, SocialUserInfo, SocialUserBasicInfo]
+}
 
 class SocialUserTypeahead @Inject() (
     db: Database,
@@ -27,7 +32,7 @@ class SocialUserTypeahead @Inject() (
     store: SocialUserTypeaheadStore,
     cache: SocialUserTypeaheadCache,
     socialConnRepo: SocialConnectionRepo,
-    socialUserRepo: SocialUserInfoRepo) extends Typeahead[User, SocialUserInfo, SocialUserBasicInfo, PersonalTypeahead[User, SocialUserInfo, SocialUserBasicInfo]] with Logging {
+    socialUserRepo: SocialUserInfoRepo) extends Typeahead[User, SocialUserInfo, SocialUserBasicInfo, UserSocialUserTypeahead] with Logging {
 
   implicit val fj = ExecutionContext.fj
 
@@ -68,7 +73,7 @@ class SocialUserTypeahead @Inject() (
 
   protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
-  protected def invalidate(typeahead: PersonalTypeahead[User, SocialUserInfo, SocialUserBasicInfo]) = {
+  protected def invalidate(typeahead: UserSocialUserTypeahead) = {
     val userId = typeahead.ownerId
     val filter = typeahead.filter
     cache.set(SocialUserTypeaheadKey(userId), filter)

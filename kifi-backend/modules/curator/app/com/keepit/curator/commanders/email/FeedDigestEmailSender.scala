@@ -1,6 +1,7 @@
 package com.keepit.curator.commanders.email
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.Id
@@ -9,15 +10,16 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.template.helpers.toHttpsUrl
+import com.keepit.common.mail.template.helpers.{ libraryName, toHttpsUrl, trackingParam }
+import com.keepit.common.mail.template.{ EmailToSend, EmailTrackingParam }
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.curator.commanders.{ SeedAttributionHelper, RecommendationGenerationCommander, SeedIngestionCommander, CuratorAnalytics }
-import com.keepit.curator.model.{ TopicAttribution, UriRecommendation, UriRecommendationRepo, UserAttribution, RecommendationClientType }
+import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationGenerationCommander, SeedAttributionHelper, SeedIngestionCommander }
+import com.keepit.curator.model.{ RecommendationClientType, UriRecommendation, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model._
-import com.keepit.search.{ AugmentableItem, ItemAugmentationRequest, ItemAugmentationResponse, SearchServiceClient }
+import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, URISummary, Keep, NormalizedURI }
+import com.keepit.search.SearchServiceClient
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, AugmentableItem, ItemAugmentationRequest }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
@@ -29,14 +31,14 @@ import scala.concurrent.duration._
 import scala.util.{ Failure, Random, Success }
 
 object DigestEmail {
+  // the possible # of minutes to show in the email (1..10, 15, 20, 30, etc)
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
 
-  // recommendations to actual email to the user
-  val MIN_RECOMMENDATIONS_TO_DELIVER = 2
-  val MAX_RECOMMENDATIONS_TO_DELIVER = 3
+  val LIBRARY_KEEPS_TO_FETCH = 20
 
-  // fetch additional recommendations in case some are filtered out
-  val RECOMMENDATIONS_TO_QUERY = 100
+  // max # of total digest items to include in the email
+  val MIN_KEEPS_TO_DELIVER = 2
+  val MAX_KEEPS_TO_DELIVER = 5
 
   // exclude recommendations with an image less than this
   val MIN_IMAGE_WIDTH_PX = 535
@@ -84,8 +86,11 @@ trait DigestItemCandidate {
   val userAttribution: Option[UserAttribution]
 }
 
-case class DigestRecoCandidate(uriId: Id[NormalizedURI], topic: Option[TopicAttribution],
-  userAttribution: Option[UserAttribution], sourceReco: UriRecommendation) extends DigestItemCandidate
+case class DigestRecoCandidate(sourceReco: UriRecommendation, uriId: Id[NormalizedURI]) extends DigestItemCandidate {
+  val topic = sourceReco.attribution.topic
+  val recommendationId = sourceReco.id.get
+  val userAttribution = sourceReco.attribution.user
+}
 
 case class DigestLibraryItemCandidate(keep: Keep, userAttribution: Option[UserAttribution]) extends DigestItemCandidate {
   val uriId = keep.uriId
@@ -107,34 +112,40 @@ trait DigestItem {
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
 
-  // todo(josh) encode urls?? add more analytics information
-  val viewPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}"
+  def viewPageUrl(content: String): Html =
+    if (isForQa) Html(uri.url)
+    else urlWithTracking(s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}", content)
+
   val sendPageUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
   val keepUrl = if (isForQa) uri.url else s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
 
   val reasonHeader: Option[Html]
+
+  private def urlWithTracking(url: String, content: String) = Html(s"$url&${EmailTrackingParam.paramName}=${trackingParam(content)}")
 }
 
-case class DigestRecommendationItem(sourceReco: UriRecommendation, topicOpt: Option[TopicAttribution], uri: NormalizedURI, uriSummary: URISummary,
+case class DigestRecommendationItem(uriRecommendation: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
-  val reasonHeader = topicOpt.map(t => Html(s"Recommended because it’s trending in a topic you’re interested in: ${t.topicName}"))
+  val reasonHeader = uriRecommendation.attribution.topic.map { t =>
+    Html(s"Recommended because it’s about a topic you are interested in: ${t.topicName}")
+  }
 }
 
-case class DigestLibraryItem(keep: Keep, library: Library, uri: NormalizedURI, uriSummary: URISummary,
+case class DigestLibraryItem(libraryId: Id[Library], uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
-  val reasonHeader = Some(Html(s"Recommended because it was kept in the library you follow: ${library.name}"))
+  val reasonHeader = Some(Html(s"Recommended because it was kept into a library you follow: ${libraryName(libraryId)}"))
 }
 
 case class DigestItemKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0, friendsToShow: Seq[Id[User]] = Seq.empty) {
 
-  val message = {
+  val messageOpt = {
     // adding s works since we are only dealing with "friend" and "other"
     @inline def pluralize(size: Int, word: String) = size + " " + (if (size == 1) word else word + "s")
 
     val friendsMsg = if (friends.size > 0) Some(pluralize(friends.size, "friend")) else None
     val othersMsg = if (others > 0) Some(pluralize(others, "other")) else None
     val keepersMessagePrefix = Seq(friendsMsg, othersMsg).flatten.mkString(" and ")
-    if (keepersMessagePrefix.size > 0) keepersMessagePrefix + " kept this" else ""
+    if (keepersMessagePrefix.size > 0) Some(keepersMessagePrefix + " kept this") else None
   }
 }
 
@@ -152,12 +163,11 @@ class FeedDigestEmailSender @Inject() (
     seedAttributionHelper: SeedAttributionHelper,
     queue: SQSQueue[SendFeedDigestToUserMessage],
     curatorAnalytics: CuratorAnalytics,
+    userExperimentCommander: RemoteUserExperimentCommander,
     protected val config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import com.keepit.curator.commanders.email.DigestEmail._
-
-  val defaultUriRecommendationScores = UriRecommendationScores()
 
   private val queueLock = new ReactiveLock(10)
 
@@ -187,7 +197,8 @@ class FeedDigestEmailSender @Inject() (
               else log.warn(s"[processQueue] digest email was not mailed: $digestMail")
               message.consume()
             } recover {
-              case e => airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
+              case e =>
+                airbrake.notify(s"error sending digest email to ${message.body.userId}", e)
             } map (_ => true)
           } catch {
             case e: Throwable =>
@@ -213,14 +224,14 @@ class FeedDigestEmailSender @Inject() (
     val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
     // todo(josh) add detailed tracking of sent digest emails; abort if another email was sent within N days
-
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      //todo(eishay): find how many new library keeps to show and pull them in.
+      // TODO(josh) fix bug getting keeps from library (https://fortytwo.airbrake.io/projects/99522/groups/1266393588775530264/notices/1266393588775530263)
+      //keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
     } yield {
-      val newLibraryItems = Seq[DigestLibraryItem]()
-      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(userId, recos, newLibraryItems, socialInfos)
+      val keepsFromLibrary = Seq[DigestLibraryItem]()
+      if (recos.size >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
       else {
         log.info(s"NOT sending digest email to $userId; 0 worthy recos")
         Future.successful(DigestMail(userId = userId, mailSent = false, recommendations = Seq.empty))
@@ -229,8 +240,7 @@ class FeedDigestEmailSender @Inject() (
     digestRecoMailF.flatten
   }
 
-  private def composeAndSendEmail(userId: Id[User],
-    digestRecos: Seq[DigestRecommendationItem], newLibraryItems: Seq[DigestLibraryItem],
+  private def composeAndSendEmail(userId: Id[User], digestRecos: Seq[DigestRecommendationItem], newLibraryItems: Seq[DigestLibraryItem],
     socialInfos: Seq[SocialUserInfo]): Future[DigestMail] = {
 
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
@@ -252,10 +262,8 @@ class FeedDigestEmailSender @Inject() (
     shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
-          digestRecos.foreach { digestReco =>
-            uriRecommendationRepo.incrementDeliveredCount(digestReco.sourceReco.id.get, true)
-          }
-          curatorAnalytics.trackDeliveredItems(digestRecos.map(_.sourceReco), Some(RecommendationClientType.Email))
+          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, true))
+          curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationClientType.Email))
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
       }
@@ -304,13 +312,13 @@ class FeedDigestEmailSender @Inject() (
     val uriRecosF = recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, rankStrategy.recommendationsToQuery, RECO_THRESHOLD)
     uriRecosF flatMap { recos =>
       val presortedRecos = recos.sorted(rankStrategy.ordering).map { reco =>
-        DigestRecoCandidate(uriId = reco.uriId, topic = reco.attribution.topic, userAttribution = reco.attribution.user, sourceReco = reco)
+        DigestRecoCandidate(uriId = reco.uriId, sourceReco = reco)
       }
-      FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, getDigestReco)
+      FutureHelpers.findMatching(presortedRecos, rankStrategy.maxRecommendationsToDeliver, isEmailWorthy, transformRecoCandidate)
     } map (_.flatten)
   }
 
-  private def isEmailWorthy(recoOpt: Option[DigestRecommendationItem]) = {
+  private def isEmailWorthy(recoOpt: Option[DigestItem]) = {
     recoOpt match {
       case Some(reco) =>
         val summary = reco.uriSummary
@@ -322,62 +330,55 @@ class FeedDigestEmailSender @Inject() (
     }
   }
 
-  private def getDigestReco(candidate: DigestItemCandidate): Future[Option[DigestRecommendationItem]] = {
+  private case class DigestItemDetails(uri: NormalizedURI, summary: URISummary, keepers: DigestItemKeepers)
+
+  private def getDigestReco[S <: DigestItemCandidate, T <: DigestItem](candidate: S)(transform: DigestItemDetails => Option[T]): Future[Option[T]] = {
     val uriId = candidate.uriId
     val uriF = shoebox.getNormalizedURI(uriId)
-    val summariesF = getRecommendationSummaries(uriId)
+    val summariesF = shoebox.getUriSummaries(Seq(uriId))
 
-    for {
-      uri <- uriF
-      summaries <- summariesF
-      if summaries.isDefinedAt(uriId)
-    } yield {
-      val keepers = getRecoKeepers(candidate)
-      candidate match {
-        case reco: DigestRecoCandidate =>
-          Some(DigestRecommendationItem(sourceReco = reco.sourceReco, topicOpt = reco.topic, uri = uri,
-            uriSummary = summaries(uriId), keepers = keepers, config = config))
+    uriF flatMap (uri => summariesF map { summaries =>
+      summaries.get(uriId) flatMap { uriSummary =>
+        val keepers = getRecoKeepers(candidate)
+        transform(DigestItemDetails(uri, uriSummary, keepers))
+      } orElse {
+        airbrake.notify(s"failed to load URISummary for uriId=$uriId")
+        None
       }
-    }
-  } recover {
-    case throwable =>
-      airbrake.notify(s"failed to load uri reco details for $candidate", throwable)
-      None
+    })
   }
 
   /**
    * this method assumes that all keeps are in library
    */
-  private def getAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
+  private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
     val request = ItemAugmentationRequest.uniform(userId, keeps.map(_.uriId).map { uriId => AugmentableItem(uriId) }: _*)
-    val keepMap = keeps map { k => (k.uriId, k.libraryId.get) -> k } toMap
+    val keepMap = keeps.map { k => (k.uriId, k.libraryId.get) -> k }.toMap
     val augmentations: Future[ItemAugmentationResponse] = search.augmentation(request)
     augmentations map { augmentations =>
       val userAttributions = augmentations.infos map {
         case (augmentableItem, augmentationInfo) =>
           (augmentableItem.uri -> augmentableItem.keptIn.get) -> seedAttributionHelper.toUserAttribution(augmentationInfo)
       }
-      keepMap map {
+      keepMap.map {
         case (key, keep) =>
           userAttributions.get(key) map { userAttribution =>
             DigestLibraryItemCandidate(keep, Some(userAttribution))
           } getOrElse DigestLibraryItemCandidate(keep, None)
-      } toSeq
+      }.toSeq
     }
   }
 
-  private def filterDigestLibraryItem(candidates: Seq[DigestLibraryItemCandidate], max: Int): Future[Seq[DigestItem]] = {
-    FutureHelpers.findMatching(candidates, max, isEmailWorthy, getDigestReco).map(_.flatten)
-  }
-
-  //  private def keepsToLibraryDigestItems(userId: Id[User], keeps: Seq[Keep], max: Int): Future[Seq[DigestItem]] = {
-  //    getAttributions(userId, keeps) map { candidates =>
-  //      filterDigestLibraryItem(candidates, max)
-  //    }
-  //  }
-  //
-  private def getRecommendationSummaries(uriIds: Id[NormalizedURI]*) = {
-    shoebox.getUriSummaries(uriIds)
+  private def getKeepsForLibrary(userId: Id[User], max: Int): Future[Seq[DigestLibraryItem]] = {
+    userExperimentCommander.getExperimentsByUser(userId) flatMap { experiments =>
+      if (experiments.contains(ExperimentType.LIBRARIES)) {
+        for {
+          keeps <- shoebox.newKeepsInLibrary(userId, LIBRARY_KEEPS_TO_FETCH)
+          candidates <- getLibraryKeepAttributions(userId, keeps)
+          digestLibraryItems <- FutureHelpers.findMatching(candidates, max, isEmailWorthy, transformLibraryCandidate).map(_.flatten)
+        } yield digestLibraryItems
+      } else Future.successful(Seq.empty)
+    }
   }
 
   private def getRecoKeepers(candidate: DigestItemCandidate): DigestItemKeepers = {
@@ -389,5 +390,18 @@ class FeedDigestEmailSender @Inject() (
       case _ => DigestItemKeepers()
     }
   }
+
+  private def transformRecoCandidate(candidate: DigestRecoCandidate): Future[Option[DigestRecommendationItem]] =
+    getDigestReco(candidate) { info =>
+      Some(DigestRecommendationItem(uriRecommendation = candidate.sourceReco, uri = info.uri,
+        uriSummary = info.summary, keepers = info.keepers, config = config))
+    }
+
+  private def transformLibraryCandidate(candidate: DigestLibraryItemCandidate): Future[Option[DigestLibraryItem]] =
+    getDigestReco(candidate) { info =>
+      candidate.keep.libraryId map { libId =>
+        DigestLibraryItem(libraryId = libId, uri = info.uri, uriSummary = info.summary, keepers = info.keepers, config = config)
+      }
+    }
 
 }

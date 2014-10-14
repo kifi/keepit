@@ -23,6 +23,7 @@
     allowFreeTagging: false,
 
     // Callbacks
+    onBlur: null,
     onSelect: null,
     onAdd: null,
     onDelete: null,
@@ -176,12 +177,16 @@
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
-        hideDropdown();
-        var val = this.value;
-        if (val && settings.allowFreeTagging) {
-          addFreeTags();
-        } else if (val !== val.trim()) {
-          this.value = val.trim();
+        if (selectedDropdownItem && settings.onBlur && settings.onBlur.call($hiddenInput, $.data(selectedDropdownItem, 'tokenInput')) !== false) {
+          handleItemChosen(selectedDropdownItem);
+        } else {
+          var val = this.value;
+          if (val && settings.allowFreeTagging) {
+            addFreeTags();
+          } else if (val !== val.trim()) {
+            this.value = val.trim();
+          }
+          hideDropdown();
         }
         $tokenList.removeClass(classes.listFocused);
       })

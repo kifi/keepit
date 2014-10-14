@@ -8,14 +8,13 @@ import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.common.strings._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.serializer.{ TupleFormat, BinaryFormat }
+import com.keepit.common.json.TupleFormat
+import com.keepit.serializer.{ BinaryFormat }
 import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
-import scala.Some
 
 case class Hashtag(tag: String) extends AnyVal {
   override def toString = tag

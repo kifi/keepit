@@ -16,7 +16,7 @@ import play.api.Play.current
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ URISanitizer, URI }
 import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.model.HttpProxy
@@ -225,7 +225,11 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   private def fetchHandler(uri: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
     if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $uri has no host!")
     val url = uri.toString()
-    implicit val httpGet = new HttpGet(url)
+    implicit val httpGet = {
+      try { new HttpGet(url) } catch {
+        case _: Exception => new HttpGet(URISanitizer.sanitize(url)) // try sanitized version of URL as a fallback
+      }
+    }
     implicit val httpContext = new BasicHttpContext()
 
     proxy.map { httpProxy =>

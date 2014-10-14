@@ -1,0 +1,23 @@
+@()(content: Html)
+@import com.keepit.common.mail.template.helpers._
+@email.tags.contentWrapper() {
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="color:#333;font-family:Arial,sans-serif;font-size:16px;">
+  @email.tags.trHorizontalLine(524)
+  @email.tags.trSpacer(34)
+  <tr><td>
+    <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td width="20" height="29"><img width="20" height="29" src="@assetUrl("Bulb.png")" style="display:block;"/></td>
+        <td height="29" align="left" valign="middle" style="padding-left:12px;color:#333;font-weight:bold;font-family:Arial,sans-serif;font-size:16px;line-height:29px;">
+          Did you know?
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+  @email.tags.trSpacer(26)
+  <tr><td style="color:#333;font-family:Arial,sans-serif;font-size:16px;line-height:22px;">
+    @content
+  </td></tr>
+  @email.tags.trSpacer(54)
+</table>
+}

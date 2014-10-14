@@ -12,7 +12,7 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.serializer.TupleFormat
+import com.keepit.common.json.TupleFormat
 
 case class LibraryHashtagTypeahead(ownerId: Id[Library], tags: Seq[Hashtag], filter: PrefixFilter[Hashtag], createdAt: DateTime) extends PersonalTypeahead[Library, Hashtag, Hashtag] {
   def getInfos(tagIds: Seq[Id[Hashtag]]) = Future.successful(tagIds.map(id => tags(id.id.toInt)))
@@ -22,7 +22,7 @@ object LibraryHashtagTypeahead {
   implicit val format = Json.format[LibraryHashtagTypeahead]
 }
 
-class HashtagTypeahead @Inject() (
+class LibraryHashtagTypeaheadCommander @Inject() (
     val airbrake: AirbrakeNotifier,
     cache: LibraryHashtagTypeaheadCache,
     clock: Clock,
