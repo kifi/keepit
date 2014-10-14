@@ -3,7 +3,7 @@
 //
 generic-dialog-button =
   width: 100px
-  padding: 13px 0
+  padding: 13px 0 10px
   border: 1px solid rgba(166, 175, 189, 0.53)
   border-radius: 6px
   font-size: 12px
@@ -12,25 +12,13 @@ generic-dialog-button =
   color: #5c6373
   cursor: pointer
 
-  // TODO: ask Danny about warn button colors.
-  // &.dialog-warn
-  //   background-color: #ce6159
+  &.dialog-warn
+    background: #d50000
+    color: white
 
-  //   &:focus
-  //   &:hover
-  //     background-color: #d3716a
-
-  // TODO: ask Danny about cancel button colors.
-  // &.dialog-cancel
-  //   background-color: #b8c5d1
-
-  //   &:focus
-  //   &:hover
-  //     background-color: #C5D2DE
-
-  //   &:active
-  //     background-color: #9FACB8
-
+    &:focus
+    &:hover
+      background: #c80000
 
 .modal-dialog.modal-dialog
   position: fixed
