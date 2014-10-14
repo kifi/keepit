@@ -116,28 +116,6 @@ class KeepsController @Inject() (
   }
 
   // todo(martin) - looks like this endpoint is not being used, consider removing
-  def getImageUrl() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlOpt = (request.body \ "url").asOpt[String]
-    log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
-    urlOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
-      case Some(url) => {
-        val (uriOpt, pageInfoOpt) = db.readOnlyReplica { implicit ro =>
-          val uriOpt = normalizedURIInterner.getByUri(url)
-          val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-          (uriOpt, pageInfoOpt)
-        }
-        uriOpt match {
-          case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
-          case Some(uri) => {
-            toJsObject(url, uri, pageInfoOpt) map { js => Ok(js) }
-          }
-        }
-      }
-    }
-  }
-
-  // todo(martin) - looks like this endpoint is not being used, consider removing
   def getImageUrls() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
