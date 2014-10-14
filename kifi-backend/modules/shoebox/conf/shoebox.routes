@@ -290,6 +290,7 @@ POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsContro
 POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
+GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String)
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
@@ -313,6 +314,7 @@ POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.Libra
 DELETE  /site/libraries/:id/keeps/:keepId   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
 POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
+GET     /site/libraries/:id/tags/search  @com.keepit.controllers.website.LibraryController.searchLibraryTags(id: PublicId[Library], query: String, limit: Option[Int] = None)
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
@@ -369,8 +371,11 @@ POST    /site/user/pic              @com.keepit.controllers.website.UserControll
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
+GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
+
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
 
 ##########################################
 # Email-Link API
@@ -490,12 +495,6 @@ GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfo
 GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
 
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
-
-GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
-GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
-GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
-GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
-GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView

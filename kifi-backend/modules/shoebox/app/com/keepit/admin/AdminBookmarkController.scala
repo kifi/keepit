@@ -201,7 +201,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = keepCommander.getBookmarkCountsFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     val bookmarkTodayAllCountsFuture = future {
       timing("load bookmarks counts from today") {
@@ -265,7 +265,7 @@ class AdminBookmarksController @Inject() (
     val PAGE_SIZE = 25
 
     val bmsFut = future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = keepCommander.getBookmarkCountsFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }

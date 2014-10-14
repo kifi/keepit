@@ -30,14 +30,13 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
-  actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
-    extends WebsiteController(actionAuthenticator) with UserActions with LibraryAccessActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
@@ -414,6 +413,13 @@ class LibraryController @Inject() (
     keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
       case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
+    }
+  }
+
+  def searchLibraryTags(pubId: PublicId[Library], query: String, limit: Option[Int] = None) = UserAction.async { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    keepsCommander.searchLibraryTags(libraryId, query, limit).map { hashTagResults =>
+      Ok(Json.obj("results" -> hashTagResults))
     }
   }
 

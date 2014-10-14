@@ -135,7 +135,7 @@ class HeimdalContextBuilder {
   def addExperiments(experiments: Set[ExperimentType]): Unit = {
     this += ("experiments", experiments.map(_.value).toSeq)
     this += ("userStatus", ExperimentType.getUserStatus(experiments))
-    experiments.foreach { ex => this += (ex.value, true) }
+    experiments.foreach { ex => this += ("exp_" + ex.value, true) }
   }
 
   def addUserAgent(userAgent: String): Unit = {

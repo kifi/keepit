@@ -15,15 +15,15 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{ Failure, Success }
 
 class MobilePageController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   keepRepo: KeepRepo,
   userCommander: UserCommander,
   collectionCommander: CollectionCommander,
   pageCommander: PageCommander)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def getPageDetails() = JsonAction.authenticatedParseJson { request =>
+  def getPageDetails() = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     URI.parse(url) match {
       case Success(_) =>
@@ -35,7 +35,7 @@ class MobilePageController @Inject() (
     }
   }
 
-  def queryExtension(page: Int, pageSize: Int) = JsonAction.authenticatedParseJsonAsync { request =>
+  def queryExtension(page: Int, pageSize: Int) = UserAction.async(parse.tolerantJson) { request =>
 
     val url = (request.body \ "url").as[String]
     val sortOrder = "user"
