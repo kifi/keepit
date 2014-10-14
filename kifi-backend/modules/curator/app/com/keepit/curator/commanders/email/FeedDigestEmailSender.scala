@@ -128,14 +128,14 @@ case class DigestLibraryItem(keep: Keep, library: Library, uri: NormalizedURI, u
 
 case class DigestItemKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0, friendsToShow: Seq[Id[User]] = Seq.empty) {
 
-  val message = {
+  val messageOpt = {
     // adding s works since we are only dealing with "friend" and "other"
     @inline def pluralize(size: Int, word: String) = size + " " + (if (size == 1) word else word + "s")
 
     val friendsMsg = if (friends.size > 0) Some(pluralize(friends.size, "friend")) else None
     val othersMsg = if (others > 0) Some(pluralize(others, "other")) else None
     val keepersMessagePrefix = Seq(friendsMsg, othersMsg).flatten.mkString(" and ")
-    if (keepersMessagePrefix.size > 0) keepersMessagePrefix + " kept this" else ""
+    if (keepersMessagePrefix.size > 0) Some(keepersMessagePrefix + " kept this") else None
   }
 }
 
