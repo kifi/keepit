@@ -21,6 +21,7 @@ import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 import scala.collection.mutable.ListBuffer
+import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -90,7 +91,6 @@ class SearchServiceClientImpl(
 
   def updateKeepIndex(): Unit = {
     broadcast(Search.internal.updateKeepIndex())
-    broadcast(Search.internal.updateURIGraph())
   }
 
   def updateLibraryIndex(): Unit = {

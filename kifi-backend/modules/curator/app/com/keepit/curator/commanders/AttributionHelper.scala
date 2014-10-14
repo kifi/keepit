@@ -1,13 +1,14 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
-import com.keepit.search.{ AugmentableItem, AugmentationInfo, ItemAugmentationRequest, RestrictedKeepInfo, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentationInfo, AugmentableItem }
 
 class SeedAttributionHelper @Inject() (
     db: Database,

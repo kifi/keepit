@@ -1,6 +1,6 @@
 package com.keepit.controllers.search
 
-import com.keepit.common.controller.{ SearchServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.search.message.MessageSearchCommander
 import com.keepit.common.db.Id
 import com.keepit.model.User
@@ -16,7 +16,7 @@ import com.keepit.common.core._
 
 class MessageSearchController @Inject() (
     commander: MessageSearchCommander,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def search(userId: Id[User], query: String, page: Int) = Action.async { request =>

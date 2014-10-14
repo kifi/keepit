@@ -12,7 +12,6 @@ import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, S
 import com.keepit.model.{ LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.twirl.api.Html
 
@@ -71,7 +70,7 @@ class EmailTestController @Inject() (
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
 
-    val emailOptF = Some(name) collect {
+    val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "welcome" => emailSenderProvider.welcome.sendToUser(userId)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
@@ -83,18 +82,18 @@ class EmailTestController @Inject() (
       case "connectionMade" => emailSenderProvider.connectionMade.sendToUser(userId, friendId, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
       case "socialFriendJoined" => emailSenderProvider.connectionMade.sendToUser(userId, friendId, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(FACEBOOK))
       case "contactJoined" => emailSenderProvider.contactJoined.sendToUser(userId, friendId)
-      case "libraryInviteUser" => {
+      case "libraryInviteUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, userId = Some(friendId), access = LibraryAccess.READ_ONLY, message = msg)
         emailSenderProvider.libraryInviteEmail.inviteUserToLibrary(invite).map(_.get)
-      }
-      case "libraryInviteNonUser" => {
+      case "libraryInviteNonUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
         emailSenderProvider.libraryInviteEmail.inviteUserToLibrary(invite).map(_.get)
-      }
       case "confirm" => emailSenderProvider.confirmation.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
-      case "tip" if tip.isDefined => testEmailTip(Left(userId), EmailTip(tip.get))
+      case "tip" if tip.isDefined =>
+        val emailTip = EmailTip(tip.get).get
+        testEmailTip(Left(userId), emailTip)
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).
@@ -107,9 +106,9 @@ class EmailTestController @Inject() (
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = s"Testing Tip $tip",
       to = to,
-      category = NotificationCategory.User.DIGEST_QA,
-      htmlTemplate = Html(s"<br/><br/>Testing Tip $tip<br/><br/>"),
-      textTemplate = Some(Html(s"Testing Tip $tip")),
+      category = NotificationCategory.System.EMAIL_QA,
+      htmlTemplate = Html(s"""<br/><br/><div align="center">Email Tip ${tip.name}: Feedback?</div><br/><br/>"""),
+      textTemplate = Some(Html(s"[internal] Testing Email Tip: ${tip.name}")),
       tips = Seq(tip)
     )
     emailTemplateSender.send(emailToSend)

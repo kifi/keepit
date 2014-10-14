@@ -12,6 +12,7 @@ var initFriendSearch = (function () {
       showResults: showResults,
       formatResult: formatResult,
       formatToken: formatToken,
+      onBlur: onBlur,
       onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
@@ -146,6 +147,10 @@ var initFriendSearch = (function () {
         html.push(Mustache.escape(parts[i]));
       }
     }
+  }
+
+  function onBlur(item) {
+    return !!item.isValidEmail;
   }
 
   function onSelect(source, res, el) {

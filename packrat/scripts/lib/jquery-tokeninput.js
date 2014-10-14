@@ -22,6 +22,7 @@
     formatToken: formatItem,
 
     // Callbacks
+    onBlur: null,
     onSelect: null,
     onAdd: null,
     onDelete: null,
@@ -171,11 +172,14 @@
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
-        hideDropdown();
         var val = this.value;
         if (val !== val.trim()) {
-          this.value = val.trim();
+          val = this.value = val.trim();
         }
+        if (selectedDropdownItem && settings.onBlur && settings.onBlur.call($hiddenInput, $.data(selectedDropdownItem, 'tokenInput')) !== false) {
+          handleItemChosen(selectedDropdownItem);
+        }
+        hideDropdown();
         $tokenList.removeClass(classes.listFocused);
       })
       .on('input', handleQueryChange)

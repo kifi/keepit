@@ -23,7 +23,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.{ AuthCommander, EmailPassFinalizeInfo, InviteCommander }
+import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, EmailPassFinalizeInfo, InviteCommander }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -70,6 +70,38 @@ object UserPassFinalizeInfo {
       info.cropY,
       info.cropSize
     )
+}
+
+@json case class TokenFinalizeInfo(
+    private val email: String,
+    firstName: String,
+    lastName: String,
+    val password: String,
+    picToken: Option[String],
+    picHeight: Option[Int],
+    picWidth: Option[Int],
+    cropX: Option[Int],
+    cropY: Option[Int],
+    cropSize: Option[Int],
+    libraryPublicId: Option[PublicId[Library]]) {
+  val emailAddress = EmailAddress(email)
+}
+
+object TokenFinalizeInfo {
+  implicit def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
+    SocialFinalizeInfo(
+      info.emailAddress,
+      info.firstName,
+      info.lastName,
+      info.password.toCharArray,
+      info.picToken,
+      info.picHeight,
+      info.picWidth,
+      info.cropX,
+      info.cropY,
+      info.cropSize
+    )
+  }
 }
 
 class AuthController @Inject() (
@@ -135,7 +167,6 @@ class AuthController @Inject() (
 
   // one-step sign-up
   def emailSignup() = Action.async(parse.tolerantJson) { implicit request =>
-    log.info(s"body=${request.body}")
     request.body.asOpt[UserPassFinalizeInfo] match {
       case None =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
@@ -260,7 +291,7 @@ class AuthController @Inject() (
     Redirect("/")
   }, unauthenticatedAction = { request =>
     request.request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent.fromString(agentString)
+      val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
@@ -295,7 +326,7 @@ class AuthController @Inject() (
     }
 
     val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent.fromString(agent)
+      UserAgent(agent)
     }
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
@@ -367,6 +398,11 @@ class AuthController @Inject() (
   def socialFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
     authenticatedAction = authHelper.doSocialFinalizeAccountAction(_),
     unauthenticatedAction = authHelper.doSocialFinalizeAccountAction(_)
+  )
+
+  def tokenFinalizeAccountAction() = JsonAction.parseJson(allowPending = true)(
+    authenticatedAction = authHelper.doTokenFinalizeAccountAction(_),
+    unauthenticatedAction = authHelper.doTokenFinalizeAccountAction(_)
   )
 
   def OkStreamFile(filename: String) =

@@ -86,8 +86,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialInviteAction', [
-  '$log', 'inviteService', '$timeout',
-  function ($log, inviteService, $timeout) {
+  '$log', 'inviteService', '$timeout', '$FB',
+  function ($log, inviteService, $timeout, $FB) {
     return {
       restrict: 'A',
       scope: {
@@ -107,6 +107,8 @@ angular.module('kifi')
         link.click(function (elem, $event) {
           scope.invite(scope.result, $event);
         });
+
+        $FB.init();
 
         scope.invite = function (result, $event) {
           result = result || scope.result;
@@ -225,6 +227,8 @@ angular.module('kifi')
         $document.on('click', clickOutside);
 
         scope.showCantFindFriendModal = function () {
+          scope.search.showDropdown = false;
+
           modalService.open({
             template: 'invite/cantFindFriendModal.tpl.html',
             modalData: { searchFriendName: scope.search.name }

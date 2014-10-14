@@ -52,6 +52,22 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
+    db.readOnlyReplica { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      if (library.visibility == LibraryVisibility.PUBLISHED ||
+        library.ownerId == viewerUserId ||
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined) {
+        val owner = basicUserRepo.load(library.ownerId)
+        val keepCount = keepRepo.getCountByLibrary(library.id.get)
+        val followerCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+        Right(library, owner, keepCount, followerCount)
+      } else {
+        Left(403, "library_access_denied")
+      }
+    }
+  }
+
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
     val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
@@ -240,34 +256,6 @@ class LibraryCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     canViewLibrary(userId, library, accessToken, passCode)
-  }
-
-  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
-    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
-      val library = libraryRepo.get(libraryId)
-      val ownerId = library.ownerId
-      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
-      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
-      val keeps = tagOpt match {
-        case None => Seq.empty
-        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
-      }
-      (library, ownerId, memTo, tagOpt, keeps)
-    }
-    (memTo, tagOpt) match {
-      case (_, None) => Left(LibraryFail("tag_not_found"))
-      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
-      case (_, Some(tag)) =>
-        def saveKeep(k: Keep, s: RWSession): Unit = {
-          implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
-            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = true))
-          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-        }
-        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
-        Right(badKeeps.toSeq)
-    }
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -494,7 +482,7 @@ class LibraryCommander @Inject() (
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
       // todo: make more performant
-      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet
+      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet // note only contains ACTIVE keeps
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
@@ -515,8 +503,50 @@ class LibraryCommander @Inject() (
           badKeeps += keep -> LibraryError.AlreadyExistsInDest
         }
       }
+      if (badKeeps.size != keeps.size)
+        libraryRepo.updateLastKept(library.id.get)
     }
     badKeeps.toSeq
+  }
+
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val ownerId = library.ownerId
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
+      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
+      val keeps = tagOpt match {
+        case None => Seq.empty
+        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
+      }
+      (library, ownerId, memTo, tagOpt, keeps)
+    }
+    (memTo, tagOpt) match {
+      case (_, None) => Left(LibraryFail("tag_not_found"))
+      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
+        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
+      case (_, Some(tag)) =>
+        def saveKeep(k: Keep, s: RWSession): Unit = {
+          implicit val session = s
+          keepRepo.getPrimaryByUriAndLibrary(k.uriId, libraryId) match {
+            case Some(k) if k.state == KeepStates.INACTIVE =>
+              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getOpt(k.id.get, tag.id.get) match {
+                case Some(ktc) =>
+                  keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+                case None =>
+                  keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = tag.id.get))
+              }
+            case None =>
+              val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
+                userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = library.isDisjoint))
+              keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+            case _ => // if active keep already exists in library (do nothing)
+          }
+        }
+        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
+        Right(badKeeps.toSeq)
+    }
   }
 
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
@@ -531,10 +561,19 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-            userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
-          keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
-            keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
+          keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
+            case Some(k) if k.state == KeepStates.INACTIVE =>
+              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
+                keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = k2c.collectionId))
+              }
+            case None =>
+              val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
+                userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
+                keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
+              }
+            case _ => // if active keep already exists in library (do nothing)
           }
         }
 
@@ -622,6 +661,15 @@ class LibraryCommander @Inject() (
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
+
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {
+    db.readWrite { implicit s =>
+      libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
+        libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
+      }
+    }
+  }
+
 }
 
 sealed abstract class LibraryError(val message: String)

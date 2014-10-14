@@ -9,7 +9,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])

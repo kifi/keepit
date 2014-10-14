@@ -140,6 +140,15 @@ class UriFromKeepsScoreVectorSource(
   private[this] var authorizedLibraryKeepCount = 0
   private[this] var discoverableKeepCount = 0
 
+  override def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
+    super.execute(coreSize, dataBuffer, directScoreContext)
+
+    if ((debugFlags & DebugOption.Library.flag) != 0) {
+      listLibraries()
+      listLibraryKeepCounts()
+    }
+  }
+
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
@@ -201,8 +210,8 @@ class UriFromKeepsScoreVectorSource(
   }
 
   private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, idMapper: IdMapper, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
-    def load(libId: Long, visibility: Int): Int = {
-      var count = 0
+    def load(libId: Long, visibility: Int): Unit = {
+      val v = visibility | Visibility.HAS_SECONDARY_ID
       val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
       if (td != null) {
         var docId = td.nextDoc()
@@ -213,27 +222,34 @@ class UriFromKeepsScoreVectorSource(
             val keepId = idMapper.getId(docId)
 
             // write to the buffer
-            output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8) // id (8 bytes), keepId (8 bytes)
+            output.alloc(writer, v, 8 + 8) // id (8 bytes), keepId (8 bytes)
             writer.putLong(uriId, keepId)
-            count += 1
           }
           docId = td.nextDoc()
         }
       }
-      count
     }
 
-    myOwnLibraryKeepCount += myOwnLibraryIds.foldLeft(0) { (count, libId) => count + load(libId, Visibility.OWNER) }
+    // load URIs from my own libraries
+    var lastTotal = output.size
+    myOwnLibraryIds.foreachLong { libId => load(libId, Visibility.OWNER) }
+    myOwnLibraryKeepCount += output.size - lastTotal
 
+    // load URIs from libraries I am a member of
     // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryKeepCount += memberLibraryIds.foldLeft(0) { (count, libId) => count + (if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
+    lastTotal = output.size
+    memberLibraryIds.foreachLong { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
+    memberLibraryKeepCount += output.size - lastTotal
 
     // load URIs from an authorized library as MEMBER
-    authorizedLibraryKeepCount += authorizedLibraryIds.foldLeft(0) { (count, libId) => count + (if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) else 0) }
+    lastTotal = output.size
+    authorizedLibraryIds.foreachLong { libId => if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
+    authorizedLibraryKeepCount += output.size - lastTotal
 
-    discoverableKeepCount += myFriendIds.foldLeft(0) { (count, friendId) =>
+    // load discoverable URIs from friends' keeps
+    lastTotal = output.size
+    myFriendIds.foreachLong { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
-      var cnt = 0
       if (td != null) {
         var docId = td.nextDoc()
         while (docId < NO_MORE_DOCS) {
@@ -243,18 +259,12 @@ class UriFromKeepsScoreVectorSource(
             // write to the buffer
             output.alloc(writer, Visibility.NETWORK, 8) // id (8 bytes)
             writer.putLong(uriId)
-            cnt += 1
           }
           docId = td.nextDoc()
         }
       }
-      count + cnt
     }
-
-    if ((debugFlags & DebugOption.Library.flag) != 0) {
-      listLibraries()
-      listLibraryKeepCounts()
-    }
+    discoverableKeepCount += output.size - lastTotal
   }
 
   private def listLibraryKeepCounts(): Unit = {

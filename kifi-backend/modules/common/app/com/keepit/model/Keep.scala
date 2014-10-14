@@ -151,14 +151,23 @@ object KeepUriAndTime {
   )(KeepUriAndTime.apply, unlift(KeepUriAndTime.unapply))
 }
 
-case class KeepCountKey(userId: Option[Id[User]] = None) extends Key[Int] {
+case class KeepCountKey(userId: Id[User]) extends Key[Int] {
   override val version = 3
   val namespace = "bookmark_count"
-  def toKey(): String = userId map (_.toString) getOrElse "all"
+  def toKey(): String = userId.toString
 }
 
 class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class GlobalKeepCountKey() extends Key[Int] {
+  override val version = 1
+  val namespace = "global_keeps_count"
+  def toKey(): String = ""
+}
+
+class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
   override val version = 8

@@ -2,42 +2,61 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http) {
-    $scope.selectedSort = 'name';
-
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location', 'modalService',
+  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location, modalService) {
     $scope.libraries = [];
     $scope.selected = {};
 
-    $scope.tagList = manageTagService.list;
-    $scope.tagsLoaded = false;
-    $scope.selectedTagName = '';
+    $scope.selectedSort = 'name';
+    $scope.tagList = [];
+    $scope.selectedTag = {};
+    $scope.more = false;
+    $scope.offset = 0;
 
     //
     // Smart Scroll
     //
     $scope.$watch(function () {
-      return manageTagService.list.length || !manageTagService.hasMore();
+      return $scope.tagList;
     }, function (res) {
       if (res) {
-        $scope.tagsLoaded = true;
         $scope.tagsToShow = $scope.tagList;
       }
     });
     $scope.tagsScrollDistance = '100%';
     $scope.isTagScrollDisabled = function () {
-      return !manageTagService.hasMore();
+      return !$scope.more;
     };
     $scope.manageTagScrollNext = function () {
-      manageTagService.getMore($scope.selectedSort);
+      getPage();
     };
+
 
     $scope.$watch(function () {
       return $scope.selectedSort;
     }, function () {
+      $scope.tagList.length = 0;
+      $scope.offset = 0;
+      $scope.more = true;
       manageTagService.reset();
-      manageTagService.getMore($scope.selectedSort);
+      getPage();
     });
+
+    var loading = false;
+    function getPage() {
+      if (loading) { return; }
+      loading = true;
+      manageTagService.getMore($scope.selectedSort, $scope.offset).then(function (tags) {
+        loading = false;
+        if (tags.length === 0) {
+          $scope.more = false;
+        } else {
+          $scope.more = true;
+          $scope.offset += 1;
+          $scope.tagList.push.apply($scope.tagList, tags);
+        }
+      });
+    }
 
     //
     // Keeping to Library
@@ -55,21 +74,23 @@ angular.module('kifi')
             return lib.access !== 'read_only';
           });
           $scope.selection = $scope.selection || {};
-          $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+          $scope.selection.library = _.find($scope.libraries, { 'kind': 'system_main' });
         });
       }
     });
 
     $scope.clickAction = function () {
-      if ($scope.selectedTagName !== '') {
-        var data = {};
-        var config = {};
-        $http.post(routeService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTagName), data, config);
-      }
+      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
+        libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
+      });
+      modalService.open({
+        template: 'tagManage/tagToLibModal.tpl.html',
+        modalData: { library : $scope.selection.library }
+      });
     };
 
-    $scope.changeSelection = function (name) {
-      $scope.selectedTagName = name;
+    $scope.changeSelection = function (tag) {
+      $scope.selectedTag = tag;
     };
 
     //
@@ -119,6 +140,10 @@ angular.module('kifi')
         tagService.remove(tag);
         _.remove($scope.tagsToShow, function(t) { return t === tag; });
       }
+    };
+
+    $scope.navigateToTag = function (tagName) {
+      $location.path('/find').search('q', 'tag:' + tagName);
     };
 
   }

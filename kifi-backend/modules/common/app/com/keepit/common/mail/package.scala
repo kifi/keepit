@@ -2,7 +2,7 @@ package com.keepit.common.mail
 
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.User
+import com.keepit.model.{ Library, User }
 import play.twirl.api.Html
 
 package object template {
@@ -11,6 +11,7 @@ package object template {
     val lastName = TagLabel("lastName")
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
+    val libraryName = TagLabel("libraryName")
     val unsubscribeUrl = TagLabel("unsubscribeUrl")
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
@@ -45,6 +46,8 @@ package object template {
     def avatarUrl(id: Id[User]) = Tag1(tags.avatarUrl, id).toHtml
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
+
+    def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
     val unsubscribeUrl = Tag0(tags.unsubscribeUrl).toHtml
 

@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, SearchServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ MobileController, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal.{ KifiHitContext, SearchEngine, BasicSearchContext, HeimdalContextBuilderFactory }
 import com.keepit.search.SearchEventCommander
 import com.keepit.common.service.FortyTwoServices
@@ -13,13 +13,13 @@ import play.api.libs.json.JsArray
 import play.api.libs.concurrent.Execution.Implicits._
 
 class MobileSearchEventController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   searchEventCommander: SearchEventCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-    extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
+    extends UserActions with SearchServiceController with Logging {
 
-  def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
+  def clickedSearchResult = UserAction(parse.tolerantJson) { request =>
     val clickedAt = clock.now()
     val userId = request.userId
     val json = request.body
@@ -44,7 +44,7 @@ class MobileSearchEventController @Inject() (
     Ok
   }
 
-  def searched = JsonAction.authenticatedParseJson { request =>
+  def searched = UserAction(parse.tolerantJson) { request =>
     val time = currentDateTime
     val userId = request.userId
     val json = request.body

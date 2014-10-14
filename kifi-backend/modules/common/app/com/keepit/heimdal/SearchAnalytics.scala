@@ -84,7 +84,7 @@ case class KifiHitContext(
   isPrivate: Boolean,
   keepCount: Int,
   keepers: Seq[ExternalId[User]],
-  tags: Seq[ExternalId[Collection]],
+  tags: Seq[String], // was ExternalId[Collection], moving to inlined Hashtag
   title: Option[String],
   titleMatches: Int,
   urlMatches: Int)
@@ -95,7 +95,7 @@ object KifiHitContext {
     (__ \ 'isPrivate).read[Boolean] and
     (__ \ 'count).read[Int] and
     ((__ \ 'keepers).read[Seq[String]].fmap(_.map(ExternalId[User](_))) orElse (__ \ 'users).read[Seq[BasicUser]].fmap(_.map(_.externalId))) and
-    ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten.map(ExternalId[Collection](_)))) and
+    ((__ \\ 'tags).readNullable[Seq[String]].fmap(_.toSeq.flatten)) and
     ((__ \ 'title).readNullable[String] orElse (__ \ 'bookmark \ 'title).readNullable[String]) and
     ((__ \ 'titleMatches).read[Int] orElse (__ \ 'bookmark \\ 'matches \ 'title).read[JsArray].fmap(_.value.length) orElse Reads.pure(0)) and
     ((__ \ 'urlMatches).read[Int] orElse (__ \ 'bookmark \\ 'matches \ 'url).read[JsArray].fmap(_.value.length) orElse Reads.pure(0))
@@ -106,7 +106,7 @@ object KifiHitContext {
     (__ \ 'isPrivate).write[Boolean] and
     (__ \ 'count).write[Int] and
     (__ \ 'keepers).write[Seq[ExternalId[User]]] and
-    (__ \ 'tags).write[Seq[ExternalId[Collection]]] and
+    (__ \ 'tags).write[Seq[String]] and
     (__ \ 'title).writeNullable[String] and
     (__ \ 'titleMatches).write[Int] and
     (__ \ 'urlMatches).write[Int]

@@ -149,7 +149,7 @@ class KeepRepoImpl @Inject() (
 
   override def deleteCache(bookmark: Keep)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
-    countCache.remove(KeepCountKey(Some(bookmark.userId)))
+    countCache.remove(KeepCountKey(bookmark.userId))
     latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
     latestKeepUrlCache.remove(LatestKeepUrlKey(bookmark.url))
   }
@@ -159,7 +159,7 @@ class KeepRepoImpl @Inject() (
       deleteCache(bookmark)
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-      countCache.remove(KeepCountKey(Some(bookmark.userId)))
+      countCache.remove(KeepCountKey(bookmark.userId))
       val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
       if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
       val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)

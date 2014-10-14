@@ -148,7 +148,7 @@ angular.module('kifi')
         }
 
         //login if needed
-        if (platform === 'facebook') {
+        if (platform === 'facebook' && $FB.FB) {
           if ($FB.FB.getAuthResponse()) {
             doInvite();
           } else {

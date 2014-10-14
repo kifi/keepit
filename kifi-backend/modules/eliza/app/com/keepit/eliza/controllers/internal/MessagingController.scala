@@ -2,49 +2,25 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza._
 import com.keepit.eliza.model._
-import com.keepit.eliza.commanders.{ NotificationCommander, MessagingCommander, ElizaEmailCommander }
+import com.keepit.eliza.commanders.{ NotificationCommander, MessagingCommander }
 import com.keepit.model._
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.social.{ BasicUserLikeEntity, BasicNonUser, BasicUser }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ElizaServiceController
 
-import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 
-import org.joda.time.DateTime
-
 import play.api.libs.json._
-
-import java.nio.{ ByteBuffer, CharBuffer }
-import java.nio.charset.Charset
-import com.keepit.common.akka.TimeoutFuture
-import java.util.concurrent.TimeoutException
-import com.keepit.eliza.model.NonUserParticipant
-import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.eliza.model.NonUserThread
-import play.api.libs.json.JsArray
-import com.keepit.eliza.model.NonUserEmailParticipant
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
-import com.keepit.common.core._
-import com.keepit.heimdal.HeimdalContext
-import scala.util.{ Failure, Success, Try }
-import play.api.libs.json.JsArray
-import com.keepit.eliza.model.UserThread
-import play.api.libs.json.JsObject
-import com.keepit.common.json._
+import com.keepit.common.json.TupleFormat._
 
 //For migration only
 import play.api.mvc.Action
-import com.keepit.common.db.slick.DBSession.RWSession
 
 /* To future maintainers
 *  If this is ever getting too slow the first things I would look at (in no particular order):

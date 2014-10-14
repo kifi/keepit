@@ -181,6 +181,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
+  val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
 
   // Fake data initialization methods
 
@@ -742,7 +743,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(true)
   }
 
-  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = Future.successful(Seq())
+  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] =
+    Future.successful(newKeepsInLibrariesExpectation(userId))
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)
 }

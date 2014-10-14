@@ -11,6 +11,7 @@ import com.keepit.search.result._
 import com.keepit.search.sharding.Shard
 import com.google.inject.Inject
 import scala.concurrent.duration._
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem, AugmentedItem, AugmentationCommander }
 
 class SearchBackwardCompatibilitySupport @Inject() (
     libraryIndexer: LibraryIndexer,
@@ -29,7 +30,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
   def toDetailedSearchHit(shards: Set[Shard[NormalizedURI]], userId: Id[User], hit: KifiShardHit, augmentedItem: AugmentedItem, friendStats: FriendStats, librarySearcher: Searcher): DetailedSearchHit = {
     val uriId = augmentedItem.uri
     val isMyBookmark = ((hit.visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0)
-    val isFriendsBookmark = (!isMyBookmark && (hit.visibility & Visibility.NETWORK) != 0)
+    val isFriendsBookmark = ((hit.visibility & Visibility.NETWORK) != 0)
 
     shards.find(_.contains(uriId)) match {
       case Some(shard) =>
@@ -43,7 +44,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
         val friends = augmentedItem.relatedKeepers.filter(_ != userId)
         friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
-        val isPrivate = augmentedItem.isSecret(LibraryIndexable.isSecret(libraryIndexer.getSearcher, _))
+        val isPrivate = augmentedItem.isSecret(libraryIndexer.getSearcher)
 
         DetailedSearchHit(
           uriId.id,

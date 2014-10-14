@@ -4,7 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.User
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 
 import scala.concurrent.duration.Duration
 
