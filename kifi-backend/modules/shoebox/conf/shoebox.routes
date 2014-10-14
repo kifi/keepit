@@ -496,12 +496,6 @@ GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfo
 
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
-GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
-GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
-GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
-GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
-GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
-
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/autoSetUsernames   @com.keepit.controllers.admin.AdminUserController.autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean ?= true)
