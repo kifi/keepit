@@ -1,32 +1,33 @@
 package com.keepit.controllers.email
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.slick._
-import com.keepit.model.{ DeepLink, DeepLinkRepo, DeepLinkToken, DeepLocator, NormalizedURI, NormalizedURIRepo }
+import com.keepit.model.{ DeepLink, DeepLinkRepo, DeepLinkToken, NormalizedURI, NormalizedURIRepo }
 
 import play.api.mvc.{ Action, Result }
 
 class EmailDeepLinkController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   deepLinkRepo: DeepLinkRepo,
   normalizedURIRepo: NormalizedURIRepo)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with HandleDeepLinkRequests {
+    extends UserActions with ShoeboxServiceController with HandleDeepLinkRequests {
 
-  def handle(tokenString: String) = HtmlAction(
-    authenticatedAction = { request =>
-      val token = DeepLinkToken(tokenString)
-      getDeepLinkAndUrl(token) map {
-        case (deepLink, uri) => handleAuthenticatedDeepLink(request, uri, deepLink.deepLocator, deepLink.recipientUserId)
-      } getOrElse NotFound
-    },
-    unauthenticatedAction = { request =>
-      val token = DeepLinkToken(tokenString)
-      getDeepLinkAndUrl(token) map {
-        case (deepLink, uri) => handleUnauthenticatedDeepLink(request, uri, deepLink.deepLocator)
-      } getOrElse NotFound
-    })
+  def handle(tokenString: String) = MaybeUserAction { implicit request =>
+    request match {
+      case u: UserRequest[_] =>
+        val token = DeepLinkToken(tokenString)
+        getDeepLinkAndUrl(token) map {
+          case (deepLink, uri) => handleAuthenticatedDeepLink(u, uri, deepLink.deepLocator, deepLink.recipientUserId)
+        } getOrElse NotFound
+      case _ =>
+        val token = DeepLinkToken(tokenString)
+        getDeepLinkAndUrl(token) map {
+          case (deepLink, uri) => handleUnauthenticatedDeepLink(request, uri, deepLink.deepLocator)
+        } getOrElse NotFound
+    }
+  }
 
   def handleMobile(tokenString: String) = Action { request =>
     val token = DeepLinkToken(tokenString)

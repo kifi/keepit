@@ -1,7 +1,7 @@
 package com.keepit.controllers.testing
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionsBuilder, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.model.UserRepo
 
@@ -10,16 +10,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 class ForTestingOnlyController @Inject() (
-  val actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo)
-    extends ShoeboxServiceController with ActionsBuilder {
+    extends UserActions with ShoeboxServiceController {
 
-  object PlainTextAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions {
-    override val contentTypeOpt = Some(TEXT)
-  }
-
-  def me = PlainTextAction.authenticated { request =>
+  def me = UserAction { request =>
     val user = db.readOnlyMaster(implicit s => userRepo.get(request.userId))
     Ok(user.externalId.toString)
   }
