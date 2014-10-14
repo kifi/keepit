@@ -1,17 +1,14 @@
 package com.keepit.common.crypto
 
-import java.util.concurrent.{ Callable, TimeUnit }
+import java.lang.{ Long => JLong }
 import javax.crypto.spec.IvParameterSpec
-import com.google.common.cache.{CacheLoader, CacheBuilder, Cache}
+
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
-import java.lang.{Long => JLong}
 
-import scala.collection.JavaConverters
 import scala.collection.concurrent.TrieMap
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Failure, Success, Try }
 
 case class PublicIdConfiguration(key: String) {
   private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
