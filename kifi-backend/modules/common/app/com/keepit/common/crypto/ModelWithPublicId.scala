@@ -63,25 +63,13 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val publicIdIvSpec: IvParameterSpec
 
-  //private val decryptCache: Cache[java.lang.Long, Try[java.lang.Long]] = CacheBuilder.newBuilder().concurrencyLevel(1).initialCapacity(1024).maximumSize(4096).build()
   private def threadSafeDecrypt(id: Long, config: PublicIdConfiguration): Try[Long] = {
-    //    decryptCache.get(id, new Callable[Try[java.lang.Long]] {
-    //      def call() = synchronized {
-    //        Try(config.aes64bit(publicIdIvSpec).decrypt(id))
-    //      }
-    //    }).map(Long2long)
     synchronized {
       Try(config.aes64bit(publicIdIvSpec).decrypt(id))
     }
   }
 
-  //private val encryptCache: Cache[java.lang.Long, java.lang.Long] = CacheBuilder.newBuilder().concurrencyLevel(1).initialCapacity(1024).maximumSize(4096).build()
   private def threadSafeEncrypt(id: Long, config: PublicIdConfiguration): Long = {
-    //    encryptCache.get(id, new Callable[java.lang.Long] {
-    //      def call() = synchronized {
-    //        Long.box(config.aes64bit(publicIdIvSpec).encrypt(id))
-    //      }
-    //    }).toLong
     synchronized {
       config.aes64bit(publicIdIvSpec).encrypt(id)
     }
