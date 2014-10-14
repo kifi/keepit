@@ -133,8 +133,8 @@ class SearchFactory @Inject() (
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
-        val myOwnLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
-        val memberLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+        val myOwnLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+        val memberLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
       }
