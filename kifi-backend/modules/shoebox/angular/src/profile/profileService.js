@@ -41,7 +41,6 @@ angular.module('kifi')
         me[key] = val;
       });
       me.picUrl = routeService.formatPicUrl(me.id, me.pictureName);
-      console.log(me, me.picUrl, me.pictureName, me.id)
       me.primaryEmail = getPrimaryEmail(me.emails);
       me.seqNum++;
       socialService.setExpiredTokens(me.notAuthed);

@@ -180,3 +180,22 @@ input.register-full-input {
   margin: 25px;
   text-align: center;
 }
+.register-install-ext-btn {
+  cursor: pointer;
+  width: 245px;
+  text-align: center;
+  margin: 34px auto;
+  background-color: #3da9f5;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 200;
+  font-family: Helvetica, Arial, sans-serif;
+  padding: 12px 0;
+  border: 0;
+  text-decoration: none;
+}
+.register-install-ext-btn:hover,
+.register-install-ext-btn:active {
+  background-color: #50b2f6;
+}

@@ -15,8 +15,11 @@
         </div>
 
         <div class="kf-register-header">Continue with email</div>
-        <form name="regEmaiForm" class="register-email-form" ng-submit="submitEmail()">
-          <input type="email" name="email" ng-model="userData.email" placeholder="Email" class="register-email-box register-placeholder">
+        <form name="regEmailForm" class="register-email-form" ng-submit="submitEmail(regEmailForm)" novalidate>
+          <span class="register-validation">
+            <input type="email" name="email" ng-model="userData.email" placeholder="Email" class="register-email-box register-placeholder" required>
+            <span ng-show="fieldHasError(regEmailForm.email)" class="register-help-block">Enter a valid email address</span>
+          </span>
           <input type="submit" value="Continue" class="register-submit register-continue">
         </div>
 

@@ -54,13 +54,16 @@ angular.module('kifi')
 
     $scope.register = function () {
       setModalScope(modalService.open({
-        template: 'libraries/registerModal.tpl.html',
+        template: 'signup/registerModal.tpl.html',
         scope: $scope
       }));
     };
 
-    $scope.submitEmail = function () {
-      // validate email???!?
+    $scope.submitEmail = function (form) {
+      $scope.registerFinalizeSubmitted = true;
+      if (!form.$valid) {
+        return false;
+      }
       modalService.close();
       $scope.userData.method = 'email';
       $scope.registerFinalizeModal();
@@ -110,8 +113,9 @@ angular.module('kifi')
 
     // 2nd Register modal
     $scope.registerFinalizeModal = function () {
+      $scope.registerFinalizeSubmitted = false;
       setModalScope(modalService.open({
-        template: 'libraries/registerFinalizeModal.tpl.html',
+        template: 'signup/registerFinalizeModal.tpl.html',
         scope: $scope
       }));
     };
@@ -128,8 +132,17 @@ angular.module('kifi')
       } else if ($scope.userData.method === 'social') {
 
       } else { // email signup
-
+        modalService.close();
+        $scope.thanksForRegisteringModal();
       }
+    };
+
+    // 3rd confirm modal
+    $scope.thanksForRegisteringModal = function () {
+      setModalScope(modalService.open({
+        template: 'signup/thanksForRegisteringModal.tpl.html',
+        scope: $scope
+      }));
     };
 
   }
