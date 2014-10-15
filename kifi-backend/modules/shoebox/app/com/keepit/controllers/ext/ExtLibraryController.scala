@@ -249,17 +249,12 @@ class ExtLibraryController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = KeepSource.get((json \ "source").as[String])
-    if (!KeepSource.valid.contains(bookmarkSource)) {
-      val message = s"Invalid bookmark source: $bookmarkSource from user ${request.user} running extension ${request.kifiInstallationId}"
-      airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(message), message, Some(request.user)))
-    }
     SafeFuture {
       log.debug(s"adding bookmarks import of user $userId")
 
-      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.bookmarkImport).build
       val libraryId = Library.decodePublicId(id).get
-      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId, libraryId = Some(libraryId)))
+      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
     }
     Status(ACCEPTED)(JsNumber(0))
   }
