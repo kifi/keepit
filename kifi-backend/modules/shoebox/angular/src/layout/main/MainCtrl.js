@@ -158,17 +158,35 @@ angular.module('kifi')
       // Use $evalAsync to wait for forceClose to close the currently open modal before opening
       // the next modal.
       $scope.$evalAsync(function () {
-        // Fake check. To do: use real endpoints to determine which modal to open.
-        if (library) {
-          modalService.open({
-            template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
-            scope: $scope
-          });
-        } else {
+        var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+
+        if (!kifiVersion) {
           modalService.open({
             template: 'common/modal/importBookmarksErrorModal.tpl.html'
           });
+          return;
         }
+
+        $analytics.eventTrack('user_clicked_page', {
+          'type': 'browserImport',
+          'action': 'ImportToLibrary'  // TODO: update this when we have the full tracking spec.
+        });
+
+        var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        var message = {
+          type: 'import_bookmarks',
+          libraryId: library.id
+        };
+
+        if (event) {
+          event.source.postMessage(message, $scope.msgEvent.origin);
+        } else {
+          $window.postMessage(message, '*');
+        }
+
+        modalService.open({
+          template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html'
+        });
       });
     };
 
