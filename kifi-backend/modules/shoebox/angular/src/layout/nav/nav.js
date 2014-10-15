@@ -27,13 +27,12 @@ angular.module('kifi')
         scope.secretLib = {};
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
-        scope.sortingMenu = { show : false, option : '' };
+        scope.sortingMenu = { show : false, option : 'last_kept' };
 
         scope.counts = {
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
-
 
         //
         // Internal methods.
@@ -52,9 +51,9 @@ angular.module('kifi')
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
 
-          scope.userLibsToShow = allUserLibs;
-          scope.invitedLibsToShow = libraryService.invitedSummaries;
-          scope.sortingMenu.option = 'last_kept';
+          var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
+          scope.userLibsToShow = newList[0];
+          scope.invitedLibsToShow  = newList[1];
 
           scope.$broadcast('refreshScroll');
         }
@@ -74,7 +73,6 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
-
         //
         // Watches and listeners.
         //
@@ -88,13 +86,7 @@ angular.module('kifi')
         });
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
-
-        $rootScope.$on('changedLibrary', function () {
-          if (scope.librariesEnabled) {
-            allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
-            util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
-          }
-        });
+        $rootScope.$on('changedLibrary', updateNavLibs);
 
         scope.$watch(function () {
           return friendService.requests.length;
@@ -190,7 +182,18 @@ angular.module('kifi')
             newLibs = librarySummarySearch.search(term);
             newInvited = invitedSummarySearch.search(term);
           }
+          var newList = sortLibraries(newLibs, newInvited);
+          newLibs = newList[0];
+          newInvited = newList[1];
 
+          scope.userLibsToShow = newLibs;
+          scope.invitedLibsToShow = newInvited;
+          return scope.userLibsToShow.concat(scope.invitedLibsToShow);
+        };
+
+        function sortLibraries(userLibs, invitedLibs) {
+          var newLibs = userLibs;
+          var newInvited = invitedLibs;
           switch (scope.sortingMenu.option) {
             case 'name':
               var sortByNameFunc = function(a) {return a.name.toLowerCase(); };
@@ -212,15 +215,14 @@ angular.module('kifi')
               newLibs = sortByViewed(newLibs);
               newInvited = sortByViewed(newInvited);
               break;
+
             case 'last_kept':
               newLibs = sortByKept(newLibs);
               newInvited = sortByKept(newInvited);
               break;
           }
-          scope.userLibsToShow = newLibs;
-          scope.invitedLibsToShow = newInvited;
-          return scope.userLibsToShow.concat(scope.invitedLibsToShow);
-        };
+          return [newLibs, newInvited];
+        }
 
         function sortByKept(libs) {
           var partition = _.groupBy(libs, function(lib) {

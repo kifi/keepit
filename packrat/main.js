@@ -1239,13 +1239,9 @@ api.port.on({
       });
     }
   },
-  import_bookmarks: function() {
+  import_bookmarks: function (libraryId) {
     unstore('prompt_to_import_bookmarks');
-    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
-  },
-  import_bookmarks_public: function () {
-    unstore('prompt_to_import_bookmarks');
-    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD', true);
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD', libraryId);
   },
   import_bookmarks_declined: function() {
     unstore('prompt_to_import_bookmarks')
@@ -1934,21 +1930,19 @@ function updateIconSilence(tab) {
   }
 }
 
-function postBookmarks(supplyBookmarks, bookmarkSource, makePublic) {
+function postBookmarks(supplyBookmarks, bookmarkSource, libraryId) {
   log('[postBookmarks]');
-  supplyBookmarks(function(bookmarks) {
-    if (makePublic) {
+  supplyBookmarks(function (bookmarks) {
+    if (libraryId === 'main') {  // deprecated magic value
       bookmarks.forEach(function (bookmark) {
         bookmark.isPrivate = false;
       });
     }
     log('[postBookmarks] bookmarks:', bookmarks);
-    ajax("POST", "/bookmarks/add", {
-        bookmarks: bookmarks,
-        source: bookmarkSource},
-      function(o) {
-        log('[postBookmarks] resp:', o);
-      });
+    var path = !libraryId || libraryId === 'main' ? '/bookmarks/add' : '/ext/libraries/' + libraryId + '/bookmarks';
+    ajax('POST', path, {bookmarks: bookmarks, source: bookmarkSource}, function (o) {
+      log('[postBookmarks] resp:', o);
+    });
   });
 }
 

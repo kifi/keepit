@@ -2,8 +2,10 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService', 'routeService', '$http', '$location', 'modalService',
-  function (tagService, $scope, $window, manageTagService, libraryService, routeService, $http, $location, modalService) {
+.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService',
+            'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  function (tagService, $scope, $window, manageTagService, libraryService,
+              routeService, $http, $location, modalService, $timeout, $rootScope) {
     $scope.libraries = [];
     $scope.selected = {};
 
@@ -35,11 +37,15 @@ angular.module('kifi')
     $scope.$watch(function () {
       return $scope.selectedSort;
     }, function () {
-      $scope.tagList.length = 0;
-      $scope.offset = 0;
-      $scope.more = true;
-      manageTagService.reset();
-      getPage();
+      if ($scope.filter.name === '') {
+        $scope.tagList.length = 0;
+        $scope.offset = 0;
+        $scope.more = true;
+        manageTagService.reset();
+        getPage();
+      } else {
+        $scope.tagsToShow = localSortLibs($scope.tagsToShow);
+      }
     });
 
     var loading = false;
@@ -58,9 +64,7 @@ angular.module('kifi')
       });
     }
 
-    //
-    // Keeping to Library
-    //
+    // Watchers & Listeners
     $scope.librariesEnabled = false;
     $scope.libraries = [];
 
@@ -70,7 +74,7 @@ angular.module('kifi')
       $scope.librariesEnabled = newVal;
       if ($scope.librariesEnabled) {
         libraryService.fetchLibrarySummaries().then(function () {
-          $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
           $scope.selection = $scope.selection || {};
@@ -79,8 +83,15 @@ angular.module('kifi')
       }
     });
 
+    $rootScope.$on('changedLibrary', function () {
+      $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+        return lib.access !== 'read_only';
+      });
+    });
+
     $scope.clickAction = function () {
-      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
+      var tagName = encodeURIComponent($scope.selectedTag.name);
+      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
       });
       modalService.open({
@@ -96,14 +107,10 @@ angular.module('kifi')
     //
     // Filtering Stuff
     //
-    var fuseOptions = {
-       keys: ['name'],
-       threshold: 0.3 // 0 means exact match, 1 means match with anything
-    };
-    var tagSearch = {};
     $scope.filter = {};
-    $scope.isFilterFocused = false;
     $scope.filter.name = '';
+    $scope.isFilterFocused = false;
+
     $scope.focusFilter = function () {
       $scope.isFilterFocused = true;
     };
@@ -114,21 +121,37 @@ angular.module('kifi')
 
     $scope.clearFilter = function () {
       $scope.filter.name = '';
-      $scope.onFilterChange();
+      $scope.tagsToShow = $scope.tagList;
+      $scope.more = true;
     };
 
-    $scope.onFilterChange = function () {
-      tagSearch = new Fuse($scope.tagList, fuseOptions);
-      var term = $scope.filter.name;
-      var filterTags = $scope.tagList;
-      if (term.length) {
-        filterTags = tagSearch.search(term);
+    $scope.onFilterChange = _.debounce(function () {
+      if ($scope.filter.name === '') {
+        $timeout($scope.clearFilter, 0);
+        return $scope.tagList;
       }
-      $scope.tagsToShow = filterTags;
+      $scope.more = false;
+      manageTagService.search($scope.filter.name).then(function (tags) {
+        $scope.tagsToShow = localSortLibs(tags);
+        return $scope.tagsToShow;
+      });
+    }, 200, {
+      leading: true
+    });
 
-      return $scope.tagsToShow;
-    };
-
+    function localSortLibs(tags) {
+      var sortedTags = tags;
+      if ($scope.selectedSort === 'name') {
+        sortedTags = _.sortBy(sortedTags, function(t) {
+          return t.name;
+        }).reverse();
+      } else if ($scope.selectedSort === 'num_keeps') {
+        sortedTags = _.sortBy(sortedTags, function(t) {
+          return t.keeps;
+        }).reverse();
+      }
+      return sortedTags;
+    }
 
     //
     // Manage Tags
@@ -140,10 +163,6 @@ angular.module('kifi')
         tagService.remove(tag);
         _.remove($scope.tagsToShow, function(t) { return t === tag; });
       }
-    };
-
-    $scope.navigateToTag = function (tagName) {
-      $location.path('/find').search('q', 'tag:' + tagName);
     };
 
   }

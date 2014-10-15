@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import com.keepit.commanders._
 import com.keepit.common.net.URISanitizer
 import com.keepit.heimdal._
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, UserActions, UserActionsHelper }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -19,13 +19,13 @@ import com.keepit.commanders.CollectionSaveFail
 import scala.Some
 import com.keepit.normalizer.NormalizedURIInterner
 
-class MobileBookmarksController @Inject() (
+class MobileKeepsController @Inject() (
   db: Database,
   uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   keepsCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
@@ -33,9 +33,9 @@ class MobileBookmarksController @Inject() (
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
-    extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = JsonAction.authenticatedAsync { request =>
+  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
     keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
         ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
@@ -55,7 +55,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
+  def allCollections(sort: String) = UserAction.async { request =>
     for {
       numKeeps <- SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
       collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
@@ -68,7 +68,7 @@ class MobileBookmarksController @Inject() (
   }
 
   @deprecated(message = "use addKeeps instead", since = "2014-03-28")
-  def keepMultiple() = JsonAction.authenticatedParseJson { request =>
+  def keepMultiple() = UserAction(parse.tolerantJson) { request =>
     val fromJson = request.body.as[RawBookmarksWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
@@ -88,7 +88,7 @@ class MobileBookmarksController @Inject() (
     ))
   }
 
-  def addKeeps() = JsonAction.authenticatedParseJson { request =>
+  def addKeeps() = UserAction(parse.tolerantJson) { request =>
     val fromJson = request.body.as[RawBookmarksWithCollection]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
@@ -107,7 +107,7 @@ class MobileBookmarksController @Inject() (
     ))
   }
 
-  def addKeepWithTags() = JsonAction.authenticatedParseJson { request =>
+  def addKeepWithTags() = UserAction(parse.tolerantJson) { request =>
     val json = request.body
     val rawBookmark = (json \ "keep").as[RawBookmarkRepresentation]
     val collectionNames = (json \ "tagNames").as[Seq[String]]
@@ -131,7 +131,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def unkeepMultiple() = JsonAction.authenticated { request =>
+  def unkeepMultiple() = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     request.body.asJson.flatMap(Json.fromJson[Seq[RawBookmarkRepresentation]](_).asOpt) map { rawBookmarks =>
       Ok(Json.obj("removedKeeps" -> keepsCommander.unkeepMultiple(rawBookmarks, request.userId)))
@@ -140,7 +140,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     keepsCommander.unkeep(id, request.userId) map { ki =>
       Ok(Json.toJson(ki))
@@ -149,7 +149,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def unkeepBatch() = JsonAction.authenticatedParseJson { request =>
+  def unkeepBatch() = UserAction(parse.tolerantJson) { request =>
     implicit val keepFormat = ExternalId.format[Keep]
     val idsOpt = (request.body \ "ids").asOpt[Seq[ExternalId[Keep]]]
     idsOpt map { ids =>
@@ -164,7 +164,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def saveCollection() = JsonAction.authenticated { request =>
+  def saveCollection() = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
@@ -172,7 +172,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
+  def addTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     db.readOnlyMaster { implicit s => collectionRepo.getOpt(id) } map { tag =>
       val rawBookmarks = rawBookmarkFactory.toRawBookmarks(request.body)
@@ -196,7 +196,7 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
+  def removeTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     keepsCommander.removeTag(id, url, request.userId)
@@ -228,7 +228,7 @@ class MobileBookmarksController @Inject() (
 
   // todo(ray): consolidate with web endpoint
 
-  def getImageUrl() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
+  def getImageUrl() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
     urlOpt match {
@@ -252,46 +252,10 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[JsValue]]
-    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
-    urlsOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
-      case Some(urls) => {
-        val uriOpts = db.readOnlyMaster { implicit ro =>
-          urls flatMap { urlReq =>
-            urlReq match {
-              case JsString(url) => Some((url, normalizedURIInterner.getByUri(url), None))
-              case _ => {
-                val urlOpt = (urlReq \ "url").asOpt[String]
-                urlOpt map { url =>
-                  val minSizeOpt = for {
-                    minWidth <- (urlReq \ "minWidth").asOpt[Int]
-                    minHeight <- (urlReq \ "minHeight").asOpt[Int]
-                  } yield ImageSize(minWidth, minHeight)
-                  (url, normalizedURIInterner.getByUri(url), minSizeOpt)
-                }
-              }
-            }
-          }
-        }
-        val resFutSeq = uriOpts map {
-          case (url, uriOpt, minSizeOpt) =>
-            uriOpt match {
-              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-              case Some(uri) => {
-                val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-                uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
-                  toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight)
-                }
-              }
-            }
-        }
-        Future.sequence(resFutSeq) map { res =>
-          Ok(Json.toJson(res))
-        }
-      }
-    }
+  def numKeeps() = UserAction { request =>
+    Ok(Json.obj(
+      "numKeeps" -> keepsCommander.numKeeps(request.userId)
+    ))
   }
 
 }

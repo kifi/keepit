@@ -744,7 +744,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] =
-    Future.successful(newKeepsInLibrariesExpectation(userId))
+    Future.successful(newKeepsInLibrariesExpectation(userId).take(max))
 
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Future.successful(Set.empty)
 }

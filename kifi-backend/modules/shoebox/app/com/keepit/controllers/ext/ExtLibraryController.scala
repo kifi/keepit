@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, _ }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
@@ -17,10 +17,10 @@ import play.api.mvc.Result
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
+import com.keepit.common.json.TupleFormat
 
 class ExtLibraryController @Inject() (
   db: Database,
-  actionAuthenticator: ActionAuthenticator,
   libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
@@ -227,8 +227,10 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchLibraryTags(libraryId, query, limit) map { tags =>
-          Ok(Json.toJson(tags))
+        keepsCommander.searchTags(request.userId, query, limit) map { hits =>
+          implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+          val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
+          Ok(result)
         }
       } getOrElse {
         Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))

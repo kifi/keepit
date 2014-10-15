@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.commanders.URISummaryCommander
 import play.api.mvc.Action
 import play.api.libs.json._
@@ -13,7 +13,7 @@ import com.keepit.common.store.ImageSize
 import scala.concurrent.Future
 
 class URISummaryController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     uriSummaryCommander: URISummaryCommander,
     normalizedUriRepo: NormalizedURIRepo,
     db: Database) extends ShoeboxServiceController {

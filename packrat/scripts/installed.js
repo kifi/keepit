@@ -36,10 +36,10 @@
         api.port.emit('import_bookmarks_declined');
         break;
       case 'import_bookmarks':
-        api.port.emit('import_bookmarks');
+        api.port.emit('import_bookmarks', data.libraryId);
         break;
-      case 'import_bookmarks_public':
-        api.port.emit('import_bookmarks_public');
+      case 'import_bookmarks_public':  // deprecated
+        api.port.emit('import_bookmarks', 'main');
         break;
       case 'close_tab':
         api.port.emit('close_tab');

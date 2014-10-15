@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.commanders.{ FailedInvitationException, InviteStatus, FullSocialId, InviteCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -10,11 +10,11 @@ import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileInviteController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     inviteCommander: InviteCommander,
-    airbrake: AirbrakeNotifier) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
-  def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
+  def inviteConnection = UserAction.async(parse.tolerantJson) { implicit request =>
     (request.body \ "fullSocialId").asOpt[FullSocialId] match {
       case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {

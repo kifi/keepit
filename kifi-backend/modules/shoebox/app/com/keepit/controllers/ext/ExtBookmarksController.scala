@@ -4,7 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -40,7 +40,7 @@ private object SendableBookmark {
 }
 
 class ExtBookmarksController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   bookmarkInterner: KeepInterner,
   keepRepo: KeepRepo,
@@ -59,9 +59,9 @@ class ExtBookmarksController @Inject() (
   libraryCommander: LibraryCommander,
   clock: Clock,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
+  def removeTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     bookmarksCommander.removeTag(id, url, request.userId)
@@ -69,7 +69,7 @@ class ExtBookmarksController @Inject() (
   }
 
   // Move to an endpoint that accepts a libraryId: PublicId[Library] and tag: String instead!
-  def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
+  def addTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     val url = (request.body \ "url").as[String]
     val libraryId = {
@@ -94,7 +94,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def createAndApplyTag() = JsonAction.authenticatedParseJson { request =>
+  def createAndApplyTag() = UserAction(parse.tolerantJson) { request =>
     val name = (request.body \ "name").as[String]
     val url = (request.body \ "url").as[String]
     val libraryId = {
@@ -115,27 +115,27 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(SendableTag from tag.summary))
   }
 
-  def clearTags() = JsonAction.authenticatedParseJson { request =>
+  def clearTags() = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     bookmarksCommander.clearTags(url, request.userId)
     Ok(Json.obj())
   }
 
-  def tags() = JsonAction.authenticated { request =>
+  def tags() = UserAction { request =>
     val tags = db.readOnlyMaster { implicit s =>
       collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(request.userId)
     }
     Ok(Json.toJson(tags.map(SendableTag.from)))
   }
 
-  def tagsByUrl() = JsonAction.authenticatedParseJson { request =>
+  def tagsByUrl() = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     val tags = bookmarksCommander.tagsByUrl(url, request.userId)
     Ok(Json.toJson(tags.map(t => SendableTag.from(t.summary))))
   }
 
   // deprecated: use unkeep
-  def remove() = JsonAction.authenticatedParseJson { request =>
+  def remove() = UserAction(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url).flatMap { uri =>
@@ -155,7 +155,7 @@ class ExtBookmarksController @Inject() (
   }
 
   // migrate to endpoint that uses libraryId: PublicId[Library]
-  def keep() = JsonAction.authenticatedParseJson { request =>
+  def keep() = UserAction(parse.tolerantJson) { request =>
     val info = request.body.as[JsObject]
     val source = KeepSource.keeper
     val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
@@ -178,7 +178,7 @@ class ExtBookmarksController @Inject() (
     Ok(Json.toJson(bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
   }
 
-  def unkeep(id: ExternalId[Keep]) = JsonAction.authenticated { request =>
+  def unkeep(id: ExternalId[Keep]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
     bookmarksCommander.unkeep(id, request.userId) map { ki =>
       Ok(Json.toJson(ki))
@@ -187,7 +187,7 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def updateKeepInfo() = JsonAction.authenticatedParseJson { request =>
+  def updateKeepInfo() = UserAction(parse.tolerantJson) { request =>
     val json = request.body
     val url = (json \ "url").as[String]
     val privateKeep = (json \ "private").asOpt[Boolean]
@@ -211,7 +211,7 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
-  def addBookmarks() = JsonAction.authenticated(parser = parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
+  def addBookmarks() = UserAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId
     val json = request.body

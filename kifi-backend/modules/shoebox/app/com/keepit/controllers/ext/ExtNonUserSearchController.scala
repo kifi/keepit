@@ -4,7 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 
 import com.keepit.common.mail.EmailAddress
 
@@ -15,11 +15,11 @@ import com.keepit.abook.model.RichContact
 import scala.concurrent.Future
 
 class ExtNonUserSearchController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   typeaheadCommander: TypeaheadCommander)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def findPeopleToMessage(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
+  def findPeopleToMessage(q: String, n: Int) = UserAction.async { request =>
     new SafeFuture({
       typeaheadCommander.queryNonUserContacts(request.userId, q, n)
     }) map { contacts =>
@@ -33,7 +33,7 @@ class ExtNonUserSearchController @Inject() (
       contact.name.map { name => "name" -> JsString(name) })
   }
 
-  def hideEmailFromUser() = JsonAction.authenticatedParseJsonAsync { request =>
+  def hideEmailFromUser() = UserAction.async(parse.tolerantJson) { request =>
     (request.body \ "email").asOpt[EmailAddress] map { email =>
       new SafeFuture[Boolean]({
         typeaheadCommander.hideEmailFromUser(request.userId, email)

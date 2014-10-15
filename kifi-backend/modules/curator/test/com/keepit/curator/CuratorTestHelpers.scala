@@ -173,6 +173,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     val (uri, uriReco, uriSumm) = tuple
     val savedUri = shoebox.saveURIs(uri).head
     val savedUriReco = uriRecoRepo.save(uriReco)
-    (savedUri, savedUriReco, shoebox.saveURISummary(savedUri.id.get, uriSumm))
+    shoebox.saveURISummary(savedUri.id.get, uriSumm)
+    (savedUri, savedUriReco, uriSumm)
   }
 }

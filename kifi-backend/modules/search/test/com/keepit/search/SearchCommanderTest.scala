@@ -25,7 +25,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
+        val (graph, shardedCollectionIndexer, indexer, userGraphIndexer, _, mainSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
         Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate()), Duration(60, SECONDS))
@@ -39,7 +39,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
 
         val languageCommander = new LanguageCommanderImpl(inject[DistributedSearchServiceClient], searchFactory, shardedKeepIndexer)
         val augmentationCommander = new AugmentationCommanderImpl(activeShards, shardedKeepIndexer, searchFactory, inject[DistributedSearchServiceClient])
-        val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, mainSearcherFactory, inject[MonitoredAwait])
+        val compatibilitySupport = new SearchBackwardCompatibilitySupport(libraryIndexer, augmentationCommander, shardedCollectionIndexer, inject[MonitoredAwait])
 
         val searchCommander = new SearchCommanderImpl(
           activeShards,

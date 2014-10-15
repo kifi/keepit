@@ -1,7 +1,7 @@
 package com.keepit.controllers.email
 
 import com.keepit.commanders.{ LibraryCommander, RawBookmarkRepresentation, KeepInterner }
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.CuratorServiceClient
@@ -13,28 +13,29 @@ import com.google.inject.Inject
 
 class EmailRecosController @Inject() (
   db: Database,
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   keepInterner: KeepInterner,
   uriRepo: NormalizedURIRepo,
   curator: CuratorServiceClient,
   libraryCommander: LibraryCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with HandleDeepLinkRequests {
+    extends UserActions with ShoeboxServiceController with HandleDeepLinkRequests {
 
-  def viewReco(uriId: ExternalId[NormalizedURI]) = HtmlAction(
-    authenticatedAction = { request =>
-      val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-      val feedback = UriRecommendationFeedback(clicked = Some(true), clientType = Some(RecommendationClientType.Email))
-      curator.updateUriRecommendationFeedback(request.userId, uri.id.get, feedback)
-      Found(uri.url)
-    },
-    unauthenticatedAction = { request =>
-      val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
-      Found(uri.url)
+  def viewReco(uriId: ExternalId[NormalizedURI]) = MaybeUserAction { implicit request =>
+    request match {
+      case u: UserRequest[_] =>
+        val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
+        val feedback = UriRecommendationFeedback(clicked = Some(true), clientType = Some(RecommendationClientType.Email))
+        curator.updateUriRecommendationFeedback(u.userId, uri.id.get, feedback)
+        Found(uri.url)
+      case _ =>
+        val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
+        Found(uri.url)
     }
-  )
+  }
 
-  def keepReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
+  def keepReco(uriId: ExternalId[NormalizedURI]) = UserAction { request =>
+    println(s"keepReco: uriId=$uriId userId=${request.userId}")
     db.readOnlyReplica(uriRepo.getOpt(uriId)(_)) map { uri =>
       val source = KeepSource.emailReco
       val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
@@ -51,7 +52,7 @@ class EmailRecosController @Inject() (
     } getOrElse BadRequest
   }
 
-  def sendReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
+  def sendReco(uriId: ExternalId[NormalizedURI]) = UserAction { request =>
     val source = KeepSource.emailReco
     val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
     implicit val context = hcb.build

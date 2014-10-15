@@ -47,14 +47,14 @@ angular.module('kifi')
         function onClickOutsideInput(event) {
           if (!angular.element(event.target).is('.profile-name-input, .profile-input-save')) {
             $document.off('mousedown', onClickOutsideInput);
-            scope.$apply(cancel);
+            scope.$evalAsync(cancel);
           }
         }
 
         function onFocusOutsideInput(event) {
           if (!angular.element(event.target).is('.profile-name-input, .profile-input-save')) {
             $window.removeEventListener('focus', onFocusOutsideInput, true);
-            scope.$apply(cancel);
+            scope.$evalAsync(cancel);
           }
         }
 
@@ -121,6 +121,8 @@ angular.module('kifi')
           }
 
           scope.editing = false;
+          $document.off('mousedown', onClickOutsideInput);
+          $window.removeEventListener('focus', onFocusOutsideInput, true);
 
           // Save name.
           if (sameName(nameToSave, oldName)) {

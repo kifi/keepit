@@ -2,7 +2,8 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -11,7 +12,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -40,6 +41,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
+    FakeUserActionsModule(),
     FakeActorSystemModule()
   )
 
@@ -62,6 +64,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val input = Json.parse(
           s"""{"clicked": true}""".stripMargin)
 
+        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar"))
         val request = FakeRequest("POST", route).withBody(input)
 
         val controller = inject[RecommendationsController]

@@ -37,6 +37,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   val sharingUserInfoDataOriginal = SharingUserInfo(Set(Id[User](1)), 1)
   var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq(sharingUserInfoDataOriginal)
   def sharingUserInfoData(data: Seq[SharingUserInfo]): Unit = sharingUserInfoDataFix = data
+  val itemAugmentations = collection.mutable.Map[ItemAugmentationRequest, ItemAugmentationResponse]()
 
   override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (sharingUserInfoDataFix.headOption == Some(sharingUserInfoDataOriginal)) {
@@ -79,12 +80,14 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
   override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
-    ItemAugmentationResponse(
-      infos = Map.empty,
-      scores = AugmentationScores(
-        libraryScores = Map.empty,
-        userScores = Map.empty,
-        tagScores = Map.empty
+    itemAugmentations.getOrElse(request,
+      ItemAugmentationResponse(
+        infos = Map.empty,
+        scores = AugmentationScores(
+          libraryScores = Map.empty,
+          userScores = Map.empty,
+          tagScores = Map.empty
+        )
       )
     )
   }

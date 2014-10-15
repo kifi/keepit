@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.FakeActionAuthenticator
+import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -48,6 +48,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
+    FakeUserActionsModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
@@ -111,7 +112,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.website.routes.UserController.changePassword().toString()
         path === "/site/user/password"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         checkPasswordAuth(email1a.address.address, oldPwd1, true)
         checkPasswordAuth(email1b.address.address, oldPwd1, true)
         checkPasswordAuth(email1a.address.address, newPwd1, false)
@@ -140,7 +141,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
         val path = com.keepit.controllers.core.routes.AuthController.setPassword().toString
         path === "/password/set"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         checkPasswordAuth(email1a.address.address, oldPwd1, true)
         checkPasswordAuth(email1b.address.address, oldPwd1, true)
         checkPasswordAuth(email1a.address.address, newPwd1, false)
