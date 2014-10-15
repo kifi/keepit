@@ -1,6 +1,6 @@
 package com.keepit.controllers.api
 
-import com.keepit.common.controller.FakeActionAuthenticator
+import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.model._
 import com.keepit.test._
 import org.specs2.mutable.Specification
@@ -21,7 +21,7 @@ class DeskControllerTest extends Specification with ShoeboxTestInjector {
         val path = com.keepit.controllers.api.routes.DeskController.isLoggedIn.toString
         path === "/api/desk/isLoggedIn"
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest()
         val result = inject[DeskController].isLoggedIn()(request)
         status(result) must equalTo(OK)

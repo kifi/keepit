@@ -7,7 +7,7 @@ import play.api.test._
 import play.api.libs.json.Json
 
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator }
+import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
@@ -16,7 +16,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
 
   "EmailDeepLinkController" should {
     "handle valid requests from various users and devices" in {
-      withDb(FakeActionAuthenticatorModule()) { implicit injector =>
+      withDb(FakeUserActionsModule()) { implicit injector =>
         val db = inject[Database]
         val userRepo = inject[UserRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -38,7 +38,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
           (heinlein, niven, uri, deepLink)
         }
 
-        inject[FakeActionAuthenticator].setUser(heinlein)
+        inject[FakeUserActionsHelper].setUser(heinlein)
 
         {
           val path = com.keepit.controllers.email.routes.EmailDeepLinkController.handle(deepLink.token.value).toString()
@@ -49,7 +49,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
           redirectLocation(result) must equalTo(Some("http://www.google.com"))
         }
 
-        inject[FakeActionAuthenticator].setUser(niven)
+        inject[FakeUserActionsHelper].setUser(niven)
 
         {
           val path = com.keepit.controllers.email.routes.EmailDeepLinkController.handle(deepLink.token.value).toString()
@@ -61,7 +61,7 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
           contentAsString(result).contains("""window.location = "http://www.google.com";""") === false
         }
 
-        inject[FakeActionAuthenticator].setUser(niven, Set(ExperimentType.MOBILE_REDIRECT))
+        inject[FakeUserActionsHelper].setUser(niven, Set(ExperimentType.MOBILE_REDIRECT))
 
         {
           val path = com.keepit.controllers.email.routes.EmailDeepLinkController.handle(deepLink.token.value).toString()

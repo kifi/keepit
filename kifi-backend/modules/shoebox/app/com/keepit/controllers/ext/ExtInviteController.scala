@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 
 import com.keepit.commanders.{ FailedInvitationException, InviteStatus, FullSocialId, InviteCommander }
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.social.SocialNetworks
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -12,11 +12,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ BasicContact }
 
 class ExtInviteController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     inviteCommander: InviteCommander,
-    airbrake: AirbrakeNotifier) extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
-  def invite() = JsonAction.authenticatedParseJsonAsync { request =>
+  def invite() = UserAction.async(parse.tolerantJson) { request =>
     val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId] orElse {
       (request.body \ "email").asOpt[BasicContact].map(emailContact => FullSocialId(SocialNetworks.EMAIL, Right(emailContact.email), emailContact.name))
     }

@@ -4,8 +4,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus }
 import com.keepit.common.akka.TimeoutFuture
-import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -29,19 +28,19 @@ class InviteController @Inject() (db: Database,
     invitationRepo: InvitationRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     abookServiceClient: ABookServiceClient,
     inviteCommander: InviteCommander,
     fortytwoConfig: FortyTwoConfig,
-    airbrake: AirbrakeNotifier) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
-  def invite = HtmlAction.authenticated { implicit request =>
+  def invite = UserAction { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
   }
 
   private def CloseWindow() = Ok(Html("<script>window.close()</script>"))
 
-  def inviteConnection = HtmlAction.authenticatedAsync { implicit request =>
+  def inviteConnection = UserAction.async { implicit request =>
     val form = request.body.asFormUrlEncoded.get
     Try(FullSocialId(form.get("fullSocialId").get.head)) match {
       case Failure(_) => Future.successful(BadRequest("0"))
@@ -68,7 +67,7 @@ class InviteController @Inject() (db: Database,
 
   //will replace 'invite' and be renamed once the new site is fully released.
   //At which point we can also remove the two step facebook invitation process
-  def inviteV2() = JsonAction.authenticatedParseJsonAsync { request =>
+  def inviteV2() = UserAction.async(parse.tolerantJson) { request =>
     val fullSocialIdOption = (request.body \ "id").asOpt[FullSocialId]
     fullSocialIdOption match {
       case None => Future.successful(BadRequest("0"))
@@ -109,7 +108,7 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def refreshAllSocialInfo() = HtmlAction.authenticatedAsync { implicit request =>
+  def refreshAllSocialInfo() = UserAction.async { implicit request =>
     val info = db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getByUser(request.userId)
     }
@@ -119,48 +118,52 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def acceptInvite(id: ExternalId[Invitation]) = HtmlAction.async(allowPending = true)(authenticatedAction = { implicit request =>
-    resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
-  }, unauthenticatedAction = { implicit request =>
-    val (invitation, inviterUserOpt) = db.readOnlyMaster { implicit session =>
-      invitationRepo.getOpt(id).map {
-        case invite if invite.senderUserId.isDefined =>
-          (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
-        case invite =>
-          (Some(invite), None)
-      }.getOrElse((None, None))
-    }
-    invitation match {
-      case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
-        if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-          resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withCookies(Cookie("inv", invite.externalId.id)))
-        } else {
-          val senderUserId = invite.senderUserId.get
-          val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
-            case (Some(socialUserId), _) =>
-              val name = db.readOnlyReplica(socialUserInfoRepo.get(socialUserId)(_).fullName)
-              Future.successful(Some(name))
-            case (_, Some(emailAddress)) =>
-              abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
-            case _ =>
-              Future.successful(None)
-          }
-          nameOpt.map {
-            case Some(name) =>
-              val inviter = inviterUserOpt.get.firstName
-              Ok(views.html.marketing.landing(
-                useCustomMetaData = true,
-                pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
-                titleText = s"$inviter sent you an invite to kifi",
-                titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
-              )).withCookies(Cookie("inv", invite.externalId.id))
-            case None =>
-              log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-              Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home)
-          }
-        }
+  def acceptInvite(id: ExternalId[Invitation]) = UserAction.async { implicit request =>
+    request match {
+      case u: UserRequest[_] =>
+        resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
       case _ =>
-        resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home))
+        val (invitation, inviterUserOpt) = db.readOnlyMaster { implicit session =>
+          invitationRepo.getOpt(id).map {
+            case invite if invite.senderUserId.isDefined =>
+              (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
+            case invite =>
+              (Some(invite), None)
+          }.getOrElse((None, None))
+        }
+        invitation match {
+          case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
+            if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
+              resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withCookies(Cookie("inv", invite.externalId.id)))
+            } else {
+              val senderUserId = invite.senderUserId.get
+              val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
+                case (Some(socialUserId), _) =>
+                  val name = db.readOnlyReplica(socialUserInfoRepo.get(socialUserId)(_).fullName)
+                  Future.successful(Some(name))
+                case (_, Some(emailAddress)) =>
+                  abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
+                case _ =>
+                  Future.successful(None)
+              }
+              nameOpt.map {
+                case Some(name) =>
+                  val inviter = inviterUserOpt.get.firstName
+                  Ok(views.html.marketing.landing(
+                    useCustomMetaData = true,
+                    pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
+                    titleText = s"$inviter sent you an invite to kifi",
+                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
+                  )).withCookies(Cookie("inv", invite.externalId.id))
+                case None =>
+                  log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
+                  Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home)
+              }
+            }
+          case _ =>
+            resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home))
+        }
     }
-  })
+  }
+
 }

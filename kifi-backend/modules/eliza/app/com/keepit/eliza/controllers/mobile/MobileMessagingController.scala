@@ -36,9 +36,9 @@ class MobileMessagingController @Inject() (
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = false)
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = false)
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
     noticesFuture.map { notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)

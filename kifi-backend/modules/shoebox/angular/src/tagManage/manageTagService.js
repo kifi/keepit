@@ -8,10 +8,24 @@ angular.module('kifi')
     var pageSize = 100;
     var searchLimit = 30;
 
+    var decorate = function (tags) {
+      return _.map(tags || [], function (t) {
+        var tagPath;
+        var n = t.name;
+        if (n.indexOf(' ') !== -1) {
+          tagPath = '"' + n + '"';
+        } else {
+          tagPath = n;
+        }
+        t.href = '/find?q=tag:' + tagPath;
+        return t;
+      });
+    };
+
     var manageTagRemoteService = new Clutch(function (sort, offset) {
       return $http.get(routeService.pageTags + '?sort=' + sort + '&offset=' + offset + '&pageSize=' + pageSize
         ).then(function (res) {
-          return res.data.tags;
+          return decorate(res.data.tags);
         }
       );
     });
@@ -21,7 +35,11 @@ angular.module('kifi')
         return $q.when([]);
       }
       return $http.get(routeService.searchTags(query, searchLimit)).then(function (res) {
-        return res.data;
+        var results = res.data && res.data.results || [];
+        var tags = _.map(results, function (tag) {
+          return { name : tag.tag, keeps: tag.keepCount };
+        });
+        return decorate(tags);
       });
     });
 
@@ -33,12 +51,7 @@ angular.module('kifi')
         return manageTagRemoteService.get(sort, offset);
       },
       search: function(query) {
-        return tagSearchService.get(query).then(function (res) {
-          var tags = _.map(res.results, function(tag) {
-            return { name : tag.tag, keeps: tag.keepCount };
-          });
-          return tags;
-        });
+        return tagSearchService.get(query);
       }
     };
 
