@@ -233,7 +233,7 @@ class ExtLibraryController @Inject() (
       } map { _ =>
         if (query.trim.isEmpty && keepId.isDefined) {
           val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
-          keepsCommander.suggestTags(request.userId, keep.uriId, libraryId, limit).map { suggestedTags =>
+          keepsCommander.suggestTags(request.userId, libraryId, keep.uriId, limit).map { suggestedTags =>
             val result = JsArray(suggestedTags.map { tag => Json.obj("tag" -> tag) })
             Ok(result)
           }
