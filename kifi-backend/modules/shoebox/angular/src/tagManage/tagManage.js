@@ -44,13 +44,7 @@ angular.module('kifi')
         manageTagService.reset();
         getPage();
       } else {
-        var sortedTags = $scope.tagsToShow;
-        if ($scope.selectedSort === 'name') {
-          sortedTags = _.sortBy(sortedTags, function(t) { return t.name; }).reverse();
-        } else if ($scope.selectedSort === 'num_keeps') {
-          sortedTags = _.sortBy(sortedTags, function(t) { return t.keeps; }).reverse();
-        }
-        $scope.tagsToShow = sortedTags;
+        $scope.tagsToShow = localSortLibs($scope.tagsToShow);
       }
     });
 
@@ -92,7 +86,8 @@ angular.module('kifi')
     });
 
     $scope.clickAction = function () {
-      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, $scope.selectedTag.name).then(function () {
+      var tagName = encodeURIComponent($scope.selectedTag.name);
+      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
       });
       modalService.open({
@@ -133,18 +128,26 @@ angular.module('kifi')
       }
       $scope.more = false;
       manageTagService.search($scope.filter.name).then(function (tags) {
-        var sortedTags = tags;
-        if ($scope.selectedSort === 'name') {
-          sortedTags = _.sortBy(sortedTags, function(t) { return t.name; }).reverse();
-        } else if ($scope.selectedSort === 'num_keeps') {
-          sortedTags = _.sortBy(sortedTags, function(t) { return t.keeps; }).reverse();
-        }
-        $scope.tagsToShow = sortedTags;
-        return sortedTags;
+        $scope.tagsToShow = localSortLibs(tags);
+        return $scope.tagsToShow;
       });
     }, 200, {
       leading: true
     });
+
+    function localSortLibs(tags) {
+      var sortedTags = tags;
+      if ($scope.selectedSort === 'name') {
+        sortedTags = _.sortBy(sortedTags, function(t) {
+          return t.name;
+        }).reverse();
+      } else if ($scope.selectedSort === 'num_keeps') {
+        sortedTags = _.sortBy(sortedTags, function(t) {
+          return t.keeps;
+        }).reverse();
+      }
+      return sortedTags;
+    }
 
     //
     // Manage Tags
