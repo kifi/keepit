@@ -314,7 +314,6 @@ POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.Libra
 DELETE  /site/libraries/:id/keeps/:keepId   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], keepId: ExternalId[Keep])
 POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
-GET     /site/libraries/:id/tags/search  @com.keepit.controllers.website.LibraryController.searchLibraryTags(id: PublicId[Library], query: String, limit: Option[Int] = None)
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
