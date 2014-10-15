@@ -222,18 +222,21 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, None, query, limit)
+  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, None, query, limit)
 
-  def searchTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, Some(keepId), query, limit)
+  def suggestTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, Some(keepId), query, limit)
 
-  private def doSearchTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
+  private def doSuggestTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
         if (query.trim.isEmpty && keepId.isDefined) {
           val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
-          keepsCommander.suggestTags(request.userId, keep.uriId, libraryId, limit).map { suggestedTags => Ok(Json.toJson(suggestedTags)) }
+          keepsCommander.suggestTags(request.userId, libraryId, keep.uriId, limit).map { suggestedTags =>
+            val result = JsArray(suggestedTags.map { tag => Json.obj("tag" -> tag) })
+            Ok(result)
+          }
         } else {
           keepsCommander.searchTags(request.userId, query, limit) map { hits =>
             implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
