@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -77,12 +78,14 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)) { request =>
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
-    libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-      case Right(success) => Ok(JsString("success"))
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
     }
   }
 
