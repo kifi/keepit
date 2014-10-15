@@ -426,9 +426,7 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    $scope.showDelightedSurvey = function () {
-      return profileService.prefs && profileService.prefs.show_delighted_question;
-    };
+    $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
 
     /**
      * Make the page "extension-friendly"
