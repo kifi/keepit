@@ -166,13 +166,12 @@ class KeepsCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     libraryHashtagTypeahead: LibraryHashtagTypeaheadCommander,
-    searchServiceClient: SearchServiceClient,
     userHashtagTypeahead: UserHashtagTypeaheadCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
     globalKeepCountCache.getOrElseFuture(GlobalKeepCountKey()) {
-      Future.sequence(searchServiceClient.indexInfoList()).map { results =>
+      Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
           if (info.name.startsWith("BookmarkStore")) {
