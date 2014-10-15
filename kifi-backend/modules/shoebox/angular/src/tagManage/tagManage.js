@@ -161,12 +161,10 @@ angular.module('kifi')
     // Manage Tags
     //
     $scope.removeTag = function (tag) {
-      // todo (aaron): Get a nicer looking window thing
-      var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
-      if (choice) {
-        tagService.remove(tag);
-        _.remove($scope.tagsToShow, function(t) { return t === tag; });
-      }
+      modalService.open({
+        template: 'tagManage/deleteTagModal.tpl.html',
+        modalData: { tag: tag, tagsToShow: $scope.tagsToShow }
+      });
     };
 
   }
