@@ -17,7 +17,7 @@ angular.module('kifi')
         } else {
           tagPath = n;
         }
-        t.href = '/find?q=tag:' + tagPath;
+        t.href = '/find?q=tag:' + encodeURIComponent(tagPath);
         return t;
       });
     };
