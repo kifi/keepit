@@ -74,9 +74,9 @@ class CollectionCommander @Inject() (
             BasicCollection.fromCollection(summary._1, Some(summary._2))
           }
         case "name" =>
-          val sortedTags = collectionRepo.getByUserSortedByName(userId, offset, pageSize)
-          val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
-          sortedTags.map { c => BasicCollection.fromCollection(c.summary, bmCounts.get(c.id.get).orElse(Some(0))) }
+          collectionRepo.getByUserSortedByName(userId, offset, pageSize).map { summary =>
+            BasicCollection.fromCollection(summary._1, Some(summary._2))
+          }
         case _ => // default is "last_kept"
           val sortedTags = collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
           val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
