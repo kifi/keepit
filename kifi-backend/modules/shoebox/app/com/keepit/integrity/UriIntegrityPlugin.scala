@@ -78,36 +78,41 @@ class UriIntegrityActor @Inject() (
             (Some(oldBm), None)
           }
           case Some(currentPrimary) => {
-            def save(duplicate: Keep, primary: Keep, libraryId: Option[Id[Library]], visibility: LibraryVisibility): (Option[Keep], Option[Keep]) = {
+
+            def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
               val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
               val deadBm = keepRepo.save(
                 duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
               val liveBm = keepRepo.save(
-                primary.copy(visibility = visibility, libraryId = libraryId, uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
+                primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
               )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))
             }
 
-            if (oldBm.isActive) {
-              if (currentPrimary.isActive) {
-                // we are merging two active keeps, take the newer one
-                // if one of them is private, make the surviving keep private to true to be safe
-                if (oldBm.createdAt.getMillis < currentPrimary.createdAt.getMillis ||
-                  (oldBm.createdAt.getMillis == currentPrimary.createdAt.getMillis && oldBm.id.get.id < currentPrimary.id.get.id)) {
-                  save(duplicate = oldBm, primary = currentPrimary, libraryId = currentPrimary.libraryId, visibility = currentPrimary.visibility)
-                } else {
-                  save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
-                }
-              } else {
-                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
-                save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
-              }
-            } else {
-              // oldBm is already inactive or duplicate, do nothing
-              (None, None)
+            def orderByOldness(keep1: Keep, keep2: Keep): (Keep, Keep) = {
+              if (keep1.createdAt.getMillis < keep2.createdAt.getMillis ||
+                (keep1.createdAt.getMillis == keep2.createdAt.getMillis && keep1.id.get.id < keep2.id.get.id)) {
+                (keep1, keep2)
+              } else (keep2, keep1)
             }
+
+            (oldBm.isActive, currentPrimary.isActive) match {
+              case (true, true) =>
+                // we are merging two active keeps, take the newer one
+                val (older, newer) = orderByOldness(oldBm, currentPrimary)
+                save(duplicate = older, primary = newer)
+
+              case (true, false) =>
+                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
+                save(duplicate = currentPrimary, primary = oldBm)
+
+              case _ =>
+                // oldBm is already inactive or duplicate, do nothing
+                (None, None)
+            }
+
           }
         }
       }
