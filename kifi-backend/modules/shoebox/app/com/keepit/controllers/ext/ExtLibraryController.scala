@@ -2,14 +2,17 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.controllers.LibraryAccessActions
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -20,7 +23,7 @@ import scala.util.{ Failure, Success, Try }
 
 class ExtLibraryController @Inject() (
   db: Database,
-  libraryCommander: LibraryCommander,
+  val libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -30,8 +33,11 @@ class ExtLibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
+  airbrake: AirbrakeNotifier,
+  keepInterner: KeepInterner,
+  rawKeepFactory: RawKeepFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends UserActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
@@ -235,6 +241,27 @@ class ExtLibraryController @Inject() (
     } getOrElse {
       Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
     }
+  }
+
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+  def importBrowserBookmarks(id: PublicId[Library]) = (UserAction andThen LibraryWriteAction(id))(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
+    val userId = request.userId
+    val installationId = request.kifiInstallationId
+    val json = request.body
+
+    val bookmarkSource = (json \ "source").asOpt[String].map(KeepSource.get) getOrElse KeepSource.unknown
+    if (!KeepSource.valid.contains(bookmarkSource)) {
+      val message = s"Invalid bookmark source: $bookmarkSource from user ${request.user} running extension ${request.kifiInstallationId}"
+      airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(message), message, Some(request.user)))
+    }
+    SafeFuture {
+      log.debug(s"adding bookmarks import of user $userId")
+
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, bookmarkSource).build
+      val libraryId = Library.decodePublicId(id).get
+      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, bookmarkSource, json, installationId = installationId, libraryId = Some(libraryId)))
+    }
+    Status(ACCEPTED)(JsNumber(0))
   }
 
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
