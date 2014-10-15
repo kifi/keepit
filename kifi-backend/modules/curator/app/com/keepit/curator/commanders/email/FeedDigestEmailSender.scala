@@ -1,6 +1,5 @@
 package com.keepit.curator.commanders.email
 
-import akka.actor.FSM.->
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -231,7 +230,7 @@ class FeedDigestEmailSender @Inject() (
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      keepsFromLibrary <- getKeepsForLibrary(userId, MAX_KEEPS_TO_DELIVER - recos.size)
+      keepsFromLibrary <- getKeepsForLibrary(userId = userId, max = MAX_KEEPS_TO_DELIVER - recos.size, exclude = recos.map(_.uri.id.get).toSet)
     } yield {
       val totalItems = recos.size + keepsFromLibrary.size
       if (totalItems >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
@@ -384,12 +383,13 @@ class FeedDigestEmailSender @Inject() (
     }
   }
 
-  private def getKeepsForLibrary(userId: Id[User], max: Int): Future[Seq[DigestLibraryItem]] = {
+  private def getKeepsForLibrary(userId: Id[User], max: Int, exclude: Set[Id[NormalizedURI]]): Future[Seq[DigestLibraryItem]] = {
     userExperimentCommander.getExperimentsByUser(userId) flatMap { experiments =>
       if (experiments.contains(ExperimentType.LIBRARIES)) {
         for {
           keeps <- shoebox.newKeepsInLibrary(userId, LIBRARY_KEEPS_TO_FETCH)
-          candidates <- getLibraryKeepAttributions(userId, keeps)
+          dedupedKeeps = keeps.filterNot(c => exclude.contains(c.uriId))
+          candidates <- getLibraryKeepAttributions(userId, dedupedKeeps)
           digestLibraryItems <- FutureHelpers.findMatching(candidates, max, isEmailWorthy, transformLibraryCandidate).map(_.flatten)
         } yield digestLibraryItems
       } else Future.successful(Seq.empty)
