@@ -24,12 +24,15 @@ angular.module('kifi')
       linkNetwork: function (network) {
         return env.navBase + '/link/' + network;
       },
-      uploadBookmarkFile: function(makePublic) {
+      uploadBookmarkFile: function (makePublic) {
         var path = '/keeps/file-import';
         if (makePublic) {
           path += '?public=1';
         }
         return route(path);
+      },
+      uploadBookmarkFileToLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/import-file');
       },
       refreshNetworks: env.navBase + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
