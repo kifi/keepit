@@ -22,7 +22,6 @@ import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
-import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import scala.util.{ Try, Failure, Success }
 import play.api.mvc.Result
 import play.api.libs.json.{ Json, JsNumber, JsValue }
@@ -30,7 +29,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ UserRequest, ActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.{ SecureSocialHelper, MaybeUserRequest, UserRequest, ActionAuthenticator }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -256,7 +255,7 @@ class AuthHelper @Inject() (
     "cropY" -> optional(number),
     "cropSize" -> optional(number)
   )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
-  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
+  def doUserPassFinalizeAccountAction(implicit request: UserRequest[JsValue]): Future[Result] = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       {
@@ -266,7 +265,7 @@ class AuthHelper @Inject() (
     )
   }
 
-  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: UserRequest[JsValue]): Future[Result] = {
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
@@ -362,7 +361,7 @@ class AuthHelper @Inject() (
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
-  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
+  def doVerifyEmail(code: String)(implicit request: MaybeUserRequest[_]): Result = {
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         lazy val isPendingPrimaryEmail = {
