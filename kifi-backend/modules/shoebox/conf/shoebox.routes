@@ -159,28 +159,25 @@ POST    /m/1/page/details                   @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
 ## Deprecated
-POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
-POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
-POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileBookmarksController.addKeepWithTags()
+POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
+POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.addKeeps()
+POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 
-POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
-POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepBatch()
-POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileBookmarksController.unkeep(id: ExternalId[Keep])
+POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
+POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepBatch()
+POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileKeepsController.unkeep(id: ExternalId[Keep])
 
-POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrl()
-POST    /m/1/keeps/imageUrls                @com.keepit.controllers.mobile.MobileBookmarksController.getImageUrls()
+#Used by both Android and iOS
+POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileKeepsController.getImageUrl()
 
-POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileBookmarksController.saveCollection()
-GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
+POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
+GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
 GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
-GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
-POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
-
-POST    /m/1/user/:id/include               @com.keepit.controllers.mobile.MobileUserController.includeFriend(id: ExternalId[User])
-POST    /m/1/user/:id/exclude               @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
+GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
+POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])
+POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileKeepsController.removeTag(id: ExternalId[Collection])
 
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 POST    /m/1/auth/log-in                        @com.keepit.controllers.mobile.MobileAuthController.loginWithUserPass(link: String ?= "")
@@ -214,6 +211,10 @@ GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.M
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
 POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
 GET     /m/1/user/$id<[0-9a-f-]{36}> 			      @com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
+POST    /m/1/user/:id/include                   @com.keepit.controllers.mobile.MobileUserController.includeFriend(id: ExternalId[User])
+POST    /m/1/user/:id/exclude                   @com.keepit.controllers.mobile.MobileUserController.excludeFriend(id: ExternalId[User])
+
+
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
@@ -270,8 +271,9 @@ GET     /site/keeps/export          @com.keepit.controllers.website.KeepsControl
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.KeepsController.updateKeepInfo(id: ExternalId[Keep])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.KeepsController.unkeep(id: ExternalId[Keep])
+#### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
-POST    /site/keeps/imageUrl        @com.keepit.controllers.website.KeepsController.getImageUrl()
+#### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
 POST    /site/keeps/imageUrls       @com.keepit.controllers.website.KeepsController.getImageUrls()
 
 POST    /site/keeps/unkeep          @com.keepit.controllers.website.KeepsController.unkeepBulk()
