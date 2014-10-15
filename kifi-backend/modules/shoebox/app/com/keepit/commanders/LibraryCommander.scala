@@ -369,9 +369,8 @@ class LibraryCommander @Inject() (
           )
 
           // send emails to both users & non-users
-<<<<<<< HEAD
           key._2.map { invite =>
-            val recipient = invite.userId match {
+            invite.userId match {
               case Some(id) =>
                 libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, key._2.length)
                 Left(id)
@@ -379,11 +378,8 @@ class LibraryCommander @Inject() (
                 libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, key._2.length)
                 Right(invite.emailAddress.get)
             }
-            libraryInviteSender.get.inviteUserToLibrary(recipient, inviterId, invite.libraryId, invite.message)
+            libraryInviteSender.get.inviteUserToLibrary(invite)
           }
-=======
-          key._2.map(libraryInviteSender.get.inviteUserToLibrary)
->>>>>>> aa6fa08372966a95be051705229056c14f119e55
         }.toSeq.flatten
     }
     val emailsF = Future.sequence(emailFutures)
