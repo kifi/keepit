@@ -19,7 +19,10 @@ angular.module('kifi')
         var resultIndex = -1;
         var shareMenu = element.find('.library-share-menu');
         var searchInput = element.find('.library-share-search-input');
+        var contactList = element.find('.library-share-contact-list');
         var show = false;
+        var justScrolled = false;
+        var resetJustScrolledTimeout = null;
 
 
         //
@@ -59,6 +62,7 @@ angular.module('kifi')
         function hideMenu() {
           $document.off('click', onClick);
           show = false;
+          $timeout.cancel(resetJustScrolledTimeout);
           shareMenu.hide();
         }
 
@@ -181,12 +185,55 @@ angular.module('kifi')
         }
 
         function isFollowingLibrary(user) {
-          // For dev testing.
-          // scope.library.followers.push({ id: 'dc6cb121-2a69-47c7-898b-bc2b9356054c' });
-
           return _.some(scope.library.followers, function (follower) {
             return follower.id === user.id;
           });
+        }
+
+
+        // TODO(yiping): make a directive for displaying a list of items where up and down
+        // keys work to select items and where the list automatically scrolls on up and down
+        // key presses to hidden items.
+        /**
+         * If a user uses up-and-down arrows to select a contact that is not visible,
+         * scroll the list of contacts so that the selected contacts is visible.
+         *
+         * @param {number} selectedIndex - the index of the selected contact in the list of contacts.
+         */
+        function adjustScroll(selectedIndex) {
+
+          /**
+           * After we finish scrolling, we set a flag that a scroll has just happened so that
+           * a mouseenter event on a library item that was triggered as a result of the scroll
+           * would not result in that contact being selected. After a short amount of time,
+           * set the flag to false so that mouseenter can function as normal.
+           */
+          function setJustScrolled() {
+            justScrolled = true;
+            resetJustScrolledTimeout = $timeout(function () {
+              justScrolled = false;
+            }, 200);
+          }
+
+          // Each contact is 53px high, and we fit in 5 contacts within the
+          // visible area. For a contact to be visible, it should be entirely within the
+          // visible area (this means its top offset should be at least one contact height from
+          // the visible bottom).
+
+          var contactHeight = 53;
+          var maxNumContactsShown = 5;
+
+          var selectedContactTop = selectedIndex * contactHeight;
+          var visibleTop = contactList.scrollTop();
+          var visibleBottom = visibleTop + (maxNumContactsShown * contactHeight);
+
+          if (selectedContactTop < visibleTop) {
+            contactList.scrollTop(selectedContactTop);
+            setJustScrolled();
+          } else if (selectedContactTop > (visibleBottom - contactHeight)) {
+            contactList.scrollTop(selectedContactTop - ((maxNumContactsShown - 1) * contactHeight));
+            setJustScrolled();
+          }
         }
 
 
@@ -231,12 +278,14 @@ angular.module('kifi')
               clearSelection();
               resultIndex = getNextIndex(resultIndex, -1);
               scope.results[resultIndex].selected = true;
+              adjustScroll(resultIndex);
               break;
             case keyIndices.KEY_DOWN:
               $event.preventDefault();  // Otherwise browser will move cursor to end of input.
               clearSelection();
               resultIndex = getNextIndex(resultIndex, 1);
               scope.results[resultIndex].selected = true;
+              adjustScroll(resultIndex);
               break;
             case keyIndices.KEY_ENTER:
               clearSelection();
