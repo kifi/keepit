@@ -28,7 +28,6 @@ angular.module('kifi')
 
     function close () {
       var $modal = modals.pop();
-      $modal.scope().$destroy();
       $modal.remove();
     }
 
