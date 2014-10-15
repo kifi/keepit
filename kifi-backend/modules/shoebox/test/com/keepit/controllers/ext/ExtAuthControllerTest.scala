@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule, AuthenticatedRequest, FakeActionAuthenticator }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -90,8 +90,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
           .withCookies(cookie)
           .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"),
             "installation" -> JsString(kifiInstallation1.externalId.id))))
-        val authRequest2 = AuthenticatedRequest(null, user.id.get, user, fakeRequest2)
-        val result2 = inject[ExtAuthController].start(authRequest2)
+        val result2 = inject[ExtAuthController].start(fakeRequest2)
         status(result2) must equalTo(OK)
         val kifiInstallation2 = db.readOnlyMaster { implicit s =>
           val all = installationRepo.all()(s)

@@ -2,14 +2,13 @@ package com.keepit.controllers.core
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeUserActionsHelper, FakeActionAuthenticator, ActionAuthenticator }
+import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ FakeOutbox, EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.internal.ShoeboxController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ UserEmailAddress, UserEmailAddressRepo, User, UserRepo }
