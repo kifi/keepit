@@ -1,0 +1,49 @@
+@(errorId: String)
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>It's going down, I'm yelling timber...</title>
+  <meta name="robots" content="noindex">
+  <style>
+    body {
+      background-color: #f1f1f1;
+      font-family: Helvetica, Arial, sans;
+    }
+    .body-wrap {
+      max-width: 600px;
+      margin: 0 auto;
+      padding-top: 100px;
+      text-align: center;
+      color: #555;
+      font-size: 16px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    a {
+      text-decoration: none;
+      color: #6888AD;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    p {
+      padding: 0 50px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="body-wrap">
+    <h1>Looks like something went wrong! This wasn’t planned.</h1>
+    <p>We track these errors automatically, but if the problem persists feel free to <a href="http://support.kifi.com/">contact us</a>. In the meantime, try refreshing.</p>
+    <p>Sending this may help us figure out exactly what went wrong:</p>
+    <p><b>@errorId</b></p>
+    <footer>
+      <a href="http://support.kifi.com/customer/portal/emails/new">Contact support</a> — <a href="https://www.kifi.com/">Homepage</a> — <a href="https://twitter.com/kifi">@@kifi</a>
+    </footer>
+  </div>
+</body>
+</html>
