@@ -128,7 +128,7 @@ angular.module('kifi')
 
     $scope.onFilterChange = _.debounce(function () {
       if ($scope.filter.name === '') {
-        $timeout($scope.clearFilter(), 0);
+        $timeout($scope.clearFilter, 0);
         return $scope.tagList;
       }
       $scope.more = false;
@@ -142,7 +142,9 @@ angular.module('kifi')
         $scope.tagsToShow = sortedTags;
         return sortedTags;
       });
-    }, 200);
+    }, 200, {
+      leading: true
+    });
 
     //
     // Manage Tags
@@ -154,10 +156,6 @@ angular.module('kifi')
         tagService.remove(tag);
         _.remove($scope.tagsToShow, function(t) { return t === tag; });
       }
-    };
-
-    $scope.navigateToTag = function (tagName) {
-      $location.path('/find').search('q', 'tag:' + tagName);
     };
 
   }
