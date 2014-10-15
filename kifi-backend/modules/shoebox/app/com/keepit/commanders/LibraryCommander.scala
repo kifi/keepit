@@ -52,6 +52,46 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
+  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
+    db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      val numKeeps = keepRepo.getCountByLibrary(libraryId)
+      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
+      (keeps, numKeeps)
+    }
+  }
+
+  def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
+    val membership: Option[LibraryMembership] = db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+    }
+    membership.map(_.access.value)
+  }
+
+  def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
+    future {
+      db.readWrite { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map { mem =>
+          libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
+        }
+      }
+    }
+  }
+
+  def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
+    val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
+    createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
+      val accessStr = userIdOpt.map { userId =>
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
+        }.map(_.access.value)
+      }.flatten.getOrElse {
+        "none"
+      }
+      (libInfo, accessStr)
+    }
+  }
+
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
