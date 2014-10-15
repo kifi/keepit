@@ -99,7 +99,7 @@ angular.module('kifi')
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
       })['catch'](function () {
         modalService.open({
-          template: 'common/modal/genericErrorModal.tpl.html',
+          template: 'common/modal/genericErrorModal.tpl.html'
         });
       });
     };
