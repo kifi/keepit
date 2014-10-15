@@ -421,7 +421,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
-    "search tags in library" in {
+    "search tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2, keep) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
@@ -441,9 +441,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         contentAsString(searchTags(user1, libPubId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
         contentAsString(searchTags(user1, libPubId, "s", 2)) === """[]"""
 
+        /* todo(Léo): reconsider when tags have been figured out from a product perspective
         // other user with read access to library can search tags
         contentAsString(searchTags(user2, libPubId, "a", 3)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]},{"tag":"Awesome","matches":[[0,1]]}]"""
         contentAsString(searchTags(user2, libPubId, "s", 3)) === """[]"""
+        */
 
         // other user without read access to library cannot search tags
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(state = LibraryMembershipStates.INACTIVE)) }

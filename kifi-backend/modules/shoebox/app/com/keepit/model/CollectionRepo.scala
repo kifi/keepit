@@ -13,7 +13,7 @@ import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.StaticQuery
-import com.keepit.typeahead.UserHashtagTypeaheadCommander
+import com.keepit.typeahead.HashtagTypeahead
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
@@ -46,7 +46,7 @@ class CollectionRepoImpl @Inject() (
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
   val clock: Clock,
-  typeahead: UserHashtagTypeaheadCommander)
+  typeahead: HashtagTypeahead)
     extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import db.Driver.simple._

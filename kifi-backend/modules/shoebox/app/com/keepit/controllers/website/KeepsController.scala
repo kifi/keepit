@@ -23,6 +23,7 @@ import com.keepit.commanders.CollectionSaveFail
 import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.json.TupleFormat
 
 class KeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -439,8 +440,10 @@ class KeepsController @Inject() (
   }
 
   def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>
-    keepsCommander.searchUserTags(request.userId, query, limit).map { hashTagResults =>
-      Ok(Json.obj("results" -> hashTagResults))
+    keepsCommander.searchTags(request.userId, query, limit).map { hits =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val results = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "keepCount" -> hit.keepCount, "matches" -> hit.matches) })
+      Ok(Json.obj("results" -> results))
     }
   }
 }
