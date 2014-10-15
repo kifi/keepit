@@ -18,7 +18,6 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
-import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api
 import play.api.libs.json.{ JsValue, JsObject, JsString, Json }
 import play.api.Play
@@ -89,7 +88,7 @@ class HomeController @Inject() (
   }
 
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
@@ -109,7 +108,7 @@ class HomeController @Inject() (
   }
 
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
@@ -132,7 +131,7 @@ class HomeController @Inject() (
     }
   }
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
@@ -208,7 +207,7 @@ class HomeController @Inject() (
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
   }
 
-  private def homeNotAuthed(implicit request: Request[_]): Result = {
+  private def homeNotAuthed(implicit request: MaybeUserRequest[_]): Result = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -265,7 +264,7 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
     }
     setHasSeenInstall()
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (!agent.screenCanFitWebApp) {
