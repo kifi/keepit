@@ -41,7 +41,7 @@
   };
 
   function trackEventThroughProxy(event, properties)  {
-    return $http.post(env.origin + '/site/events', [{
+    return $http.post(env.xhrBase + '/events', [{
       'event': event,
       'properties': properties
     }]);
@@ -124,7 +124,7 @@
 
       var trackMe = function (me) {
         me = me || profileService.me;
-        if (!me) {
+        if (!me || !me.id) {
           // shouldn't happen, just a sanity check
           return;
         }

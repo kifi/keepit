@@ -1,14 +1,10 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.model.view.LibraryMembershipView
 import org.joda.time.DateTime
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import scala.concurrent.duration.Duration
 
 case class LibraryMembership(
     id: Option[Id[LibraryMembership]] = None,
@@ -19,7 +15,9 @@ case class LibraryMembership(
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
     seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
-    showInSearch: Boolean) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    showInSearch: Boolean,
+    lastViewed: Option[DateTime] = None,
+    lastEmailSent: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -27,35 +25,12 @@ case class LibraryMembership(
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
-  def hasWriteAccess: Boolean = {
-    return access == LibraryAccess.READ_WRITE || access == LibraryAccess.OWNER
-  }
-}
+  def hasWriteAccess: Boolean = access == LibraryAccess.READ_WRITE || access == LibraryAccess.OWNER
+  def isOwner: Boolean = access == LibraryAccess.OWNER
 
-object LibraryMembership {
-  implicit def format = (
-    (__ \ 'id).formatNullable(Id.format[LibraryMembership]) and
-    (__ \ 'libraryId).format[Id[Library]] and
-    (__ \ 'userId).format[Id[User]] and
-    (__ \ 'access).format[LibraryAccess] and
-    (__ \ 'createdAt).format(DateTimeJsonFormat) and
-    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'state).format(State.format[LibraryMembership]) and
-    (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
-    (__ \ 'showInSearch).format[Boolean]
-  )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
-
-  def toLibraryMembershipView(libMem: LibraryMembership): LibraryMembershipView =
-    LibraryMembershipView(id = libMem.id, libraryId = libMem.libraryId, userId = libMem.userId, access = libMem.access, createdAt = libMem.createdAt, state = libMem.state, seq = libMem.seq)
+  def toLibraryMembershipView: LibraryMembershipView =
+    LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
 }
-
-case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
-  override val version = 0
-  val namespace = "library_membership_by_id"
-  def toKey(): String = id.id.toString
-}
-class LibraryMembershipIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LibraryMembershipIdKey, LibraryMembership](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
@@ -78,17 +53,4 @@ object LibraryAccess {
       case OWNER.value => OWNER
     }
   }
-}
-
-case class LibraryMembershipView(
-  id: Option[Id[LibraryMembership]],
-  libraryId: Id[Library],
-  userId: Id[User],
-  access: LibraryAccess,
-  createdAt: DateTime = currentDateTime,
-  state: State[LibraryMembership],
-  seq: SequenceNumber[LibraryMembership])
-
-object LibraryMembershipView {
-  implicit val format = Json.format[LibraryMembershipView]
 }

@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.Library
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
+import com.keepit.search.Searcher
 
 case class LibraryRecord(name: String, description: Option[String], id: Id[Library])
 

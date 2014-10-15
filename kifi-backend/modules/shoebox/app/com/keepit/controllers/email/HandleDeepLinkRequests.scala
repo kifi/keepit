@@ -1,6 +1,6 @@
 package com.keepit.controllers.email
 
-import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController }
+import com.keepit.common.controller.{ UserRequest, AuthenticatedRequest, ShoeboxServiceController }
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.model.{ User, DeepLocator, NormalizedURI }
@@ -8,7 +8,7 @@ import play.api.mvc.{ Result, Request }
 
 protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
 
-  def handleAuthenticatedDeepLink(request: AuthenticatedRequest[_], uri: NormalizedURI, locator: DeepLocator, recipientUserId: Option[Id[User]]) = {
+  def handleAuthenticatedDeepLink(request: UserRequest[_], uri: NormalizedURI, locator: DeepLocator, recipientUserId: Option[Id[User]]) = {
     val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
     if (isKifiIphoneApp) {
       log.info(s"redirecting user ${request.userId} on iphone app")
@@ -60,7 +60,7 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
       if (agentString == null || agentString.isEmpty) {
         (false, false)
       } else {
-        val agent = UserAgent.fromString(agentString)
+        val agent = UserAgent(agentString)
         (agent.isIphone, agent.isKifiIphoneApp)
       }
     } getOrElse (false, false)

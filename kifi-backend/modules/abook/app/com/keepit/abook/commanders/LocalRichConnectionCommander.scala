@@ -119,10 +119,6 @@ class LocalRichConnectionCommander @Inject() (
           val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
           db.readWrite { implicit session => repo.recordFriendUserId(friendId, friendUserId) }
         }
-        case Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress]) => {
-          val friendId = friendSocialId.map(Left(_)).getOrElse(Right(friendEmail.get))
-          db.readWrite { implicit session => repo.block(userId, friendId) }
-        }
         case RemoveRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
           db.readWrite { implicit session =>
             user1.userId.foreach { userId1 => repo.removeRichConnection(userId1, user1.id.get, user2.id.get) }

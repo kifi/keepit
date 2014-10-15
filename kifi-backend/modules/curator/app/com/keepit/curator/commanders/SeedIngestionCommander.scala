@@ -30,18 +30,19 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  def usersToIngestGraphDataFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
-
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
+
+  val MIN_KEEPS_FOR_RECOS = 20
+
+  def usersToIngestGraphDataFor(): Seq[Id[User]] = getUsersWithSufficientData().toSeq
 
   val ingestionLock = new ReactiveLock()
 
   def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
       ingestLibraryMemberships.flatMap { _ =>
-        usersToIngestGraphDataFor().flatMap { userIds =>
-          FutureHelpers.sequentialExec(userIds)(ingestTopUris)
-        }
+        val userIds = usersToIngestGraphDataFor()
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
       }
     }
     fut.onComplete {
@@ -161,6 +162,15 @@ class SeedIngestionCommander @Inject() (
       }
 
     }
+  }
+
+  def getUsersWithSufficientData(): Set[Id[User]] = {
+    db.readOnlyReplica { implicit session =>
+      keepInfoRepo.getUsersWithKeepsCounts()
+    }.filter {
+      case (userId, keepCount) =>
+        keepCount > MIN_KEEPS_FOR_RECOS
+    }.map(_._1).toSet
   }
 
   def forceIngestGraphData(userId: Id[User]): Future[Unit] = {

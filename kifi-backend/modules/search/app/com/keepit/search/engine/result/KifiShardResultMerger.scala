@@ -2,7 +2,7 @@ package com.keepit.search.engine.result
 
 import com.keepit.search.SearchConfig
 import com.keepit.search.engine.Visibility
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
 import play.api.libs.json.JsResultException
 import scala.math._
 
@@ -91,13 +91,12 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     if (hits.size < maxHits && othersHits.size > 0) {
       val othersNorm = max(highScore, othersHits.highScore)
-      val queue = createQueue(maxHits - hits.size)
-      othersHits.toRankedIterator.foreach {
+      othersHits.toRankedIterator.forall {
         case (hit, rank) =>
           val score = (hit.score / othersNorm) * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-          queue.insert(score, null, hit.hit)
+          hits.insert(score, null, hit.hit)
+          hits.size < maxHits // until we fill up the queue
       }
-      queue.foreach { h => hits.insert(h) }
     }
 
     if (withFinalScores) {
@@ -107,7 +106,8 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     }
   }
 
-  @inline private[this] def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
+  @inline private[this] def createQueue(maxHits: Int) = new MergeQueue[KifiShardHit](maxHits)
+
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {

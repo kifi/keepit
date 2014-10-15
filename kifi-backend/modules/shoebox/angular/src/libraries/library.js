@@ -2,24 +2,33 @@
 
 angular.module('kifi')
 
-.controller('LibraryCtrl', ['$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService', 'profileService', 'util',
-  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService, profileService, util) {
+.controller('LibraryCtrl', [
+  '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
+  'modalService', 'profileService', 'util',
+  function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
+            modalService, profileService, util) {
     //
     // Internal data.
     //
-    var username = $routeParams.username;
-    var librarySlug = $routeParams.librarySlug;
     var selectedCount = 0;
+    var prePopulated = false;
+    var authToken = $location.search().authToken || $location.search().authCode || $location.search().accessToken || '';
+    //                   ↑↑↑ use this one ↑↑↑
 
 
     //
     // Scope data.
     //
+    $scope.username = $routeParams.username;
+    $scope.librarySlug = $routeParams.librarySlug;
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
     $scope.loading = true;
     $scope.hasMore = true;
+    $scope.page = null; // This is used to decide which page to show (library, permission denied, login)
+    $scope.passphrase = $scope.passphrase || {};
+    $scope.$error = $scope.$error || {};
 
 
     //
@@ -31,7 +40,7 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      return libraryService.getKeepsInLibrary($scope.library.id, $scope.keeps.length).then(function (res) {
+      return libraryService.getKeepsInLibrary($scope.library.id, $scope.keeps.length, authToken).then(function (res) {
         var rawKeeps = res.keeps;
 
         rawKeeps.forEach(function (rawKeep) {
@@ -47,42 +56,6 @@ angular.module('kifi')
 
         return $scope.keeps;
       });
-    };
-
-    $scope.manageLibrary = function () {
-      libraryService.libraryState = {
-        library: $scope.library,
-        returnAction: function () {
-          libraryService.getLibraryById($scope.library.id, true).then(function (data) {
-            libraryService.getLibraryByUserSlug(username, data.library.slug, true);
-            if (data.library.slug !== librarySlug) {
-              $location.path('/' + username + '/' + data.library.slug);
-            }
-          });
-        }
-      };
-      $rootScope.$emit('showGlobalModal', 'manageLibrary');
-    };
-
-    $scope.canBeShared = function (library) {
-      // Only user created (i.e. not Main or Secret) libraries can be shared.
-      // Of the user created libraries, public libraries can be shared by any Kifi user;
-      // discoverable/secret libraries can be shared only by the library owner.
-      return library.kind === 'user_created' &&
-             (library.visibility === 'published' ||
-              library.ownerId === profileService.me.id);
-    };
-
-    // This needs to be determined server side in the library response. For now, doing it client side.
-    $scope.canBeFollowed = function (library) {
-      var alreadyFollowing = _.find(library.followers, function (elem) {
-        return elem.id === profileService.me.id;
-      });
-      return !alreadyFollowing && library.ownerId !== profileService.me.id;
-    };
-
-    $scope.followLibrary = function (libraryId) {
-      libraryService.joinLibrary(libraryId);
     };
 
     $scope.getSubtitle = function () {
@@ -117,7 +90,7 @@ angular.module('kifi')
     // Watches and listeners.
     //
     $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if (libSlug === librarySlug) {
+      if (libSlug === $scope.librarySlug) {
         $scope.keeps.unshift(keep);
       }
     });
@@ -129,31 +102,63 @@ angular.module('kifi')
 
     // librarySummaries has a few of the fields we need to draw the library.
     // Attempt to pre-populate the library object while we wait
-    if (libraryService.librarySummaries) {
-      var path = '/' + username + '/' + librarySlug;
+    if ($scope.$root.userLoggedIn && libraryService.librarySummaries) {
+      var path = '/' + $scope.username + '/' + $scope.librarySlug;
       var lib = _.find(libraryService.librarySummaries, function (elem) {
         return elem.url === path;
       });
 
       if (lib) {
+        $scope.page = 'library';
         util.replaceObjectInPlace($scope.library, lib);
+        prePopulated = true;
       }
     }
 
-    // Request for library object also retrieves an initial set of keeps in the library.
-    libraryService.getLibraryByUserSlug(username, librarySlug).then(function (library) {
-      util.replaceObjectInPlace($scope.library, library);
 
-      library.keeps.forEach(function (rawKeep) {
-        var keep = new keepDecoratorService.Keep(rawKeep);
-        keep.buildKeep(keep);
-        keep.makeKept();
+    var init = function (invalidateCache) {
+      // Request for library object also retrieves an initial set of keeps in the library.
+      libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken, invalidateCache || false).then(function (library) {
+        // If library information has already been prepopulated, extend the library object.
+        // Otherwise, replace library object completely with the newly fetched object.
+        if (prePopulated) {
+          _.assign($scope.library, library);
+        } else {
+          util.replaceObjectInPlace($scope.library, library);
+        }
 
-        $scope.keeps.push(keep);
+        library.keeps.forEach(function (rawKeep) {
+          var keep = new keepDecoratorService.Keep(rawKeep);
+          keep.buildKeep(keep);
+          keep.makeKept();
+
+          $scope.keeps.push(keep);
+        });
+
+        $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
+        $scope.loading = false;
+        $scope.page = 'library';
+      }, function onError(resp) {
+        if (resp.data && resp.data.error) {
+          if (resp.data.error && authToken) {
+            $scope.page = 'login';
+          } else {
+            $scope.page = 'permission_denied';
+          }
+        }
       });
+    };
 
-      $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
-      $scope.loading = false;
-    });
+    init();
+
+
+    $scope.submitPassPhrase = function () {
+      libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {
+        init(true);
+      })['catch'](function (err) {
+        $scope.$error.name = 'Oops, that didn\'t work. Try again? Check the email you recieved for the correct pass phrase.';
+        return err;
+      });
+    };
   }
 ]);

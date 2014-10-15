@@ -1,12 +1,11 @@
 package com.keepit.controllers.core
 
 import com.keepit.commanders.emails.ResetPasswordEmailSender
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
-import com.keepit.common.performance._
 import com.google.inject.Inject
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
-import play.api.libs.json.{ Json, JsValue }
 import securesocial.core._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
@@ -24,16 +23,14 @@ import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import scala.util.Failure
-import scala.Some
+import scala.util.{ Try, Failure, Success }
 import play.api.mvc.Result
-import play.api.libs.json.JsNumber
+import play.api.libs.json.{ Json, JsNumber, JsValue }
 import play.api.mvc.DiscardingCookie
-import scala.util.Success
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.controller.{ UserRequest, ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -63,6 +60,7 @@ class AuthHelper @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
+    libraryCommander: LibraryCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     secureSocialClientIds: SecureSocialClientIds,
@@ -75,7 +73,7 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
+  def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
       socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
@@ -170,7 +168,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]])(implicit request: Request[JsValue]): Result = {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
@@ -186,16 +184,21 @@ class AuthHelper @Inject() (
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey) getOrElse {
       request.request.headers.get(USER_AGENT).flatMap { agentString =>
-        val agent = UserAgent.fromString(agentString)
+        val agent = UserAgent(agentString)
         if (agent.canRunExtensionIfUpToDate) Some("/install") else None
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
+
+    libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
-      authenticator => Ok(Json.obj("uri" -> uri)).withNewSession.withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv")) // todo: uri not relevant for mobile
+      authenticator => Ok(Json.obj("uri" -> uri))
+        .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
+        .withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> user.id.get.toString))
     )
   }
 
@@ -222,14 +225,25 @@ class AuthHelper @Inject() (
       formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
       {
         case sfi: SocialFinalizeInfo =>
-          require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-          val identity = request.identityOpt.get
-          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-          val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
-          finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+          handleSocialFinalizeInfo(sfi, None)
       })
+  }
+
+  def doTokenFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
+    request.body.asOpt[TokenFinalizeInfo] match {
+      case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
+      case Some(info) => handleSocialFinalizeInfo(info, info.libraryPublicId)
+    }
+  }
+
+  def handleSocialFinalizeInfo(sfi: SocialFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: Request[JsValue]): Result = {
+    require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+    val identity = request.identityOpt.get
+    val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
+    val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
+    finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId)
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -247,17 +261,18 @@ class AuthHelper @Inject() (
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       {
         case efi: EmailPassFinalizeInfo =>
-          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-          val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
-          authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
-            case (user, email, newIdentity) =>
-              sw.stop()
-              sw.logTime()
-              finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-          }
+          handleEmailPassFinalizeInfo(efi, None)
       }
     )
+  }
+
+  def handleEmailPassFinalizeInfo(efi: EmailPassFinalizeInfo, libraryPublicId: Option[PublicId[Library]])(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
+    val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+      case (user, email, newIdentity) =>
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId)
+    }
   }
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
@@ -419,6 +434,76 @@ class AuthHelper @Inject() (
           BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
+    }
+  }
+
+  def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
+    Registry.providers.get(providerName) match {
+      case None =>
+        log.error(s"[accessTokenSignup($providerName)] Failed to retrieve provider; request=${request.body}")
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_arguments")))
+      case Some(provider) =>
+        authCommander.fillUserProfile(provider, oauth2InfoOrig) match {
+          case Failure(t) =>
+            log.error(s"[accessTokenSignup($providerName)] Caught Exception($t) during fillProfile; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+          case Success(filledUser) =>
+            authCommander.exchangeLongTermToken(provider, oauth2InfoOrig) map { oauth2InfoNew =>
+              authCommander.getSocialUserOpt(filledUser.identityId) match {
+                case None =>
+                  val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
+                  log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
+                  Authenticator.create(saved).fold(
+                    error => throw error,
+                    authenticator =>
+                      Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                        .withCookies(authenticator.toCookie)
+                  )
+                case Some(identity) => // social user exists
+                  db.readOnlyMaster(attempts = 2) { implicit s =>
+                    socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
+                  } match {
+                    case None => // kifi user does not exist
+                      Authenticator.create(identity).fold(
+                        error => throw error,
+                        authenticator =>
+                          Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                            .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                            .withCookies(authenticator.toCookie)
+                      )
+                    case Some(userId) =>
+                      val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
+                      Authenticator.create(identity).fold(
+                        error => throw error,
+                        authenticator =>
+                          Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
+                            .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                            .withCookies(authenticator.toCookie)
+                      )
+                  }
+
+              }
+            }
+        }
+    }
+  }
+
+  def doAccessTokenLogin(providerName: String, oAuth2Info: OAuth2Info)(implicit request: Request[JsValue]): Result = {
+    (for {
+      provider <- Registry.providers.get(providerName)
+    } yield {
+      Try {
+        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
+      } match {
+        case Success(socialUser) =>
+          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
+        case Failure(t) =>
+          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+          BadRequest(Json.obj("error" -> "invalid_token"))
+      }
+    }) getOrElse {
+      BadRequest(Json.obj("error" -> "invalid_arguments"))
     }
   }
 

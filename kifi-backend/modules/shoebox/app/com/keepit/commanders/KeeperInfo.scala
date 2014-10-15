@@ -5,6 +5,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
+import com.kifi.macros.json
 import play.api.libs.json.{ __, JsObject, Writes }
 import play.api.libs.functional.syntax._
 
@@ -69,6 +70,19 @@ object KeepData {
     (__ \ 'secret).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
+}
+
+// The extension uses this object to augment `KeepData` only when needed. It's useless by itself.
+case class MoarKeepData(
+  title: Option[String],
+  image: Option[String],
+  tags: Seq[String])
+object MoarKeepData {
+  implicit val writes: Writes[MoarKeepData] = (
+    (__ \ 'title).writeNullable[String] and
+    (__ \ 'image).writeNullable[String] and
+    (__ \ 'tags).writeNullable[Seq[String]].contramap[Seq[String]](Some(_).filter(_.nonEmpty))
+  )(unlift(MoarKeepData.unapply))
 }
 
 case class LibraryData(

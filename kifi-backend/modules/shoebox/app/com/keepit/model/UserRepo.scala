@@ -34,8 +34,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
-  def getUsername(username: Username)(implicit session: RSession): Option[User]
-  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User]
+  def getByUsername(username: Username)(implicit session: RSession): Option[User]
 }
 
 @Singleton
@@ -210,17 +209,13 @@ class UserRepoImpl @Inject() (
     }
   }
 
-  private val getUsernameCompiled = Compiled { username: Column[Username] =>
-    for (f <- rows if f.username is username) yield f
-  }
-  def getUsername(username: Username)(implicit session: RSession): Option[User] = {
-    getUsernameCompiled(username).firstOption
+  def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
+    val normalizedUsername = UsernameOps.normalize(username.value)
+    getByNormalizedUsernameCompiled(normalizedUsername).firstOption
   }
 
-  private val getNormalizedUsernameCompiled = Compiled { username: Column[String] =>
-    for (f <- rows if f.normalizedUsername is username) yield f
+  private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[String] =>
+    for (f <- rows if f.normalizedUsername is normalizedUsername) yield f
   }
-  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User] = {
-    getNormalizedUsernameCompiled(username).firstOption
-  }
+
 }

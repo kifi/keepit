@@ -1,0 +1,14 @@
+@(isLoggedIn: Boolean)
+
+<header id="header">
+  <div class="wrap clearfix">
+    <a href="/" class="left" id="logo" data-track-action="clickLogo"><img src="//djty7jcqog9qu.cloudfront.net/assets/site/kifi_logo_clover_gray.svg" alt="kifi logo with four-leaf clover"> Our social library</a>
+    <div class="right">
+      @if(isLoggedIn) {
+        <a href="/" class="button gray">Home</a>
+      } else {
+        <a href="/login" class="button gray" data-track-action="clickLogIn">Log In</a>
+      }
+    </div>
+  </div>
+</header>

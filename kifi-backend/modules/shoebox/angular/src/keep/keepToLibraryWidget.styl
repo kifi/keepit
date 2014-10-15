@@ -1,0 +1,232 @@
+//
+// Blocks.
+//
+keep-to-library-lib-icon =
+  display: inline-block
+  width: 23px
+  height: 31px
+  background-repeat: no-repeat
+
+
+//
+// Dropdown button.
+//
+.add-keep-to-library-dropdown
+  position: relative
+  display: block
+  box-sizing: border-box
+  margin-left: 15px
+  border: 2px solid #e7eaee
+  border-radius: 6px
+  padding: 12px 12px 12px 46px
+  width: 302px
+  background-color: #fff
+  font-family: Helvetica, Arial, sans-serif
+  font-size: 12px
+  line-height: 18px
+  color: #66829b
+  text-align: left
+
+  &:focus
+    border-color: #ced1d5
+
+  .keep-to-library-lib-icon-container
+    position: absolute
+    top: 7px
+    left: 12px
+
+  .add-keep-to-library-dropdown-arrow
+    position: absolute
+    top: 20px
+    right: 12px
+    border-top: 6px solid #d8dee6
+    border-bottom: 6px solid transparent
+    border-left: 5px solid transparent
+    border-right: 5px solid transparent
+
+  .keep-to-library-lib-icon
+    {keep-to-library-lib-icon}
+
+
+//
+// Widget.
+//
+.keep-to-library-widget
+  position: absolute
+  box-sizing: border-box
+  border: 1px solid #a6afbd
+  border-radius: 10px
+  box-shadow: 1px 1px 3px rgba(51, 51, 51, 0.6)
+  width: 302px
+  font-size: 12px  // TODO(yiping): get the SegoeUI font used in the PSD?
+  background-color: #fff
+  color: kifiBlack
+  overflow: hidden
+  z-index: 1100
+
+  .keep-to-library-search
+    position: relative
+    border-bottom: 1px solid #e7e7e7
+    padding: 17px 12px
+
+  .keep-to-library-search-input-icon
+    position: absolute
+    top: 26px
+    left: 22px
+    width: 13px
+    height: 14px
+    background-image: url('/img/sprites.png')
+    background-position: -68px -88px
+    background-size: 132px auto
+
+  .keep-to-library-search-input
+    box-sizing: border-box
+    border: 1px solid #dbdee3
+    border-radius: 4px
+    padding: 9px 10px 8px 30px
+    width: 275px
+    height: 31px
+    font-weight: 400
+    placeholder #a1adb9
+    background-color: #fcfcfc
+
+  .library-select-list
+    max-height: 376px
+    overflow-x: hidden
+    overflow-y: scroll
+
+  .library-select-option
+    position: relative
+    box-sizing: border-box
+    border-bottom: 1px solid #e7e7e7
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    white-space: nowrap
+    text-overflow: ellipsis
+    overflow: hidden
+    cursor: pointer
+
+    &.selected
+      background-color: #f3f5f7
+
+    &:active
+      background-color: #e6e8ea
+
+  .keep-to-library-lib-icon-container
+    position: absolute
+    top: 8px
+    left: 14px
+
+  .keep-to-library-lib-icon
+    {keep-to-library-lib-icon}
+    display: inline-block
+    width: 23px
+    height: 31px
+    background-repeat: no-repeat
+
+  .keep-to-library-create
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #f3f5f7
+    white-space: nowrap
+    overflow: hidden
+    cursor: pointer
+
+  .keep-to-library-create-header
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #fff
+    white-space: nowrap
+    overflow: hidden
+    cursor: pointer
+
+  .go-back-left-arrow
+    position: absolute
+    top: 13px
+    left: 15px
+    border-radius: 100%
+    width: 20px
+    height: 20px
+    background-color: #c8ced7
+    cursor: pointer
+
+    &:hover
+    &:focus
+      background-color: #bbc1ca
+
+    &:active
+      background-color: #afb5be
+
+    &::before
+    &::after
+      content: ' '
+      position: absolute;
+      left: 47%
+      border-radius: 2px
+      width: 2px;
+      background: #fff
+      font-size: 0
+
+    &::before
+      top: 4px
+      bottom: 8px
+      transform: translate(-1px) rotate(45deg)
+
+    &::after
+      top: 8px
+      bottom: 4px
+      transform: translate(-1px) rotate(-45deg)
+
+  .keep-to-library-create-heading
+    box-sizing: border-box
+    padding: 8px 15px
+    font-weight: 600
+    background-color: #f3f5f7
+
+  .keep-to-library-create-name-input-container
+    position: relative
+    box-sizing: border-box
+    padding: 17px 25px 15px 46px
+    font-weight: 600
+    background-color: #fff
+    white-space: nowrap
+    overflow: hidden
+
+  .keep-to-library-create-name-input
+    border: none
+    width: 230px
+    font-size: 12px
+    placeholder secondaryTextGray
+
+  .keep-to-library-create-visibility
+    margin-top: 10px
+
+  .keep-to-library-visibility-explanation
+    padding: 15px 30px 35px
+
+  .keep-to-library-create-button-container
+    padding: 10px
+    background-color: #f3f5f7
+    text-align: center
+
+  .keep-to-library-create-button
+    width: 100px
+    padding: 5px 0
+    border: 1px solid rgba(166, 175, 189, 0.53)
+    border-radius: 6px
+    font-size: 12px
+    font-weight: 700
+    font-smoothing: antialiased
+    color: #5c6373
+    background: linear-gradient(to top, #f3f3f3, #fff)
+    cursor: pointer
+
+    &:hover
+      background: #e6e8ea
+
+    &:active
+      background: #dadcde

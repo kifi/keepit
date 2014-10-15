@@ -10,8 +10,6 @@ angular.module('kifi')
      *  - Kifi User is a user of Kifi, may not be a friend.
      */
 
-    $FB.getLoginStatus(); //This causes the Facebook SDK to initialize properly. Don't remove!
-
     var inviteList = [], // used for typeahead dropdown for invite search
         selected,
         lastSearch;
@@ -150,7 +148,7 @@ angular.module('kifi')
         }
 
         //login if needed
-        if (platform === 'facebook') {
+        if (platform === 'facebook' && $FB.FB) {
           if ($FB.FB.getAuthResponse()) {
             doInvite();
           } else {

@@ -48,19 +48,21 @@ angular.module('kifi', [
 .factory('env', [
   '$location',
   function ($location) {
-    var host = $location.host(),
-      dev = /^dev\.ezkeep\.com|localhost$/.test(host),
-      local = $location.port() === 9000,
-      origin = local ? $location.protocol() + '://' + host  + ':' + $location.port() : 'https://www.kifi.com';
+    var host = $location.host();
+    var dev = /^dev\.ezkeep\.com|localhost|^protractor\.kifi\.com$/.test(host);
+    var origin = $location.protocol() + '://' + host  + (dev ? ':' + $location.port() : '');
+    var local = $location.port() === 9000;
+    var navOrigin = dev && !local ? 'https://www.kifi.com' : origin;
 
     return {
       local: local,
       dev: dev,
       production: !dev,
       origin: origin,
-      xhrBase: origin + '/site',
-      xhrBaseEliza: origin.replace('www', 'eliza') + '/eliza/site',
-      xhrBaseSearch: origin.replace('www', 'search'),
+      navBase: navOrigin,
+      xhrBase: navOrigin + '/site',
+      xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
+      xhrBaseSearch: navOrigin.replace('www', 'search'),
       picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
     };
   }
@@ -76,11 +78,6 @@ angular.module('kifi', [
       _.forOwn($location.search(), function (value, key) {
         state[key] = value;
       });
-
-      if ($location.path() !== '/find') {
-        // For now, remove all URL parameters
-        $location.search({}).replace();
-      }
     }
 
     function pushState(obj) {
@@ -121,12 +118,16 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
-  function (profileService, $window, $rootScope, friendService, $timeout, $log) {
+  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
-      profileService.fetchPrefs();
-      friendService.getRequests();
+      profileService.fetchMe().then(function () {
+        if ($rootScope.userLoggedIn) {
+          profileService.fetchPrefs();
+          friendService.getRequests();
+        }
+      });
       // TODO: add a link for triggering a bookmark import
       // $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
     });

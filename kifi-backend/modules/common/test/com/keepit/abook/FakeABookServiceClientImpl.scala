@@ -74,8 +74,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = ???
 
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = ???
-
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
 
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = ???
@@ -86,7 +84,9 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
 
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
+  def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]] = {
+    Future.successful(contacts.map(contact => RichContact(contact.email, contact.name, contact.firstName, contact.lastName, userId = None)))
+  }
 
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful {
     typeaheadHitMap.get(userId) match {
@@ -120,5 +120,4 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
 
   def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
-
 }

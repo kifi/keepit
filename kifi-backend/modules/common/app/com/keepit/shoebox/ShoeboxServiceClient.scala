@@ -1,12 +1,15 @@
 package com.keepit.shoebox
 
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.db.{ State, ExternalId, Id, SequenceNumber }
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import com.keepit.common.net.{ URI, CallTimeouts, HttpClient }
@@ -17,7 +20,6 @@ import com.keepit.common.zookeeper._
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.social._
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
@@ -33,8 +35,6 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.keepit.heimdal.SanitizedKifiHit
-import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -47,6 +47,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
+  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
@@ -77,7 +78,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -86,7 +87,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]]
   def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]]
   def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
@@ -117,6 +118,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
+  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]]
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -131,7 +134,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
-  userSessionExternalIdCache: UserSessionExternalIdCache,
+  userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
   userValueCache: UserValueCache,
@@ -298,6 +301,12 @@ class ShoeboxServiceClientImpl @Inject() (
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
+  }
+
+  def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]] = {
+    redundantDBConnectionCheck(userIds)
+    val payload = Json.toJson(userIds)
+    call(Shoebox.internal.getPrimaryEmailAddressForUsers(), payload) map { _.json.as[Map[Id[User], Option[EmailAddress]]] }
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)) { key =>
@@ -477,13 +486,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
-    cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
+  def getSessionByExternalId(sessionId: UserSessionExternalId): Future[Option[UserSessionView]] = {
+    cacheProvider.userSessionExternalIdCache.get(UserSessionViewExternalIdKey(sessionId)) match {
       case Some(session) => Promise.successful(Some(session)).future
       case None =>
         call(Shoebox.internal.getSessionByExternalId(sessionId)).map { r =>
           r.json match {
-            case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
+            case jso: JsObject => Json.fromJson[UserSessionView](jso).asOpt
             case _ => None
           }
         }
@@ -542,9 +551,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
-    call(Shoebox.internal.getFriendRequestBySender(senderId)).map { r =>
-      r.json.as[JsArray].value.map { x => Json.fromJson[FriendRequest](x).get }
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]): Future[Seq[Id[User]]] = {
+    call(Shoebox.internal.getFriendRequestRecipientIdBySender(senderId)).map { r =>
+      r.json.as[JsArray].value.map { x => Json.fromJson[Id[User]](x).get }
     }
   }
 
@@ -559,14 +568,14 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)) {
       val friendsCount = cacheProvider.userConnCountCache.get(UserConnectionCountKey(userId))
-      val bmsCount = cacheProvider.userBookmarkCountCache.get(KeepCountKey(Some(userId)))
+      val bmsCount = cacheProvider.userBookmarkCountCache.get(KeepCountKey(userId))
 
       (friendsCount, bmsCount) match {
-        case (Some(f), Some(bm)) => {
+        case (Some(f), Some(bm)) =>
           val segment = UserSegmentFactory(bm, f)
           Future.successful(segment)
-        }
-        case _ => call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
+        case _ =>
+          call(Shoebox.internal.getUserSegment(userId)).map { x => Json.fromJson[UserSegment](x.json).get }
       }
     }
   }
@@ -741,4 +750,12 @@ class ShoeboxServiceClientImpl @Inject() (
       "passPhrase" -> Json.toJson(hashedPassPhrase))
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
+
+  def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]] = {
+    call(Shoebox.internal.newKeepsInLibrary(userId, max)).map(_.json.as[Seq[Keep]])
+  }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
+    call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
+
 }

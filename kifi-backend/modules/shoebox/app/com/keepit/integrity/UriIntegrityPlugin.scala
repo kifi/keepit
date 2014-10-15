@@ -18,6 +18,7 @@ import akka.pattern.{ ask, pipe }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.core._
 
 trait UriChangeMessage
 
@@ -41,8 +42,8 @@ class UriIntegrityActor @Inject() (
     centralConfig: CentralConfig,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  /** tricky point: make sure (user, uri) pair is unique.  */
-  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession) = {
+  /** tricky point: make sure (library, uri) pair is unique.  */
+  private def handleBookmarks(oldBookmarks: Seq[Keep])(implicit session: RWSession): Unit = {
 
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
@@ -57,52 +58,61 @@ class UriIntegrityActor @Inject() (
 
       if (newUri.state == NormalizedURIStates.REDIRECTED) {
         // skipping due to double redirects. this should not happen.
-        log.error(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
-        airbrake.notify(s"double uri redirect found: keepid=${oldBm.id.get} uriid=${newUri.id.get}")
+        log.error(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
+        airbrake.notify(s"double uri redirect found: keepId=${oldBm.id.get} uriId=${newUri.id.get}")
         (None, None)
       } else {
+        val libId = oldBm.libraryId.get // fail if there's no library
         val userId = oldBm.userId
         val newUriId = newUri.id.get
+        val currentBookmarkOpt = if (oldBm.inDisjointLib)
+          keepRepo.getPrimaryInDisjointByUriAndUser(newUriId, userId)
+        else
+          keepRepo.getPrimaryByUriAndLibrary(newUriId, libId)
 
-        keepRepo.getPrimaryByUriAndUser(newUriId, userId) match {
+        currentBookmarkOpt match {
           case None => {
-            log.info(s"going to redirect bookmark's uri: (userId, newUriId) = (${userId.id}, ${newUriId.id}), db or cache returns None")
+            log.info(s"going to redirect bookmark's uri: (libId, newUriId) = (${libId.id}, ${newUriId.id}), db or cache returns None")
             keepRepo.deleteCache(oldBm) // NOTE: we touch two different cache keys here and the following line
             keepRepo.save(oldBm.withNormUriId(newUriId))
             (Some(oldBm), None)
           }
           case Some(currentPrimary) => {
 
-            def save(duplicate: Keep, primary: Keep, libraryId: Option[Id[Library]], visibility: LibraryVisibility): (Option[Keep], Option[Keep]) = {
+            def save(duplicate: Keep, primary: Keep): (Option[Keep], Option[Keep]) = {
               val deadState = if (duplicate.isActive) KeepStates.DUPLICATE else duplicate.state
               val deadBm = keepRepo.save(
-                duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
+                duplicate.copy(uriId = newUriId, isPrimary = false, state = deadState)
               )
               val liveBm = keepRepo.save(
-                primary.copy(visibility = visibility, libraryId = libraryId).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+                primary.copy(uriId = newUriId, isPrimary = true, state = KeepStates.ACTIVE)
               )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))
             }
 
-            if (oldBm.isActive) {
-              if (currentPrimary.isActive) {
-                // we are merging two active keeps, take the newer one
-                // if one of them is private, make the surviving keep private to true to be safe
-                if (oldBm.createdAt.getMillis < currentPrimary.createdAt.getMillis ||
-                  (oldBm.createdAt.getMillis == currentPrimary.createdAt.getMillis && oldBm.id.get.id < currentPrimary.id.get.id)) {
-                  save(duplicate = oldBm, primary = currentPrimary, libraryId = currentPrimary.libraryId, visibility = currentPrimary.visibility)
-                } else {
-                  save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
-                }
-              } else {
-                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
-                save(duplicate = currentPrimary, primary = oldBm, libraryId = oldBm.libraryId, visibility = oldBm.visibility)
-              }
-            } else {
-              // oldBm is already inactive ro duplicate, do nothing
-              (None, None)
+            def orderByOldness(keep1: Keep, keep2: Keep): (Keep, Keep) = {
+              if (keep1.createdAt.getMillis < keep2.createdAt.getMillis ||
+                (keep1.createdAt.getMillis == keep2.createdAt.getMillis && keep1.id.get.id < keep2.id.get.id)) {
+                (keep1, keep2)
+              } else (keep2, keep1)
             }
+
+            (oldBm.isActive, currentPrimary.isActive) match {
+              case (true, true) =>
+                // we are merging two active keeps, take the newer one
+                val (older, newer) = orderByOldness(oldBm, currentPrimary)
+                save(duplicate = older, primary = newer)
+
+              case (true, false) =>
+                // the current primary is INACTIVE. It will be marked as primary=false. the state remains INACTIVE
+                save(duplicate = currentPrimary, primary = oldBm)
+
+              case _ =>
+                // oldBm is already inactive or duplicate, do nothing
+                (None, None)
+            }
+
           }
         }
       }
@@ -296,28 +306,19 @@ class UriIntegrityActor @Inject() (
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3) { (session, keep) =>
-          normalizedURIInterner.getByUri(keep.url)(session) match {
-            case Some(uri) =>
-              if (keep.uriId != uri.id.get) {
-                log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${uri.id.get}]")
-
-                handleBookmarks(Seq(keep))(session)
-                dedupedSuccessCount += 1
-              }
-            case None =>
-              log.info(s"keep fixed [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=missing]")
-
-              handleBookmarks(Seq(keep))(session)
-              dedupedSuccessCount += 1
+          val newUriOpt = normalizedURIInterner.getByUri(keep.url)(session)
+          if (newUriOpt.forall(_.id.get != keep.uriId)) {
+            log.info(s"fix keep [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${newUriOpt.map(_.toShortString).getOrElse("missing")}]")
+            handleBookmarks(Seq(keep))(session)
+            dedupedSuccessCount += 1
           }
         }
         log.info(s"keeps deduped [count=$dedupedSuccessCount/${keeps.size}]")
-
         if (seq == centralConfig(FixDuplicateKeepsSeqNumKey).getOrElse(SequenceNumber.ZERO)) {
           centralConfig.update(FixDuplicateKeepsSeqNumKey, keeps.last.seq)
         }
       }
-      log.info(s"total $dedupedSuccessCount keeps deduplicated")
+      log.info(s"total $dedupedSuccessCount keeps deduped")
     } catch {
       case e: Throwable => log.error("deduping keeps failed", e)
     }

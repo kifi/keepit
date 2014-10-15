@@ -4,7 +4,7 @@ import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ MessageSource, Message, MessageThread }
-import com.keepit.common.controller.{ ElizaServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller.{ ElizaServiceController, MobileController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import play.api.mvc.Action
@@ -29,16 +29,16 @@ class MobileMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    messageSearchCommander: MessageSearchCommander) extends MobileController(actionAuthenticator) with ElizaServiceController {
+    messageSearchCommander: MessageSearchCommander) extends UserActions with ElizaServiceController {
 
-  def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
+  def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = false)
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = false)
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
     noticesFuture.map { notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
@@ -46,7 +46,7 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
+  def sendMessageAction() = UserAction.async(parse.tolerantJson) { request =>
     val o = request.body
     val (title, text, source) = (
       (o \ "title").asOpt[String],
@@ -78,7 +78,7 @@ class MobileMessagingController @Inject() (
     messageSubmitResponse // todo(JP, Eduardo, Léo): return meaningful error about invalid participants
   }
 
-  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>
+  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
     val tStart = currentDateTime
     val o = request.body
     val (text, source) = (
@@ -94,7 +94,7 @@ class MobileMessagingController @Inject() (
   }
 
   // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
-  def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = JsonAction.authenticatedAsync { request =>
+  def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map {
       case (thread, allMsgs) =>
         val url = thread.url.getOrElse("") // needs to change when we have detached threads
@@ -143,7 +143,7 @@ class MobileMessagingController @Inject() (
   }
 
   @deprecated(message = "use getPagedThread", since = "April 23, 2014")
-  def getCompactThread(threadId: String) = JsonAction.authenticatedAsync { request =>
+  def getCompactThread(threadId: String) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map {
       case (thread, msgs) =>
         val url = thread.url.getOrElse("") // needs to change when we have detached threads
@@ -182,39 +182,39 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def getThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
+  def getThreadsByUrl(url: String) = UserAction.async { request =>
     messagingCommander.getThreadInfos(request.userId, url).map {
       case (_, threadInfos) =>
         Ok(Json.toJson(threadInfos))
     }
   }
 
-  def hasThreadsByUrl(url: String) = JsonAction.authenticatedAsync { request =>
+  def hasThreadsByUrl(url: String) = UserAction.async { request =>
     messagingCommander.hasThreads(request.userId, url).map { yesorno =>
       Ok(Json.toJson(yesorno))
     }
   }
 
-  def searchMessages(query: String, page: Int, storeInHistory: Boolean) = JsonAction.authenticatedAsync { request =>
+  def searchMessages(query: String, page: Int, storeInHistory: Boolean) = UserAction.async { request =>
     messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map { notifs =>
       Ok(Json.toJson(notifs.map(_.obj)))
     }
   }
 
-  def getMessageSearchHistory() = JsonAction.authenticated { request =>
+  def getMessageSearchHistory() = UserAction { request =>
     val (queries, emails, optOut) = messageSearchCommander.getHistory(request.userId)
     Ok(Json.obj("qs" -> queries, "es" -> emails, "optOut" -> optOut))
   }
 
-  def getMessageSearchHistoryOptOut() = JsonAction.authenticated { request =>
+  def getMessageSearchHistoryOptOut() = UserAction { request =>
     Ok(Json.obj("didOptOut" -> messageSearchCommander.getHistoryOptOut(request.userId)))
   }
 
-  def setMessageSearchHistoryOptOut() = JsonAction.authenticatedParseJson { request =>
+  def setMessageSearchHistoryOptOut() = UserAction(parse.tolerantJson) { request =>
     Ok(Json.obj("didOptOut" -> messageSearchCommander.setHistoryOptOut(request.userId, (request.body \ "optOut").as[Boolean])))
   }
 
-  def clearMessageSearchHistory() = JsonAction.authenticated { request =>
+  def clearMessageSearchHistory() = UserAction { request =>
     messageSearchCommander.clearHistory(request.userId)
     Ok("")
   }

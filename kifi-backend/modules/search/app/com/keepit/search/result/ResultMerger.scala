@@ -1,12 +1,12 @@
 package com.keepit.search.result
 
 import com.keepit.search.SearchConfig
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import play.api.libs.json.JsNumber
 
-class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
+class ResultMerger(enableTailCutting: Boolean, config: SearchConfig, isFinalMerge: Boolean) {
   // get config params
   private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   private[this] val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
@@ -23,24 +23,19 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
   def merge(results: Seq[PartialSearchResult], maxHits: Int): PartialSearchResult = {
-    if (results.size == 1) {
-      val head = results.head
-      PartialSearchResult(head.hits, head.myTotal, head.friendsTotal, head.othersTotal, head.friendStats, head.show)
-    } else {
-      val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
-      val friendStats = mergeFriendStats(results)
-      val hits = mergeHits(results, maxHits)
-      val show = results.exists(_.show) // TODO: how to merge the show flag?
+    val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
+    val friendStats = mergeFriendStats(results)
+    val hits = mergeHits(results, maxHits)
+    val show = results.exists(_.show) // TODO: how to merge the show flag?
 
-      PartialSearchResult(
-        hits,
-        myTotal,
-        friendsTotal,
-        othersTotal,
-        friendStats,
-        show
-      )
-    }
+    PartialSearchResult(
+      hits,
+      myTotal,
+      friendsTotal,
+      othersTotal,
+      friendStats,
+      show
+    )
   }
 
   private def mergeHits(results: Seq[PartialSearchResult], maxHits: Int): Seq[DetailedSearchHit] = {
@@ -121,13 +116,17 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     }
 
     val hitList = hits.toSortedList
-    hitList.map { hit =>
-      hit.hit = hit.hit.set("score", JsNumber(hit.score))
-      hit.hit
+    if (isFinalMerge) {
+      hitList.map { hit =>
+        hit.hit = hit.hit.set("score", JsNumber(hit.score.toDouble))
+        hit.hit
+      }
+    } else {
+      hitList.map { hit => hit.hit }
     }
   }
 
-  @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
+  @inline private def createQueue(maxHits: Int) = new MergeQueue[DetailedSearchHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[PartialSearchResult]): (Int, Int, Int) = {

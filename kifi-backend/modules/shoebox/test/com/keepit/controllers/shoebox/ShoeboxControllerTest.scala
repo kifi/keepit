@@ -7,23 +7,23 @@ import com.keepit.common.db.slick._
 import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
 import com.keepit.model._
 import com.keepit.search.{ FakeSearchServiceClientModule, Lang }
-import com.keepit.test.{ ShoeboxTestInjector }
+import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import com.keepit.common.controller._
 
 import play.api.libs.json.{ Json, JsNumber, JsArray }
-import play.api.test.FakeRequest
+import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.db.{ SequenceNumber }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
@@ -39,7 +39,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
@@ -135,6 +135,60 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
         contentAsString(result) must not contain ("schrodinger equation");
         contentAsString(result) must not contain ("wave-particle duality");
         contentAsString(result) must not contain ("planck constant")
+      }
+    }
+
+    "return mutual friends of 2 users" in {
+      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
+        val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
+          val saveUser = inject[UserRepo].save _
+          val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i"))
+
+          val thisUserId = users(0).id.get
+          val thatUserId = users(1).id.get
+          val saveConn = inject[UserConnectionRepo].save _
+
+          for (i <- 2 to 7) yield saveConn(UserConnection(user1 = thisUserId, user2 = users(i).id.get))
+          for (i <- 5 to 9) yield saveConn(UserConnection(user1 = thatUserId, user2 = users(i).id.get))
+
+          (thisUserId, thatUserId, users.drop(5).take(3).map(_.id.get))
+        }
+
+        val call = com.keepit.controllers.internal.routes.ShoeboxController.getMutualFriends(user1, user2)
+        s"/internal/shoebox/database/getMutualFriends?user1Id=$user1&user2Id=$user2" === call.url
+
+        val ctrl = inject[ShoeboxController]
+        val result = ctrl.getMutualFriends(user1, user2)(FakeRequest())
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val json = Json.parse(contentAsString(result))
+        val userIds = Json.fromJson[Set[Id[User]]](json).get
+        commonUserIds.toSet === userIds
+      }
+    }
+
+    "getPrimaryEmailAddressForUsers" should {
+      "return a map of user id -> EmailAddress" in {
+        withDb(shoeboxControllerTestModules: _*) { implicit injector =>
+          val call = com.keepit.controllers.internal.routes.ShoeboxController.getPrimaryEmailAddressForUsers()
+          call.method === "POST"
+          call.url === s"/internal/shoebox/database/getPrimaryEmailAddressForUsers"
+
+          val userEmails = db.readWrite { implicit rw =>
+            for (i <- 1 to 3) yield inject[UserRepo].save(User(firstName = s"first$i",
+              lastName = s"last$i", primaryEmail = Some(EmailAddress(s"test$i@yahoo.com"))))
+          }.map(user => user.id.get -> user.primaryEmail).toMap
+
+          val userIds = userEmails.keySet
+          val payload = Json.toJson(userIds)
+          val ctrl = inject[ShoeboxController]
+          val result = ctrl.getPrimaryEmailAddressForUsers()(FakeRequest("POST", call.url, FakeHeaders(), payload))
+          status(result) must equalTo(OK)
+
+          val json = Json.parse(contentAsString(result))
+          Json.fromJson[Map[Id[User], Option[EmailAddress]]](json).get === userEmails
+        }
       }
     }
   }

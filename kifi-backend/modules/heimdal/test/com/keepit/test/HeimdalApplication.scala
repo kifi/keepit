@@ -7,7 +7,7 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HeimdalCacheModule, HashMapMemoryCacheModule }
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
@@ -33,7 +33,7 @@ class HeimdalApplication(overridingModules: Module*)(implicit path: File = new F
     FakeDiscoveryModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     HeimdalCacheModule(HashMapMemoryCacheModule()),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeSchedulerModule(),
     FakeSimpleQueueModule(),
     AwsModule(),
@@ -59,6 +59,6 @@ trait HeimdalTestInjector extends TestInjector with DbInjectionHelper with Heimd
     AwsModule(),
     FakeCryptoModule(),
     FakeActorSystemModule(),
-    FakeActionAuthenticatorModule()
+    FakeUserActionsModule()
   )
 }

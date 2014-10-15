@@ -26,7 +26,6 @@ class ResultDecorator(
     userId: Id[User],
     query: String,
     lang: Lang,
-    showExperts: Boolean,
     searchExperimentId: Option[Id[SearchConfigExperiment]],
     shoeboxClient: ShoeboxServiceClient,
     monitoredAwait: MonitoredAwait) extends Logging {
@@ -44,7 +43,6 @@ class ResultDecorator(
     val uriSummariesFuture = if (hits.isEmpty || !withUriSummary) Future.successful(Map.empty[Id[NormalizedURI], URISummary]) else {
       shoeboxClient.getUriSummaries(hits.map(_.uriId))
     }
-    val expertsFuture = Promise.successful(List.empty[Id[User]]).future // TODO: revisit
 
     val highlightedHits = highlight(hits)
 
@@ -59,9 +57,6 @@ class ResultDecorator(
     var decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
     decoratedHits = addUriSummary(decoratedHits, uriSummaryMap)
 
-    val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val experts = expertIds.flatMap { expert => basicUserJsonMap.get(expert) }
-
     new DecoratedResult(
       externalId,
       decoratedHits,
@@ -73,8 +68,7 @@ class ResultDecorator(
       idFilter,
       mayHaveMoreHits,
       result.show,
-      searchExperimentId,
-      experts)
+      searchExperimentId)
   }
 
   private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
@@ -168,6 +162,8 @@ object Highlighter extends Logging {
       emptyMatches
     }
   }
+
+  def formatMatches(matches: Seq[(Int, Int)]): JsArray = JsArray(matches.map(h => Json.arr(h._1, (h._2 - h._1))))
 }
 
 case class DecoratedResult(
@@ -181,5 +177,4 @@ case class DecoratedResult(
   idFilter: Set[Long],
   mayHaveMoreHits: Boolean,
   show: Boolean,
-  searchExperimentId: Option[Id[SearchConfigExperiment]],
-  experts: Seq[JsObject])
+  searchExperimentId: Option[Id[SearchConfigExperiment]])

@@ -14,9 +14,12 @@ import com.keepit.common.core._
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
-  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
+  def getAllByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
+  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
@@ -49,6 +52,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   // Do not use:
   def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
+  def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -70,6 +74,7 @@ class KeepRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Boolean]("is_primary", O.Nullable) // trueOrNull
+    def inDisjointLib = column[Boolean]("in_disjoint_lib", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
@@ -79,7 +84,7 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
       userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
@@ -100,6 +105,7 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
+      inDisjointLib = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       bookmarkPath = r.<<[Option[String]],
@@ -143,7 +149,7 @@ class KeepRepoImpl @Inject() (
 
   override def deleteCache(bookmark: Keep)(implicit session: RSession): Unit = {
     bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
-    countCache.remove(KeepCountKey(Some(bookmark.userId)))
+    countCache.remove(KeepCountKey(bookmark.userId))
     latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
     latestKeepUrlCache.remove(LatestKeepUrlKey(bookmark.url))
   }
@@ -153,7 +159,7 @@ class KeepRepoImpl @Inject() (
       deleteCache(bookmark)
     } else {
       bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-      countCache.remove(KeepCountKey(Some(bookmark.userId)))
+      countCache.remove(KeepCountKey(bookmark.userId))
       val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
       if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
       val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)
@@ -161,12 +167,17 @@ class KeepRepoImpl @Inject() (
     }
   }
 
+  // preserved for backward compatibility
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
     bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
       val bookmarks = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
-      assert(bookmarks.length <= 1, s"${bookmarks.length} bookmarks found for (uri, user) pair ${(uriId, userId)}")
-      bookmarks.headOption
+      if (bookmarks.length > 1) log.warn(s"[getByUriAndUser] ${bookmarks.length} keeps found for (uri, user) pair ${(uriId, userId)}")
+      bookmarks.find(_.inDisjointLib).orElse(bookmarks.headOption) // order: disjoint, custom
     }
+
+  def getAllByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
+  }
 
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.externalId === extId && b.userId === userId) yield b).firstOption
@@ -174,6 +185,14 @@ class KeepRepoImpl @Inject() (
 
   def getPrimaryByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
     (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true) yield b).firstOption
+  }
+
+  def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.libraryId === libId && b.isPrimary === true) yield b).firstOption
+  }
+
+  def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.userId === userId && b.inDisjointLib && b.isPrimary === true) yield b).firstOption
   }
 
   def getDuplicatesByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] = {
@@ -380,11 +399,11 @@ class KeepRepoImpl @Inject() (
 
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport] = {
     import StaticQuery.interpolation
-    val sql_query = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
+    val sqlQuery = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
       from bookmark k left join keep_to_collection kc
       on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId}
       group by url order by k.id desc"""
-    sql_query.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
+    sqlQuery.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }
 
   // Make compiled in Slick 2.1
@@ -395,6 +414,7 @@ class KeepRepoImpl @Inject() (
   private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).length
   }
+
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int = {
     getCountByLibraryCompiled(libraryId, excludeState).run
   }
@@ -402,7 +422,12 @@ class KeepRepoImpl @Inject() (
   private def getByExtIdandLibraryIdCompiled(extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
     (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
   }
+
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
     getByExtIdandLibraryIdCompiled(extId, libraryId, excludeState).firstOption
+  }
+
+  def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.createdAt > since) yield b).sortBy(_.createdAt asc).take(max).list
   }
 }

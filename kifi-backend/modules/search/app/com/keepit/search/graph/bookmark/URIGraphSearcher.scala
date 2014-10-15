@@ -158,18 +158,6 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val bookmarkId = myUriEdgeSet.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].getBookmarkId(uriId.id)
     storeSearcher.getDecodedDocValue[BookmarkRecord](BookmarkStoreFields.recField, bookmarkId)
   }
-
-  def getLangProfile(): Map[Lang, Int] = {
-    val prof = searcher.getDecodedDocValue[String](URIGraphFields.langProfField, myUserId.id)((arr, offset, length) => new String(arr, offset, length))
-    prof match {
-      case Some(prof) =>
-        prof.split(",").filter(_.indexOf(":") > 0).map { p =>
-          val len = p.indexOf(":")
-          (Lang(p.substring(0, len)) -> p.substring(len + 1).toInt)
-        }.toMap
-      case None => Map()
-    }
-  }
 }
 
 class NotAuthorizedURIGraphQueryException(msg: String) extends Exception(msg)

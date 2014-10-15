@@ -16,6 +16,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
@@ -62,6 +63,8 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryRepo: LibraryRepo,
   emailTemplateSender: EmailTemplateSender,
+  newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
+  userConnectionsCommander: UserConnectionsCommander,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -252,6 +255,22 @@ class ShoeboxController @Inject() (
     Ok(json)
   }
 
+  def getPrimaryEmailAddressForUsers() = Action(parse.tolerantJson) { request =>
+    Json.fromJson[Seq[Id[User]]](request.body).fold(
+      invalid = { jsErr =>
+        airbrake.notify("s[getPrimaryEmailAddressForUsers] failed to deserialize request body to Seq[Id[User]")
+        log.error(s"[getPrimaryEmailAddressForUsers] bad request: ${request.body}")
+        BadRequest
+      },
+      valid = { userIds =>
+        val userEmailMap = db.readOnlyReplica(2) { implicit session =>
+          userRepo.getUsers(userIds) map { case (id, user) => (id, user.primaryEmail) }
+        }
+        Ok(Json.toJson(userEmailMap))
+      }
+    )
+  }
+
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
     val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
     val collectionIds = db.readOnlyReplica(2) { implicit s => //no cache used
@@ -313,7 +332,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
-    val users = db.readOnlyReplica { implicit s =>
+    val users = db.readOnlyMaster { implicit s =>
       var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)
     }
@@ -331,9 +350,9 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uris))
   }
 
-  def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
+  def getSessionViewByExternalId(sessionId: UserSessionExternalId) = Action { request =>
     val res = db.readOnlyMaster { implicit session => //using cache
-      sessionRepo.getOpt(sessionId)
+      sessionRepo.getViewOpt(sessionId)
     }
     Ok(Json.toJson(res))
   }
@@ -350,9 +369,9 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
+  def getFriendRequestsRecipientIdBySender(senderId: Id[User]) = Action { request =>
     val requests = db.readOnlyReplica(2) { implicit s =>
-      friendRequestRepo.getBySender(senderId)
+      friendRequestRepo.getBySender(senderId).map(_.recipientId)
     }
     Ok(JsArray(requests.map { x => Json.toJson(x) }))
   }
@@ -411,7 +430,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
-    val userInfos = db.readOnlyReplica { implicit session =>
+    val userInfos = db.readOnlyMaster { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
           DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
@@ -458,5 +477,15 @@ class ShoeboxController @Inject() (
     val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
     Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
+  }
+
+  def newKeepsInLibrary(userId: Id[User], max: Int) = Action { request =>
+    val keeps = newKeepsInLibraryCommander.getLastViewdKeeps(userId, max)
+    Ok(Json.toJson(keeps))
+  }
+
+  def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Action { request =>
+    val mutualFriendIds = userConnectionsCommander.getMutualFriends(user1Id, user2Id)
+    Ok(Json.toJson(mutualFriendIds))
   }
 }

@@ -1,17 +1,21 @@
 package com.keepit.search.sharding
 
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
+import com.keepit.search.article.ArticleRecord
+import com.keepit.search.article.ArticleRecordSerializer
+import com.keepit.search.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
+import org.apache.lucene.index.Term
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.graph.collection._
 import com.keepit.search.SearchTestHelper
-import com.keepit.search.SearchFilter
 import com.keepit.test._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent._
+import scala.concurrent.duration._
 
 class IndexShardingTest extends Specification with SearchTestInjector with SearchTestHelper {
 
@@ -19,7 +23,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
   implicit private val publicIdConfig = PublicIdConfiguration("secret key")
   val emptyFuture = Future.successful(Set[Long]())
 
-  "ShardedArticleIndexer" should {
+  "ShardedIndexer" should {
     "create index shards" in {
       withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
@@ -39,65 +43,44 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, _) = initIndexes(store)
+        val (_, _, indexer, _, _, _, _, keepIndexer, _) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
-        uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
-        collectionGraph.isInstanceOf[ShardedCollectionIndexer] === true
+        keepIndexer.isInstanceOf[ShardedKeepIndexer] === true
 
-        uriGraph.update()
-        collectionGraph.update()
         indexer.update() === uris.size
+        Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
         users.foreach { user =>
           val userId = user.id.get
           activeShards.local.foreach { shard =>
-            val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
-            val uriGraphSearcher = mainSearcher.uriGraphSearcher
-            val collectionSearcher = mainSearcher.collectionSearcher
+            val articleSearcher = indexer.getIndexer(shard).getSearcher
 
             uris.foreach { uri =>
-              mainSearcher.getArticleRecord(uri.id.get).isDefined === shard.contains(uri.id.get)
+              articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id)(ArticleRecordSerializer.fromByteArray).isDefined === shard.contains(uri.id.get)
             }
 
-            val keeps = uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet
-            keeps.forall(shard.contains(_)) === true
+            val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
+            val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField)
+            keeps.forall(id => shard.contains(Id[NormalizedURI](id))) === true
 
             bookmarks.filter(_.userId == userId).foreach { bookmark =>
               if (shard.contains(bookmark.uriId)) {
-                keeps.contains(bookmark.uriId) === true
-                mainSearcher.getBookmarkRecord(bookmark.uriId).isDefined === true
+                keeps.contains(bookmark.uriId.id) === true
+                keepSearcher.getDecodedDocValue[KeepRecord](KeepFields.recordField, bookmark.id.get.id)(KeepRecord.fromByteArray).isDefined === true
               } else {
-                keeps.contains(bookmark.uriId) === false
+                keeps.contains(bookmark.uriId.id) === false
               }
             }
-            collections.foreach { collection =>
-              collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet.forall(shard.contains(_)) === true
-
-              val urisInCollection = getUriIdsInCollection(collection.id.get).map(_.uriId)
-              collectionSearcher.getName(collection.id.get) === (if (urisInCollection.exists(shard.contains(_))) collection.name else "")
-            }
           }
 
-          val keeps = bookmarks.filter(_.userId == userId).map(_.uriId).toSet
+          val keeps = bookmarks.filter(_.userId == userId).map(_.uriId.id).toSet
           val shardedKeeps = activeShards.local.map { shard =>
-            val uriGraphSearcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
-
-            uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet
+            val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toSet
           }
-          shardedKeeps.toSeq.map(_.size).sum === keeps.size
+          shardedKeeps.foldLeft(0) { (sum, set) => sum + set.size } === keeps.size
           shardedKeeps.flatten === keeps
-        }
-
-        (collections zip collKeeps).foreach {
-          case (collection, collKeeps) =>
-            val shardedKeeps = activeShards.local.map { shard =>
-              val collectionSearcher = CollectionSearcher(collectionGraph.getIndexer(shard))
-              collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet
-            }
-            val keeps = collKeeps.map(_.uriId).toSet
-            shardedKeeps.toSeq.map(_.size).sum === keeps.size
-            shardedKeeps.flatten === keeps
         }
       }
       1 === 1
@@ -116,13 +99,12 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         }
 
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, _) = initIndexes(store)
+        val (_, collectionGraph, indexer, _, _, _, _, keepIndexer, _) = initIndexes(store)
 
         indexer.isInstanceOf[ShardedArticleIndexer] === true
-        uriGraph.isInstanceOf[ShardedURIGraphIndexer] === true
         collectionGraph.isInstanceOf[ShardedCollectionIndexer] === true
 
-        uriGraph.update()
+        Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
         collectionGraph.update()
 
         val originalBookmark = bookmarks.find(_.userId == userId).get
@@ -130,12 +112,14 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val targetShard = activeShards.local.find(!_.contains(originalBookmark.uriId)).get
         val targetUri = uris.filter(u => targetShard.contains(u.id.get)).find(u => !bookmarks.exists(k => k.uriId == u.id.get)).get
 
-        uriGraph.update()
+        Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
         collectionGraph.update()
-        mainSearcherFactory.clear()
 
-        def getKeepSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, userId).getUserToUriEdgeSet(userId).size
-        def getCollectionSize(shard: Shard[NormalizedURI]) = mainSearcherFactory.getCollectionSearcher(shard, userId).getCollectionToUriEdgeSet(collection.id.get).size
+        def getKeepSize(shard: Shard[NormalizedURI]) = {
+          val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
+          keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toSet.size
+        }
+        def getCollectionSize(shard: Shard[NormalizedURI]) = CollectionSearcher(collectionGraph.getIndexer(shard)).getCollectionToUriEdgeSet(collection.id.get).size
 
         val oldKeepSizes = activeShards.local.map { shard => (shard -> getKeepSize(shard)) }.toMap
         val oldCollSizes = activeShards.local.map { shard => (shard -> getCollectionSize(shard)) }.toMap
@@ -144,27 +128,24 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val Seq(migratedBookmark) = saveBookmarks(originalBookmark.copy(uriId = targetUri.id.get))
         saveCollections(collection)
 
-        uriGraph.update()
+        Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
         collectionGraph.update()
-        mainSearcherFactory.clear() // remove cached searchers
 
         val newKeepSizes = activeShards.local.map { shard => (shard -> getKeepSize(shard)) }.toMap
         val newCollSizes = activeShards.local.map { shard => (shard -> getCollectionSize(shard)) }.toMap
 
         activeShards.local.foreach { shard =>
-          val mainSearcher = mainSearcherFactory(shard, userId, "alldocs", english, None, 1000, SearchFilter.default(), allHitsConfig)
-          val uriGraphSearcher = mainSearcher.uriGraphSearcher
-          val collectionSearcher = mainSearcher.collectionSearcher
+          val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
+          val collectionSearcher = CollectionSearcher(collectionGraph.getIndexer(shard))
 
           if (shard == sourceShard) {
-            uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet.contains(originalBookmark.uriId) === false
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).contains(originalBookmark.uriId.id) === false
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet.contains(originalBookmark.uriId) === false
 
             newKeepSizes(shard) === oldKeepSizes(shard) - 1
             newCollSizes(shard) === oldCollSizes(shard) - 1
           } else if (shard == targetShard) {
-            uriGraphSearcher.getUserToUriEdgeSet(userId).destIdSet.contains(migratedBookmark.uriId) === true
-            mainSearcher.getBookmarkRecord(migratedBookmark.uriId).isDefined === true
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).contains(migratedBookmark.uriId.id) === true
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet.contains(migratedBookmark.uriId) === true
 
             newKeepSizes(shard) === oldKeepSizes(shard) + 1
@@ -190,7 +171,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
           (fakeShoeboxClient.saveURIs(uris: _*), fakeShoeboxClient)
         }
         val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, _, mainSearcherFactory, _) = initIndexes(store)
+        val (_, _, indexer, _, _, _, _, _, _) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update() === 5 // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE)) // a4
@@ -220,7 +201,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         }.toList
         val savedUris = shoebox.saveURIs(uris: _*)
         val store = mkStore(savedUris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, _, mainSearcherFactory, _) = initIndexes(store)
+        val (_, _, indexer, _, _, _, _, _, _) = initIndexes(store)
         indexer.isInstanceOf[ShardedArticleIndexer] === true
         indexer.update === 5
         indexer.catchUpSeqNumber.value === 10

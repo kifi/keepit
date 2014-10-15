@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.commanders.{ FailedInvitationException, InviteStatus, FullSocialId, InviteCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -10,18 +10,18 @@ import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileInviteController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     inviteCommander: InviteCommander,
-    airbrake: AirbrakeNotifier) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
-  def inviteConnection = JsonAction.authenticatedParseJsonAsync { implicit request =>
+  def inviteConnection = UserAction.async(parse.tolerantJson) { implicit request =>
     (request.body \ "fullSocialId").asOpt[FullSocialId] match {
       case None => Future.successful(BadRequest("0"))
       case Some(fullSocialId) => {
         val subject = (request.body \ "subject").asOpt[String]
         val message = (request.body \ "message").asOpt[String]
         val source = "mobile"
-        inviteCommander.invite(request.userId, fullSocialId, subject, message, source).map {
+        inviteCommander.invite(request, request.userId, fullSocialId, subject, message, source).map {
           case inviteStatus if inviteStatus.sent => {
             log.info(s"[inviteConnection] Invite sent: $inviteStatus")
             Ok(Json.obj("code" -> "invitation_sent"))

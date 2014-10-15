@@ -11,8 +11,7 @@ angular.module('kifi')
   'env',
   'routeService',
   'Clutch',
-  'util',
-  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch, util) {
+  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
     var limit = 10;
     var smallLimit = 4;
 
@@ -39,7 +38,7 @@ angular.module('kifi')
       params = params || {};
       params.withPageInfo = true;
 
-      // Pass the id of the last keep received to the server so the server 
+      // Pass the id of the last keep received to the server so the server
       // knows which keeps to send next.
       params.before = lastKeepId;
 
@@ -163,7 +162,8 @@ angular.module('kifi')
       };
 
       $log.log('keepActionService.keepToLibrary()', data);
-      var url = env.xhrBase + '/libraries/' + libraryId + '/keeps';
+
+      var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -174,7 +174,7 @@ angular.module('kifi')
     }
 
     // When a url is added as a keep, the returned keep does not have the full
-    // keep information we need to display it. This function fetches that 
+    // keep information we need to display it. This function fetches that
     // information.
     function fetchFullKeepInfo(keep) {
       var url = routeService.getKeep(keep.id);
@@ -183,8 +183,7 @@ angular.module('kifi')
       };
 
       return $http.get(url, config).then(function (result) {
-        util.completeObjectInPlace(keep, result.data);
-        return keep;
+        return _.assign(keep, result.data);
       });
     }
 
@@ -232,6 +231,19 @@ angular.module('kifi')
       return unkeepMany([keep]);
     }
 
+    function unkeepFromLibrary(libraryId, keepId) {
+      var url = routeService.removeKeepFromLibrary(libraryId, keepId);
+      return $http.delete(url);  // jshint ignore:line
+    }
+
+    function unkeepManyFromLibrary(libraryId, keeps) {
+      var url = routeService.removeManyKeepsFromLibrary(libraryId);
+      var data = {
+        'ids': _.pluck(keeps, 'id')
+      };
+      return $http.post(url, data);
+    }
+
     var api = {
       getKeeps: getKeeps,
       getKeepsByTagId: getKeepsByTagId,
@@ -245,7 +257,9 @@ angular.module('kifi')
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,
       unkeepOne: unkeepOne,
-      unkeepMany: unkeepMany
+      unkeepMany: unkeepMany,
+      unkeepFromLibrary: unkeepFromLibrary,
+      unkeepManyFromLibrary: unkeepManyFromLibrary
     };
 
     return api;

@@ -31,7 +31,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
         visibility = LibraryVisibility.DISCOVERABLE,
-        libraryId = None))
+        libraryId = Some(Id[Library](1)),
+        inDisjointLib = true))
     }
   }
 
@@ -45,7 +46,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
         visibility = LibraryVisibility.SECRET,
-        libraryId = None))
+        libraryId = Some(Id[Library](1)),
+        inDisjointLib = true))
     }
   }
 
@@ -72,7 +74,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     rekeepScore = 1.0f,
     curationScore = None,
     multiplier = Some(1.0f),
-    discoveryScore = 1.0f)
+    discoveryScore = 1.0f,
+    libraryInducedScore = Some(0f))
 
   def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float, allScores: UriScores = defaultAllScores) = {
     val userId = Id[User](userIdInt)
@@ -104,7 +107,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         rekeepScore = 1.0f,
         curationScore = None,
         multiplier = Some(1.0f),
-        discoveryScore = 1.0f),
+        discoveryScore = 1.0f,
+        libraryInducedScore = Some(0f)),
       delivered = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId))
   }
@@ -134,7 +138,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeUserAttribution(userId: Id[User]) = {
     UserAttribution(
       friends = Seq.empty,
-      others = 5
+      others = 5,
+      None
     )
   }
 
@@ -168,6 +173,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     val (uri, uriReco, uriSumm) = tuple
     val savedUri = shoebox.saveURIs(uri).head
     val savedUriReco = uriRecoRepo.save(uriReco)
-    (savedUri, savedUriReco, shoebox.saveURISummary(savedUri.id.get, uriSumm))
+    shoebox.saveURISummary(savedUri.id.get, uriSumm)
+    (savedUri, savedUriReco, uriSumm)
   }
 }

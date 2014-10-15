@@ -6,8 +6,10 @@ import java.net.URLConnection
 import java.sql.SQLException
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.store._
@@ -28,11 +30,12 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[KeepImageCommanderImpl])
 trait KeepImageCommander {
 
+  def getUrl(keepImage: KeepImage): String
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
-  def setKeepImage(imageUrl: String, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone]
-  def setKeepImage(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone]
+  def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
+  def setKeepImageFromFile(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
 
   // Returns true if images were removed, false otherwise
   def removeKeepImageForKeep(keepId: Id[Keep]): Boolean
@@ -47,8 +50,15 @@ class KeepImageCommanderImpl @Inject() (
     uriSummaryCommander: URISummaryCommander,
     imageInfoRepo: ImageInfoRepo,
     s3UriImageStore: S3URIImageStore,
+    s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
+    keepImageRequestRepo: KeepImageRequestRepo,
+    airbrake: AirbrakeNotifier,
     keepImageRepo: KeepImageRepo) extends KeepImageCommander with KeepImageHelper with Logging {
+
+  def getUrl(keepImage: KeepImage): String = {
+    s3ImageConfig.cdnBase + "/" + keepImage.imagePath
+  }
 
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage] = {
     val keepImages = db.readOnlyReplica { implicit session =>
@@ -84,7 +94,7 @@ class KeepImageCommanderImpl @Inject() (
         remoteImageOpt.map { imageUrl =>
           log.info(s"[kic] Using $imageUrl")
           val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
-          fetchAndSet(realUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)
+          fetchAndSet(realUrl, keepId, KeepImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)(None)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
         }
@@ -95,11 +105,54 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  def setKeepImage(imageUrl: String, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone] = {
-    fetchAndSet(imageUrl, keepId, source, overwriteExistingImage = true)
+  def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
+    fetchAndSet(imageUrl, keepId, source, overwriteExistingImage = true)(requestId).map { done =>
+      finalizeImageRequestState(keepId, requestId, done)
+      done
+    }
   }
-  def setKeepImage(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource): Future[ImageProcessDone] = {
-    fetchAndSet(image, keepId, source, overwriteExistingImage = true)
+  def setKeepImageFromFile(image: TemporaryFile, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
+    fetchAndSet(image, keepId, source, overwriteExistingImage = true)(requestId).map { done =>
+      finalizeImageRequestState(keepId, requestId, done)
+      done
+    }
+  }
+
+  private def finalizeImageRequestState(keepId: Id[Keep], requestIdOpt: Option[Id[KeepImageRequest]], doneResult: ImageProcessDone): Unit = {
+    import ImageProcessState._
+    import KeepImageRequestStates._
+
+    requestIdOpt.map { requestId =>
+      val (state, failureCode, failureReason) = doneResult match {
+        case err: UpstreamProviderFailed =>
+          (UPSTREAM_FAILED, Some(err.reason), Some(err.ex.getMessage))
+        case UpstreamProviderNoImage =>
+          (UPSTREAM_FAILED, Some(UpstreamProviderNoImage.reason), None)
+        case err: SourceFetchFailed =>
+          (FETCHING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+        case err: HashFailed =>
+          (FETCHING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+        case err: InvalidImage =>
+          (PROCESSING_FAILED, Some(err.reason), Some(err.ex.getMessage))
+        case err: DbPersistFailed =>
+          (PERSISTING, Some(err.reason), Some(err.ex.getMessage))
+        case err: CDNUploadFailed =>
+          (PERSISTING, Some(err.reason), Some(err.ex.getMessage))
+        case success: ImageProcessSuccess =>
+          (INACTIVE, None, None)
+      }
+
+      db.readWrite { implicit session =>
+        val request = keepImageRequestRepo.get(requestId)
+        state match {
+          case INACTIVE => // Success
+            val keepImageOpt = keepImageRepo.getForKeepId(keepId).headOption
+            keepImageRequestRepo.save(request.copy(state = state, successHash = keepImageOpt.map(_.sourceFileHash)))
+          case failureState =>
+            keepImageRequestRepo.save(request.copy(state = state, failureCode = failureCode, failureReason = failureReason))
+        }
+      }
+    }
   }
 
   def removeKeepImageForKeep(keepId: Id[Keep]): Boolean = {
@@ -111,32 +164,32 @@ class KeepImageCommanderImpl @Inject() (
     images.nonEmpty
   }
 
-  // todo
-  // Use data from user picks to do a better system pick
-
-  // try ULTRA_QUALITY
-
   // Helper methods
 
   val originalLabel: String = "_o"
 
-  private def fetchAndSet(imageFile: TemporaryFile, keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean): Future[ImageProcessDone] = {
+  private def fetchAndSet(imageFile: TemporaryFile, keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(implicit requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     runFetcherAndPersist(keepId, source, overwriteExistingImage)(fetchAndHashLocalImage(imageFile))
   }
 
-  private def fetchAndSet(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean): Future[ImageProcessDone] = {
-    runFetcherAndPersist(keepId, source, overwriteExistingImage)(fetchAndHashRemoteImage(imageUrl))
+  private def fetchAndSet(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(implicit requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
+    detectUserPickedImageFromExistingHashAndReplace(imageUrl, keepId).map(Future.successful).getOrElse {
+      runFetcherAndPersist(keepId, source, overwriteExistingImage)(fetchAndHashRemoteImage(imageUrl))
+    }
   }
 
-  private def runFetcherAndPersist(keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]]): Future[ImageProcessDone] = {
+  private def runFetcherAndPersist(keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     val existingImagesForKeep = db.readOnlyMaster { implicit session =>
       keepImageRepo.getForKeepId(keepId)
     }
     if (existingImagesForKeep.nonEmpty && !overwriteExistingImage) {
       Future.successful(ImageProcessState.ExistingStoredImagesFound(existingImagesForKeep))
     } else {
+      updateRequestState(KeepImageRequestStates.FETCHING)
+
       fetcher.flatMap {
         case Right(loadedImage) =>
+          updateRequestState(KeepImageRequestStates.PROCESSING)
           val existingSameHash = db.readOnlyReplica { implicit session =>
             keepImageRepo.getBySourceHash(loadedImage.hash)
           }
@@ -144,6 +197,7 @@ class KeepImageCommanderImpl @Inject() (
             // never seen this image, or we're reprocessing an image
             buildPersistSet(loadedImage) match {
               case Right(toPersist) =>
+                updateRequestState(KeepImageRequestStates.PERSISTING)
                 uploadAndPersistImages(loadedImage, toPersist, keepId, source, overwriteExistingImage)
               case Left(failure) =>
                 Future.successful(failure)
@@ -151,29 +205,38 @@ class KeepImageCommanderImpl @Inject() (
           } else {
             // have existing KeepImages, use those
             log.info(s"[kic] Existing stored images found: $existingSameHash")
-            val allForThisKeep = existingSameHash.filter(i => i.keepId == keepId)
-            val activeForThisKeep = allForThisKeep.filter(i => i.state == KeepImageStates.ACTIVE)
-            if (activeForThisKeep.nonEmpty) {
-              Future.successful(ImageProcessState.ExistingStoredImagesFound(activeForThisKeep))
-            } else if (allForThisKeep.nonEmpty) {
-              val saved = db.readWrite { implicit session =>
-                allForThisKeep.map(_.copy(state = KeepImageStates.ACTIVE)).map { img => keepImageRepo.save(img) }
-              }
-              Future.successful(ImageProcessState.ExistingStoredImagesFound(saved))
-            } else {
-              val copiedImages = existingSameHash.map { prev =>
-                KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
-              }
-              val saved = db.readWrite { implicit session =>
-                copiedImages.map { img =>
-                  keepImageRepo.save(img)
-                }
-              }
-              Future.successful(ImageProcessState.ExistingStoredImagesFound(saved))
-            }
+            Future.successful(copyExistingImagesAndReplace(keepId, source, existingSameHash))
           }
         case Left(failure) => Future.successful(failure)
       }
+    }
+  }
+
+  private def copyExistingImagesAndReplace(keepId: Id[Keep], source: KeepImageSource, existingSameHash: Seq[KeepImage]) = {
+    val allForThisKeep = existingSameHash.filter(i => i.keepId == keepId)
+    val activeForThisKeep = allForThisKeep.filter(i => i.state == KeepImageStates.ACTIVE)
+    if (activeForThisKeep.nonEmpty) {
+      ImageProcessState.ExistingStoredImagesFound(activeForThisKeep)
+    } else if (allForThisKeep.nonEmpty) {
+      val saved = db.readWrite { implicit session =>
+        allForThisKeep.map(_.copy(state = KeepImageStates.ACTIVE)).map { img => keepImageRepo.save(img) }
+      }
+      ImageProcessState.ExistingStoredImagesFound(saved)
+    } else {
+      val copiedImages = existingSameHash.map { prev =>
+        KeepImage(state = KeepImageStates.ACTIVE, keepId = keepId, imagePath = prev.imagePath, format = prev.format, width = prev.width, height = prev.height, source = source, sourceFileHash = prev.sourceFileHash, sourceImageUrl = prev.sourceImageUrl, isOriginal = prev.isOriginal)
+      }
+
+      val saved = db.readWrite { implicit session =>
+        val existingForKeep = keepImageRepo.getForKeepId(keepId)
+        existingForKeep.map { oldImg =>
+          keepImageRepo.save(oldImg.copy(state = KeepImageStates.INACTIVE))
+        }
+        copiedImages.map { img =>
+          keepImageRepo.save(img)
+        }
+      }
+      ImageProcessState.ExistingStoredImagesFound(saved)
     }
   }
 
@@ -184,6 +247,7 @@ class KeepImageCommanderImpl @Inject() (
         ImageProcessState.UploadedImage(image.key, image.format, image.image)
       }
     }
+
     Future.sequence(uploads).map { results =>
       val keepImages = results.map {
         case uploadedImage =>
@@ -192,40 +256,40 @@ class KeepImageCommanderImpl @Inject() (
           uploadedImage.image.flush()
           ki
       }
-      val existingImagesForKeep = db.readOnlyMaster { implicit session =>
-        keepImageRepo.getAllForKeepId(keepId)
+      db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
+        val existingImagesForKeep = keepImageRepo.getAllForKeepId(keepId).toSet
+        replaceOldKeepImagesWithNew(existingImagesForKeep, keepImages)
       }
-      db.readWrite { implicit session =>
-        if (existingImagesForKeep.isEmpty) {
-          keepImages.map { keepImage =>
-            keepImageRepo.save(keepImage)
-          }
-        } else {
-          val (shouldBeActive, shouldBeInactive) = existingImagesForKeep.partition { existingImg =>
-            keepImages.find { newImg =>
-              existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
-            }.nonEmpty
-          }
-          val toActivate = shouldBeActive.filter(_.state != KeepImageStates.ACTIVE).map(_.copy(state = KeepImageStates.ACTIVE))
-          val toDeactivate = shouldBeInactive.filter(_.state != KeepImageStates.INACTIVE).map(_.copy(state = KeepImageStates.INACTIVE))
-          val toCreate = keepImages.filter { newImg =>
-            existingImagesForKeep.find { existingImg =>
-              existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
-            }.isEmpty
-          }
-
-          log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
-          toDeactivate.foreach(keepImageRepo.save)
-          (toActivate ++ toCreate).map(keepImageRepo.save)
-        }
-        ImageProcessState.StoreSuccess
-      }
+      ImageProcessState.StoreSuccess
     }.recover {
       case ex: SQLException =>
         log.error("Could not persist keepimage", ex)
         ImageProcessState.DbPersistFailed(ex)
       case ex: Throwable =>
         ImageProcessState.CDNUploadFailed(ex)
+    }
+  }
+
+  private def replaceOldKeepImagesWithNew(oldKeepImages: Set[KeepImage], newKeepImages: Set[KeepImage])(implicit session: RWSession) = {
+    if (oldKeepImages.isEmpty) {
+      newKeepImages.map(keepImageRepo.save)
+    } else {
+      val (shouldBeActive, shouldBeInactive) = oldKeepImages.partition { existingImg =>
+        newKeepImages.find { newImg =>
+          existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
+        }.nonEmpty
+      }
+      val toActivate = shouldBeActive.filter(_.state != KeepImageStates.ACTIVE).map(_.copy(state = KeepImageStates.ACTIVE))
+      val toDeactivate = shouldBeInactive.filter(_.state != KeepImageStates.INACTIVE).map(_.copy(state = KeepImageStates.INACTIVE))
+      val toCreate = newKeepImages.filter { newImg =>
+        oldKeepImages.find { existingImg =>
+          existingImg.sourceFileHash == newImg.sourceFileHash && existingImg.width == newImg.width && existingImg.height == newImg.height
+        }.isEmpty
+      }
+
+      log.info("[kic] Activating:" + toActivate.map(_.imagePath) + "\nDeactivating:" + toDeactivate.map(_.imagePath) + "\nCreating:" + toCreate.map(_.imagePath))
+      toDeactivate.foreach(keepImageRepo.save)
+      (toActivate ++ toCreate).map(keepImageRepo.save)
     }
   }
 
@@ -362,6 +426,41 @@ class KeepImageCommanderImpl @Inject() (
     val img = Scalr.resize(image, Scalr.Method.QUALITY, Scalr.Mode.AUTOMATIC, boundingBox)
     log.info(s"[kic] Bounding box $boundingBox resized to ${img.getHeight} x ${img.getWidth}")
     img
+  }
+
+  private def updateRequestState(state: State[KeepImageRequest])(implicit requestIdOpt: Option[Id[KeepImageRequest]]): Unit = {
+    requestIdOpt.map { requestId =>
+      db.readWrite { implicit session =>
+        keepImageRequestRepo.updateState(requestId, state)
+      }
+    }
+  }
+
+  private val cdnUrl = {
+    s3ImageConfig.cdnBase.drop(s3ImageConfig.cdnBase.indexOf("//"))
+  }
+  private val ourOwnImageUrl = s"(https?\\:)?$cdnUrl/keep/([0-9a-f]{32})_\\d+x\\d+.*".r
+  private def detectUserPickedImageFromExistingHashAndReplace(imageUrl: String, keepId: Id[Keep]): Option[ImageProcessSuccess] = {
+    Try {
+      imageUrl match {
+        case ourOwnImageUrl(_, hash) =>
+          db.readWrite(attempts = 3) { implicit session =>
+            val existingForHash = keepImageRepo.getBySourceHash(ImageHash(hash))
+            if (existingForHash.nonEmpty) {
+              copyExistingImagesAndReplace(keepId, KeepImageSource.UserPicked, existingForHash)
+              Some(ImageProcessState.StoreSuccess)
+            } else {
+              None
+            }
+          }
+        case _ =>
+          None
+      }
+    }.recover {
+      case ex: Throwable =>
+        airbrake.notify(s"Could not see if we have an existing version of $imageUrl", ex)
+        None
+    }.toOption.flatten
   }
 
 }

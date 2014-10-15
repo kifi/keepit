@@ -9,8 +9,10 @@ var initFriendSearch = (function () {
       preventDuplicates: true,
       tokenValue: 'id',
       classPrefix: 'kifi-ti-',
+      showResults: showResults,
       formatResult: formatResult,
       formatToken: formatToken,
+      onBlur: onBlur,
       onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
@@ -83,6 +85,60 @@ var initFriendSearch = (function () {
     }
   }
 
+  function showResults($dropdown, els, done) {
+    if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
+      if (els.length) {
+        $dropdown.css('height', 0).append(els);
+        $dropdown.off('transitionend').on('transitionend', function (e) {
+          if (e.target === this && e.originalEvent.propertyName === 'height') {
+            $dropdown.off('transitionend').css('height', '');
+            done();
+          }
+        }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
+      }
+    } else if (els.length === 0) {  // hiding entire list
+      $dropdown.css('height', $dropdown[0].clientHeight).layout();
+      $dropdown.off('transitionend').on('transitionend', function (e) {
+        if (e.target === this && e.originalEvent.propertyName === 'height') {
+          $dropdown.off('transitionend').empty().css('height', '');
+          done();
+        }
+      }).css('height', 0);
+    } else {  // list is changing
+      // fade in overlaid as height adjusts and old fades out
+      var heightInitial = $dropdown[0].clientHeight;
+      var width = $dropdown[0].clientWidth;
+      $dropdown.css('height', heightInitial);
+      var $clone = $($dropdown[0].cloneNode(false)).addClass('kifi-ti-dropdown-clone').css('width', width)
+          .append(els)
+        .css({visibility: 'hidden', opacity: 0, height: ''})
+        .insertBefore($dropdown);
+      var heightFinal = $clone[0].clientHeight;
+      $dropdown.layout();
+      $clone
+        .css({height: heightInitial, visibility: 'visible', transition: 'none'})
+        .layout()
+        .on('transitionend', function (e) {
+          if (e.target === this && e.originalEvent.propertyName === 'opacity') {
+            $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
+            $clone.remove();
+            done();
+          }
+        })
+        .css({height: heightFinal, opacity: 1, transition: ''});
+      $dropdown
+        .css({height: heightFinal, opacity: 0});
+    }
+  }
+
+  function measureCloneHeight(el, heightProp) {
+    var clone = el.cloneNode(true);
+    $(clone).css({position: 'absolute', zIndex: -1, visibility: 'hidden', height: 'auto'}).insertBefore(el);
+    var val = clone[heightProp];
+    clone.remove();
+    return val;
+  }
+
   function appendParts(html, parts) {
     for (var i = 0; i < parts.length; i++) {
       if (i % 2) {
@@ -91,6 +147,10 @@ var initFriendSearch = (function () {
         html.push(Mustache.escape(parts[i]));
       }
     }
+  }
+
+  function onBlur(item) {
+    return !!item.isValidEmail;
   }
 
   function onSelect(source, res, el) {

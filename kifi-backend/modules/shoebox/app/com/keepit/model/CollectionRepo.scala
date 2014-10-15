@@ -13,6 +13,7 @@ import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.StaticQuery
+import com.keepit.typeahead.HashtagTypeahead
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
@@ -26,9 +27,14 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
-  def modelChanged(c: Collection, isActive: Boolean = false)(implicit session: RWSession)
-  def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
+  def getTagsByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[Hashtag]
+  def getByUserSortedByName(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
+  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
+  def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
+  def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
+  def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)]
 }
 
 @Singleton
@@ -39,7 +45,8 @@ class CollectionRepoImpl @Inject() (
   val keepToCollectionRepo: KeepToCollectionRepo,
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
-  val clock: Clock)
+  val clock: Clock,
+  typeahead: HashtagTypeahead)
     extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import db.Driver.simple._
@@ -60,9 +67,7 @@ class CollectionRepoImpl @Inject() (
   initTable()
 
   override def invalidateCache(collection: Collection)(implicit session: RSession): Unit = {
-    userCollectionsCache.remove(UserCollectionsKey(collection.userId))
-    userCollectionSummariesCache.remove(UserCollectionSummariesKey(collection.userId))
-    bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collection.id.get))
+    deleteCache(collection)
   }
 
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
@@ -135,26 +140,15 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession) {
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection = {
+    val collection = get(collectionId)
+    session.onTransactionSuccess { typeahead.delete(collection.userId) }
     if (isNewKeep) {
-      save(get(collectionId) withLastKeptTo clock.now())
+      save(collection withLastKeptTo clock.now())
+    } else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) {
+      save(collection.copy(state = CollectionStates.INACTIVE))
     } else {
-      (for (c <- rows if c.id === collectionId) yield c.seq).update(sequence.incrementAndGet())
-
-      // invalidate count cache
-      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(collectionId))
-    }
-  }
-
-  // caller-supplied model
-  def modelChanged(col: Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
-    if (isNewKeep) {
-      save(col withLastKeptTo clock.now())
-    } else {
-      (for (c <- rows if c.id === col.id.get) yield c.seq).update(sequence.incrementAndGet())
-
-      // invalidate count cache
-      bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(col.id.get))
+      save(collection)
     }
   }
 
@@ -162,9 +156,47 @@ class CollectionRepoImpl @Inject() (
 
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
     import StaticQuery.interpolation
-    val query = sql"select c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
+    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
+
+  def getTagsByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[Hashtag] = {
+    import StaticQuery.interpolation
+    val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c, bookmark b where b.library_id = ${libraryId} and kc.bookmark_id = b.id and c.id = kc.collection_id and b.state =${KeepStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE}"
+    query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
+
+  def getByUserSortedByName(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection] = {
+    (for (c <- rows if c.userId === userId && c.state =!= excludeState) yield c).sortBy(r => (r.name, r.id)).drop(page * size).take(size).list
+  }
+
+  def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection] = {
+    (for (c <- rows if c.userId === userId && c.state =!= excludeState) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).drop(page * size).take(size).list
+  }
+
+  def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count desc limit ${size} offset ${page * size}"
+    query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
+      (CollectionSummary(row._1, row._2, row._3), row._4)
+    }
+  }
+  def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+    val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state=${KeepStates.ACTIVE} and kc.state=${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by c.name limit ${size} offset ${page * size}"
+    query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int)].list.map { row =>
+      (CollectionSummary(row._1, row._2, row._3), row._4)
+    }
+  }
+
+  def getAllTagsByUserSortedByNumKeeps(userId: Id[User])(implicit session: RSession): Seq[(Hashtag, Int)] = {
+    import StaticQuery.interpolation
+    import scala.collection.JavaConversions._
+    val query = sql"select c.name, count(kc.id) as keep_count from collection c, keep_to_collection kc where kc.collection_id = c.id and user_id=${userId} and kc.state = ${KeepToCollectionStates.ACTIVE} and c.state=${CollectionStates.ACTIVE} group by c.id order by keep_count"
+    query.as[(Hashtag, Int)].list.map { row => (row._1, row._2) }
   }
 }
 

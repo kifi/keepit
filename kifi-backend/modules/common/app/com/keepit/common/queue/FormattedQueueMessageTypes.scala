@@ -113,15 +113,3 @@ case object RecordFriendUserId extends RichConnectionUpdateMessageKind[RecordFri
   implicit val format = Json.format[RecordFriendUserId]
   implicit val typeCode = "record_friend_user_id"
 }
-
-//Caused by direct user action. Will usually be a direcrt call.
-case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress]) extends RichConnectionUpdateMessage {
-  type M = Block
-  def kind = Block
-}
-case object Block extends RichConnectionUpdateMessageKind[Block] {
-  private implicit val userIdFormat = Id.format[User]
-  private implicit val socialIdFormat = Id.format[SocialUserInfo]
-  implicit val format = Json.format[Block]
-  implicit val typeCode = "block"
-}

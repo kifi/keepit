@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.commanders.PeopleRecommendationCommander
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, WebsiteController }
 import com.google.inject.Inject
 import com.keepit.model.SocialUserInfoRepo
 import play.api.libs.json.{ Json, JsNumber, JsArray }
@@ -9,11 +9,11 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class MobilePeopleRecommendationController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    peopleRecoCommander: PeopleRecommendationCommander,
-    socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    val userActionsHelper: UserActionsHelper,
+    peopleRecoCommander: UserConnectionsCommander,
+    socialUserRepo: SocialUserInfoRepo) extends UserActions with ShoeboxServiceController {
 
-  def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
+  def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
     peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recoData) => {

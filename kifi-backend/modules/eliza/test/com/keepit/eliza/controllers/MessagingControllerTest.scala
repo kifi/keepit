@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
@@ -35,7 +35,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUrbanAirshipModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeCryptoModule(),
     FakeScraperServiceClientModule(),
     FakeElizaStoreModule(),

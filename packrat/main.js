@@ -224,12 +224,7 @@ var tracker = {
     }
   },
   augmentAndBatch: function (data) {
-    var exp = experiments || [];
-    data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
-    data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
-    data.properties.experiments = exp;
-    data.properties.userStatus = ~exp.indexOf('fake') ? 'fake' : ~exp.indexOf('admin') ? 'admin' : 'standard';
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
@@ -772,7 +767,7 @@ api.port.on({
     });
   },
   log_search_event: function(data) {
-    ajax('search', 'POST', '/search/events/' + data[0], data[1]);
+    ajax('search', 'POST', '/ext/search/events/' + data[0], data[1]);
   },
   import_contacts: function (source) {
     api.tabs.selectOrOpen(webBaseUri() + '/contacts/import');
@@ -1247,13 +1242,9 @@ api.port.on({
       });
     }
   },
-  import_bookmarks: function() {
+  import_bookmarks: function (libraryId) {
     unstore('prompt_to_import_bookmarks');
-    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD');
-  },
-  import_bookmarks_public: function () {
-    unstore('prompt_to_import_bookmarks');
-    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD', true);
+    postBookmarks(api.bookmarks.getAll, 'INIT_LOAD', libraryId);
   },
   import_bookmarks_declined: function() {
     unstore('prompt_to_import_bookmarks')
@@ -1947,21 +1938,19 @@ function updateIconSilence(tab) {
   }
 }
 
-function postBookmarks(supplyBookmarks, bookmarkSource, makePublic) {
+function postBookmarks(supplyBookmarks, bookmarkSource, libraryId) {
   log('[postBookmarks]');
-  supplyBookmarks(function(bookmarks) {
-    if (makePublic) {
+  supplyBookmarks(function (bookmarks) {
+    if (libraryId === 'main') {  // deprecated magic value
       bookmarks.forEach(function (bookmark) {
         bookmark.isPrivate = false;
       });
     }
     log('[postBookmarks] bookmarks:', bookmarks);
-    ajax("POST", "/bookmarks/add", {
-        bookmarks: bookmarks,
-        source: bookmarkSource},
-      function(o) {
-        log('[postBookmarks] resp:', o);
-      });
+    var path = !libraryId || libraryId === 'main' ? '/bookmarks/add' : '/ext/libraries/' + libraryId + '/bookmarks';
+    ajax('POST', path, {bookmarks: bookmarks, source: bookmarkSource}, function (o) {
+      log('[postBookmarks] resp:', o);
+    });
   });
 }
 
@@ -2055,7 +2044,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
 api.on.beforeSearch.add(throttle(primeSearch, 50000));
 function primeSearch(whence) {
   if (me && enabled('search')) {
-    ajax('search', 'GET', '/search/warmUp', {w: whence});
+    ajax('search', 'POST', '/ext/search/prime' + ('agos'.indexOf(whence) >= 0 ? '?w=' + whence : ''));
   }
 }
 

@@ -1,7 +1,6 @@
 package com.keepit.controllers.search
 
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model._
@@ -9,7 +8,7 @@ import com.keepit.search._
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.sharding.ShardSpecParser
@@ -22,12 +21,17 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
+import com.keepit.common.routes.Search
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentationCommander }
 
 class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
     augmentationCommander: AugmentationCommander,
+    languageCommander: LanguageCommander,
+    librarySearchCommander: LibrarySearchCommander,
+    distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -64,7 +68,7 @@ class SearchController @Inject() (
     Ok(result.json)
   }
 
-  def distSearch2() = Action(parse.tolerantJson) { request =>
+  def distSearch2() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -75,7 +79,7 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
-    val library = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
+    val libraryContext = ((searchRequest \ "authorizedLibrary").asOpt[Long], (searchRequest \ "library").asOpt[Long]) match {
       case (Some(libId), _) => LibraryContext.Authorized(libId)
       case (None, Some(libId)) => LibraryContext.NotAuthorized(libId)
       case _ => LibraryContext.None
@@ -87,7 +91,7 @@ class SearchController @Inject() (
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    val result = searchCommander.distSearch2(
+    searchCommander.distSearch2(
       shards,
       id,
       Lang(lang1),
@@ -95,24 +99,14 @@ class SearchController @Inject() (
       userExperiments,
       query,
       filter,
-      library,
+      libraryContext,
       maxHits,
       context,
       None,
-      debug)
-
-    Ok(result.json)
+      debug).map { result => Ok(result.json) }
   }
 
-  def distLangFreqs() = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    val shardSpec = (json \ "shards").as[String]
-    val userId = Id[User]((json \ "request").as[Long])
-    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
-  }
-
-  def distLangFreqs2() = Action(parse.tolerantJson) { request =>
+  def distLangFreqs() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
@@ -124,7 +118,9 @@ class SearchController @Inject() (
       case _ => LibraryContext.None
     }
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs2(shards, userId, libraryContext).map { case (lang, freq) => lang.lang -> freq }))
+    languageCommander.distLangFreqs(shards, userId, libraryContext).map { freqs =>
+      Ok(Json.toJson(freqs.map { case (lang, freq) => lang.lang -> freq }))
+    }
   }
 
   def distAugmentation() = Action.async(parse.tolerantJson) { request =>
@@ -134,6 +130,16 @@ class SearchController @Inject() (
     val augmentationRequest = (json \ "request").as[ItemAugmentationRequest]
     augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
       Ok(Json.toJson(augmentationResponse))
+    }
+  }
+
+  def distLibrarySearch() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val librarySearchRequest = (json \ "request").as[LibrarySearchRequest]
+    librarySearchCommander.distLibrarySearch(shards, librarySearchRequest).map { libraryShardResults =>
+      Ok(Json.toJson(libraryShardResults))
     }
   }
 
@@ -198,21 +204,11 @@ class SearchController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
-    SafeFuture {
-      val uriIds = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
-      val info = searchCommander.sharingUserInfo(userId, uriIds)
-      Ok(Json.toJson(info))
-    }
-  }
-
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
+  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action.async { request =>
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(userId), 5 seconds)
-    searchCommander.explain(userId, uriId, lang, userExperiments, query) match {
-      case explanation if explanation.isDefined =>
-        Ok(html.admin.explainResult(query, userId, uriId, explanation))
-      case None =>
-        Ok("shard not found")
+    searchCommander.explain(userId, uriId, lang, userExperiments, query) flatMap {
+      case someExplanation if someExplanation.isDefined => Future.successful(Ok(html.admin.explainResult(query, userId, uriId, someExplanation)))
+      case None => distributedSearchClient.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang), JsNull).map(r => Ok(r.body))
     }
   }
 

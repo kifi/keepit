@@ -3,61 +3,45 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document',
-  function ($document) {
+  '$document', 'modalService',
+  function ($document, modalService) {
     return {
       restrict: 'A',
       replace: true,
       scope: {
-        show: '='
+        forceClose: '='
       },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        var defaultHideAction = null;
-
-        this.setDefaultHideAction = function (action) {
-          defaultHideAction = action;
-        };
-
-        this.hideModal = function (hideAction) {
-          if ($scope.noUserHide && $scope.show) {
-            // hide is disabled for user and was not triggered by change of state
-            return;
-          }
-          if (typeof hideAction === 'function') {
-            hideAction();
-          } else if (defaultHideAction) {
-            defaultHideAction();
-          }
-          $scope.show = false;
-        };
-
-        this.show = $scope.show || false;
-
-        $scope.hideModal = this.hideModal;
-
-        function exitModal(evt) {
-          if (evt.which === 27) {
-            $scope.hideModal(evt);
-            $scope.$apply();
+        function escapeModal (event) {
+          if (event.which === 27) {  // Escape key
+            $scope.close();
           }
         }
 
-        $scope.$watch(function () {
-          return $scope.show;
-        }, function () {
-          this.show = $scope.show || false;
-          if ($scope.show) {
-            $document.on('keydown', exitModal);
-          } else {
-            $document.off('keydown', exitModal);
-          }
-        });
+        function onOpen() {
+          $document.on('keydown', escapeModal);
+          $document.find('body').addClass('modal-open');
+        }
 
-        $scope.$on('$destroy', function () {
-          $document.off('keydown', exitModal);
-        });
+        function onCloseOrDestroy() {
+          $document.off('keydown', escapeModal);
+          $document.find('body').removeClass('modal-open');
+        }
+
+        $scope.close = this.close = function (closeAction) {
+          onCloseOrDestroy();
+          modalService.close();
+
+          if (angular.isFunction(closeAction)) {
+            closeAction();
+          }
+        };
+
+        $scope.$on('$destroy', onCloseOrDestroy);
+
+        onOpen();
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -73,62 +57,69 @@ angular.module('kifi')
 
         scope.backdropStyle.opacity = attrs.kfOpacity || 0.3;
         scope.backdropStyle.backgroundColor = attrs.kfBackdropColor || 'rgba(0, 40, 90, 1)';
+
+        scope.$watch(function () {
+          return scope.forceClose;
+        }, function (newVal) {
+          if (newVal) {
+            scope.close();
+          }
+        });
       }
     };
   }
 ])
 
-.directive('kfBasicModalContent', [
-  '$window',
+.directive('kfBasicModalContent', ['$window',
   function ($window) {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        action: '&',
-        cancel: '&',
-        title: '@'
-      },
-      templateUrl: 'common/modal/basicModalContent.tpl.html',
-      transclude: true,
-      require: '^kfModal',
-      link: function (scope, element, attrs, kfModalCtrl) {
-        scope.title = attrs.title || '';
-        scope.singleAction = attrs.singleAction || true;
-        scope.actionText = attrs.actionText;
-        scope.withCancel = (attrs.withCancel !== void 0) || false;
-        scope.withWarning = (attrs.withWarning !== void 0) || false;
-        scope.cancelText = attrs.cancelText;
-        scope.centered = attrs.centered;
-        kfModalCtrl.setDefaultHideAction(scope.cancel);
+  return {
+    restrict: 'A',
+    replace: true,
+    scope: {
+      action: '&',
+      cancel: '&',
+      title: '@'
+    },
+    templateUrl: 'common/modal/basicModalContent.tpl.html',
+    transclude: true,
+    require: '^kfModal',
+    link: function (scope, element, attrs, kfModalCtrl) {
+      scope.title = attrs.title || '';
+      scope.actionText = attrs.actionText;
+      scope.withCancel = (attrs.withCancel !== void 0) || false;
+      scope.withWarning = (attrs.withWarning !== void 0) || false;
+      scope.cancelText = attrs.cancelText;
+      scope.centered = attrs.centered;
 
-        scope.hideAndCancel = kfModalCtrl.hideModal;
-        scope.hideAndAction = function () {
-          kfModalCtrl.hideModal(scope.action);
-        };
+      // Note: if there is no 'single-action' attribute,
+      // scope.singleAction will be set to true.
+      scope.singleAction = attrs.singleAction || true;
 
-        var wrap = element.find('.dialog-body-wrap');
 
-        var resizeWindow = _.debounce(function () {
-          var winHeight = $window.innerHeight;
-          wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
-        }, 100);
+      var wrap = element.find('.dialog-body-wrap');
+      var resizeWindow = _.debounce(function () {
+        var winHeight = $window.innerHeight;
+        wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
+      }, 100);
+      $window.addEventListener('resize', resizeWindow);
 
-        scope.$watch(function () {
-          return kfModalCtrl.show;
-        }, function (show) {
-          if (show) {
-            resizeWindow();
-            $window.addEventListener('resize', resizeWindow);
-          } else {
-            $window.removeEventListener('resize', resizeWindow);
-          }
-        });
+      scope.closeAndCancel = function () {
+        $window.removeEventListener('resize', resizeWindow);
+        kfModalCtrl.close(scope.cancel);
+      };
+      scope.closeAndAction = function () {
+        $window.removeEventListener('resize', resizeWindow);
+        kfModalCtrl.close(scope.action);
+      };
 
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', resizeWindow);
-        });
-      }
-    };
-  }
-]);
+      scope.close = function () {
+        $window.removeEventListener('resize', resizeWindow);
+        kfModalCtrl.close();
+      };
+
+      scope.$on('$destroy', function () {
+        $window.removeEventListener('resize', resizeWindow);
+      });
+    }
+  };
+}]);

@@ -34,15 +34,15 @@ trait GraphTestHelper {
   val userUpdate = UserGraphUpdate(User(id = Some(u42), firstName = "Tan", lastName = "Lin", seq = SequenceNumber(1)))
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepGraphUpdate2 = KeepGraphUpdate(Keep(id = Some(keepid2), uriId = uriid2, urlId = urlid2, url = "url2", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(4), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    source = KeepSource("site"), seq = SequenceNumber(4), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepGraphUpdate3 = KeepGraphUpdate(Keep(id = Some(keepid3), uriId = uriid3, urlId = urlid3, url = "url3", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(5), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    source = KeepSource("site"), seq = SequenceNumber(5), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepGraphUpdate4 = KeepGraphUpdate(Keep(id = Some(keepid4), uriId = uriid4, urlId = urlid4, url = "url4", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(6), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    source = KeepSource("site"), seq = SequenceNumber(6), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepGraphUpdate5 = KeepGraphUpdate(Keep(id = Some(keepid5), uriId = uriid5, urlId = urlid5, url = "url5", userId = u42,
-    source = KeepSource("site"), seq = SequenceNumber(7), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    source = KeepSource("site"), seq = SequenceNumber(7), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepUpdates = List(keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5)
 
   val userConnectionGraphUpdate0 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = u43, seq = SequenceNumber(2)))

@@ -1,15 +1,18 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Injector }
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailRepo, EmailAddress }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ FakeShoeboxStoreModule, FakeS3ImageStore }
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time.zones
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.{ FakeCuratorServiceClientImpl, CuratorServiceClient, FakeCuratorServiceClientModule }
+import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -18,7 +21,6 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import views.html.admin.user
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
   def setup(db: Database)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
@@ -41,7 +43,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  def mockSendgridEvent(externalId: ExternalId[ElectronicMail]): SendgridEvent =
+  def mockSendgridEvent(externalId: ExternalId[ElectronicMail], email: Option[ElectronicMail] = None): SendgridEvent =
     SendgridEvent(
       event = Some(SendgridEventTypes.CLICK),
       mailId = Some(externalId),
@@ -52,7 +54,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
       url = None,
       response = None,
       id = None,
-      email = None
+      email = email.map(_.to.head.address)
     )
 
   var modules = Seq(
@@ -71,6 +73,46 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
   "SendgridCommander" should {
 
     "processNewEvents" should {
+
+      "sends user event to heimdal with arbitrary context properties in the URL" in {
+        withDb(modules: _*) { implicit injector =>
+          val commander = inject[SendgridCommander]
+          val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+          val (user, emailAddr, email) = setup(db)
+
+          val someDate = new DateTime(2014, 6, 14, 13, 14, zones.UTC)
+          val trackingParam = EmailTrackingParam(
+            subAction = Some("kifiLogo"),
+            variableComponents = Seq("1Friend"),
+            tip = Some(EmailTip.FriendRecommendations),
+            auxiliaryData = {
+              val ctxBuilder = new HeimdalContextBuilder
+              ctxBuilder += ("version", 1)
+              ctxBuilder += ("tipLocation", "top")
+              ctxBuilder += ("isAdmin", true)
+              ctxBuilder += ("someDate", someDate)
+              Some(ctxBuilder.build)
+            }
+          )
+
+          val sgEvent = mockSendgridEvent(email.externalId, Some(email)).copy(
+            url = Some(s"http://www.kifi.com/?${EmailTrackingParam.paramName}=${EmailTrackingParam.encode(trackingParam)}"),
+            event = Some(SendgridEventTypes.CLICK))
+
+          commander.processNewEvents(Seq(sgEvent))
+          heimdal.eventsRecorded === 1
+
+          val actualEvent = heimdal.trackedEvents(0)
+          actualEvent.eventType === UserEventTypes.WAS_NOTIFIED
+          actualEvent.context.get[String]("subaction").get === "kifiLogo"
+          actualEvent.context.getSeq[String]("emailComponents").get === Seq("1Friend")
+          actualEvent.context.get[EmailTip]("emailTip").get === EmailTip.FriendRecommendations
+          actualEvent.context.get[Double]("version").get === 1.0
+          actualEvent.context.get[String]("tipLocation").get === "top"
+          actualEvent.context.get[Boolean]("isAdmin").get === true
+          actualEvent.context.get[DateTime]("someDate").get === someDate
+        }
+      }
 
       "bounce events unsubscribe the email from all notifications" in {
         withDb(modules: _*) { implicit injector =>

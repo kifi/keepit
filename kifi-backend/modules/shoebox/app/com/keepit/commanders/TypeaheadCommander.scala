@@ -15,18 +15,18 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
+import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.Collection.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Promise, Future }
-import scala.util.{ Success, Failure }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -267,26 +267,16 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def dedupBy[A, B](items: Seq[A])(by: A => B): Seq[A] = {
-    val hashSet = new collection.mutable.HashSet[B]
-    items.filter { item =>
-      val elem = by(item)
-      !hashSet(elem) tap { notSeen => if (notSeen) hashSet += elem }
-    }
-  }
-
   private def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[NetworkTypeAndHit])]]): Future[Seq[NetworkTypeAndHit]] = {
-    val zHits = new ArrayBuffer[NetworkTypeAndHit] // hits with score == 0
+    val bestHits = new ArrayBuffer[NetworkTypeAndHit] // hits with score == 0
     val allHits = new ArrayBuffer[NetworkTypeAndHit]
     FutureHelpers.processWhile[Seq[NetworkTypeAndHit]](futures, { hits =>
       val ordered = hits.sorted(hitOrd)
-      log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} zHits.size=${zHits.size}")
-      zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
-      (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
+      log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} bestHits.size=${bestHits.size}")
+      bestHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
+      (bestHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
-      if (zHits.length >= limit) zHits.take(limit) else {
-        allHits.sorted(hitOrd)
-      }
+      (if (bestHits.length >= limit) bestHits else allHits.sorted(hitOrd)).take(limit)
     }
   }
 

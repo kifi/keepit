@@ -12,6 +12,7 @@
     // Results (in dropdown)
     suggestAbove: false,
     formatResult: formatItem,
+    showResults: populateDropdown,
 
     // Tokens
     tokenValue: 'id',
@@ -21,6 +22,7 @@
     formatToken: formatItem,
 
     // Callbacks
+    onBlur: null,
     onSelect: null,
     onAdd: null,
     onDelete: null,
@@ -83,6 +85,10 @@
   }
   function formatItem(item) {
     return '<li>' + htmlEscape(item.name) + '</li>';
+  }
+  function populateDropdown($dropdown, els, done) {
+    $dropdown.empty().append(els);
+    done();
   }
 
   // Additional public (exposed) methods
@@ -166,11 +172,14 @@
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
-        hideDropdown();
         var val = this.value;
         if (val !== val.trim()) {
-          this.value = val.trim();
+          val = this.value = val.trim();
         }
+        if (selectedDropdownItem && settings.onBlur && settings.onBlur.call($hiddenInput, $.data(selectedDropdownItem, 'tokenInput')) !== false) {
+          handleItemChosen(selectedDropdownItem);
+        }
+        hideDropdown();
         $tokenList.removeClass(classes.listFocused);
       })
       .on('input', handleQueryChange)
@@ -627,10 +636,10 @@
     }
 
     function hideDropdown() {
-      populateDropdown(null, []);
+      renderDropdown(null, []);
     }
 
-    function populateDropdown(query, results) {
+    function renderDropdown(query, results) {
       var now = Date.now();
       if ($dropdown.data('populating') > now - 1000) {
         $dropdown.data('queued', [query, results]);
@@ -643,57 +652,14 @@
       selectedDropdownItem = query && $(els[0]).filter('.' + classes.dropdownItemToken)[0] || null;
       $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
 
-      // TODO: factor out this transition code to friend_search.js
-      if ($dropdown[0].childElementCount === 0) {  // bringing entire list into view
-        if (els.length) {
-          $dropdown.css('height', 0).append(els);
-          $dropdown.off('transitionend').on('transitionend', function (e) {
-            if (e.target === this && e.originalEvent.propertyName === 'height') {
-              $dropdown.off('transitionend').css('height', '');
-              donePopulating();
-            }
-          }).css('height', measureCloneHeight($dropdown[0], 'clientHeight'));
-        }
-      } else if (els.length === 0) {  // hiding entire list
-        $dropdown.css('height', $dropdown[0].clientHeight).layout();
-        $dropdown.off('transitionend').on('transitionend', function (e) {
-          if (e.target === this && e.originalEvent.propertyName === 'height') {
-            $dropdown.off('transitionend').empty().css('height', '');
-            donePopulating();
-          }
-        }).css('height', 0);
-      } else {  // list is changing
-        // fade in overlaid as height adjusts and old fades out
-        var heightInitial = $dropdown[0].clientHeight;
-        var width = $dropdown[0].clientWidth;
-        $dropdown.css('height', heightInitial);
-        var $clone = $($dropdown[0].cloneNode(false)).addClass(classes.dropdown + '-clone').css('width', width)
-            .append(els)
-          .css({visibility: 'hidden', opacity: 0, height: ''})
-          .insertBefore($dropdown);
-        var heightFinal = $clone[0].clientHeight;
-        $dropdown.layout();
-        $clone
-          .css({height: heightInitial, visibility: 'visible', transition: 'none'})
-          .layout()
-          .on('transitionend', function (e) {
-            if (e.target === this && e.originalEvent.propertyName === 'opacity') {
-              $dropdown.empty().append($clone.children()).css({opacity: '', height: '', transition: 'none'}).layout().css('transition', '');
-              $clone.remove();
-              donePopulating();
-            }
-          })
-          .css({height: heightFinal, opacity: 1, transition: ''});
-        $dropdown
-          .css({height: heightFinal, opacity: 0});
-      }
+      settings.showResults($dropdown, els, donePopulating);
     }
 
     function donePopulating() {
       $dropdown.data('populating', 0);
       var queued = $dropdown.data('queued');
       if (queued) {
-        populateDropdown.apply(null, queued);
+        renderDropdown.apply(null, queued);
       }
     }
 
@@ -724,7 +690,7 @@
 
     function receiveResults(query, results) {
       if ($tokenInput.val().trim() === query && $dropdown.data('q') !== query) {
-        populateDropdown(query, results);
+        renderDropdown(query, results);
       }
     }
 
@@ -755,14 +721,6 @@
 
     function getCurrentQuery() {
       return $tokenInput.val().trim();
-    }
-
-    function measureCloneHeight(el, heightProp) {
-      var clone = el.cloneNode(true);
-      $(clone).css({position: 'absolute', zIndex: -1, visibility: 'hidden', height: 'auto'}).insertBefore(el);
-      var val = clone[heightProp];
-      clone.remove();
-      return val;
     }
 
     function getId(o) {

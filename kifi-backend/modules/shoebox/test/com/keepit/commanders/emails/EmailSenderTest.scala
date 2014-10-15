@@ -3,8 +3,9 @@ package com.keepit.commanders.emails
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.mail.template.helpers._
+import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
 import com.keepit.common.mail.{ EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -15,8 +16,10 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
+import org.specs2.matcher.MatchResult
 import org.specs2.mutable.Specification
 
 import scala.concurrent.duration.Duration
@@ -52,7 +55,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Let's get started with Kifi"
         val html = email.htmlBody.value
         html must contain("Hey Billy,")
-        html must contain("utm_source=confirmEmail&utm_medium=email&utm_campaign=welcomeEmail")
+
+        val trackingCode = EmailTrackingParam(
+          subAction = Some("findMoreFriendsBtn"),
+          tip = Some(EmailTip.ConnectFacebook)).encode
+
+        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn"
+          + s"&${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
         text must contain("Hey Billy,")
@@ -76,13 +85,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       email.to === Seq(EmailAddress("johnny@gmail.com"))
       email.category === NotificationCategory.toElectronicMailCategory(category)
       val html = email.htmlBody.value
-      html must contain("Hey Johnny")
+      html must contain("Hi Johnny")
 
       email
     }
 
     "friend request accepted email" in {
-      "sends email without PYMK tip" in {
+      "sends email" in {
         withDb(modules: _*) { implicit injector =>
           val toUser = db.readWrite { implicit rw =>
             inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
@@ -94,20 +103,19 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
           val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your Kifi friend request"
-          html must contain("Billy accepted your Kifi")
-          html must contain("You and Billy Madison are now")
+          html must contain("Billy Madison accepted your Kifi")
           html must contain("utm_campaign=friendRequestAccepted")
 
           val text = email.textBody.get.value
-          text must contain("Billy accepted your Kifi")
+          text must contain("Billy Madison accepted your Kifi")
         }
       }
     }
 
     "connection made email for new user from Facebook/LinkedIn" in {
       Seq(
-        (SocialNetworks.FACEBOOK, "Facebook"),
-        (SocialNetworks.LINKEDIN, "LinkedIn")
+        (SocialNetworks.FACEBOOK, "Facebook friend"),
+        (SocialNetworks.LINKEDIN, "LinkedIn connection")
       ).map {
           case (network, networkName) => withDb(modules: _*) { implicit injector =>
             val (toUser, friends) = db.readWrite { implicit rw =>
@@ -124,13 +132,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
             val email = testFriendConnectionMade(toUser, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(network))
             val html = email.htmlBody.value
             val text = email.textBody.get.value
-            email.subject === s"Your $networkName friend Billy just joined Kifi"
+            email.subject === s"Your $networkName Billy just joined Kifi"
             html must contain("utm_campaign=socialFriendJoined")
-            html must contain("You and Billy Madison are now")
-            html must contain(s"Your $networkName friend Billy just joined Kifi")
+            html must contain(s"Your $networkName, Billy Madison, joined Kifi")
+            html must contain(s"You and Billy are now")
 
-            text must contain("You and Billy Madison are now")
-            text must contain(s"Your $networkName friend Billy just joined Kifi")
+            text must contain(s"Your $networkName, Billy Madison, joined Kifi")
+            text must contain(s"You and Billy are now")
           }
         }
     }
@@ -149,17 +157,16 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
-          val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE)
+          val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
           val html = email.htmlBody.value
           val text = email.textBody.get.value
           email.subject === "You are now friends with Billy Madison on Kifi!"
           html must contain("utm_campaign=connectionMade")
-          html must contain("You and Billy Madison are now")
-          html must contain("now friends with Billy Madison on Kifi. Enjoy Billy’s")
-          html must contain("message Billy directly")
+          html must contain("You have a new connection on Kifi")
+          html must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
 
-          text must contain("now friends with Billy Madison on Kifi. Enjoy Billy's")
-          text must contain("message Billy directly")
+          text must contain("You have a new connection on Kifi")
+          text must contain("Your Facebook friend, Billy Madison, is now connected to you on Kifi")
         }
       }
     }
@@ -289,49 +296,75 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryInviteEmailSender" should {
+    implicit val config = PublicIdConfiguration("secret key")
+
+    def setup()(implicit injector: Injector) = {
+      val keepRepo = inject[KeepRepo]
+      val urlRepo = inject[URLRepo]
+      val uriRepo = inject[NormalizedURIRepo]
+
+      db.readWrite { implicit rw =>
+        val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
+        val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Some(Username("aaron")), primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
+        val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
+          visibility = LibraryVisibility.PUBLISHED, memberCount = 1, description = Some("Lorem ipsum")))
+
+        val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
+        // todo(andrew) jared compiler bug if url_ var is named url
+        val url_ = urlRepo.save(URL(url = "http://www.kifi.com", domain = None, normalizedUriId = uri.id.get))
+        val keep = keepRepo.save(Keep(urlId = url_.id.get, url = url_.url, libraryId = lib1.id, uriId = uri.id.get, visibility = LibraryVisibility.SECRET, userId = user1.id.get, source = KeepSource.keeper, inDisjointLib = false))
+
+        libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+        val invite = LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
+
+        (user1, user2, lib1, invite)
+      }
+    }
+
+    def testHtml(html: String): MatchResult[_] = {
+      html must contain("Football")
+      html must contain("Tom invited you to")
+      html must contain("Tom Brady")
+      html must contain("Lorem ipsum")
+      html must contain("TEST_MODE/tom/football")
+      html must contain("check this out!")
+    }
+
     "sends invite to user (userId)" in {
       withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteUser = invite.copy(userId = user2.id)
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val (user1, user2, lib1) = db.readWrite { implicit rw =>
-          val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
-          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+        val email = Await.result(inviteSender.inviteUserToLibrary(inviteUser), Duration(5, "seconds")).get
 
-          val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Some(Username("aaron")), primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
-          (user1, user2, lib1)
-        }
-        val email = Await.result(inviteSender.inviteUserToLibrary(Left(user2.id.get), user1.id.get, lib1.id.get), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        html must contain("Hey Aaron,")
-        html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="https://www.kifi.com/tom/football"><u>Football</u></a>""")
+        testHtml(html)
       }
     }
 
     "send invite to non-user (email)" in {
       withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")))
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val (user1, lib1) = db.readWrite { implicit rw =>
-          val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
-          val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          (user1, lib1)
-        }
-        val email = Await.result(inviteSender.inviteUserToLibrary(Right(EmailAddress("aaronrodgers@gmail.com")), user1.id.get, lib1.id.get), Duration(5, "seconds"))
+        val email = Await.result(inviteSender.inviteUserToLibrary(inviteNonUser), Duration(5, "seconds")).get
+
         outbox.size === 1
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        html must contain("Hello!")
-        html must contain("Tom Brady would like to share Football with you")
-        html must contain(s"""<a href="https://www.kifi.com/tom/football"><u>Football</u></a>""")
+        testHtml(html)
+        html must contain(invite.passPhrase)
       }
     }
   }

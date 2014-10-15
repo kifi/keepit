@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.{ KifiShardResult, KifiResultCollector }
+import com.keepit.search.engine.result._
 import com.keepit.search.engine.result.KifiResultCollector._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -40,32 +40,36 @@ class KifiSearchImpl(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val percentMatch = config.asFloat("percentMatch")
+  private[this] val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
+
+  private[this] val clickBoostsProvider: () => ResultClickBoosts = { () =>
+    val ret = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts")
+    timeLogs.clickBoost()
+    ret
+  }
 
   def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
 
     val engine = engineBuilder.build()
-    log.info(s"NE: engine created (${timeLogs.elapsed()})")
+    debugLog("engine created")
 
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRecs1 = engine.execute(keepScoreSource)
-    log.info(s"NE: UriFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
-
+    val collector: KifiResultCollector = if (engine.recencyOnly) {
+      new KifiResultCollectorWithNoBoost(maxTextHitsPerCategory, percentMatch / 100.0f)
+    } else {
+      new KifiResultCollectorWithBoost(clickBoostsProvider, maxTextHitsPerCategory, percentMatch / 100.0f, sharingBoostInNetwork)
+    }
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
-    val numRec2 = engine.execute(articleScoreSource)
-    log.info(s"NE: UriFromArticlesScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
-
-    val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-    timeLogs.clickBoost()
 
     if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
-      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+      engine.debug(this)
+      keepScoreSource.debug(this)
+      articleScoreSource.debug(this)
     }
 
-    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch / 100.0f)
-    log.info(s"NE: KifiResultCollector created (${timeLogs.elapsed()})")
-    engine.join(collector)
-    log.info(s"NE: KifiResultCollector joined (${timeLogs.elapsed()})")
+    engine.execute(collector, keepScoreSource, articleScoreSource)
+
+    timeLogs.search()
 
     collector.getResults()
   }
@@ -113,7 +117,6 @@ class KifiSearchImpl(
     var othersHighScore = -1.0f
     var othersTotal = othersHits.totalHits
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
-      val queue = createQueue(numHitsToReturn - hits.size)
       var othersNorm = Float.NaN
       var rank = 0 // compute the rank on the fly (there may be hits not kept public)
       othersHits.toSortedList.forall { hit =>
@@ -125,14 +128,13 @@ class KifiSearchImpl(
           }
           hit.score = hit.score * (if (usefulPages.mayContain(hit.id, 2)) usefulPageBoost else 1.0f)
           hit.normalizedScore = (hit.score / othersNorm) * KifiSearch.dampFunc(rank, dampingHalfDecayOthers)
-          queue.insert(hit)
+          hits.insert(hit)
           rank += 1
         } else {
           othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue
       }
-      queue.foreach { h => hits.insert(h) }
     }
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
@@ -141,7 +143,7 @@ class KifiSearchImpl(
     timeLogs.done()
     timing()
 
-    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
+    debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }

@@ -1,6 +1,7 @@
 package com.keepit.abook
 
 import com.keepit.common.cache.CacheModule
+import com.keepit.common.controller.UserActionsModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ShoeboxServiceClientModule, ProdShoeboxServiceClientModule }
@@ -17,6 +18,7 @@ case class ABookServiceTypeModule() extends ServiceTypeModule {
 
 abstract class ABookModule(
     // Common Functional Modules
+    val userActionsModule: UserActionsModule,
     val cacheModule: CacheModule,
     val storeModule: StoreModule,
     val contactsUpdaterPluginModule: ABookImporterPluginModule,

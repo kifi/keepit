@@ -1,15 +1,15 @@
 package com.keepit.search.engine
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{ Keep, User }
 import com.keepit.search.{ Searcher, SearchConfig, SearchFilter }
-import com.keepit.search.engine.result.KifiResultCollector.HitQueue
-import com.keepit.search.engine.result.{ LibraryShardHit, LibraryResultCollector, LibraryShardResult }
+import com.keepit.search.engine.result.{ HitQueue, LibraryShardHit, LibraryResultCollector, LibraryShardResult }
 import com.keepit.common.logging.Logging
 import scala.concurrent.Future
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
+import com.keepit.search.graph.keep.KeepRecord
 
 class LibrarySearch(
     userId: Id[User],
@@ -23,17 +23,53 @@ class LibrarySearch(
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
     timeLogs: SearchTimeLogs) extends DebugOption with Logging {
-  private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
-  private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
-  private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val minMyLibraries = config.asInt("minMyLibraries")
-  private[this] val myLibraryBoost = config.asFloat("myLibraryBoost")
   private[this] val percentMatch = config.asFloat("percentMatch")
-
-  private[this] val isInitialSearch = filter.idFilter.isEmpty
 
   def execute(): LibraryShardResult = {
     val (myHits, friendsHits, othersHits) = executeTextSearch(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val libraryShardResult = LibrarySearch.merge(myHits, friendsHits, othersHits, numHitsToReturn, filter, config)(keepId => KeepRecord.retrieve(keepSearcher, keepId).get)
+
+    timeLogs.processHits()
+    timeLogs.done()
+
+    SafeFuture { timeLogs.send() }
+    debugLog(timeLogs.toString)
+
+    libraryShardResult
+  }
+
+  private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
+    val engine = engineBuilder.build()
+    debugLog("engine created")
+
+    val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
+    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
+    val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
+
+    if (debugFlags != 0) {
+      engine.debug(this)
+      keepScoreSource.debug(this)
+    }
+
+    engine.execute(collector, keepScoreSource, libraryScoreSource)
+
+    timeLogs.search()
+
+    collector.getResults()
+  }
+
+}
+
+object LibrarySearch extends Logging {
+  def merge(myHits: HitQueue, friendsHits: HitQueue, othersHits: HitQueue, numHitsToReturn: Int, filter: SearchFilter, config: SearchConfig)(keepsRecords: Id[Keep] => KeepRecord): LibraryShardResult = {
+
+    val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+    val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+    val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
+    val minMyLibraries = config.asInt("minMyLibraries")
+    val myLibraryBoost = config.asFloat("myLibraryBoost")
+
+    val isInitialSearch = filter.idFilter.isEmpty
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -88,46 +124,35 @@ class LibrarySearch(
 
     val show = if (filter.isDefault && isInitialSearch && noFriendlyHits) false else (highScore > 0.6f || othersHighScore > 0.8f)
 
-    timeLogs.processHits()
-    timeLogs.done()
-
-    //todo(Léo): DRY with KifiSearch
-    SafeFuture {
-      timeLogs.send()
-      if ((debugFlags & DebugOption.Timing.flag) != 0) log.info(timeLogs.toString)
-    }
-
-    log.info(s"NE: myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
-
     val libraryShardHits = hits.toSortedList.map { h =>
-      LibraryShardHit(Id(h.id), h.score, h.visibility, if (h.secondaryId > 0) Some(Id(h.secondaryId)) else None)
-    }
-    LibraryShardResult(libraryShardHits)
-  }
-
-  private def executeTextSearch(maxTextHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue) = {
-    val engine = engineBuilder.build()
-    log.info(s"NE: engine created (${timeLogs.elapsed()})")
-
-    val keepScoreSource = new LibraryFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRecs1 = engine.execute(keepScoreSource)
-    log.info(s"NE: LibraryFromKeepsScoreVectorSource executed recs=$numRecs1 (${timeLogs.elapsed()})")
-
-    val libraryScoreSource = new LibraryScoreVectorSource(librarySearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
-    val numRec2 = engine.execute(libraryScoreSource)
-    log.info(s"NE: LibraryScoreVectorSource executed recs=${numRec2 - numRecs1} (${timeLogs.elapsed()})")
-
-    if (debugFlags != 0) {
-      if ((debugFlags & DebugOption.Trace.flag) != 0) engine.trace(debugTracedIds)
-      if ((debugFlags & DebugOption.Library.flag) != 0) listLibraries(keepScoreSource)
+      val keep = if (h.secondaryId > 0) {
+        val keepId = Id[Keep](h.secondaryId)
+        val keepRecord = keepsRecords(keepId)
+        Some((keepId, keepRecord))
+      } else None
+      LibraryShardHit(Id(h.id), h.score, h.visibility, keep)
     }
 
-    val collector = new LibraryResultCollector(maxTextHitsPerCategory, percentMatch / 100.0f)
-    log.info(s"NE: LibraryResultCollector created (${timeLogs.elapsed()})")
-    engine.join(collector)
-    log.info(s"NE: LibraryResultCollector joined (${timeLogs.elapsed()})")
-
-    collector.getResults()
+    LibraryShardResult(libraryShardHits, show)
   }
 
+  def partition(libraryShardHits: Seq[LibraryShardHit], maxHitsPerCategory: Int): (HitQueue, HitQueue, HitQueue, Map[Id[Keep], KeepRecord]) = {
+    val myHits = KifiSearch.createQueue(maxHitsPerCategory)
+    val friendsHits = KifiSearch.createQueue(maxHitsPerCategory)
+    val othersHits = KifiSearch.createQueue(maxHitsPerCategory)
+
+    val keepRecords = libraryShardHits.map { hit =>
+      val visibility = hit.visibility
+      val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
+        myHits
+      } else if ((visibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) {
+        friendsHits
+      } else {
+        othersHits
+      }
+      relevantQueue.insert(hit.id.id, hit.score, visibility, hit.keep.map(_._1.id).getOrElse(-1))
+      hit.keep
+    }.flatten.toMap
+    (myHits, friendsHits, othersHits, keepRecords)
+  }
 }

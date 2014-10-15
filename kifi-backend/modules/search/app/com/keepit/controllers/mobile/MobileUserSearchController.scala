@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, ActionAuthenticator, SearchServiceController }
+import com.keepit.common.controller.{ MobileController, UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
@@ -12,14 +12,13 @@ import play.api.libs.json.Json
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.model.FriendRequestStates
 import play.api.libs.json.JsArray
 
 class MobileUserSearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     filterFactory: UserSearchFilterFactory,
     shoeboxClient: ShoeboxServiceClient,
-    actionAuthenticator: ActionAuthenticator) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
+    val userActionsHelper: UserActionsHelper) extends UserActions with SearchServiceController with Logging {
 
   val EXCLUDED_EXPERIMENTS = Seq("fake")
 
@@ -31,12 +30,12 @@ class MobileUserSearchController @Inject() (
     }
   }
 
-  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = JsonAction.authenticated { request =>
+  def pageV1(queryText: String, filter: Option[String], pageNum: Int, pageSize: Int) = UserAction { request =>
     val userId = request.userId
     val userExps = request.experiments.map { _.value }
     log.info(s"user search: userId = $userId, userExps = ${userExps.mkString(" ")}")
     val excludedExperiments = if (userExps.contains("admin")) Seq() else EXCLUDED_EXPERIMENTS
-    val friendRequests = shoeboxClient.getFriendRequestsBySender(userId)
+    val friendRequests = shoeboxClient.getFriendRequestsRecipientIdBySender(userId)
     val searchFilter = createFilter(Some(userId), filter, None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
@@ -45,7 +44,7 @@ class MobileUserSearchController @Inject() (
       case Some(q) => searcher.searchPaging(q, searchFilter, pageNum, pageSize)
     }
 
-    val requestedUsers = Await.result(friendRequests, 5 seconds).filter(_.state == FriendRequestStates.ACTIVE).map { _.recipientId }.toSet
+    val requestedUsers = Await.result(friendRequests, 5 seconds).toSet
 
     val jsVals = res.hits.map {
       case UserHit(id, basicUser, isFriend) =>
@@ -61,7 +60,7 @@ class MobileUserSearchController @Inject() (
     Ok(JsArray(jsVals))
   }
 
-  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = JsonAction.authenticated { request =>
+  def searchV1(queryText: String, filter: Option[String], context: Option[String], maxHits: Int) = UserAction { request =>
     val userId = request.userId
     val searchFilter = createFilter(Some(userId), filter, context)
     val searcher = searcherFactory.getUserSearcher

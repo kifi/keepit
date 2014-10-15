@@ -47,7 +47,7 @@ class ExtAuthController @Inject() (
     val userId = request.userId
     val json = request.body
     val (userAgent, version, installationIdOpt) =
-      (UserAgent.fromString(request.headers.get("user-agent").getOrElse("")),
+      (UserAgent(request.headers.get("user-agent").getOrElse("")),
         KifiExtVersion((json \ "version").as[String]),
         (json \ "installation").asOpt[String].flatMap { id =>
           val kiId = ExternalId.asOpt[KifiInstallation](id)
@@ -93,10 +93,11 @@ class ExtAuthController @Inject() (
           val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length }
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
-        } else
-          contextBuilder += ("action", "updatedExtension")
+          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
+        } else {
+          heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.UPDATED_EXTENSION, installation.updatedAt))
+        }
 
-        heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, installation.updatedAt))
         heimdal.setUserProperties(userId, "latestExtension" -> ContextStringData(installation.version.toString))
       }
     }

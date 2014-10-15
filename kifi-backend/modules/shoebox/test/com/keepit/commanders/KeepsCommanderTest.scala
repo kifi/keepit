@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
@@ -31,7 +31,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule() ::
     FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
-    FakeActionAuthenticatorModule() ::
+    FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
@@ -63,19 +63,19 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("t1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))

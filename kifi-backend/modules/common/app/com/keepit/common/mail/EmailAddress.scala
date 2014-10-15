@@ -44,6 +44,7 @@ object EmailAddress {
     val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
     localAt + host.toLowerCase
   }
+
   def validate(address: String): Try[EmailAddress] = {
     if (isValid(address)) {
       Success(EmailAddress(canonicalize(address)))

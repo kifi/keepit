@@ -138,7 +138,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
     "updateUserConnections sends emails to new user (LinkedIn)" in
       runTest(SocialNetworks.LINKEDIN, now) { outbox =>
-        outbox(0).subject === "Your LinkedIn friend Greg just joined Kifi"
+        outbox(0).subject === "Your LinkedIn connection Greg just joined Kifi"
       }
 
     "updateUserConnections sends emails to old user (LinkedIn)" in
@@ -249,7 +249,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             scRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser3.id.get))
           }
 
-          inject[UserConnectionCreator].updateUserConnections(user1.id.get)
+          Await.ready(inject[UserConnectionCreator].updateUserConnections(user1.id.get), Duration(5, "seconds"))
 
           // should be 1 instead of 2 b/c user1 and user2 are "unfriended"
           outbox.size === 1

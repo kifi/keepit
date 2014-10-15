@@ -7,9 +7,10 @@ angular.module('kifi')
 
     function Recommendation(rawReco, type) {
       this.recoData = {
-        type: type,
-        kind: rawReco.kind,
-        reasons: rawReco.metaData || []
+        type: type,  // This is either 'recommended' or 'popular'.
+        kind: rawReco.kind,  // This is either 'keep' or 'library'.
+        reasons: rawReco.metaData || [],
+        explain: rawReco.explain
       };
 
       this.recoData.reasons.forEach(function (reason) {
@@ -22,6 +23,10 @@ angular.module('kifi')
         this.recoKeep = new keepDecoratorService.Keep(rawReco.itemInfo, 'reco');
       } else {
         this.recoLib = rawReco.itemInfo;
+
+        // All recommended libraries are published user-created libraries.
+        this.recoLib.kind = 'user_created';
+        this.recoLib.visibility = 'published';
       }
     }
 

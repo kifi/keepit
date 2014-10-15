@@ -19,7 +19,6 @@ import play.api.Play.current
 import play.api.http.ContentTypes
 import com.keepit.heimdal._
 import play.api.libs.json.JsString
-import scala.Some
 import play.api.libs.json.JsObject
 import com.keepit.common.time._
 
@@ -185,7 +184,7 @@ class SendgridMailProvider @Inject() (
     }
     message.setSubject(mail.subject)
     message.addRecipients(Message.RecipientType.TO, recipientAddr)
-    if (!mail.cc.isEmpty) {
+    if (mail.cc.nonEmpty) {
       val recipientCCAddr: Array[Address] = Play.isProd match {
         case true => (mail.cc map { e => new InternetAddress(e.address) }).toArray
         case false => Array(new InternetAddress(fortyTwoUsername + "+test_cc@42go.com"))

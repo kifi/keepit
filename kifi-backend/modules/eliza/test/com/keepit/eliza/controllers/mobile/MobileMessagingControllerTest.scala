@@ -1,9 +1,10 @@
 package com.keepit.eliza.controllers.mobile
 
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.test.{ ElizaTestInjector }
 import org.specs2.mutable._
 import com.keepit.common.db.slick._
-import com.keepit.common.controller.FakeActionAuthenticator
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
 import com.keepit.common.time._
 import com.keepit.model.User
@@ -16,7 +17,6 @@ import play.api.libs.json.Json
 import akka.actor.ActorSystem
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
 import play.api.libs.json.JsArray
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -43,6 +43,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
+      FakeUserActionsModule(),
+      FakeHttpClientModule(),
       FakeCryptoModule(),
       FakeScraperServiceClientModule(),
       FakeElizaStoreModule()
@@ -62,7 +64,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString
         path === "/m/1/eliza/messages"
 
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val input = Json.parse(s"""
           {
             "title": "Search Experiments",
@@ -150,7 +152,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         fakeClient.saveUsers(shanee)
         fakeClient.saveUsers(shachaf)
 
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val controller = inject[MobileMessagingController]
         val sendMessageAction = controller.sendMessageAction()
         status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
@@ -239,7 +241,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         fakeClient.saveUsers(shanee)
         fakeClient.saveUsers(shachaf)
 
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString()
         path === "/m/1/eliza/messages"
         status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
@@ -407,7 +409,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 
-        inject[FakeActionAuthenticator].setUser(shanee)
+        inject[FakeUserActionsHelper].setUser(shanee)
         val createThreadJson = Json.parse(s"""
           {
             "title": "Search Experiments",

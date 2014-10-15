@@ -48,7 +48,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
   "TypeaheadController" should {
 
-    "query & sort results" in {
+    "query & sort & limit results" in {
       withDb(modules: _*) { implicit injector =>
         val u1 = inject[Database].readWrite { implicit session =>
 
@@ -72,8 +72,18 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
           val su4 = suiRepo.save(SocialUserInfo(fullName = "郭靖", socialId = SocialId("kwok"), networkType = SocialNetworks.LINKEDIN, userId = None))
 
+          val su5 = suiRepo.save(SocialUserInfo(fullName = "Andrew Ng", socialId = SocialId("andrew"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su6 = suiRepo.save(SocialUserInfo(fullName = "Ng Kar Ho", socialId = SocialId("raymond"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su7 = suiRepo.save(SocialUserInfo(fullName = "Julie Andrews", socialId = SocialId("julie.andrews"), networkType = SocialNetworks.LINKEDIN, userId = None))
+          val su8 = suiRepo.save(SocialUserInfo(fullName = "Julie Ng", socialId = SocialId("julie.ng"), networkType = SocialNetworks.LINKEDIN, userId = None))
+
           socialConnRepo.save(SocialConnection(socialUser1 = su1a.id.get, socialUser2 = su3a.id.get))
           socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su3b.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su5.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su6.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su7.id.get))
+          socialConnRepo.save(SocialConnection(socialUser1 = su1b.id.get, socialUser2 = su8.id.get))
+
           u1
         }
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -103,6 +113,20 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res2(2).networkType === SocialNetworks.EMAIL.name
         res2(2).value === "email/chan@jing.com"
         res2(2).label === "陳家洛 電郵"
+
+        // limit
+
+        val res2a = search("陳家", 2)
+        res2a.length === 2
+
+        val res2b = search("陳家", 1)
+        res2b.length === 1
+
+        val res3 = search("Ng")
+        res3.length === 3
+
+        val res3a = search("Ng", 2)
+        res3a.length === 2
       }
     }
 
@@ -165,6 +189,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵"
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
       }
     }
 
@@ -229,6 +257,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵" // email lower priority (& deduped)
+
+        val res3a = search("郭靖", 1)
+        res3a.length === 1 // LNKD
+        res3a(0).label === "郭靖 先生"
 
         val res4 = search("kwok") // kwok@jing.com (deduped)
         res4.length === 1

@@ -106,6 +106,7 @@ angular.module('jun.facebook', [])
 	this.loading = false;
 	this.loaded = false;
 	this.FB = null;
+	this.failedToLoad = false;
 
 	this.load = function () {
 		if (!FBPromise) {
@@ -123,6 +124,16 @@ angular.module('jun.facebook', [])
 				});
 			};
 
+			var failedToLoadHander = function () {
+				if (!that.FB && that.loading && !that.loaded) {
+					that.loading = false;
+					that.failedToLoad = true;
+					document.getElementById('facebook-jssdk').remove();
+					deferred.reject({'error': 'no_FB_on_page'});
+					FBPromise = null;
+				}
+			};
+
 			(function (d, s, id) {
 				var js, fjs = d.getElementsByTagName(s)[0];
 				if (d.getElementById(id)) {
@@ -131,6 +142,7 @@ angular.module('jun.facebook', [])
 				js = d.createElement(s);
 				js.id = id;
 				js.src = '//connect.facebook.net/en_US/all.js';
+				js.addEventListener('error', failedToLoadHander);
 				fjs.parentNode.insertBefore(js, fjs);
 			}(window.document, 'script', 'facebook-jssdk'));
 
@@ -144,7 +156,7 @@ angular.module('jun.facebook', [])
 	this.initialized = false;
 
 	this.init = function (params) {
-		if (!initPromise) {
+		if (!initPromise || (!that.loading && !that.loaded)) {
 			initPromise = that.load().then(function (FB) {
 				params = angular.extend({
 					appId: options.appId,

@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.FakeUserActionsModule
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
@@ -75,6 +75,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         cookies(startResult).get(impersonateCookie.COOKIE_NAME) === None
         cookies(startResult).get(inject[KifiInstallationCookie].COOKIE_NAME) !== None
 
+        inject[FakeUserActionsHelper].setUser(admin)
         val meRequest1 = FakeRequest("GET", "/test/me").withCookies(cookie1)
         val meResult1 = route(meRequest1).get
 

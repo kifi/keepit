@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.common.analytics._
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -20,14 +20,14 @@ import play.api.mvc.Action
 import java.math.BigDecimal
 
 class ExtEventController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
   heimdal: HeimdalServiceClient,
   eventHelper: EventHelper,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   def logEvent = Action { request =>
     SafeFuture {

@@ -52,12 +52,12 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit session =>
           val user1Lib = libraryRepo.getByUser(user1.id.get)
           user1Lib.length === 2
-          user1Lib.head._1 === LibraryAccess.OWNER
+          user1Lib.head._1.access === LibraryAccess.OWNER
           user1Lib.head._2.id === l1.id
           val user2lib = libraryRepo.getByUser(user2.id.get)
-          user2lib(0)._1 === LibraryAccess.READ_ONLY
+          user2lib(0)._1.access === LibraryAccess.READ_ONLY
           user2lib(0)._2.id === l2.id
-          user2lib(1)._1 === LibraryAccess.OWNER
+          user2lib(1)._1.access === LibraryAccess.OWNER
           user2lib(1)._2.id === l3.id
         }
       }

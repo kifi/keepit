@@ -35,7 +35,7 @@ case class User(
   def withState(state: State[User]) = copy(state = state)
   def fullName = s"$firstName $lastName"
   def shortName = if (firstName.length > 0) firstName else lastName
-  override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",username=$username,state=$state]"""
+  override def toString(): String = s"""User[id=$id,externalId=$externalId,name="$firstName $lastName",username=$username, normalizedUsername=$normalizedUsername, state=$state]"""
 }
 
 object User {
@@ -108,7 +108,7 @@ object UserStates extends States[User] {
 }
 
 case class VerifiedEmailUserIdKey(address: EmailAddress) extends Key[Id[User]] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_id_by_verified_email"
   def toKey(): String = address.address
 }

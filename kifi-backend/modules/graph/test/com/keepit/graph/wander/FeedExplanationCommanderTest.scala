@@ -48,9 +48,9 @@ trait FeedHelper {
 
   val userUpdate = UserGraphUpdate(User(id = Some(Id[User](1)), firstName = "Dummy", lastName = "Yummy", seq = SequenceNumber(1)))
   val keepUpdate1 = KeepGraphUpdate(Keep(id = Some(Id[Keep](1)), uriId = Id[NormalizedURI](1), urlId = Id[URL](1), url = "url1",
-    userId = Id[User](1), source = KeepSource("site"), seq = SequenceNumber(1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+    userId = Id[User](1), source = KeepSource("site"), seq = SequenceNumber(1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepUpdate2 = KeepGraphUpdate(Keep(id = Some(Id[Keep](2)), uriId = Id[NormalizedURI](2), urlId = Id[URL](2), url = "url2",
-    userId = Id[User](1), source = KeepSource("site"), seq = SequenceNumber(2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](2))))
+    userId = Id[User](1), source = KeepSource("site"), seq = SequenceNumber(2), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](2)), inDisjointLib = true))
 
   val ldaUpdate1 = genLDAUpdate(1, 1)
   val ldaUpdate2 = genLDAUpdate(3, 1)

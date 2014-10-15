@@ -7,7 +7,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import play.api.libs.json._
 
 case class UserExperiment(
@@ -59,15 +59,14 @@ object ExperimentType {
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
   val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
-  val RECOS_BETA = ExperimentType("recos_beta")
   val SPECIAL_CURATOR = ExperimentType("special_curator")
   val LIBRARIES = ExperimentType("libraries")
   val SEND_DIGEST_EMAIL_ON_REFRESH = ExperimentType("send_digest_email_on_refresh")
+  val GRAPH_BASED_PEOPLE_TO_INVITE = ExperimentType("graph_based_people_to_invite")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT ::
-    RECOS_BETA :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: Nil
+    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: GRAPH_BASED_PEOPLE_TO_INVITE :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

@@ -61,10 +61,10 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
         outbox(0).subject === "You are now friends with Peter Griffin on Kifi!"
         outbox(0).to === Seq(EmailAddress("homer@gmail.com"))
         outbox(0).fromName === Some("Peter Griffin (via Kifi)")
-        htmlBody must contain("with Peter Griffin on Kifi")
-        htmlBody must contain("Enjoy Peter’s")
-        textBody must contain("with Peter Griffin on Kifi")
-        textBody must contain("Enjoy Peter's")
+        htmlBody must contain("Hi Homer")
+        htmlBody must contain("Peter Griffin")
+        textBody must contain("Hi Homer")
+        textBody must contain("Peter Griffin")
         outbox.size === 1
       }
     }

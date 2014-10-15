@@ -12,7 +12,6 @@ import com.keepit.common.routes.ABook
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.serializer.EitherFormat
 import com.keepit.social.SocialNetworkType
 import com.keepit.typeahead.TypeaheadHit
 import play.api.http.Status
@@ -21,6 +20,7 @@ import play.api.libs.json.{ JsArray, JsNumber, _ }
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
+import com.keepit.common.json.EitherFormat
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -42,13 +42,12 @@ trait ABookServiceClient extends ServiceClient {
   def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit]
   def refreshAllFilters(): Future[Unit]
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit]
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit]
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]]
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
+  def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]]
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Future[Seq[RichContact]]
   def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]]
@@ -152,9 +151,9 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = {
-    call(ABook.internal.internKifiContact(userId), Json.toJson(contact)).map { r =>
-      r.json.as[RichContact]
+  def internKifiContacts(userId: Id[User], contacts: BasicContact*): Future[Seq[RichContact]] = {
+    if (contacts.isEmpty) Future.successful(Seq.empty) else call(ABook.internal.internKifiContacts(userId), Json.toJson(contacts)).map { r =>
+      r.json.as[Seq[RichContact]]
     }
   }
 
@@ -199,13 +198,6 @@ class ABookServiceClientImpl @Inject() (
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
     callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => () }
-  }
-
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = {
-    implicit val userIdFormat = Id.format[User]
-    implicit val socialIdFormat = Id.format[SocialUserInfo]
-    val json = Json.obj("userId" -> userId, "friendSocialId" -> friend.left.toOption, "friendEmailAddress" -> friend.right.toOption)
-    call(ABook.internal.blockRichConnection, json).map(_ => ())
   }
 
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = {
@@ -259,5 +251,4 @@ class ABookServiceClientImpl @Inject() (
   def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
     call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
   }
-
 }

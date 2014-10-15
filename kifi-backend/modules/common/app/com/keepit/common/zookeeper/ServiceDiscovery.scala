@@ -37,6 +37,7 @@ trait ServiceDiscovery {
   def amIUp: Boolean = myStatus.exists { status =>
     myHealthyStatus.exists(_ == status)
   }
+  def hasBackupCapability: Boolean
   def isCanary: Boolean
 }
 
@@ -243,6 +244,8 @@ class ServiceDiscoveryImpl(
   }
 
   def timeSinceLastStatusChange: Long = System.currentTimeMillis - lastStatusChangeTime
+
+  def hasBackupCapability: Boolean = amazonInstanceInfo.tags.get("Capabilities").map { _.trim } == Some("backup")
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format

@@ -1,3 +1,37 @@
+//
+// Blocks
+//
+generic-dialog-button =
+  width: 100px
+  padding: 13px 0
+  border: 1px solid rgba(166, 175, 189, 0.53)
+  border-radius: 6px
+  font-size: 12px
+  font-weight: 700
+  font-smoothing: antialiased
+  color: #5c6373
+  cursor: pointer
+
+  // TODO: ask Danny about warn button colors.
+  // &.dialog-warn
+  //   background-color: #ce6159
+
+  //   &:focus
+  //   &:hover
+  //     background-color: #d3716a
+
+  // TODO: ask Danny about cancel button colors.
+  // &.dialog-cancel
+  //   background-color: #b8c5d1
+
+  //   &:focus
+  //   &:hover
+  //     background-color: #C5D2DE
+
+  //   &:active
+  //     background-color: #9FACB8
+
+
 .modal-dialog.modal-dialog
   position: fixed
   left: 50%
@@ -7,13 +41,13 @@
   margin: 0
   z-index: 1050
 
-.modal-content.modal-content
+.modal-content
   width: 100%
   height: 100%
   border: 1px solid #8197AC
   box-shadow: 10px 10px 0 rgba(0, 40, 90, 0.2)
   background: #fff
-  border-radius: 5px
+  border-radius: 10px
   overflow: hidden
 
 
@@ -29,54 +63,9 @@
 
 
 .dialog-content
-  color: #66829b
+  font-size: 14px
   line-height: 1.5
-  padding: 0 0 10px
-
-  h1
-    margin: 0 0 0
-    font-size: 28px
-    font-weight: 300
-    color: #333
-    font-smoothing: antialiased
-    text-align: center
-
-  button
-    width: 100px
-    height: 20px
-    line-height: 20px
-    padding: 11px 15px
-    background-color: #4372B1
-    color: #fff
-    border: none
-    border-radius: 6px
-    font-size: 17px
-    font-weight: 300
-    font-smoothing: antialiased
-    cursor: pointer
-    transition: background-color .1s
-
-    &:focus
-    &:hover
-      background-color: #5382C1
-
-    &.dialog-warn
-      background-color: #ce6159
-
-      &:focus
-      &:hover
-        background-color: #D3716A
-
-
-    &.dialog-cancel
-      background-color: #b8c5d1
-
-      &:focus
-      &:hover
-        background-color: #C5D2DE
-
-      &:active
-        background-color: #9FACB8
+  color: kifiBlack
 
   .action-wrap
     margin: 0 auto 15px
@@ -87,37 +76,90 @@
     color: #73787f
 
 .dialog-header
-  padding: 9px 6px 8px
-  text-align: center
-  word-wrap: break-word
+  padding: 15px 23px
+  border-bottom: 1px solid #e7e7e7
+  background-color: #fff
+  font-family: Helvetica, Arial, sans-serif
+  font-size: 16px
+  font-style: normal
+  font-weight: 700
+  color: #5c6373
+  text-align: left
 
   &.dialog-warning
     color: #ce6159
 
 .dialog-x
   position: absolute
-  color: #67829C
-  right: 20px
-  top: 25px
-  font-size: 18px
-  text-decoration: none
+  top: 16px
+  right: 18px
+  border-radius: 100%
+  width: 20px
+  height: 20px
+  background-color: #c8ced7
   cursor: pointer
 
+  &:hover
+  &:focus
+    background-color: #bbc1ca
+
+  &:active
+    background-color: #afb5be
+
+  &::before
+  &::after
+    content: ' '
+    position: absolute;
+    left: 50%
+    top: 4px
+    bottom: 4px
+    border-radius: 2px
+    width: 2px;
+    background: #fff
+    font-size: 0
+
+  &::before
+    transform: translate(-1px) rotate(45deg)
+
+  &::after
+    transform: translate(-1px) rotate(-45deg)
+
 .dialog-buttons
+  margin: 0px auto
+  padding: 13px 0
+  background-color: #f3f5f7
   text-align: center
-  margin: 0px auto 20px
+
+  button
+    {generic-dialog-button}
+
+    // TODO(yiping): these rules in the block are not being picked up by the stylus preprocessor, argh!
+    // Maybe the block needs to turn into a mixin or function...
+    border-radius: 6px
+    background: linear-gradient(to top, #f3f3f3, #fff)
+
+    &:hover
+      background: #e6e8ea
+
+    &:active
+      background: #dadcde
+
+    &.disabled
+    &.disabled:hover
+      background: #f3f5f7
+      color: #a9b0c0
+      cursor: default
+
 
 .dialog-body-wrap
   min-width: 300px
   max-width: 800px
-  margin: 40px 0px 5px
-  padding: 0px 35px
-  color: #333
-  font-size: 14px
+  margin: 0
+  padding: 0
 
   .dialog-body
     margin: 0 auto
-    padding: 0 0 20px
+    padding: 30px 25px
 
   .dialog-buttons
     margin-bottom: 0px
@@ -136,7 +178,7 @@
   opacity: 0.3
 
 .kf-modal-upload-image-header
-  padding: 9px 6px 47px
+  padding: 20px
   text-align: center
   word-wrap: break-word
   margin-right: 30px

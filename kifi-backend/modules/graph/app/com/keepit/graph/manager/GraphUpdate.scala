@@ -1,13 +1,14 @@
 package com.keepit.graph.manager
 
-import com.keepit.common.db.{ State, Id, SequenceNumber }
+import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
+import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
-import com.keepit.model._
-import com.keepit.social.SocialNetworkType
-import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation }
 import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.models.lda.{ DenseLDA, UriSparseLDAFeatures }
+import com.keepit.model._
+import com.keepit.model.view.LibraryMembershipView
+import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
-import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate

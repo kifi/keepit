@@ -38,10 +38,10 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
 
       val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
         urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
         urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1))
       val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Apparel"), createdAt = t1))
@@ -114,6 +114,14 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
         }
+
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnlyMaster { implicit s =>
+            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
+          }
+        }
+
         db.readWrite { implicit s =>
           keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
         }
@@ -121,12 +129,12 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getBookmarkCount(coll1.id.get) === 1
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
         }
-        sessionProvider.doWithoutCreatingSessions {
-          db.readOnlyMaster { implicit s =>
-            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          }
-        }
+
+        coll2.isActive must beTrue
+        db.readWrite { implicit s =>
+          collectionRepo.collectionChanged(coll2.id.get, inactivateIfEmpty = true)
+        }.isActive must beFalse
+
       }
     }
     "separate collections by user" in {

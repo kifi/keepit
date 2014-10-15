@@ -16,6 +16,8 @@ object KQueryExpansion {
   private[this] val langsToUseBoolean = Set[Lang](Lang("ja"))
 
   def useBooleanForPhrase(lang: Lang) = langsToUseBoolean.contains(lang)
+
+  val titleBoost: Float = 2.0f
 }
 
 trait KQueryExpansion extends QueryParser {
@@ -101,7 +103,7 @@ trait KQueryExpansion extends QueryParser {
     super.getFieldQuery("t", queryText, quoted).foreach { q =>
       textQuery.terms = extractTerms(q)
       val query = if (quoted) q else mayConvertQuery(q, lang)
-      textQuery.addQuery(query)
+      textQuery.addQuery(query, 2.0f)
       textQuery.addQuery(copyFieldQuery(query, "c"))
       textQuery.addQuery(copyFieldQuery(query, "h"))
       addSiteQuery(textQuery, queryText)
@@ -125,7 +127,7 @@ trait KQueryExpansion extends QueryParser {
       textQuery.stems = extractTerms(q)
       if (!quoted) {
         val query = mayConvertQuery(q, lang)
-        textQuery.addQuery(query)
+        textQuery.addQuery(query, 2.0f)
         textQuery.addQuery(copyFieldQuery(query, "cs"))
         textQuery.addQuery(copyFieldQuery(query, "hs"))
       }
@@ -137,7 +139,7 @@ trait KQueryExpansion extends QueryParser {
           if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             val boost = if (textQuery.isEmpty) 0.1f else 1.0f
-            textQuery.addQuery(query)
+            textQuery.addQuery(query, 2.0f)
             textQuery.addQuery(copyFieldQuery(query, "cs"))
             textQuery.addQuery(copyFieldQuery(query, "hs"))
             textQuery.setBoost(textQuery.getBoost * boost)
@@ -175,8 +177,14 @@ trait KQueryExpansion extends QueryParser {
       }
     }
 
-    // if we have too many terms, don't concat terms
-    if (concatBoost > 0.0f && clauses.size <= 42) KConcatQueryAdder.addConcatQueries(queries, concatBoost)
+    if (concatBoost > 0.0f) {
+      // concat first 8 terms
+      if (clauses.size <= 8) {
+        KConcatQueryAdder.addConcatQueries(queries, concatBoost)
+      } else {
+        KConcatQueryAdder.addConcatQueries(queries.take(8), concatBoost)
+      }
+    }
 
     getBooleanQuery(clauses)
   }

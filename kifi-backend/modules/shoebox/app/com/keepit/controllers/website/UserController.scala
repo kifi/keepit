@@ -4,8 +4,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
+import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
-import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.controller._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -46,7 +47,7 @@ class UserController @Inject() (
     socialUserRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
     networkInfoLoader: NetworkInfoLoader,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     friendRequestRepo: FriendRequestRepo,
     postOffice: LocalPostOffice,
     userCommander: UserCommander,
@@ -58,9 +59,10 @@ class UserController @Inject() (
     authCommander: AuthCommander,
     searchClient: SearchServiceClient,
     abookUploadConf: ABookUploadConf,
-    fortytwoConfig: FortyTwoConfig) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    emailSender: EmailSenderProvider,
+    fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
-  def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
+  def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = db.readOnlyMaster { implicit s =>
       connectionsPage.map {
@@ -78,7 +80,7 @@ class UserController @Inject() (
     ))
   }
 
-  def friendCount() = JsonAction.authenticated { request =>
+  def friendCount() = UserAction { request =>
     db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
         "friends" -> userConnectionRepo.getConnectionCount(request.userId),
@@ -87,22 +89,22 @@ class UserController @Inject() (
     }
   }
 
-  def socialNetworkInfo() = JsonAction.authenticated { request =>
+  def socialNetworkInfo() = UserAction { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
-  def abookInfo() = JsonAction.authenticatedAsync { request =>
+  def abookInfo() = UserAction.async { request =>
     val abookF = userCommander.getGmailABookInfos(request.userId)
     abookF.map { abooks =>
       Ok(Json.toJson(abooks.map(ExternalABookInfo.fromABookInfo _)))
     }
   }
 
-  def friendNetworkInfo(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def friendNetworkInfo(id: ExternalId[User]) = UserAction { request =>
     Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
 
-  def unfriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def unfriend(id: ExternalId[User]) = UserAction { request =>
     if (userCommander.unfriend(request.userId, id)) {
       Ok(Json.obj("removed" -> true))
     } else {
@@ -110,13 +112,13 @@ class UserController @Inject() (
     }
   }
 
-  def closeAccount = JsonAction.authenticatedParseJson { request =>
+  def closeAccount = UserAction(parse.tolerantJson) { request =>
     val comment = (request.body \ "comment").asOpt[String].getOrElse("")
     userCommander.sendCloseAccountEmail(request.userId, comment)
     Ok(Json.obj("closed" -> true))
   }
 
-  def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def friend(id: ExternalId[User]) = UserAction { request =>
     val (success, code) = userCommander.friend(request.userId, id)
     if (success) {
       Ok(Json.obj("success" -> true, code -> true))
@@ -125,7 +127,7 @@ class UserController @Inject() (
     }
   }
 
-  def ignoreFriendRequest(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def ignoreFriendRequest(id: ExternalId[User]) = UserAction { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, id)
     if (success) Ok(Json.obj("success" -> true))
     else if (code == "friend_request_not_found") NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
@@ -133,7 +135,7 @@ class UserController @Inject() (
     else BadRequest(Json.obj("error" -> code))
   }
 
-  def cancelFriendRequest(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def cancelFriendRequest(id: ExternalId[User]) = UserAction { request =>
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { recipient =>
         friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
@@ -149,17 +151,17 @@ class UserController @Inject() (
     }
   }
 
-  def incomingFriendRequests = JsonAction.authenticated { request =>
+  def incomingFriendRequests = UserAction { request =>
     val users = userCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def outgoingFriendRequests = JsonAction.authenticated { request =>
+  def outgoingFriendRequests = UserAction { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def excludeFriend(id: ExternalId[User]) = UserAction { request =>
     userCommander.excludeFriend(request.userId, id) map { changed =>
       Ok(Json.obj("changed" -> changed))
     } getOrElse {
@@ -167,7 +169,7 @@ class UserController @Inject() (
     }
   }
 
-  def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def includeFriend(id: ExternalId[User]) = UserAction { request =>
     userCommander.includeFriend(request.userId, id) map { changed =>
       Ok(Json.obj("changed" -> changed))
     } getOrElse {
@@ -175,11 +177,11 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = JsonAction.authenticatedAsync(allowPending = true) { implicit request =>
+  def currentUser = UserAction.async { implicit request =>
     getUserInfo(request.userId)
   }
 
-  def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
+  def changePassword = UserAction(parse.tolerantJson) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
@@ -192,7 +194,7 @@ class UserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = JsonAction.authenticated { implicit request =>
+  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = UserAction { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         Ok {
@@ -206,7 +208,7 @@ class UserController @Inject() (
     }
   }
 
-  def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def getEmailInfo(email: EmailAddress) = UserAction { implicit request =>
     db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
@@ -227,7 +229,7 @@ class UserController @Inject() (
     }
   }
 
-  def updateUsername() = JsonAction.authenticatedParseJson { implicit request =>
+  def updateUsername() = UserAction(parse.tolerantJson) { implicit request =>
     val newUsername = (request.body \ "username").as[Username]
     userCommander.setUsername(request.userId, newUsername) match {
       case Left(error) => BadRequest(Json.obj("error" -> error))
@@ -235,33 +237,33 @@ class UserController @Inject() (
     }
   }
 
-  def updateName() = JsonAction.authenticatedParseJson { implicit request =>
+  def updateName() = UserAction(parse.tolerantJson) { implicit request =>
     val newFirstName = (request.body \ "firstName").asOpt[String]
     val newLastName = (request.body \ "lastName").asOpt[String]
     userCommander.updateName(request.userId, newFirstName, newLastName)
     Ok(JsString("success"))
   }
 
-  def updateDescription() = JsonAction.authenticatedParseJson { implicit request =>
+  def updateDescription() = UserAction(parse.tolerantJson) { implicit request =>
     val newDescription = (request.body \ "description").as[String]
     userCommander.updateUserDescription(request.userId, newDescription)
     Ok(JsString("success"))
   }
 
-  def addEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def addEmail() = UserAction.async(parse.tolerantJson) { implicit request =>
     val newAddress = (request.body \ "email").as[String]
     val isPrimary = (request.body \ "isPrimary").as[Boolean]
     EmailAddress.validate(newAddress) match {
       case Failure(e) =>
-        BadRequest(e.getMessage)
+        Future.successful(BadRequest(e.getMessage))
       case Success(newEmail) =>
-        userCommander.addEmail(request.userId, newEmail, isPrimary) match {
+        userCommander.addEmail(request.userId, newEmail, isPrimary) map {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
     }
   }
-  def changePrimaryEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def changePrimaryEmail() = UserAction(parse.tolerantJson) { implicit request =>
     val targetAddress = (request.body \ "email").as[String]
     EmailAddress.validate(targetAddress) match {
       case Failure(e) =>
@@ -273,7 +275,7 @@ class UserController @Inject() (
         }
     }
   }
-  def removeEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def removeEmail() = UserAction(parse.tolerantJson) { implicit request =>
     val targetAddress = (request.body \ "email").as[String]
     EmailAddress.validate(targetAddress) match {
       case Failure(e) =>
@@ -288,7 +290,7 @@ class UserController @Inject() (
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
+  def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
@@ -327,13 +329,13 @@ class UserController @Inject() (
     UserValueName.SHOW_DELIGHTED_QUESTION
   )
 
-  def getPrefs() = JsonAction.authenticatedAsync { request =>
+  def getPrefs() = UserAction.async { request =>
     // The prefs endpoint is used as an indicator that the user is active
     userCommander.setLastUserActive(request.userId)
     userCommander.getPrefs(SitePrefNames, request.userId, request.experiments) map (Ok(_))
   }
 
-  def savePrefs() = JsonAction.authenticatedParseJson { request =>
+  def savePrefs() = UserAction(parse.tolerantJson) { request =>
     val o = request.request.body.as[JsObject]
     val map = o.value.map(t => UserValueName(t._1) -> t._2).toMap
     val keyNames = map.keys.toSet
@@ -345,7 +347,7 @@ class UserController @Inject() (
     }
   }
 
-  def getInviteCounts() = JsonAction.authenticated { request =>
+  def getInviteCounts() = UserAction { request =>
     db.readOnlyMaster { implicit s =>
       val availableInvites = userValueRepo.getValue(request.userId, UserValues.availableInvites)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
@@ -356,7 +358,7 @@ class UserController @Inject() (
     }
   }
 
-  def needMoreInvites() = JsonAction.authenticated { request =>
+  def needMoreInvites() = UserAction { request =>
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.INVITATION,
@@ -368,7 +370,9 @@ class UserController @Inject() (
     Ok
   }
 
-  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024 * 1024 * 15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def uploadBinaryUserPicture() = MaybeUserAction(parse.maxLength(1024 * 1024 * 15, parse.temporaryFile)) { implicit request =>
+    doUploadBinaryUserPicture
+  }
   def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]]) = {
     request.body match {
       case Right(tempFile) =>
@@ -399,7 +403,7 @@ class UserController @Inject() (
       "cropSize" -> optional(number)
     )(UserPicInfo.apply)(UserPicInfo.unapply)
   )
-  def setUserPicture() = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def setUserPicture() = UserAction { implicit request =>
     userPicForm.bindFromRequest.fold(
       formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
       {
@@ -422,28 +426,22 @@ class UserController @Inject() (
   }
 
   private val url = fortytwoConfig.applicationBaseUrl
-  def resendVerificationEmail(email: EmailAddress) = HtmlAction.authenticated { implicit request =>
+
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     db.readWrite { implicit s =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailAddr) if emailAddr.userId == request.userId =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(email).get.withVerificationCode(clock.now))
-          val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-          postOffice.sendMail(ElectronicMail(
-            from = SystemEmailAddress.NOTIFICATIONS,
-            to = Seq(email),
-            subject = "Kifi.com | Please confirm your email address",
-            htmlBody = views.html.email.verifyEmail(request.user.firstName, verifyUrl).body,
-            category = NotificationCategory.User.EMAIL_CONFIRMATION
-          ))
-          Ok("0")
+          emailSender.confirmation(emailAddr) map { f =>
+            Ok("0")
+          }
         case _ =>
-          Forbidden("0")
+          Future.successful(Forbidden("0"))
       }
     }
-    Ok
   }
 
-  def importStatus() = JsonAction.authenticatedAsync { implicit request =>
+  def importStatus() = UserAction.async { implicit request =>
     val networks = Seq("facebook", "linkedin")
 
     val networkStatuses = Future {
@@ -485,7 +483,7 @@ class UserController @Inject() (
     }
   }
 
-  def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
+  def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
     implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
     Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
       userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
@@ -496,14 +494,14 @@ class UserController @Inject() (
     } getOrElse Future.successful(BadRequest)
   }
 
-  def cancelDelightedSurvey = JsonAction.authenticatedAsync { implicit request =>
+  def cancelDelightedSurvey = UserAction.async { implicit request =>
     userCommander.cancelDelightedSurvey(request.userId) map { success =>
       if (success) Ok else BadRequest
     }
   }
 
   // todo(Andrew): Remove when ng is out
-  def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
+  def checkIfImporting(network: String, callback: String) = UserAction { implicit request =>
     val startTime = clock.now
     val importHasHappened = new AtomicBoolean(false)
     val finishedImportAnnounced = new AtomicBoolean(false)
@@ -547,7 +545,7 @@ class UserController @Inject() (
 
   // todo(Andrew): Remove when ng is out
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  def getABookUploadStatus(id: Id[ABookInfo], callbackOpt: Option[String]) = HtmlAction.authenticated { request =>
+  def getABookUploadStatus(id: Id[ABookInfo], callbackOpt: Option[String]) = UserAction { request =>
     import com.keepit.model.ABookInfoStates._
     val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")

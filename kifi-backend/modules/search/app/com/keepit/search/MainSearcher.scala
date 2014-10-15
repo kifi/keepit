@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.engine.SearchTimeLogs
+import com.keepit.search.engine.{ DebugOption, SearchTimeLogs }
 import com.keepit.search.graph.bookmark.BookmarkRecord
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
@@ -19,8 +19,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.math._
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration._
-import com.keepit.search.util.Hit
-import com.keepit.search.util.HitQueue
+import com.keepit.search.util.MergeQueue
+import com.keepit.search.util.MergeQueue.Hit
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -42,7 +42,7 @@ class MainSearcher(
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     val timeLogs: SearchTimeLogs,
     monitoredAwait: MonitoredAwait)(implicit private val clock: Clock,
-        private val fortyTwoServices: FortyTwoServices) extends Logging {
+        private val fortyTwoServices: FortyTwoServices) extends Logging with DebugOption {
 
   private[this] var parsedQuery: Option[Query] = None
 
@@ -63,14 +63,6 @@ class MainSearcher(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
-
-  // debug flags
-  private[this] var noBookmarkCheck = false
-  def debug(debugMode: String) {
-    val debugFlags = debugMode.split(",").map(_.toLowerCase).toSet
-    noBookmarkCheck = debugFlags.contains("nobookmarkcheck")
-    log.info(s"debug option: $debugFlags")
-  }
 
   // tailCutting is set to low when a non-default filter is in use
   private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.0f
@@ -112,14 +104,12 @@ class MainSearcher(
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      timeLogs.personalizedSearcher()
 
       val weight = personalizedSearcher.createWeight(articleQuery)
 
       val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
       val mySearchUris = socialGraphInfo.mySearchUris
       val friendSearchUris = socialGraphInfo.friendSearchUris
-      timeLogs.socialGraphInfo()
 
       val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
       timeLogs.clickBoost()
@@ -268,7 +258,7 @@ class MainSearcher(
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         if (score > othersThreshold) {
           h.bookmarkCount = getPublicBookmarkCount(h.id)
-          if (h.bookmarkCount > 0 || noBookmarkCheck) {
+          if (h.bookmarkCount > 0) {
             val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
             queue.insert(newScore, scoring, h)
@@ -309,6 +299,8 @@ class MainSearcher(
     timeLogs.processHits()
     timeLogs.done()
     timing()
+
+    debugLog(s"myTotal=$myTotal friendsTotal=$friendsTotal othersTotal=$othersTotal show=$show")
 
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, show)
   }
@@ -404,13 +396,12 @@ class MainSearcher(
   def getBookmarkId(uriId: Id[NormalizedURI]): Long = socialGraphInfo.myUriEdgeAccessor.getBookmarkId(uriId.id)
 
   def timing(): Unit = {
-    SafeFuture {
-      timeLogs.send()
-    }
+    SafeFuture { timeLogs.send() }
+    debugLog(timeLogs.toString)
   }
 }
 
-class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
+class ArticleHitQueue(sz: Int) extends MergeQueue[MutableArticleHit](sz) {
 
   private[this] val NO_FRIEND_IDS = Set.empty[Id[User]]
 

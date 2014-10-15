@@ -8,8 +8,7 @@ describe('kifi.friends.seeMutualFriends', function () {
       $compile,
       $rootScope,
       friendService,
-      inviteService,
-      savePymkService;
+      inviteService;
 
   beforeEach(inject(function ($injector) {
     $q = $injector.get('$q');
@@ -17,7 +16,6 @@ describe('kifi.friends.seeMutualFriends', function () {
     $rootScope = $injector.get('$rootScope');
     friendService = $injector.get('friendService');
     inviteService = $injector.get('inviteService');
-    savePymkService = $injector.get('savePymkService');
   }));
 
   describe('kfSeeMutualFriends', function () {
@@ -47,41 +45,20 @@ describe('kifi.friends.seeMutualFriends', function () {
         }
       ]
     };
-    var savedPerson2 = {
-      id: 'fake-id-123',
-      fullName: 'John Smith',
-      pictureUrl: '//djty7jcqog9qu.cloudfront.net/users/fake-id-123/pics/200/0.jpg',
-      numMutualFriends: 2,
-      mutualFriends: [
-        {
-          id: '597e6c13-5093-4cba-8acc-93318987d8ee',
-          firstName: 'Stephen',
-          lastName: 'Kemmerling',
-          numFriends: 71,
-          pictureName: 'tEbqN.jpg'
-        },
-        {
-          id: 'ae139ae4-49ad-4026-b215-1ece236f1322',
-          firstName: 'Jen',
-          lastName: 'Granito Ruffner',
-          numFriends: 148,
-          pictureName: 'Upm5X.jpg'
-        }
-      ]
-    };
 
     beforeEach(function () {
       scope = $rootScope.$new();
+      scope.modalData = {
+        savedPymk: testSavedPerson
+      };
+
       elem = $compile('<div kf-see-mutual-friends></div>')(scope);
 
-      spyOn(savePymkService, 'getSavedPersonYouMayKnow').andCallFake(function () {
-        return testSavedPerson;
-      });
       spyOn(friendService, 'getPictureUrlForUser').andReturn('fake picture URL');
     });
 
     it('should have the correct pymk header', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       expect(elem.find('.kf-mutual-friends-pymk').length > 0);
@@ -90,7 +67,7 @@ describe('kifi.friends.seeMutualFriends', function () {
     });
 
     it('should have the correct mutual friends', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk =  savedPerson1;
       scope.$digest();
 
       expect(elem.find('.kf-mutual-friend-card').length).toBe(2);
@@ -99,18 +76,8 @@ describe('kifi.friends.seeMutualFriends', function () {
 
     });
 
-    it('should update modal content when saved person changes', function () {
-      testSavedPerson = savedPerson1;
-      scope.$digest();
-      expect(elem.find('.kf-mutual-friends-pymk-name').text()).toBe('Alexander Willis Schultz');
-
-      testSavedPerson = savedPerson2;
-      scope.$digest();
-      expect(elem.find('.kf-mutual-friends-pymk-name').text()).toBe('John Smith');
-    });
-
     it('should call inviteService\'s friendRequest when add friend link is called', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').andReturn(promise(null));
@@ -119,7 +86,7 @@ describe('kifi.friends.seeMutualFriends', function () {
     });
 
     it('should update action text when add friend link is called', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').andReturn(promise(null));
@@ -129,7 +96,7 @@ describe('kifi.friends.seeMutualFriends', function () {
     });
 
     it('should update action text when add friend link is called with invite error', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').andReturn(rejectedPromise());
@@ -139,7 +106,7 @@ describe('kifi.friends.seeMutualFriends', function () {
     });
 
     it('should disable click when add friend link is called', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       spyOn(inviteService, 'friendRequest').andReturn(promise(null));
@@ -149,7 +116,7 @@ describe('kifi.friends.seeMutualFriends', function () {
     });
 
     it('should disable and then reenable click when add friend link is called', function () {
-      testSavedPerson = savedPerson1;
+      scope.modalData.savedPymk = savedPerson1;
       scope.$digest();
 
       expect(elem.find('.kf-mutual-friends-action').hasClass('clickable')).toBe(true);

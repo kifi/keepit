@@ -1,72 +1,57 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos)
+@(allRecos: com.keepit.curator.commanders.email.AllDigestItems)
 @import com.keepit.common.mail.template.helpers._
 
+@email.tags.contentWrapper() {
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-<tr>
-    <td>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-            <tr>
-                <td align="center">
-                    <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                        <tr>
-                            <td height="25">&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td align="center" style="font-family:Arial, sans-serif; font-size:20px; text-align:center; color:#000000; line-height:18px; font-weight:bold;">This Week’s Recommended List</td>
-                        </tr>
-                        <tr>
-                            <td height="21">&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td valign="top">
-                                <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                                    <tr>
-                                        <td width="72" class="side1">&nbsp;</td>
-                                        <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">
-                                            This digest is a recommended list based on your interests and recent activity on Kifi.
-                                            @if(!allRecos.isFacebookConnected) {
-                                            You can also <a href="@baseUrl/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
-                                            }
-                                            <br/>
-                                        </td>
-                                        <td width="67" class="side1">&nbsp;</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td height="35">&nbsp;</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </td>
-</tr>
+  @email.tags.trSpacer(25)
+  <tr>
+    <td align="center" style="font-family:Arial,sans-serif;font-size:20px;text-align:center;color:#000000;line-height:18px;font-weight:bold;">Your Recommended List</td>
+  </tr>
 
-@allRecos.recos.map { reco =>
-<tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
+@if(allRecos.recommendations.nonEmpty) {
+  @email.tags.trSpacer(21)
+  <tr><td bgcolor="#ffffff">
+    <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+      <tr>
+        <td width="72" class="side1">&nbsp;</td>
+        <td align="left" valign="top" style="font-family:Arial,sans-serif;font-size:16px;text-align:left;color:#000000;line-height:21px;">
+          <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;line-height:25px;">Your Recommendations</div>
+          Recommended pages based on your interests and recent activity on Kifi.
+          @if(!allRecos.isFacebookConnected) {
+          You can also <a href="@baseUrl/link/facebook?redirect=recommendations" target="_blank" style="color:#43a0f8;text-decoration:none;font-family:Arial,sans-serif;">Connect Facebook</a> to access recommendations from your friends’ best keeps.
+          }
+        </td>
+        <td width="67" class="side1">&nbsp;</td>
+      </tr>
+    </table>
+  </td></tr>
+  @email.tags.trSpacer(21)
+
+  @allRecos.recommendations.map { reco =>
+  <tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
+  }
 }
 
-<tr>
-    <td bgcolor="#ffffff">
-        <table width="672" border="0" cellspacing="0" cellpadding="0" align="center">
-            <tr>
-                <td height="37">&nbsp;</td>
-            </tr>
-            <tr>
-                <td align="center">
-                    <table border="0" cellspacing="0" cellpadding="0" align="center">
-                        <tr>
-                            <td><a href="@baseUrl/recommendations" target="_blank"><img src="@assetUrl("digest/viewfulllist.png")" alt="View Full list" width="174" height="46" style="display:block;" border="0" /></a></td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td height="33">&nbsp;</td>
-            </tr>
-        </table>
-    </td>
-</tr>
+@if(allRecos.newLibraryItems.nonEmpty) {
+  @email.tags.trSpacer(21)
+  <tr><td bgcolor="#ffffff">
+    <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+      <tr>
+        <td width="72" class="side1">&nbsp;</td>
+        <td align="left" valign="top" style="font-family:Arial,sans-serif;font-size:16px;text-align:left;color:#000000;line-height:21px;">
+          <div style="font-family:Arial,sans-serif;font-size:16px;font-weight:bold;line-height:25px;">New from libraries you follow</div>
+          Recommended keeps recently added to libraries that you follow.
+        </td>
+        <td width="67" class="side1">&nbsp;</td>
+      </tr>
+    </table>
+  </td></tr>
+  @email.tags.trSpacer(21)
+
+  @allRecos.newLibraryItems.map { reco =>
+  <tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco)</td></tr>
+  }
+}
+
 </table>
+}

@@ -6,12 +6,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.{ KeepLangs, KeepFields, ShardedKeepIndexer }
+import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -36,13 +35,14 @@ class SearchFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
-    mainSearcherFactory: MainSearcherFactory,
     monitoredAwait: MonitoredAwait,
-    implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
+
+  lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
   private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
+  private[this] val configReqConsolidator = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -56,8 +56,8 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
-    val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+    val clickBoostsFuture = resultClickTracker.getBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+    val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
 
     val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryContext)
     val friendIdsFuture = getFriendIdsFuture(userId)
@@ -133,8 +133,8 @@ class SearchFactory @Inject() (
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
-        val myOwnLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
-        val memberLibIds = LongArraySet.from(librarySearcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+        val myOwnLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+        val memberLibIds = LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
       }
@@ -206,28 +206,6 @@ class SearchFactory @Inject() (
     }
   }
 
-  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
-    getLibraryIdsFuture(userId, libraryContext).flatMap {
-      case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
-        Future.traverse(shards) { shard =>
-          SafeFuture {
-            val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-            val keepLangs = new KeepLangs(keepSearcher)
-            keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
-            keepLangs.processLibraries(trustedPublishedLibIds)
-            keepLangs.processLibraries(authorizedLibIds)
-            keepLangs.getFrequentLangs()
-          }
-        }.map { results =>
-          results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
-            case (m, (langName, count)) =>
-              val lang = Lang(langName)
-              m + (lang -> (count + m.getOrElse(lang, 0)))
-          }
-        }
-    }
-  }
-
   private def addLibraryFilter(engBuilder: QueryEngineBuilder, libId: Long) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.toString))) }
 
   def getLibrarySearches(
@@ -282,5 +260,20 @@ class SearchFactory @Inject() (
         }
       case None => Seq.empty
     }
+  }
+
+  def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
+    predefinedConfig match {
+      case None =>
+        configReqConsolidator(userId) { k => searchConfigManager.getConfigFuture(userId, experiments) }
+      case Some(conf) =>
+        val default = searchConfigManager.defaultConfig
+        // almost complete overwrite. But when search config parameter list changes, this prevents exception
+        Future.successful((new SearchConfig(default.params ++ conf.params), None))
+    }
+  }
+
+  def warmUp(userId: Id[User]): Seq[Future[Any]] = {
+    Seq(clickHistoryTracker.getClickHistoryFuture(userId)) // returning futures to pin them in the heap
   }
 }

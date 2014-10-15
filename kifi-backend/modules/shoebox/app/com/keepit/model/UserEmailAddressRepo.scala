@@ -19,6 +19,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def verify(userId: Id[User], verificationCode: String)(implicit session: RWSession): (Option[UserEmailAddress], Boolean) // returns (verifiedEmailOption, isFirstTimeUsed)
   def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
+  def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
 }
 
 @Singleton
@@ -35,7 +36,7 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
-    def verifiedAt = column[DateTime]("verified_at", O.NotNull)
+    def verifiedAt = column[DateTime]("verified_at", O.Nullable)
     def lastVerificationSent = column[DateTime]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[String]]("verification_code", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId, state, address, verifiedAt.?, lastVerificationSent.?,
@@ -54,14 +55,10 @@ class UserEmailAddressRepoImpl @Inject() (
   }
 
   override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    if (emailAddress.verified) {
-      verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
-    }
+    verifiedEmailUserIdCache.remove(VerifiedEmailUserIdKey(emailAddress.address))
   }
   override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
-    if (emailAddress.verified) {
-      verifiedEmailUserIdCache.set(VerifiedEmailUserIdKey(emailAddress.address), emailAddress.userId)
-    }
+    deleteCache(emailAddress)
   }
 
   def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress] =
@@ -105,4 +102,9 @@ class UserEmailAddressRepoImpl @Inject() (
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {
     getByAddress(address).find(_.verified).map(_.userId)
   }
+
+  def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
+    (for (e <- rows if e.state === UserEmailAddressStates.UNVERIFIED && e.createdAt > from && e.createdAt < to) yield e).list
+  }
+
 }

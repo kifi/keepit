@@ -2,27 +2,24 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.commanders.AuthCommander
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, MobileController }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.controller.{ ActionAuthenticator, MobileController, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
-import com.keepit.social.{ SocialId, UserIdentity }
-import com.keepit.controllers.core.{ AuthController, AuthHelper }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.social.SocialNetworkType
-import com.keepit.model._
 import com.keepit.common.time.Clock
+import com.keepit.controllers.core.{ AuthController, AuthHelper }
+import com.keepit.model._
+import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import com.keepit.social.providers.ProviderController
-
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, Json }
-import play.api.mvc.{ Action, Cookie, Session, Result }
+import play.api.mvc.{ Action, Cookie, Result, Session }
+import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
+import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
-
-import securesocial.core.{ Authenticator, Events, IdentityId, IdentityProvider, LoginEvent }
-import securesocial.core.{ OAuth1Provider, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 class MobileAuthController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
@@ -46,7 +43,7 @@ class MobileAuthController @Inject() (
     val json = request.body
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiIPhoneVersion((json \ "version").as[String])
-    val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+    val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
     registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.IPhone)
   }
 
@@ -54,7 +51,7 @@ class MobileAuthController @Inject() (
     val json = request.body
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiAndroidVersion((json \ "version").as[String])
-    val agent = UserAgent.fromString(request.headers.get("user-agent").getOrElse(""))
+    val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
     registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.Android)
   }
 
@@ -99,75 +96,21 @@ class MobileAuthController @Inject() (
     ))
   }
 
-  def accessTokenSignup(providerName: String) = Action(parse.tolerantJson) { implicit request =>
-    val resOpt = for {
-      provider <- Registry.providers.get(providerName)
-      oauth2Info <- request.body.asOpt[OAuth2Info]
-    } yield {
-      Try {
-        val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
-        val filledSocialUser = provider.fillProfile(socialUser)
-        filledSocialUser
-      } match {
-        case Success(filledUser) =>
-          UserService.find(filledUser.identityId) match {
-            case None =>
-              val saved = UserService.save(UserIdentity(None, filledUser, allowSignup = false))
-              log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
-              Authenticator.create(saved).fold(
-                error => throw error,
-                authenticator =>
-                  Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                    .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                    .withCookies(authenticator.toCookie)
-              )
-            case Some(identity) => // social user exists
-              db.readOnlyMaster(attempts = 2) { implicit s =>
-                socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
-              } match {
-                case None => // kifi user does not exist
-                  Authenticator.create(identity).fold(
-                    error => throw error,
-                    authenticator =>
-                      Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                        .withCookies(authenticator.toCookie)
-                  )
-                case Some(userId) =>
-                  val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
-                  Authenticator.create(identity).fold(
-                    error => throw error,
-                    authenticator =>
-                      Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-                        .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                        .withCookies(authenticator.toCookie)
-                  )
-              }
-          }
-        case Failure(t) =>
-          log.error(s"[accessTokenLogin($provider)] Caught Exception($t) during fillProfile; token=${oauth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid token"))
-      }
+  def accessTokenSignup(providerName: String) = Action.async(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        Future.successful(BadRequest(Json.obj("error" -> "invalid_token")))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenSignup(providerName, oauth2Info)
     }
-    resOpt getOrElse BadRequest(Json.obj("error" -> "invalid arguments"))
   }
 
   def accessTokenLogin(providerName: String) = Action(parse.tolerantJson) { implicit request =>
-    (for {
-      provider <- Registry.providers.get(providerName)
-      oAuth2Info <- request.body.asOpt[OAuth2Info]
-    } yield {
-      Try {
-        provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oAuth2Info)))
-      } match {
-        case Success(socialUser) =>
-          authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
-        case Failure(t) =>
-          log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during fillProfile; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
-          BadRequest(Json.obj("error" -> "invalid_token"))
-      }
-    }) getOrElse {
-      BadRequest(Json.obj("error" -> "invalid_arguments"))
+    request.body.asOpt[OAuth2TokenInfo] match {
+      case None =>
+        BadRequest(Json.obj("error" -> "invalid_token"))
+      case Some(oauth2Info) =>
+        authHelper.doAccessTokenLogin(providerName, oauth2Info)
     }
   }
 
@@ -225,10 +168,10 @@ class MobileAuthController @Inject() (
       } find (_.networkType == SocialNetworkType(providerName)) headOption
 
       val result = suiOpt match {
-        case Some(sui) =>
+        case Some(sui) if sui.state != SocialUserInfoStates.INACTIVE =>
           log.info(s"[accessTokenSignup($providerName)] user(${request.user}) already associated with social user: ${sui}")
           Ok(Json.obj("code" -> "link_already_exists")) // err on safe side
-        case None =>
+        case _ =>
           Try {
             val socialUser = SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = Some(oauth2Info))
             val filledSocialUser = provider.fillProfile(socialUser)

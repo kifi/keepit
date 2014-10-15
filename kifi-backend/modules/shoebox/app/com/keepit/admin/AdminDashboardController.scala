@@ -6,7 +6,7 @@ import org.joda.time.Days
 import org.joda.time.LocalDate
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.time._
@@ -20,11 +20,11 @@ import views.html
 //this is a singleton, bad pattern but the code here will no scale and soon it will be refactored anyway
 @Singleton
 class AdminDashboardController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
   clock: Clock)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
@@ -41,11 +41,11 @@ class AdminDashboardController @Inject() (
     Json.obj("day0" -> day0, "counts" -> userCounts)
   }
 
-  def index = AdminHtmlAction.authenticated { implicit request =>
+  def index = AdminUserPage { implicit request =>
     Ok(html.admin.adminDashboard())
   }
 
-  def usersByDate = AdminJsonAction.authenticated { implicit request =>
+  def usersByDate = AdminUserAction { implicit request =>
     Ok(userCountByDate)
   }
 

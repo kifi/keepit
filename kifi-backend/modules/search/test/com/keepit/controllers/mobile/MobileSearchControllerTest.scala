@@ -1,14 +1,14 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.engine.result.KifiShardResult
-import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
+import com.keepit.search.index._
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
 import com.keepit.social.BasicUser
@@ -27,7 +27,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
 
   def modules = Seq(
     FakeActorSystemModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FixedResultIndexModule(),
     FakeHttpClientModule(),
     PlayAppConfigurationModule()
@@ -41,7 +41,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         path === "/m/1/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = mobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)
@@ -105,7 +105,9 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
+  protected def removeOldIndexDirs(conf: Configuration, configName: String, shard: Shard[_], versionsToClean: Seq[IndexerVersion]): Unit = {}
+
+  protected def getIndexDirectory(configName: String, shard: Shard[_], version: IndexerVersion, indexStore: IndexStore, conf: Configuration, versionsToClean: Seq[IndexerVersion]): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir
@@ -160,8 +162,7 @@ class FixedResultSearchCommander extends SearchCommander {
       Set(100, 220), // idFilter
       false, // mayHaveMoreHits
       true, //show
-      Some(Id[SearchConfigExperiment](10)), //searchExperimentId
-      Seq.empty[JsObject] // experts
+      Some(Id[SearchConfigExperiment](10)) //searchExperimentId
     )
   )
 
@@ -218,12 +219,8 @@ class FixedResultSearchCommander extends SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    debug: Option[String]): KifiShardResult = ???
+    debug: Option[String]): Future[KifiShardResult] = ???
 
-  def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
-  def distLangFreqs2(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext) = ???
-
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Option[(Query, Explanation)] = ???
-  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
   def warmUp(userId: Id[User]): Unit = {}
 }

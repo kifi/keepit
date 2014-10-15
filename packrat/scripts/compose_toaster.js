@@ -69,10 +69,17 @@ var toaster = (function () {
     }))
     .on('click mousedown', '.kifi-toast-x', function (e) {
       if (e.which === 1 && $toast) {
+        e.preventDefault();
         hide(e, 'x');
       }
     })
-    .on('click mousedown', '.kifi-toast-other', onOthersClick)
+    .on('click mousedown', '.kifi-toast-other', function (e) {
+      var data = $.data(this);
+      if (e.which === 1 && data.count) {
+        e.preventDefault();
+        showOlder(data.count === 1 && data.id);
+      }
+    })
     .appendTo($parent);
 
     var compose = initCompose($toast, {onSubmit: send.bind(null, $toast)});
@@ -142,14 +149,10 @@ var toaster = (function () {
     api.require('scripts/pane.js', api.noop); // in parallel
   }
 
-  function onOthersClick(e) {
-    var data = $.data(this);
-    if (e.which === 1 && data.count) {
-      var threadId = data.id;
-      api.require('scripts/pane.js', function () {
-        pane.show({locator: threadId && data.count === 1 ? '/messages/' + threadId : '/messages'});
-      });
-    }
+  function showOlder(threadId) {
+    api.require('scripts/pane.js', function () {
+      pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
+    });
   }
 
   function idOf(o) {

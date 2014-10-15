@@ -19,23 +19,26 @@ angular.module('kifi')
 
     return {
       disconnectNetwork: function (network) {
-        return env.origin + '/disconnect/' + network;
+        return env.navBase + '/disconnect/' + network;
       },
       linkNetwork: function (network) {
-        return env.origin + '/link/' + network;
+        return env.navBase + '/link/' + network;
       },
-      uploadBookmarkFile: function(makePublic) {
+      uploadBookmarkFile: function (makePublic) {
         var path = '/keeps/file-import';
         if (makePublic) {
           path += '?public=1';
         }
         return route(path);
       },
-      refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
+      uploadBookmarkFileToLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/import-file');
+      },
+      refreshNetworks: env.navBase + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
       importGmail: function () {
-        return env.origin + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
+        return env.navBase + '/contacts/import?redirectUrl=' + $location.url(); // wtf, why top level route?
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
@@ -54,6 +57,10 @@ angular.module('kifi')
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
+      pageTags: route('/collections/page'),
+      searchTags: function (query, limit) {
+        return route('/collections/search') + '?query=' + query + '&limit=' + limit;
+      },
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
@@ -101,19 +108,28 @@ angular.module('kifi')
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
       },
+      addKeepsToLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps');
+      },
+      removeKeepFromLibrary: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId);
+      },
+      removeManyKeepsFromLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/keeps/delete');
+      },
 
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
-      getLibraryByUserSlug: function (username, slug) {
-        return route('/users/' + username + '/libraries/' + slug);
+      getLibraryByUserSlug: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + (authToken ? '?authToken=' + authToken : ''));
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + '&authToken=' + authToken || '');
+        return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
@@ -127,6 +143,15 @@ angular.module('kifi')
       },
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
+      },
+      deleteLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/delete');
+      },
+      authIntoLibrary: function (username, slug, authToken) {
+        return route('/users/' + username + '/libraries/' + slug + '/auth?authToken=' + authToken || '');
+      },
+      copyKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
       }
     };
   }

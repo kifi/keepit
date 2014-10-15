@@ -12,17 +12,25 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json._
 import play.api.mvc.RequestHeader
 
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.JsObject
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryFields }
+import play.api.libs.json.{ Writes, Json, JsObject }
+import com.keepit.search.graph.library.{ LibraryIndexable }
 
 import scala.util.{ Failure, Success }
+import com.keepit.common.json
+import com.keepit.search.augmentation._
+
+case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
+object BasicLibrary {
+  implicit val writes = Writes[BasicLibrary] { library =>
+    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret))
+  }
+}
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -31,6 +39,8 @@ object SearchControllerUtil {
 trait SearchControllerUtil {
 
   val shoeboxClient: ShoeboxServiceClient
+
+  implicit val publicIdConfig: PublicIdConfiguration
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
 
@@ -59,6 +69,7 @@ trait SearchControllerUtil {
     KifiSearchResult.v2(
       kifiPlainResult.uuid,
       kifiPlainResult.query,
+      kifiPlainResult.firstLang,
       kifiPlainResult.hits,
       kifiPlainResult.myTotal,
       kifiPlainResult.friendsTotal,
@@ -81,38 +92,21 @@ trait SearchControllerUtil {
       decoratedResult.show,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
+      Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[JsValue] = {
+  def augment(augmentationCommander: AugmentationCommander, userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.augmentation(augmentationRequest).flatMap { augmentationResponse =>
-      val futureBasicUsers = shoeboxClient.getBasicUsers(augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptBy).flatten).toSeq)
-      val libraryNames = getLibraryNames(librarySearcher, augmentationResponse.infos.values.flatMap(_.keeps.map(_.keptIn).flatten).toSeq)
-      val augmenter = AugmentedItem.withScores(augmentationResponse.scores) _
-      val augmentedItems = items.map(item => augmenter(item, augmentationResponse.infos(item)))
-      futureBasicUsers.map { basicUsers =>
-        val userNames = basicUsers.mapValues(basicUser => basicUser.firstName + " " + basicUser.lastName)
-        JsArray(augmentedItems.map {
-          augmentedItem =>
-            Json.obj(
-              "keep" -> augmentedItem.keep.map { case (keptIn, keptBy, tags) => Json.obj("keptIn" -> libraryNames(keptIn), "keptBy" -> keptBy.map(userNames(_)), "tags" -> tags) },
-              "moreKeeps" -> JsArray(augmentedItem.moreKeeps.map { case (keptIn, keptBy) => Json.obj("keptIn" -> keptIn.map(libraryNames(_)), "keptBy" -> keptBy.map(userNames(_))) }),
-              "moreTags" -> Json.toJson(augmentedItem.moreTags),
-              "otherPublishedKeeps" -> augmentedItem.otherPublishedKeeps
-            )
-        })
-      }
-    }
+    augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  def getLibraryNames(librarySearcher: Searcher, libraryIds: Seq[Id[Library]]): Map[Id[Library], String] = {
+  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
     libraryIds.map { libId =>
-      libId -> librarySearcher.getDecodedDocValue(LibraryFields.recordField, libId.id)(LibraryRecord.fromByteArray).get.name
+      val name = LibraryIndexable.getRecord(librarySearcher, libId).get.name
+      libId -> BasicLibrary(Library.publicId(libId), name, LibraryIndexable.isSecret(librarySearcher, libId))
     }.toMap
   }
 

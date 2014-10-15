@@ -3,16 +3,13 @@
 angular.module('kifi')
 
 .controller('ProfileCtrl', [
-  '$scope', '$http', 'profileService', 'routeService', '$window', 'socialService',
-  function ($scope, $http, profileService, routeService, $window, socialService) {
+  '$scope', '$http', 'modalService', 'profileService', 'routeService', '$window', 'socialService',
+  function ($scope, $http, modalService, profileService, routeService, $window, socialService) {
 
     // $analytics.eventTrack('test_event', { category: 'test', label: 'controller' });
 
     $window.document.title = 'Kifi • Your Profile';
     socialService.refresh();
-
-    $scope.showEmailChangeDialog = {value: false};
-    $scope.showResendVerificationEmailDialog = {value: false};
 
     $scope.me = profileService.me;
     profileService.getMe();
@@ -104,7 +101,10 @@ angular.module('kifi')
 
     function showVerificationAlert(email) {
       $scope.emailForVerification = email;
-      $scope.showResendVerificationEmailDialog.value = true;
+      modalService.open({
+        template: 'profile/emailResendVerificationModal.tpl.html',
+        scope: $scope
+      });
     }
 
     function getEmailInfo(email) {
@@ -123,11 +123,15 @@ angular.module('kifi')
         return;
       }
       if (emailInfo.isVerified) {
-        return profileService.setNewPrimaryEmail($scope.me, emailInfo.address);
+        return profileService.setNewPrimaryEmail(emailInfo.address);
       }
       // email is available || (not primary && not pending primary && not verified)
       emailToBeSaved = email;
-      $scope.showEmailChangeDialog.value = true;
+
+      modalService.open({
+        template: 'profile/emailChangeModal.tpl.html',
+        scope: $scope
+      });
       return profileService.successInputActionResult();
     }
 

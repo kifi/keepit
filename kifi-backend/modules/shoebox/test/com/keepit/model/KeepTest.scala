@@ -35,16 +35,16 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
       keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50),
-        visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
       keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1),
-        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
       (user1, user2, uri1, uri2, uri3, url1, url2)
     }
@@ -155,7 +155,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
         }
         db.readWrite { implicit s =>
           keepRepo.count === 4
@@ -173,7 +173,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.getByUriAndUser(uri1.id.get, user1.id.get).size === 0
-          keepRepo.getPrimaryByUriAndUser(uri1.id.get, user1.id.get).size === 1
         }
       }
     }
@@ -196,14 +195,14 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         }
         val firstUserBookmark = db.readWrite { implicit s =>
           keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
         }
         db.readOnlyMaster { implicit s =>
           keepRepo.latestKeep(uriId, url).flatMap(_.id) === firstUserBookmark.id
         }
         val secondUserBookmark = db.readWrite { implicit s =>
           keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
         }
         db.readOnlyMaster { implicit s =>
           keepRepo.latestKeep(uriId, url).flatMap(_.id) === secondUserBookmark.id
@@ -235,15 +234,15 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
           keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6),
-            visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
+            visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
         }
 

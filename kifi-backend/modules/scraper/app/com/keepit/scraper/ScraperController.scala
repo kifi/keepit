@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ScraperServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ ScraperServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.json._
@@ -16,7 +16,7 @@ import com.keepit.common.net.URI
 
 class ScraperController @Inject() (
     airbrake: AirbrakeNotifier,
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     scrapeProcessor: ScrapeProcessor) extends ScraperServiceController with Logging {
 
   implicit val fj = ExecutionContext.fj

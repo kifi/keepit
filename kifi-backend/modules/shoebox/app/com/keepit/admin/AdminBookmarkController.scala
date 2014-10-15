@@ -1,34 +1,28 @@
 package com.keepit.controllers.admin
 
-import scala.collection.mutable.{ HashMap => MutableMap, SynchronizedMap }
-import scala.concurrent._
-import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.search.{ IndexInfo, SearchServiceClient }
-import com.keepit.common.controller.{ AuthenticatedRequest, AdminController, ActionAuthenticator }
-import com.keepit.common.db._
+import com.keepit.commanders.{ KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
-import com.keepit.model._
-import com.keepit.model.KeepSource._
+import com.keepit.common.time._
+import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.mvc.AnyContent
 import views.html
-import com.keepit.common.db.Id
-import com.keepit.common.time._
-import play.api.mvc.{ AnyContent, Action }
-import com.keepit.commanders.{ LibraryCommander, URISummaryCommander, RichWhoKeptMyKeeps }
-import com.keepit.model.KeywordsSummary
-import com.keepit.model.KeepStates
+
+import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
+import scala.concurrent._
 
 class AdminBookmarksController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   scraper: ScrapeScheduler,
-  searchServiceClient: SearchServiceClient,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
@@ -37,10 +31,11 @@ class AdminBookmarksController @Inject() (
   libraryRepo: LibraryRepo,
   uriSummaryCommander: URISummaryCommander,
   libraryCommander: LibraryCommander,
+  keepCommander: KeepsCommander,
   clock: Clock)
-    extends AdminController(actionAuthenticator) {
+    extends AdminUserActions {
 
-  private def editBookmark(bookmark: Keep)(implicit request: AuthenticatedRequest[AnyContent]) = {
+  private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
@@ -59,7 +54,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
+  def whoKeptMyKeeps = AdminUserPage { implicit request =>
     val since = clock.now.minusDays(7)
     val richWhoKeptMyKeeps = db.readOnlyReplica { implicit session =>
       var maxUsers = 30
@@ -82,14 +77,14 @@ class AdminBookmarksController @Inject() (
     Ok(html.admin.whoKeptMyKeeps(richWhoKeptMyKeeps, since, users.size))
   }
 
-  def edit(id: Id[Keep]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def edit(id: Id[Keep]) = AdminUserPage.async { implicit request =>
     val bookmark = db.readOnlyReplica { implicit session =>
       keepRepo.get(id)
     }
     editBookmark(bookmark)
   }
 
-  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
     val bookmarkOpt = db.readOnlyReplica { implicit session =>
       keepRepo.getByUri(id).headOption
     }
@@ -99,7 +94,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def rescrape = AdminJsonAction.authenticatedParseJson { request =>
+  def rescrape = AdminUserAction(parse.tolerantJson) { request =>
     val id = Id[Keep]((request.body \ "id").as[Int])
     db.readWrite { implicit session =>
       val bookmark = keepRepo.get(id)
@@ -110,7 +105,7 @@ class AdminBookmarksController @Inject() (
   }
 
   //post request with a list of private/public and active/inactive
-  def updateBookmarks() = AdminHtmlAction.authenticated { request =>
+  def updateBookmarks() = AdminUserPage { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
     val (mainLib, secretLib) = db.readWrite { s => libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(s) }
@@ -148,7 +143,7 @@ class AdminBookmarksController @Inject() (
     Redirect(request.request.referer)
   }
 
-  def inactive(id: Id[Keep]) = AdminHtmlAction.authenticated { request =>
+  def inactive(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       val keep = keepRepo.get(id)
       keepRepo.save(keep.copy(state = KeepStates.INACTIVE))
@@ -157,14 +152,14 @@ class AdminBookmarksController @Inject() (
   }
 
   //this is an admin only task!!!
-  def delete(id: Id[Keep]) = AdminHtmlAction.authenticated { request =>
+  def delete(id: Id[Keep]) = AdminUserPage { request =>
     db.readWrite { implicit s =>
       keepRepo.delete(id)
       Redirect(com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0))
     }
   }
 
-  def bookmarksView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
@@ -206,7 +201,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = getBookmarkCountsFuture
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     val bookmarkTodayAllCountsFuture = future {
       timing("load bookmarks counts from today") {
@@ -242,22 +237,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  private def getBookmarkCountsFuture(): Future[Int] = {
-    Future.sequence(searchServiceClient.indexInfoList()).map { results =>
-      var countMap = Map.empty[String, Int]
-      results.flatMap(_._2).foreach { info =>
-        if (info.name.startsWith("BookmarkStore")) {
-          countMap.get(info.name) match {
-            case Some(count) if count >= info.numDocs =>
-            case _ => countMap += (info.name -> info.numDocs)
-          }
-        }
-      }
-      countMap.values.sum
-    }
-  }
-
-  def userBookmarkKeywords = AdminHtmlAction.authenticatedAsync { request =>
+  def userBookmarkKeywords = AdminUserPage.async { request =>
     val user = request.userId
     val uris = db.readOnlyReplica { implicit s =>
       keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
@@ -281,11 +261,11 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def bookmarksKeywordsPageView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def bookmarksKeywordsPageView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
     val bmsFut = future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = getBookmarkCountsFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }

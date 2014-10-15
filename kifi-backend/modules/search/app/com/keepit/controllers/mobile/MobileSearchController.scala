@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, SearchServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ MobileController, SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.result.DecoratedResult
@@ -12,8 +12,8 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
 class MobileSearchController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    searchCommander: SearchCommander) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
+    val userActionsHelper: UserActionsHelper,
+    searchCommander: SearchCommander) extends UserActions with SearchServiceController with Logging {
 
   def searchV1(
     query: String,
@@ -26,7 +26,7 @@ class MobileSearchController @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+    withUriSummary: Boolean = false) = UserAction { request =>
 
     val userId = request.userId
     val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
@@ -36,7 +36,7 @@ class MobileSearchController @Inject() (
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
-  def warmUp() = JsonAction.authenticated { request =>
+  def warmUp() = UserAction { request =>
     searchCommander.warmUp(request.userId)
     Ok
   }
@@ -53,8 +53,7 @@ class MobileSearchController @Inject() (
       decoratedResult.show,
       decoratedResult.searchExperimentId,
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
-      Nil,
-      decoratedResult.experts).json
+      Nil).json
   }
 }
 

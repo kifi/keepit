@@ -1,7 +1,7 @@
 package com.keepit.search.graph.library
 
 import com.keepit.model.{ LibraryAndMemberships, Library }
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.search.IndexInfo
 import com.keepit.search.index._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,7 +19,7 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  private[library] def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
+  def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
     resetSequenceNumberIfReindex()
     val fetchSize = commitBatchSize
     fetchIndexables(sequenceNumber, fetchSize).map {

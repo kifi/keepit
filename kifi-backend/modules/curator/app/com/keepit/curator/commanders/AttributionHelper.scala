@@ -1,35 +1,25 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.Id
+import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
-import com.keepit.graph.GraphServiceClient
-import com.keepit.graph.model.GraphFeedExplanation
-import com.keepit.model.{ Keep, NormalizedURI }
-import com.keepit.search.SearchServiceClient
-
+import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.collection.mutable
 import scala.concurrent.Future
+import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentationInfo, AugmentableItem }
 
-@Singleton
 class SeedAttributionHelper @Inject() (
     db: Database,
     keepRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
     search: SearchServiceClient,
-    graph: GraphServiceClient,
     libMemRepo: CuratorLibraryMembershipInfoRepo) {
-
-  val MIN_KEEP_ATTR_SCORE = 2
-  protected val MIN_USER_KEEP_SIZE = 20 // too few keeps means graph random walk may not return relevant results
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
-    val keepAttrFut = keepAttributionFromCortex(seeds)
+    val keepAttrFut = getKeepAttribution(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
     val libraryAttrFut = getLibraryAttribution(seeds)
     for {
@@ -62,21 +52,24 @@ class SeedAttributionHelper @Inject() (
     require(seeds.map(_.userId).toSet.size <= 1, "Batch looking up of sharing users must be all for the same user")
 
     def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.1f
-
     val ret: Array[Option[UserAttribution]] = Array.fill(seeds.size)(None)
 
     seeds.headOption.map { _.userId } match {
       case None => Future.successful(ret)
       case Some(userId) =>
         // get uriIds for lookup and the corresponding indexes
-        val (idxes, uriIds) = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((i, seeds(i).uriId)) else None }.unzip
-        if (uriIds.size == 0) {
+        val uriId2Idx = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((seeds(i).uriId, i)) else None }.toMap
+        if (uriId2Idx.size == 0) {
           Future.successful(ret)
         } else {
-          search.sharingUserInfo(userId, uriIds).map { sharingUsersInfo =>
-            (idxes zip sharingUsersInfo).foreach {
-              case (idx, info) =>
-                if (info.sharingUserIds.size > 0) ret(idx) = Some(UserAttribution(info.sharingUserIds.toSeq, info.keepersEdgeSetSize - info.sharingUserIds.size))
+          val request = ItemAugmentationRequest.uniform(userId, uriId2Idx.keys.toSeq.map { uriId => AugmentableItem(uriId) }: _*)
+          search.augmentation(request).map { resp =>
+            resp.infos.foreach {
+              case (item, info) =>
+                val idx = uriId2Idx(item.uri)
+                val attr = toUserAttribution(info)
+                val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
+                if (n > 0) ret(idx) = Some(attr)
             }
             ret
           }
@@ -85,44 +78,6 @@ class SeedAttributionHelper @Inject() (
   }
 
   private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
-    require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
-
-    val empty = Seq.fill(seeds.size)(None)
-
-    seeds.headOption.map { _.userId } match {
-      case None => Future.successful(empty)
-      case Some(userId) =>
-        val uriIds = seeds.map { _.uriId }
-        val userUriKeepMap = db.readOnlyReplica { implicit s => keepRepo.getUserURIsAndKeeps(userId) }.toMap
-        val userKeeps = userUriKeepMap.values.toSet
-        if (userKeeps.size < MIN_USER_KEEP_SIZE) {
-          Future.successful(empty)
-        } else {
-          graph.explainFeed(userId, uriIds).map { explains =>
-            explains.map { ex => decodeGraphExplanation(ex, userUriKeepMap, userKeeps) }
-          }
-        }
-    }
-
-  }
-
-  private def decodeGraphExplanation(graphExplain: GraphFeedExplanation, uriKeepMap: Map[Id[NormalizedURI], Id[Keep]], userKeeps: Set[Id[Keep]]): Option[KeepAttribution] = {
-    val finalScores = mutable.Map[Id[Keep], Int]().withDefaultValue(0)
-    graphExplain.keepScores.foreach {
-      case (keep, score) =>
-        if (userKeeps.contains(keep)) finalScores(keep) += score
-    }
-
-    graphExplain.uriScores.foreach {
-      case (uri, score) =>
-        uriKeepMap.get(uri).foreach { keep => finalScores(keep) += score }
-    }
-    val filtered = finalScores.filter { case (_, score) => score >= MIN_KEEP_ATTR_SCORE }.toArray
-    val relevantKeeps = filtered.sortBy(-1 * _._2).take(3).map { _._1 }
-    if (relevantKeeps.size == 0) None else Some(KeepAttribution(relevantKeeps))
-  }
-
-  private def keepAttributionFromCortex(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
     require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
 
     val empty = Seq.fill(seeds.size)(None)
@@ -142,4 +97,13 @@ class SeedAttributionHelper @Inject() (
     }
   }
 
+  def toUserAttribution(info: AugmentationInfo): UserAttribution = {
+    val users = info.keeps.flatMap(_.keptBy).distinct
+    val user2Lib = info.keeps.flatMap {
+      case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
+      case _ => None
+    }.toMap
+    val others = info.otherDiscoverableKeeps + info.otherPublishedKeeps
+    UserAttribution(users, others, Some(user2Lib))
+  }
 }

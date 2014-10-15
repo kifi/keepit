@@ -2,7 +2,7 @@ package com.keepit.abook.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.controller.{ WebsiteController, ABookServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ WebsiteController, ABookServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.mvc.Action
@@ -53,7 +53,7 @@ object GmailABookOwnerInfo {
 
 import Logging._
 class ABookController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     s3: ABookRawInfoStore,
     abookInfoRepo: ABookInfoRepo,
@@ -62,7 +62,7 @@ class ABookController @Inject() (
     typeahead: EContactTypeahead,
     abookCommander: ABookCommander,
     contactsUpdater: ABookImporterPlugin,
-    richConnectionCommander: LocalRichConnectionCommander) extends WebsiteController(actionAuthenticator) with ABookServiceController {
+    richConnectionCommander: LocalRichConnectionCommander) extends UserActions with ABookServiceController {
 
   // gmail
   def importContacts(userId: Id[User]) = Action.async(parse.json) { request =>
@@ -233,13 +233,13 @@ class ABookController @Inject() (
     Ok(Json.toJson(name))
   }
 
-  def internKifiContact(userId: Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internKifiContact] userId=$userId contact=$contact")
+  def internKifiContacts(userId: Id[User]) = Action(parse.json) { request =>
+    val contacts = request.body.as[Seq[BasicContact]]
+    log.info(s"[internKifiContacts] userId=$userId contacts=$contacts")
 
-    val eContact = abookCommander.internKifiContact(userId, contact)
-    val richContact = EContact.toRichContact(eContact)
-    Ok(Json.toJson(richContact))
+    val eContacts = abookCommander.internKifiContacts(userId, contacts)
+    val richContacts = eContacts.map(EContact.toRichContact)
+    Ok(Json.toJson(richContacts))
   }
 
   def prefixQuery(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
@@ -262,4 +262,5 @@ class ABookController @Inject() (
     val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
+
 }

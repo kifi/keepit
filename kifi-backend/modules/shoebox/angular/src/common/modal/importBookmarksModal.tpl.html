@@ -1,0 +1,12 @@
+<div kf-modal kf-width="620px" class="import-modal" force-close="forceClose">
+  <div kf-basic-modal-content centered="true" title="Import your browser bookmarks as keeps" single-action="false" cancel="cancelImport()">
+    <img src="/img/bookmark-to-kifi@2x.png" class="import-star-to-kifi">
+    <div class="dialog-text">
+      Get pages you bookmarked in your browser into your personal Kifi library. Public imports mean that your keeps can be discovered by friends, but will never automatically be displayed as a list anywhere.
+    </div>
+    <div class="dialog-buttons">
+      <button ng-click="importBookmarks()">Import Privately</button>
+      <button ng-click="importBookmarks(true)">Import Publicly</button>
+    </div>
+  </div>
+</div>

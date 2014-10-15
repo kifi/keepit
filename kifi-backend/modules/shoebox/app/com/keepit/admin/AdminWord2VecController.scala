@@ -5,7 +5,7 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model.{ NormalizedURI, User }
@@ -18,9 +18,9 @@ import views.html
 class AdminWord2VecController @Inject() (
     cortex: CortexServiceClient,
     shoebox: ShoeboxServiceClient,
-    actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
+    val userActionsHelper: UserActionsHelper) extends AdminUserActions {
 
-  def wordSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+  def wordSimilarity() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word1 = body.get("word1").get
     val word2 = body.get("word2").get
@@ -29,7 +29,7 @@ class AdminWord2VecController @Inject() (
     Ok(res)
   }
 
-  def keywords() = AdminHtmlAction.authenticated { implicit request =>
+  def keywords() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val text = body.get("text").get
 
@@ -39,7 +39,7 @@ class AdminWord2VecController @Inject() (
     Ok(res.replaceAll("\n", "\n<br>"))
   }
 
-  def uriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+  def uriSimilarity() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val uri1 = body.get("uri1").get.toLong
     val uri2 = body.get("uri2").get.toLong
@@ -52,7 +52,7 @@ class AdminWord2VecController @Inject() (
     Ok(res)
   }
 
-  def userSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+  def userSimilarity() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val user1 = body.get("user1").get.toLong
     val user2 = body.get("user2").get.toLong
@@ -74,7 +74,7 @@ class AdminWord2VecController @Inject() (
     Ok(res)
   }
 
-  def queryUriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+  def queryUriSimilarity() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val query = body.get("query").get
     val uri = Id[NormalizedURI](body.get("uri").get.toLong)
@@ -87,7 +87,7 @@ class AdminWord2VecController @Inject() (
     Ok(res)
   }
 
-  def userUriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
+  def userUriSimilarity() = AdminUserPage { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val user = body.get("user").get.toLong
     val uri = Id[NormalizedURI](body.get("uri").get.toLong)
@@ -101,7 +101,7 @@ class AdminWord2VecController @Inject() (
     Ok(res)
   }
 
-  def index() = AdminHtmlAction.authenticated { implicit request =>
+  def index() = AdminUserPage { implicit request =>
     Ok(html.admin.word2vec())
   }
 

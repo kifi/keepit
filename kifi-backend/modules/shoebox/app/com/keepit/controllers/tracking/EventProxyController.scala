@@ -1,6 +1,6 @@
 package com.keepit.controllers.tracking
 
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.controller._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 
@@ -11,9 +11,9 @@ import play.api.mvc.RequestHeader
 import com.google.inject.Inject
 
 class EventProxyController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     heimdal: HeimdalServiceClient,
-    heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory) extends UserActions with ShoeboxServiceController {
 
   private def jsValue2SimpleContextData(datum: JsValue): SimpleContextData = {
     datum match {
@@ -36,20 +36,43 @@ class EventProxyController @Inject() (
     contextBuilder.build
   }
 
-  def track() = JsonAction.authenticatedParseJson { request =>
+  def track() = UserAction(parse.tolerantJson) { request =>
     SafeFuture("event proxy") {
       val rawEvents: Seq[JsObject] = request.body.as[JsArray].value.map(_.as[JsObject])
       rawEvents.foreach { rawEvent =>
         val eventType = (rawEvent \ "event").as[String]
         val eventContext = (rawEvent \ "properties").as[JsObject]
+        val context = jsObject2HeimdalContext(eventContext, request)
+        val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
+        builder.addExistingContext(context)
+        val fullcontext = builder.build
+
         heimdal.trackEvent(UserEvent(
           userId = request.userId,
-          context = jsObject2HeimdalContext(eventContext, request),
+          context = fullcontext,
           eventType = EventType(eventType)
         ))
+        optionallySendUserUsedKifiEvent(request, fullcontext, eventType)
       }
     }
     NoContent
   }
 
+  // integrate some events into used_kifi events as actions
+  def optionallySendUserUsedKifiEvent(request: UserRequest[_], existingContext: HeimdalContext, triggeringEvent: String): Unit = {
+    val validEvents = Set("user_viewed_page", "user_viewed_pane")
+    if (validEvents.contains(triggeringEvent)) {
+      val builder = heimdalContextBuilderFactoryBean()
+      builder.addExistingContext(existingContext)
+      triggeringEvent match {
+        case "user_viewed_page" =>
+          builder += ("action", "viewedSite")
+          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
+        case "user_viewed_pane" =>
+          builder += ("action", "viewedPane")
+          heimdal.trackEvent(UserEvent(request.userId, builder.build, UserEventTypes.USED_KIFI))
+        case _ =>
+      }
+    }
+  }
 }

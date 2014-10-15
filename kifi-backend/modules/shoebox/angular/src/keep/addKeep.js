@@ -3,14 +3,11 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'tagService', 'util',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, tagService, util) {
-
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'tagService', 'util',
+  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
     return {
       restrict: 'A',
-      scope: {
-        shown: '='
-      },
+      scope: {},
       require: '^kfModal',
       templateUrl: 'keep/addKeep.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
@@ -86,7 +83,10 @@ angular.module('kifi')
 
             return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal', 'genericError');
+                scope.resetAndHide();
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
               } else if (result.alreadyKept && result.alreadyKept.length) {
                 scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
@@ -101,7 +101,7 @@ angular.module('kifi')
                   scope.resetAndHide();
                 });
               }
-            }); 
+            });
           } else {
             scope.state.invalidUrl = true;
           }
@@ -110,9 +110,12 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([url], scope.data.selectedLibraryId).then(function (result) {
+            return keepActionService.keepToLibrary([url], scope.selection.library.id).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal', 'genericError');
+                scope.resetAndHide();
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
               } else if (result.alreadyKept.length > 0) {
                 scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
@@ -123,10 +126,10 @@ angular.module('kifi')
                   keep.makeKept();
 
                   libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.data.selectedLibraryId, 1);
+                  libraryService.addToLibraryCount(scope.selection.library.id, 1);
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.data.selectedLibraryId), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selection.library.id), keep);
                   scope.resetAndHide();
                 });
               }
@@ -136,31 +139,32 @@ angular.module('kifi')
           }
         };
 
-
         scope.librariesEnabled = libraryService.isAllowed();
         if (scope.librariesEnabled) {
           scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
             return lib.access !== 'read_only';
           });
-          scope.data = scope.data || {};
-          scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
-            return lib.name === 'Main Library';
-          }).id;          
+          scope.selection = scope.selection || {};
+          scope.selection.library = _.find(scope.libraries, { 'name': 'Main Library' });
+          scope.libSelectTopOffset = 110;
         }
-
-        scope.$watch('shown', function (shown) {
-          if (shown) {
-            $document.on('keydown', processKey);
-            safeFocus();
-          } else {
-            $document.off('keydown', processKey);
-          }
-        });
 
         scope.resetAndHide = function () {
           reset();
-          kfModalCtrl.hideModal();
+          kfModalCtrl.close();
+          $document.off('keydown', processKey);
         };
+
+        $document.on('keydown', processKey);
+        safeFocus();
+
+        $rootScope.$on('changedLibrary', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+              return lib.access !== 'read_only';
+            });
+          }
+        });
       }
     };
   }

@@ -8,7 +8,7 @@ import play.api.libs.functional.syntax._
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.serializer.TraversableFormat
+import com.keepit.common.json.TraversableFormat
 import scala.util.hashing.MurmurHash3
 import com.keepit.common.math.ProbabilityDensity
 

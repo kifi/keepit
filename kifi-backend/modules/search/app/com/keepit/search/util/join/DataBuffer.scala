@@ -1,6 +1,7 @@
 package com.keepit.search.util.join
 
 import scala.collection.mutable.ArrayBuffer
+import java.lang.{ Float => JFloat }
 
 object DataBuffer {
   type Page = Array[Short]
@@ -14,10 +15,15 @@ object DataBuffer {
   val MAX_RECTYPEID = 100 // this needs to fit in 7-bit
   val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
 
-  @inline def taggedFloatBits(tag: Byte, value: Float): Int = ((tag & 0xff) << 24) | (java.lang.Float.floatToRawIntBits(value) >>> 8)
-  @inline def getTaggedFloatTag(bits: Int): Byte = (bits >>> 24).toByte
-  @inline def getTaggedFloatValue(bits: Int): Float = java.lang.Float.intBitsToFloat(bits << 8)
+  @inline def taggedFloatBits(tag: Byte, value: Float): Int = (tag & 0xff) | (JFloat.floatToRawIntBits(value) & 0xffffff00)
+  @inline def getTaggedFloatTag(bits: Int): Byte = bits.toByte
+  @inline def getTaggedFloatValue(bits: Int): Float = JFloat.intBitsToFloat(bits) // this doesn't clear the tag bits
+  @inline def clearTag(value: Float): Float = JFloat.intBitsToFloat(JFloat.floatToRawIntBits(value) & 0xffffff00)
 
+  class FloatTagger(tag: Int) {
+    require(0 <= tag && tag <= Byte.MaxValue, "tag value out of range")
+    @inline def tagFloat(value: Float): Int = tag | (JFloat.floatToRawIntBits(value) & 0xffffff00)
+  }
 }
 
 class DataBuffer(maxPages: Int = 10000) {
@@ -34,7 +40,7 @@ class DataBuffer(maxPages: Int = 10000) {
 
   private[this] def addPage(): Unit = {
     _numPages += 1
-    if (numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
+    if (_numPages > maxPages) throw new DataBufferFullException("number of page exceeded the limit")
 
     _currentPage = new Page(DataBuffer.PAGE_SHORT_ARRAY_SIZE)
     _dataBuf += _currentPage
@@ -45,7 +51,6 @@ class DataBuffer(maxPages: Int = 10000) {
   def alloc(writer: DataBufferWriter, recType: Int, byteSize: Int): DataBufferWriter = {
     if (byteSize >= MAX_DATASIZE) throw new DataBufferException(s"data size too big: $byteSize")
     if (recType >= MAX_RECTYPEID) throw new DataBufferException(s"record type id too big: $recType")
-    if (byteSize % 2 != 0) throw new DataBufferException(s"data size not aligned")
 
     // add a page if not enough room
     if (_freeSpace - byteSize - DESCRIPTOR_SIZE < 0) addPage()
@@ -65,15 +70,13 @@ class DataBuffer(maxPages: Int = 10000) {
   }
 
   def scan[T](reader: DataBufferReader)(f: DataBufferReader => T): Unit = {
-    var pageGlobalOffset = 0
-    _dataBuf.foreach { page =>
-      var byteOffset = 0
-      while (byteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + byteOffset, page, byteOffset)) {
-        val next = reader.next
+    _dataBuf.foldLeft(0) { (pageGlobalOffset, page) =>
+      var nextByteOffset = 0
+      while (nextByteOffset < DataBuffer.PAGE_SIZE && reader.set(pageGlobalOffset + nextByteOffset, page, nextByteOffset)) {
+        nextByteOffset = reader.next
         f(reader)
-        byteOffset = next
       }
-      pageGlobalOffset += DataBuffer.PAGE_SIZE
+      pageGlobalOffset + DataBuffer.PAGE_SIZE
     }
   }
 

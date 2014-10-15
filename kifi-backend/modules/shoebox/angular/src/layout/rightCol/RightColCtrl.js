@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('RightColCtrl', [
-  '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
+  '$scope', '$element', '$window', 'modalService', 'profileService', '$q', '$http', 'env', '$timeout',
   'installService', '$rootScope', '$analytics', 'friendService', 'socialService', '$location', 'tagService',
-  function ($scope, $element, $window, profileService, $q, $http, env, $timeout,
+  function ($scope, $element, $window, modalService, profileService, $q, $http, env, $timeout,
     installService, $rootScope, $analytics, friendService, socialService, $location, tagService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
@@ -19,7 +19,7 @@ angular.module('kifi')
     }, 1200);
 
     $scope.readyToDraw = function () {
-      return profileService.me.seqNum > 0 && friendsReady;
+      return profileService.userLoggedIn() === true && profileService.me.seqNum > 0 && friendsReady;
     };
 
     socialService.refresh().then(function () {
@@ -79,7 +79,9 @@ angular.module('kifi')
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal', 'installExtensionError');
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
       });
     };
 
@@ -137,7 +139,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
         return;
       }
 

@@ -3,6 +3,7 @@ package com.keepit.search
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
+import com.keepit.search.augmentation.{ AugmentationScores, ItemAugmentationResponse, ItemAugmentationRequest }
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
@@ -13,6 +14,10 @@ import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ TypeaheadUserHit, BasicUser }
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
+
+  override def updateKeepIndex(): Unit = {}
+
+  override def updateLibraryIndex(): Unit = {}
 
   override def updateURIGraph(): Unit = {}
 
@@ -32,6 +37,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   val sharingUserInfoDataOriginal = SharingUserInfo(Set(Id[User](1)), 1)
   var sharingUserInfoDataFix: Seq[SharingUserInfo] = Seq(sharingUserInfoDataOriginal)
   def sharingUserInfoData(data: Seq[SharingUserInfo]): Unit = sharingUserInfoDataFix = data
+  val itemAugmentations = collection.mutable.Map[ItemAugmentationRequest, ItemAugmentationResponse]()
 
   override def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
     if (sharingUserInfoDataFix.headOption == Some(sharingUserInfoDataOriginal)) {
@@ -55,8 +61,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 
-  override def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = ???
-
   override def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = ???
 
   override def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = ???
@@ -67,8 +71,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def version(): Future[String] = ???
 
-  override def correctSpelling(text: String, enableBoost: Boolean): Future[String] = ???
-
   override def showUserConfig(id: Id[User]): Future[SearchConfig] = ???
 
   override def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {}
@@ -77,13 +79,16 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
-  override def leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def allSubsets(queryText: String, stem: Boolean, useSketch: Boolean): Future[Map[String, Float]] = ???
-
-  override def semanticSimilarity(query1: String, query2: String, stem: Boolean): Future[Float] = ???
-
-  override def visualizeSemanticVector(queries: Seq[String]): Future[Seq[String]] = ???
-
-  override def semanticLoss(query: String): Future[Map[String, Float]] = ???
+  override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
+    itemAugmentations.getOrElse(request,
+      ItemAugmentationResponse(
+        infos = Map.empty,
+        scores = AugmentationScores(
+          libraryScores = Map.empty,
+          userScores = Map.empty,
+          tagScores = Map.empty
+        )
+      )
+    )
+  }
 }

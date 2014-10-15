@@ -1,51 +1,33 @@
-@(reco: com.keepit.curator.commanders.email.DigestReco)
+@(reco: com.keepit.curator.commanders.email.DigestItem)
 @import com.keepit.common.mail.template.helpers._
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" data-reco-id="@reco.uri.externalId">
     <tr>
         <td valign="top">
             <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+                @email.tags.trSpacer(17)
+                @reco.reasonHeader.map { reasonHeader =>
                 <tr>
-                    <td height="8" style="font-size:1px; line-height:1px;">&nbsp;</td>
+                  <td>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
+                      <td width="82">&nbsp;</td>
+                      <td align="center" style="font-family:Arial,sans-serif;font-size:18px;color:#92938d;text-align:center;line-height:24px;font-weight:bold;">
+                        @reasonHeader
+                      </td>
+                      <td width="77">&nbsp;</td>
+                    </table>
+                  </td>
                 </tr>
+                @email.tags.trSpacer(17)
+                }
                 <tr>
-                    <td>
-                        <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                            <tr>
-                                <td width="82" class="side1">&nbsp;</td>
-                                <td align="center" style="font-family:Arial, sans-serif; font-size:14px; color:#92938d; text-align:left; line-height:18px;  font-weight:bold;">
-                                    @reco.topic.map { topic =>
-                                    Recommended because it’s trending in a topic you’re interested in: @topic
-                                    }
-                                </td>
-                                <td width="142" class="side1">&nbsp;</td>
-                            </tr>
-                        </table>
+                    <td align="center" valign="top" width="535">
+                        <a href="@reco.viewPageUrl("recoImage")" target="_blank">
+                            <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="535" />
+                        </a>
                     </td>
                 </tr>
-                <tr>
-                    <td height="17" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                </tr>
-
-                <tr>
-                    <td>
-                        <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                            <tr>
-                                <td width="72" class="side1">&nbsp;</td>
-                                <td align="center" valign="top" width="535">
-                                    <a href="@reco.viewPageUrl" target="_blank">
-                                        <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="535" />
-                                    </a>
-                                </td>
-                                <td width="65" class="side1">&nbsp;</td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
-                </tr>
+                @email.tags.trSpacer(14)
                 <tr>
                     <td valign="top">
                         <table width="672" border="0" cellspacing="0" cellpadding="0" class="wrapper">
@@ -55,59 +37,52 @@
                                     <table width="513" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                                         <tr>
                                             <td align="left">
-                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl">@reco.title</a>
+                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl("recoTitle")">@reco.title</a>
                                             </td>
                                         </tr>
+                                        @email.tags.trSpacer(4)
                                         <tr>
                                             <td align="left" class="num1">
-                                                <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</a>
-                                                <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">·</span>
+                                                <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</span>
+                                                <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;">·</span>
                                                 @reco.readTime.map { readTime =>
-                                                <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
+                                                <span style="line-height:22px;font-size:16px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
                                                 }
                                             </td>
                                         </tr>
-                                        <tr><td height="20">&nbsp;</td></tr>
+                                        @email.tags.trSpacer(20)
                                         <tr>
                                             <td align="left" style="line-height:21px; font-size:16px; text-align:justify; font-family:Arial,sans-serif;color:#000000;">
                                                 @reco.description
                                             </td>
                                         </tr>
-
+                                        @email.tags.trSpacer(18)
                                         <tr>
-                                            <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                        </tr>
-                                        <tr>
-                                            <td align="left" class="num2" valign="middle" style="line-height:16px; font-size:14px; color:#43a0f8; font-family:Arial, sans-serif;">
-                                                <a href="@reco.viewPageUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
-                                                <span style="line-height:18px; font-size:14px; color:#9a9b99;">·</span>
-                                                <a href="@reco.sendPageUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;">Send</a>
-                                                <span style="line-height:18px; font-size:14px; color:#9a9b99;">·</span>
-                                                <a href="@reco.keepUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Keep</a>
+                                            <td align="center" class="num2" valign="middle" style="line-height:16px;font-size:14px;color:#43a0f8;font-family:Arial,sans-serif;">
+                                                <a href="@reco.viewPageUrl("viewPageLink")" style="line-height:18px; font-size:16px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                        </tr>
+                                        @email.tags.trSpacer(15)
+                                        @reco.keepers.messageOpt.map { message =>
                                         <tr>
                                             <td align="left">
                                                 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="left">
                                                     <tr>
                                                         <td align="left">
+                                                            @reco.keepers.friendsToShow.map { userId =>
                                                             <table border="0" cellspacing="0" cellpadding="0" align="left">
                                                                 <tr>
-                                                                    @reco.keepers.friendsToShow.map { userId =>
                                                                     <td width="28" style="padding-right:1px;"><img src="@avatarUrl(userId)" width="28" height="27" alt="@firstName(userId)" style="display:block;" border="0"/></td>
-                                                                    }
                                                                 </tr>
                                                             </table>
+                                                            }
                                                             <table border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" style="padding-left:6px;">
                                                                 <tr>
                                                                     <td align="left" class="top_space">
                                                                         <table border="0" cellspacing="0" cellpadding="0" align="left">
                                                                             <tr>
-                                                                                <td height="27" align="left" valign="middle" style="line-height:18px; font-size:14px; color:#a4a2af; text-align:left; font-family:Arial,  sans-serif;">
-                                                                                    @reco.keepers.message
+                                                                                <td height="27" align="left" valign="middle" style="line-height:18px;font-size:16px;color:#a4a2af;text-align:left;font-family:Arial,sans-serif;">
+                                                                                    @message
                                                                                 </td>
                                                                             </tr>
                                                                         </table>
@@ -119,9 +94,8 @@
                                                 </table>
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                        </tr>
+                                        @email.tags.trSpacer(18)
+                                        }
                                     </table>
                                 </td>
                                 <td width="77" class="side1">&nbsp;</td>

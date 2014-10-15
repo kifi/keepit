@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{
   UserExperimentRepo,
@@ -20,13 +20,13 @@ import com.keepit.common.math.ProbabilityDensity
 case class AdminExperimentInfo(name: String, numUsers: Int, percentage: Float, variations: Seq[(String, Double)])
 
 class AdminExperimentController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     experimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     db: Database,
-    generatorRepo: ProbabilisticExperimentGeneratorRepo) extends AdminController(actionAuthenticator) {
+    generatorRepo: ProbabilisticExperimentGeneratorRepo) extends AdminUserActions {
 
-  def overview = AdminHtmlAction.authenticated { request =>
+  def overview = AdminUserPage { request =>
     val (totalUserCount, experimentsWithCount) = db.readOnlyMaster { implicit session =>
       (userRepo.countIncluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED),
         experimentRepo.getDistinctExperimentsWithCounts().toMap)
@@ -45,7 +45,7 @@ class AdminExperimentController @Inject() (
     Ok(views.html.admin.experimentOverview(experimentInfos))
   }
 
-  def saveGenerator = AdminJsonAction.authenticated { request =>
+  def saveGenerator = AdminUserAction { request =>
     val data = request.body.asJson.get.as[JsObject]
     val condition = (data \ "condition").as[String]
     val density = (data \ "density").as[JsObject].fields.map {
