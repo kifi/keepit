@@ -65,6 +65,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val cookie1 = Authenticator.create(su1).right.get.toCookie
         val cookie2 = Authenticator.create(su2).right.get.toCookie
 
+        inject[FakeUserActionsHelper].setUser(admin)
         val startRequest = FakeRequest("POST", "/kifi/start")
           .withCookies(cookie1)
           .withJsonBody(JsObject(Seq("agent" -> JsString("test agent"), "version" -> JsString("0.0.0"))))
@@ -75,7 +76,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         cookies(startResult).get(impersonateCookie.COOKIE_NAME) === None
         cookies(startResult).get(inject[KifiInstallationCookie].COOKIE_NAME) !== None
 
-        inject[FakeUserActionsHelper].setUser(admin)
         val meRequest1 = FakeRequest("GET", "/test/me").withCookies(cookie1)
         val meResult1 = route(meRequest1).get
 

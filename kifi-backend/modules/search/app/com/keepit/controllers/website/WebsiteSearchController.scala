@@ -25,14 +25,13 @@ import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
 import com.keepit.common.json
 
 class WebsiteSearchController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
     librarySearchCommander: LibrarySearchCommander,
-    val userActionsHelper: UserActionsHelper,
-    implicit val publicIdConfig: PublicIdConfiguration) extends WebsiteController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search(
     query: String,
@@ -45,7 +44,7 @@ class WebsiteSearchController @Inject() (
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None,
-    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+    withUriSummary: Boolean = false) = UserAction { request =>
 
     val userId = request.userId
     val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
@@ -133,7 +132,7 @@ class WebsiteSearchController @Inject() (
   }
 
   //external (from the website)
-  def warmUp() = JsonAction.authenticated { request =>
+  def warmUp() = UserAction { request =>
     searchCommander.warmUp(request.userId)
     Ok
   }

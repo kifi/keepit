@@ -12,13 +12,13 @@ import securesocial.core.SecureSocial
 import views.html
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller._
 
 class WebsiteHealthController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   healthcheckPlugin: HealthcheckPlugin,
   service: FortyTwoServices)
-    extends WebsiteController(actionAuthenticator) {
+    extends UserActions with ServiceController {
 
   override lazy val serviceType: ServiceType = service.currentService
 

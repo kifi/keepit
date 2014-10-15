@@ -14,10 +14,24 @@ import securesocial.core.{ UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
 
-sealed trait MaybeUserRequest[T] extends Request[T]
+sealed trait MaybeUserRequest[T] extends Request[T] {
+  // for backward compatibility only; use UserRequest/NonUserRequest where possible
+  def userIdOpt: Option[Id[User]] = this match {
+    case ur: UserRequest[T] => Some(ur.userId)
+    case _ => None
+  }
+  def userOpt: Option[User] = this match {
+    case ur: UserRequest[T] => Some(ur.user)
+    case _ => None
+  }
+  def identityOpt: Option[Identity] = this match {
+    case ur: UserRequest[T] => ur.identityOpt
+    case nr: NonUserRequest[_] => nr.identityOpt
+  }
+}
 
 case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = identityF.apply()
+  override def identityOpt: Option[Identity] = identityF.apply()
 }
 
 case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
@@ -40,7 +54,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
 
   private val identityOpt0: Lazily[Option[Identity]] = new Lazily(helper.getSecureSocialIdentityOpt(userId))
   def identityOptF = identityOpt0.get
-  def identityOpt = identityOpt0.awaitGet
+  override def identityOpt = identityOpt0.awaitGet
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
 }
