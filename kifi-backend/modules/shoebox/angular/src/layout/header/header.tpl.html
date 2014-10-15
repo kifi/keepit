@@ -7,15 +7,6 @@
       <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
       <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
     </div>
-    <div class="kf-header-search-bar" ng-if="librariesEnabled">
-      <div class="kf-query-wrap" ng-class="{empty: isEmpty()}">
-        <input kf-no-drag-input class="kf-query" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-change="onChange()">
-        <div class="kf-query-icon"></div>
-        <span class="kf-search-clear-wrapper" ng-if="clearable()">
-          <a href="javascript:" ng-click="clear()">Clear</a>
-        </span>
-      </div>
-    </div>
     <div class="kf-header-right">
       <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
       <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-if="librariesEnabled" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>
