@@ -1,16 +1,14 @@
 <div kf-modal class="kf-register-modal">
+  <a class="dialog-x" ng-click="close()"></a>
   <div class="register-modal-wrap">
       <div class="dialog-body">
         <div class="kf-register-header">Experience the full power of Kifi</div>
 
-        <img src="http://lorempixel.com/400/200/" alt="Kifi">
+        <div class="register-kifi-under-clover svg-kifi-under-clover"></div>
 
-        <div class="register-install-ext-btn">Get Kifi on Chrome</div>
+        <div class="register-install-ext-btn" ng-click="installExtension()">Get Kifi for {{platformName}}</div>
 
-        <img src="http://lorempixel.com/100/20/" alt="Kifi">
-
-
-        <div>Don’t have time right now? No worries, we’ll send an email with instructions.</div>
+        <a href="https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin?hl=en" title="Kifi in the Chrome Web Store"><img src="/img/available-in-chrome-webstore.png" class="register-chrome-webstore" ng-if="platformName === 'Chrome'"></a>
 
       </div>
   </div>

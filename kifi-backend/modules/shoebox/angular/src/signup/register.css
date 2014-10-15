@@ -199,3 +199,13 @@ input.register-full-input {
 .register-install-ext-btn:active {
   background-color: #50b2f6;
 }
+.register-kifi-under-clover {
+  width: 68px;
+  height: 100px;
+  margin: 40px auto;
+}
+.register-chrome-webstore {
+  width: 154px;
+  display: block;
+  margin: 0 auto;
+}

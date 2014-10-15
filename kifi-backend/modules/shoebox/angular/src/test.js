@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('TestCtrl', [
-  '$scope', '$FB', 'modalService', 'registrationService', '$window',
-  function ($scope, $FB, modalService, registrationService, $window) {
+  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService',
+  function ($scope, $FB, modalService, registrationService, $window, installService) {
 
     // Shared data across several modals
     function resetUserData() {
@@ -50,6 +50,7 @@ angular.module('kifi')
 
     window.setTimeout(function () {
       $scope.register();
+      //$scope.thanksForRegisteringModal();
     }, 10);
 
     $scope.register = function () {
@@ -71,9 +72,7 @@ angular.module('kifi')
 
     $scope.fbInit = function () {
       if (!$FB.failedToLoad) {
-        $FB.init().then(function (resp) {
-          console.log('done with fb', resp);
-        });
+        $FB.init();
       }
     };
 
@@ -86,7 +85,7 @@ angular.module('kifi')
         if (!fbResp) {
           //error
           return;
-        } else if (fbResp.status === "connected") {
+        } else if (fbResp.status === 'connected') {
           // todo: remove?
           $FB.api('/me', {}, function(response) {
             $scope.userData.firstName = response.first_name;
@@ -123,14 +122,15 @@ angular.module('kifi')
     $scope.fieldHasError = function (field) {
       var hasError = field.$invalid && $scope.registerFinalizeSubmitted;
       return hasError;
-    }
+    };
 
     $scope.registerFinalizeSubmit = function (form) {
       $scope.registerFinalizeSubmitted = true;
       if (!form.$valid) {
         return false;
       } else if ($scope.userData.method === 'social') {
-
+        modalService.close();
+        $scope.thanksForRegisteringModal();
       } else { // email signup
         modalService.close();
         $scope.thanksForRegisteringModal();
@@ -139,10 +139,20 @@ angular.module('kifi')
 
     // 3rd confirm modal
     $scope.thanksForRegisteringModal = function () {
-      setModalScope(modalService.open({
-        template: 'signup/thanksForRegisteringModal.tpl.html',
-        scope: $scope
-      }));
+
+      if (true /*installService.canInstall && !installService.detectIfIsInstalled()*/) {
+        if (installService.isValidChrome) {
+          $scope.platformName = 'Chrome';
+        } else if (installService.isValidFirefox) {
+          $scope.platformName = 'Firefox';
+        }
+        $scope.installExtension = installService.triggerInstall;
+        setModalScope(modalService.open({
+          template: 'signup/thanksForRegisteringModal.tpl.html',
+          scope: $scope
+        }));
+      }
+
     };
 
   }
