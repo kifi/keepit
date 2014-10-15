@@ -143,7 +143,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
     if (request.path.startsWith("/internal/")) {
       allowCrossOrigin(request, BadRequest(msg))
-    } else if (request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/")) {
+    } else if (speaksJson(request)) {
       allowCrossOrigin(request, BadRequest(Json.obj(
         "error" -> errorId.id,
         "status" -> "bad_request",
@@ -166,7 +166,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
     if (request.path.startsWith("/internal/")) {
       allowCrossOrigin(request, NotFound(msg))
-    } else if (request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/")) {
+    } else if (speaksJson(request)) {
       allowCrossOrigin(request, NotFound(Json.obj(
         "error" -> errorId.id,
         "status" -> "not_found",
@@ -212,7 +212,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         //todo(eishay) consider use the original ex.getCause instead
         val message = s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
         allowCrossOrigin(request, InternalServerError(message))
-      } else if (request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/")) {
+      } else if (speaksJson(request)) {
         allowCrossOrigin(request, InternalServerError(Json.obj(
           "error" -> errorId.id,
           "status" -> "internal_error",
@@ -288,6 +288,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         "Access-Control-Allow-Origin" -> h,
         "Access-Control-Allow-Credentials" -> "true")
     }.getOrElse(result)
+  }
+
+  private def speaksJson(request: RequestHeader) = {
+    // todo: check if request.accepts works better
+    request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/") || request.path.startsWith("/eliza/")
   }
 
 }
