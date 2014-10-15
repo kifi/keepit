@@ -227,6 +227,15 @@ GET     /m/1/recos/top                          @com.keepit.controllers.mobile.M
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 
+GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPath(userStr:String, slug: String)
+GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
+GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryById(id: PublicId[Library])
+POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
+POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
+POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
+GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0)
+
+
 
 ##########################################
 # Website

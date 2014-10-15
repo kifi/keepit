@@ -88,16 +88,8 @@ class LibraryController @Inject() (
 
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { libInfo =>
-      val accessStr = request.userIdOpt.map { userId =>
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
-        }.map(_.access.value)
-      }.flatten.getOrElse {
-        "none"
-      }
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    libraryCommander.getLibraryById(request.userIdOpt, id) map {
+      case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
   }
 
@@ -105,18 +97,10 @@ class LibraryController @Inject() (
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
-          request.userIdOpt.map { userId =>
-            db.readWrite { implicit s =>
-              libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId).map { mem =>
-                libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
-              }
-            }
-          }
+          request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
-              db.readOnlyMaster { implicit s =>
-                libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId)
-              }.map(_.access.value)
+              libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
               "none"
             }
@@ -240,12 +224,7 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
         val take = Math.min(count, 30)
-        val (keeps, numKeeps) = db.readOnlyReplica { implicit session =>
-          val lib = libraryRepo.get(libraryId)
-          val numKeeps = keepRepo.getCountByLibrary(libraryId)
-          val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-          (keeps, numKeeps)
-        }
+        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
         val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
 
         keepInfosF.map { keepInfos =>
