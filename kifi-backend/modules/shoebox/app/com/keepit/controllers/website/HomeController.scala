@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ KeepsCommander, InviteCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
+import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -18,7 +18,6 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
-import ActionAuthenticator.MaybeAuthenticatedRequest
 import play.api
 import play.api.libs.json.{ JsValue, JsObject, JsString, Json }
 import play.api.Play
@@ -44,7 +43,7 @@ class HomeController @Inject() (
   emailRepo: UserEmailAddressRepo,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   emailAddressRepo: UserEmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
@@ -58,14 +57,14 @@ class HomeController @Inject() (
   applicationConfig: FortyTwoConfig,
   keepsCommander: KeepsCommander,
   siteRouter: KifiSiteRouter)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    extends UserActions with ShoeboxServiceController with Logging {
 
-  private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
+  private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
     // Sign-up flow is critical, read from master
     db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
-  private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
+  private def setHasSeenInstall()(implicit request: UserRequest[_]): Unit = {
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
@@ -79,9 +78,17 @@ class HomeController @Inject() (
     }
   }
 
-  def about = HtmlAction(authenticatedAction = aboutHandler(isLoggedIn = true)(_), unauthenticatedAction = aboutHandler(isLoggedIn = false)(_))
+  def about = MaybeUserAction { implicit request =>
+    request match {
+      case ur: UserRequest[_] =>
+        aboutHandler(isLoggedIn = true)
+      case _ =>
+        aboutHandler(isLoggedIn = false)
+    }
+  }
+
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
@@ -91,9 +98,17 @@ class HomeController @Inject() (
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
   }
 
-  def termsOfService = HtmlAction(authenticatedAction = termsHandler(isLoggedIn = true)(_), unauthenticatedAction = termsHandler(isLoggedIn = false)(_))
+  def termsOfService = MaybeUserAction { implicit request =>
+    request match {
+      case ur: UserRequest[_] =>
+        termsHandler(isLoggedIn = true)
+      case _ =>
+        termsHandler(isLoggedIn = false)
+    }
+  }
+
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
@@ -107,9 +122,16 @@ class HomeController @Inject() (
     }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
-  def privacyPolicy = HtmlAction(authenticatedAction = privacyHandler(isLoggedIn = true)(_), unauthenticatedAction = privacyHandler(isLoggedIn = false)(_))
+  def privacyPolicy = MaybeUserAction { implicit request =>
+    request match {
+      case ur: UserRequest[_] =>
+        privacyHandler(isLoggedIn = true)
+      case _ =>
+        privacyHandler(isLoggedIn = false)
+    }
+  }
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       if (agent.isOldIE) {
         None
@@ -123,7 +145,9 @@ class HomeController @Inject() (
     }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
-  def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
+  def iPhoneAppStoreRedirect = MaybeUserAction { implicit request =>
+    iPhoneAppStoreRedirectWithTracking
+  }
   def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
@@ -133,7 +157,9 @@ class HomeController @Inject() (
     Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
 
-  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))
+  def mobileLanding = MaybeUserAction { implicit request =>
+    mobileLandingHandler
+  }
   private def mobileLandingHandler(implicit request: Request[_]): Result = {
     if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
       iPhoneAppStoreRedirectWithTracking
@@ -143,7 +169,12 @@ class HomeController @Inject() (
   }
 
   def home = {
-    val htmlAction = HtmlAction(authenticatedAction = homeAuthed(_), unauthenticatedAction = homeNotAuthed(_))
+    val htmlAction = MaybeUserAction { implicit request =>
+      request match {
+        case ur: UserRequest[_] => homeAuthed(ur)
+        case _ => homeNotAuthed
+      }
+    }
     Action.async(htmlAction.parser) { request =>
       if (request.host.contains("42go")) {
         Future.successful(MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html"))
@@ -153,7 +184,7 @@ class HomeController @Inject() (
     }
   }
 
-  private def homeAuthed(implicit request: AuthenticatedRequest[_]): Result = {
+  private def homeAuthed(implicit request: UserRequest[_]): Result = {
     val linkWith = request.session.get(AuthController.LinkWithKey)
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent(agent)
@@ -176,7 +207,7 @@ class HomeController @Inject() (
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
   }
 
-  private def homeNotAuthed(implicit request: Request[_]): Result = {
+  private def homeNotAuthed(implicit request: MaybeUserRequest[_]): Result = {
     if (request.identityOpt.isDefined) {
       // User needs to sign up or (social) finalize
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -215,17 +246,15 @@ class HomeController @Inject() (
 
   def homeWithParam(id: String) = home
 
-  def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
+  def blog = MaybeUserAction { implicit request =>
     MovedPermanently("http://blog.kifi.com/")
-  }, unauthenticatedAction = { request =>
-    MovedPermanently("http://blog.kifi.com/")
-  })
+  }
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
   }
 
-  def install = HtmlAction.authenticated { implicit request =>
+  def install = UserAction { implicit request =>
     SafeFuture {
       if (!hasSeenInstall) userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
 
@@ -235,7 +264,7 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
     }
     setHasSeenInstall()
-    request.request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (!agent.screenCanFitWebApp) {
@@ -247,7 +276,7 @@ class HomeController @Inject() (
   }
 
   // todo: move this to UserController
-  def disconnect(networkString: String) = HtmlAction.authenticated { implicit request =>
+  def disconnect(networkString: String) = UserAction { implicit request =>
     val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => code match {

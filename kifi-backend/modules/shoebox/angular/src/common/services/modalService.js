@@ -4,7 +4,8 @@ angular.module('kifi')
 
 .factory('modalService', ['$compile', '$rootScope', '$templateCache',
   function ($compile, $rootScope, $templateCache) {
-    var modalScope;
+    var modals = [];
+
     function open (opts) {
       opts = opts || {};
 
@@ -20,16 +21,13 @@ angular.module('kifi')
       }
 
       $compile($modal)(scope);
+      angular.element(document.body).find('.kf-cols').append($modal);
 
-      modalScope = scope;
-      angular.element(document.body).append($modal);
-      return scope;
+      modals.push($modal);
     }
 
-    function close() {
-      var $modal = angular.element(document.getElementById('kf-modal'));
-      modalScope.$destroy();
-      modalScope = null;
+    function close () {
+      var $modal = modals.pop();
       $modal.remove();
     }
 

@@ -95,7 +95,6 @@ angular.module('kifi')
       // scope.singleAction will be set to true.
       scope.singleAction = attrs.singleAction || true;
 
-
       var wrap = element.find('.dialog-body-wrap');
       var resizeWindow = _.debounce(function () {
         var winHeight = $window.innerHeight;

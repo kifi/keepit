@@ -73,7 +73,6 @@ angular.module('kifi')
           return loc === path || util.startsWith(loc, path + '/');
         };
 
-
         //
         // Watches and listeners.
         //
@@ -87,13 +86,7 @@ angular.module('kifi')
         });
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
-
-        $rootScope.$on('changedLibrary', function () {
-          if (scope.librariesEnabled) {
-            allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
-            util.replaceArrayInPlace(scope.userLibsToShow, allUserLibs);
-          }
-        });
+        $rootScope.$on('changedLibrary', updateNavLibs);
 
         scope.$watch(function () {
           return friendService.requests.length;

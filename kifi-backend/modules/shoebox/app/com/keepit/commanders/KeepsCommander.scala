@@ -38,6 +38,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -789,6 +790,17 @@ class KeepsCommander @Inject() (
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[(Hashtag, Int)]
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
+  }
+
+  def suggestTags(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Id[Library], limit: Option[Int]): Future[Seq[Hashtag]] = {
+    val item = AugmentableItem(uriId, Some(libraryId))
+    val request = ItemAugmentationRequest.uniform(userId, item)
+    searchClient.augmentation(request).map { response =>
+      val (thisKeep, moreKeeps) = response.infos(item).keeps.toSet.partition(_.keptIn == Some(libraryId))
+      val existingTags = thisKeep.flatMap(_.tags)
+      val suggestedTags = (moreKeeps.flatMap(_.tags) -- existingTags).toSeq.sortBy(-response.scores.byTag(_))
+      limit.map(suggestedTags.take(_)) getOrElse suggestedTags
+    }
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

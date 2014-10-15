@@ -6,7 +6,7 @@ import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.{ AuthCommander, LibraryCommander }
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
@@ -20,12 +20,11 @@ import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import play.api.mvc.Action
 
 import securesocial.core.{ Authenticator, Events, LogoutEvent, OAuth2Provider, Registry, SecureSocial, UserService }
 
 class ExtAuthController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   db: Database,
   airbrake: AirbrakeNotifier,
   authCommander: AuthCommander,
@@ -38,12 +37,12 @@ class ExtAuthController @Inject() (
   facebook: FacebookSocialGraph,
   linkedIn: LinkedInSocialGraph,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  def start = JsonAction.authenticatedParseJson { implicit request =>
+  def start = UserAction(parse.tolerantJson) { implicit request =>
     val userId = request.userId
     val json = request.body
     val (userAgent, version, installationIdOpt) =
@@ -116,7 +115,7 @@ class ExtAuthController @Inject() (
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
-  def jsTokenLogin(providerName: String) = Action(parse.json) { implicit request =>
+  def jsTokenLogin(providerName: String) = MaybeUserAction(parse.json) { implicit request =>
     Registry.providers.get(providerName) map (_.asInstanceOf[OAuth2Provider].settings) map { settings =>
       ((providerName match {
         case "linkedin" => linkedIn.vetJsAccessToken(settings, request.body)
@@ -132,13 +131,16 @@ class ExtAuthController @Inject() (
     } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
 
-  def getLoggedIn() = JsonAction(allowPending = true)(authenticatedAction = { request =>
-    Ok(Json.toJson(request.user.state == UserStates.ACTIVE))
-  }, unauthenticatedAction = { request =>
-    Ok(Json.toJson(false))
-  })
+  def getLoggedIn() = MaybeUserAction { implicit request =>
+    request match {
+      case ur: UserRequest[_] =>
+        Ok(Json.toJson(ur.user.state == UserStates.ACTIVE))
+      case _ =>
+        Ok(Json.toJson(false))
+    }
+  }
 
-  def logOut = Action { implicit request => // code mostly copied from LoginPage.logout
+  def logOut = MaybeUserAction { implicit request => // code mostly copied from LoginPage.logout
     val user = for (
       authenticator <- SecureSocial.authenticatorFromRequest;
       user <- UserService.find(authenticator.identityId)
