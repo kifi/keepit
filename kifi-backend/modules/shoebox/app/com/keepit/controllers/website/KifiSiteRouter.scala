@@ -62,7 +62,7 @@ class KifiSiteRouter @Inject() (
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
-          BadRequest(views.html.error.notFound())
+          NotFound(views.html.error.notFound())
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
           AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
