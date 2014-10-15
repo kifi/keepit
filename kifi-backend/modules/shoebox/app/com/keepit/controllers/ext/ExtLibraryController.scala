@@ -249,7 +249,7 @@ class ExtLibraryController @Inject() (
     val installationId = request.kifiInstallationId
     val json = request.body
 
-    val bookmarkSource = (json \ "source").asOpt[String].map(KeepSource.get) getOrElse KeepSource.unknown
+    val bookmarkSource = KeepSource.get((json \ "source").as[String])
     if (!KeepSource.valid.contains(bookmarkSource)) {
       val message = s"Invalid bookmark source: $bookmarkSource from user ${request.user} running extension ${request.kifiInstallationId}"
       airbrake.notify(AirbrakeError.incoming(request, new IllegalStateException(message), message, Some(request.user)))
