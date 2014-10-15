@@ -10,12 +10,11 @@ import play.api.libs.json.{ JsArray, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
-import scala.collection.mutable.{ ListBuffer, ArrayBuffer }
+import scala.collection.mutable.{ ArrayBuffer }
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
-import com.keepit.typeahead.LibraryHashtagTypeaheadCommander
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
