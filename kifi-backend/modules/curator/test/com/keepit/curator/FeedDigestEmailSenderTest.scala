@@ -182,7 +182,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val mail42body = mail42.htmlBody.value
         val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
-        mail42body must contain(">www.kifi.com<")
+        mail42body must contain(">www.kifi&#8203;.com<")
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
@@ -323,7 +323,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         html must contain("into a library you follow: " + libraryName(Id[Library](1)))
         html must contain("into a library you follow: " + libraryName(Id[Library](2)))
         html must contain("into a library you follow: " + libraryName(Id[Library](4)))
-        html must contain("whitehouse.gov")
+        html must contain("whitehouse&#8203;.gov")
         html must contain("craigslist")
         html must contain("The Verge")
       }

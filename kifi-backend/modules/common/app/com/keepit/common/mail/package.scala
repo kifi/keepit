@@ -1,5 +1,6 @@
 package com.keepit.common.mail
 
+import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ Library, User }
@@ -26,6 +27,7 @@ package object template {
 
   // val/def that use tags need to return the Html type so certain characters aren't escaped as HTML entities
   object helpers {
+    private val htmlEscape = HtmlEscapers.htmlEscaper().asFunction()
 
     val title = Tag0(tags.title).toHtml
     val baseUrl = Tag0(tags.baseUrl).toHtml
@@ -107,6 +109,19 @@ package object template {
 
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
+
+    // prevents email clients from auto-linking text like "kifi.com"
+    def escapeAutoLinkText(str: String): Html = {
+      val lastPeriodIdx = str.lastIndexOf('.')
+      Html {
+        // to prevent Play from auto-escaping our string we wrap the string in Html,
+        // but for safety, escape every part of the return value except the entity we insert
+        if (lastPeriodIdx > 0 && lastPeriodIdx < str.length - 1) {
+          val (before, after) = str.splitAt(lastPeriodIdx)
+          htmlEscape(before) + "&#8203;" + htmlEscape(after)
+        } else htmlEscape(str)
+      }
+    }
   }
 
 }
