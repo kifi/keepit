@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Provides, Singleton }
 import com.keepit.commanders.UserCommander
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.controller.{ FakeActionAuthenticator, ActionAuthenticator, AuthenticatedRequest, ReportedException }
+import com.keepit.common.controller.{ FakeUserActionsHelper, ActionAuthenticator, AuthenticatedRequest, ReportedException }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }

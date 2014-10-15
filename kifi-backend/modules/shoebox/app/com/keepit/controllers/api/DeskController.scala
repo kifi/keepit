@@ -2,21 +2,23 @@ package com.keepit.controllers.api
 
 import play.api.libs.json.Json
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.logging.Logging
 
 class DeskController @Inject() (
-    actionAuthenticator: ActionAuthenticator) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController with Logging {
 
-  def isLoggedIn = JsonAction(
-    { request =>
-      Ok(Json.obj(
-        "loggedIn" -> true,
-        "firstName" -> request.user.firstName,
-        "lastName" -> request.user.lastName
-      ))
-    }, { request =>
-      Ok(Json.obj("loggedIn" -> false))
+  def isLoggedIn = MaybeUserAction { implicit req =>
+    val js = req match {
+      case u: UserRequest[_] =>
+        Json.obj(
+          "loggedIn" -> true,
+          "firstName" -> u.user.firstName,
+          "lastName" -> u.user.lastName
+        )
+      case _ =>
+        Json.obj("loggedIn" -> false)
     }
-  )
+    Ok(js)
+  }
 }
