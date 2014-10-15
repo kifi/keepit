@@ -8,7 +8,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.controller.{ FakeUserActionsModule, FakeActionAuthenticatorModule }
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.external.FakeExternalServiceModule
@@ -48,6 +48,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeNormalizationServiceModule(),
     FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
+    FakeHttpClientModule(),
     AbuseControlModule(),
     FakeSchedulerModule(),
     FakeKeepImportsModule(),
@@ -83,6 +85,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeCryptoModule(),
     FakeActorSystemModule(),
     FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),
@@ -90,7 +93,6 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeUserActionsModule(),
     FakeHttpClientModule()
   )
 

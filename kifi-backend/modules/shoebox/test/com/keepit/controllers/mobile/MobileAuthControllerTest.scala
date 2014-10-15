@@ -35,7 +35,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
     FakeShoeboxStoreModule(),
     FakeAirbrakeModule(),
     FakeMailModule(),
-    FakeActionAuthenticatorModule(),
+    FakeUserActionsModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
@@ -63,7 +63,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
       val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerIPhoneVersion().toString
       path === "/m/1/iphone/version/register"
 
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val existing = {
         val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
         val result = mobileAuthController.registerIPhoneVersion()(request)
@@ -153,7 +153,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
       val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerAndroidVersion().toString
       path === "/m/1/android/version/register"
 
-      inject[FakeActionAuthenticator].setUser(user)
+      inject[FakeUserActionsHelper].setUser(user)
       val existing = {
         val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
         val result = mobileAuthController.registerAndroidVersion()(request)

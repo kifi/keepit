@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ AuthenticatedRequest, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ UserRequest, AuthenticatedRequest, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
@@ -236,14 +236,14 @@ class InviteCommander @Inject() (
     }
   }
 
-  def invite(request: AuthenticatedRequest[_], userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
+  def invite(request: UserRequest[_], userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteStatus] = {
     getInviteInfo(userId, fullSocialId, subject: Option[String], message: Option[String]).flatMap {
       case inviteInfo if isAllowed(inviteInfo) => processInvite(request, inviteInfo, source)
       case _ => Future.successful(InviteStatus.forbidden)
     }
   }
 
-  private def processInvite(request: AuthenticatedRequest[_], inviteInfo: InviteInfo, source: String): Future[InviteStatus] = {
+  private def processInvite(request: UserRequest[_], inviteInfo: InviteInfo, source: String): Future[InviteStatus] = {
     log.info(s"[processInvite] Processing: $inviteInfo")
     val socialNetwork = inviteInfo.friend.left.toOption.map(_.networkType) getOrElse SocialNetworks.EMAIL
     val inviteStatusFuture = socialNetwork match {
@@ -358,7 +358,7 @@ class InviteCommander @Inject() (
     s"https://www.facebook.com/dialog/send?app_id=${secureSocialClientIds.facebook}&link=$link&redirect_uri=$redirectUri&to=$socialId"
   }
 
-  def confirmFacebookInvite(request: Option[AuthenticatedRequest[_]], id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
+  def confirmFacebookInvite(request: Option[UserRequest[_]], id: ExternalId[Invitation], source: String, errorMsg: Option[String], errorCode: Option[Int]): InviteStatus = {
     val inviteStatus = db.readWrite { implicit session =>
       val existingInvitation = invitationRepo.getOpt(id)
       val inviteStatus = existingInvitation match {
@@ -420,7 +420,7 @@ class InviteCommander @Inject() (
     )
   }
 
-  private def reportSentInvitation(request: Option[AuthenticatedRequest[_]], invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
+  private def reportSentInvitation(request: Option[UserRequest[_]], invite: Invitation, socialNetwork: SocialNetworkType, source: String): Unit = SafeFuture {
     invite.senderUserId.foreach { senderId =>
       val contextBuilder = eventContextBuilder()
       request.foreach(contextBuilder.addRequestInfo(_))

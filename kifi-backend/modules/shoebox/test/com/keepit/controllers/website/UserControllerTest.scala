@@ -59,7 +59,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val path = com.keepit.controllers.website.routes.UserController.currentUser().toString
         path === "/site/user/me"
 
-        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
         val request = FakeRequest("GET", path)
         val result = inject[UserController].currentUser()(request)
@@ -97,7 +97,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val path = com.keepit.controllers.website.routes.UserController.updateUsername().url
         path === "/site/user/me/username"
 
-        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
         val inputJson1 = Json.obj(
           "username" -> "GDubs"
@@ -122,7 +122,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         pathName === "/site/user/me/name"
         pathDescription === "/site/user/me/description"
 
-        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
         val inputJson1 = Json.obj(
           "firstName" -> "Abe",
@@ -173,6 +173,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "email" -> address2,
           "isPrimary" -> true
         )
+
+        inject[FakeUserActionsHelper].setUser(user)
 
         // add email1
         val request1 = FakeRequest("POST", path).withBody(inputJson1)
@@ -227,7 +229,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
             inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump"))
           }
 
-          inject[FakeActionAuthenticator].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user)
 
           val controller = inject[UserController] // setup
           val result = controller.basicUserInfo(user.externalId, true)(FakeRequest())
