@@ -26,7 +26,7 @@ angular.module('kifi')
       return scope;
     }
 
-    function close () {
+    function close() {
       var $modal = angular.element(document.getElementById('kf-modal'));
       modalScope.$destroy();
       modalScope = null;
