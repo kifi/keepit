@@ -438,8 +438,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(tagKeep(user1, libPubId, keep.externalId, "Awesome")) === OK
 
         // user can search tags in own library
-        contentAsString(searchTags(user1, libPubId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
-        contentAsString(searchTags(user1, libPubId, "s", 2)) === """[]"""
+        contentAsString(searchTags(user1, libPubId, keep.externalId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
+        contentAsString(searchTags(user1, libPubId, keep.externalId, "s", 2)) === """[]"""
 
         /* todo(Léo): reconsider when tags have been figured out from a product perspective
         // other user with read access to library can search tags
@@ -449,7 +449,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
         // other user without read access to library cannot search tags
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(state = LibraryMembershipStates.INACTIVE)) }
-        status(searchTags(user2, libPubId, "a", 3)) === FORBIDDEN
+        status(searchTags(user2, libPubId, keep.externalId, "a", 3)) === FORBIDDEN
       }
     }
   }
@@ -504,9 +504,9 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
     controller.untagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.untagKeep(libraryId, keepId, tag)))
   }
 
-  private def searchTags(user: User, libraryId: PublicId[Library], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
+  private def searchTags(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.searchTags(libraryId, q, Some(n))(request(routes.ExtLibraryController.searchTags(libraryId, q, Some(n))))
+    controller.searchTags(libraryId, keepId, q, Some(n))(request(routes.ExtLibraryController.searchTags(libraryId, keepId, q, Some(n))))
   }
 
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
