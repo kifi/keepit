@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService',
-            'routeService', '$http', '$location', 'modalService', '$timeout',
+            'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
   function (tagService, $scope, $window, manageTagService, libraryService,
-              routeService, $http, $location, modalService, $timeout) {
+              routeService, $http, $location, modalService, $timeout, $rootScope) {
     $scope.libraries = [];
     $scope.selected = {};
 
@@ -70,9 +70,7 @@ angular.module('kifi')
       });
     }
 
-    //
-    // Keeping to Library
-    //
+    // Watchers & Listeners
     $scope.librariesEnabled = false;
     $scope.libraries = [];
 
@@ -82,13 +80,19 @@ angular.module('kifi')
       $scope.librariesEnabled = newVal;
       if ($scope.librariesEnabled) {
         libraryService.fetchLibrarySummaries().then(function () {
-          $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
           $scope.selection = $scope.selection || {};
           $scope.selection.library = _.find($scope.libraries, { 'kind': 'system_main' });
         });
       }
+    });
+
+    $rootScope.$on('changedLibrary', function () {
+      $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+        return lib.access !== 'read_only';
+      });
     });
 
     $scope.clickAction = function () {
