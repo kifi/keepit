@@ -222,12 +222,15 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def searchTags(libraryPubId: PublicId[Library], query: String, keepIdStr: Option[String], limit: Option[Int]) = UserAction.async { request =>
+  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, None, query, limit)
+
+  def searchTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, Some(keepId), query, limit)
+
+  private def doSearchTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        val keepId = keepIdStr.flatMap(idStr => Try(ExternalId[Keep](idStr)).toOption)
         if (query.trim.isEmpty && keepId.isDefined) {
           val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
           keepsCommander.suggestTags(request.userId, keep.uriId, libraryId, limit).map { suggestedTags => Ok(Json.toJson(suggestedTags)) }
