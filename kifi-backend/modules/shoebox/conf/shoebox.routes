@@ -170,6 +170,9 @@ POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.Mobil
 #Used by both Android and iOS
 POST    /m/1/keeps/imageUrl                 @com.keepit.controllers.mobile.MobileKeepsController.getImageUrl()
 
+GET     /m/1/keeps/count                    @com.keepit.controllers.mobile.MobileKeepsController.numKeeps()
+
+
 POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
