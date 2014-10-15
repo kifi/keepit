@@ -19,7 +19,7 @@ import com.keepit.commanders.CollectionSaveFail
 import scala.Some
 import com.keepit.normalizer.NormalizedURIInterner
 
-class MobileBookmarksController @Inject() (
+class MobileKeepsController @Inject() (
   db: Database,
   uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
@@ -252,46 +252,10 @@ class MobileBookmarksController @Inject() (
     }
   }
 
-  def getImageUrls() = UserAction.async(parse.tolerantJson) { request => // WIP; test-only
-    val urlsOpt = (request.body \ "urls").asOpt[Seq[JsValue]]
-    log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
-    urlsOpt match {
-      case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
-      case Some(urls) => {
-        val uriOpts = db.readOnlyMaster { implicit ro =>
-          urls flatMap { urlReq =>
-            urlReq match {
-              case JsString(url) => Some((url, normalizedURIInterner.getByUri(url), None))
-              case _ => {
-                val urlOpt = (urlReq \ "url").asOpt[String]
-                urlOpt map { url =>
-                  val minSizeOpt = for {
-                    minWidth <- (urlReq \ "minWidth").asOpt[Int]
-                    minHeight <- (urlReq \ "minHeight").asOpt[Int]
-                  } yield ImageSize(minWidth, minHeight)
-                  (url, normalizedURIInterner.getByUri(url), minSizeOpt)
-                }
-              }
-            }
-          }
-        }
-        val resFutSeq = uriOpts map {
-          case (url, uriOpt, minSizeOpt) =>
-            uriOpt match {
-              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-              case Some(uri) => {
-                val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-                uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
-                  toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight)
-                }
-              }
-            }
-        }
-        Future.sequence(resFutSeq) map { res =>
-          Ok(Json.toJson(res))
-        }
-      }
-    }
+  def numKeeps() = UserAction { request =>
+    Ok(Json.obj(
+      "numKeeps" -> keepsCommander.numKeeps(request.userId)
+    ))
   }
 
 }

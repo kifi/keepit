@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
 import com.keepit.commanders.{ KeepsCommander, KeepInterner, UserCommander }
-import com.keepit.common.controller.{ WebsiteController, ShoeboxServiceController, ActionAuthenticator }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -25,16 +25,16 @@ import org.apache.commons.io.FileUtils
 import com.keepit.common.performance._
 
 class BookmarkImporter @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     db: Database,
     rawKeepFactory: RawKeepFactory,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepsCommander,
     clock: Clock,
-    implicit val config: PublicIdConfiguration) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
-  def uploadBookmarkFile(public: Boolean = false) = JsonAction.authenticated(allowPending = true, parser = parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
+  def uploadBookmarkFile(public: Boolean = false) = UserAction(parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
     val startMillis = clock.getMillis()
     val id = humanFriendlyToken(8)
     log.info(s"[bmFileImport:$id] Processing bookmark file import for ${request.userId}")
@@ -168,7 +168,7 @@ class BookmarkImporter @Inject() (
     (importId, rawKeeps)
   }
 
-  def importFileToLibrary(pubId: PublicId[Library]) = JsonAction.authenticated(allowPending = true, parser = parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
+  def importFileToLibrary(pubId: PublicId[Library]) = UserAction(parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
     val startMillis = clock.getMillis()
     val id = humanFriendlyToken(8)
     log.info(s"[bmFileImport:$id] Processing bookmark file import for ${request.userId}")

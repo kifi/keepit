@@ -50,6 +50,7 @@ object ActionAuthenticator {
   }
 }
 
+@deprecated("See UserActions", "oct 2014")
 trait ActionAuthenticator extends SecureSocial {
   private[controller] def isAdmin(userId: Id[User]): Boolean
   private[controller] def authenticatedAction[T](

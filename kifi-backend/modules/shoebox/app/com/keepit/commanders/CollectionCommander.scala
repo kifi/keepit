@@ -10,12 +10,11 @@ import play.api.libs.json.{ JsArray, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
-import scala.collection.mutable.{ ListBuffer, ArrayBuffer }
+import scala.collection.mutable.{ ArrayBuffer }
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
-import com.keepit.typeahead.LibraryHashtagTypeaheadCommander
 
 case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -75,9 +74,9 @@ class CollectionCommander @Inject() (
             BasicCollection.fromCollection(summary._1, Some(summary._2))
           }
         case "name" =>
-          val sortedTags = collectionRepo.getByUserSortedByName(userId, offset, pageSize)
-          val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)
-          sortedTags.map { c => BasicCollection.fromCollection(c.summary, bmCounts.get(c.id.get).orElse(Some(0))) }
+          collectionRepo.getByUserSortedByName(userId, offset, pageSize).map { summary =>
+            BasicCollection.fromCollection(summary._1, Some(summary._2))
+          }
         case _ => // default is "last_kept"
           val sortedTags = collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
           val bmCounts = collectionRepo.getBookmarkCounts(sortedTags.map(_.id.get).toSet)

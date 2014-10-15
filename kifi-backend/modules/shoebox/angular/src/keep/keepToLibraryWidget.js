@@ -17,6 +17,8 @@ angular.module('kifi')
        *  Optional properties on parent scope:
        *   clickAction() - a function that can be called once a library is selected
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
+       *
+       *  // todo (yiping): Try to turn this into isolated scope
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -204,6 +206,9 @@ angular.module('kifi')
               $event.stopPropagation();
 
               scope.selection.library = scope.libraries[selectedIndex];
+              if (_.isFunction(scope.clickAction)) {
+                scope.clickAction();
+              }
               removeWidget();
               break;
             case keyIndices.KEY_ESC:
@@ -243,6 +248,9 @@ angular.module('kifi')
 
               scope.$evalAsync(function () {
                 scope.selection.library = _.find(scope.libraries, { 'name': library.name });
+                if (_.isFunction(scope.clickAction)) {
+                  scope.clickAction();
+                }
                 removeWidget();
               });
             });

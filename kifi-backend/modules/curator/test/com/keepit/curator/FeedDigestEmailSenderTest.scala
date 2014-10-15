@@ -6,20 +6,22 @@ import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.mail.template.helpers.libraryName
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, FeedDigestEmailSender }
-import com.keepit.curator.model.{ UriScores, UriRecommendation, SeedAttribution, TopicAttribution, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.model.{ SeedAttribution, TopicAttribution, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.{ FakeFeedDigestEmailQueue, FakeFeedDigestEmailQueueModule, SendFeedDigestToUserMessage }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ SocialUserInfo, User }
+import com.keepit.model.{ UserExperiment, ExperimentType, LibraryVisibility, Library, URL, NormalizedURI, Keep, KeepSource, SocialUserInfo, User }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.kifi.franz.SQSQueue
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import scala.concurrent.Await
@@ -39,6 +41,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeABookServiceClientModule(),
     FakeFeedDigestEmailQueueModule(),
     FakeSearchServiceClientModule())
+
+  implicit def userToIdInt(user: User): Int = user.id.get.id.toInt
 
   "FeedDigestEmailSender" should {
 
@@ -182,9 +186,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
+        mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42text must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
         //mail42body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
-        //mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
-        //mail42text must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
         //mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
@@ -244,12 +248,11 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       withDb(modules: _*) { implicit injector =>
         val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
 
-        val u2id = user2.id.get.id.toInt
         val uriModels = db.readWrite { implicit rw =>
           Seq(
-            makeCompleteUriRecommendation(40, u2id, 8.1f, "http://espn.com", allScores = defaultAllScores.copy(recentInterestScore = 8f)),
-            makeCompleteUriRecommendation(41, u2id, 8.2f, "http://digg.com", allScores = defaultAllScores.copy(recentInterestScore = 7f)),
-            makeCompleteUriRecommendation(42, u2id, 8.3f, "http://hotornot.com", allScores = defaultAllScores.copy(recentInterestScore = 6f))
+            makeCompleteUriRecommendation(40, user2, 8.1f, "http://espn.com", allScores = defaultAllScores.copy(recentInterestScore = 8f)),
+            makeCompleteUriRecommendation(41, user2, 8.2f, "http://digg.com", allScores = defaultAllScores.copy(recentInterestScore = 7f)),
+            makeCompleteUriRecommendation(42, user2, 8.3f, "http://hotornot.com", allScores = defaultAllScores.copy(recentInterestScore = 6f))
           ).map(saveUriModels(_, shoebox))
         }
         val sumU43F = sender.sendToUser(user2.id.get, RecentInterestRankStrategy)
@@ -262,6 +265,67 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         recoId(0) === uriModels(0)._2.id.get
         recoId(1) === uriModels(1)._2.id.get
         recoId(2) === uriModels(2)._2.id.get
+      }
+    }
+
+    "sends new keeps in libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val (shoebox, sender, savedRecoModels, user1, user2, friends) = setupToSend(db)
+
+        val uriModels = db.readWrite { implicit rw =>
+          Seq(
+            // setting the master score low so they aren't in the recommendation list
+            makeCompleteUriRecommendation(40, user2, 1f, "http://whitehouse.gov"),
+            makeCompleteUriRecommendation(41, user2, 1f, "http://craigslist.org"),
+            makeCompleteUriRecommendation(42, user2, 1f, "http://theverge.com")
+          ).map(saveUriModels(_, shoebox))
+        }
+
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val keeps = {
+          // the 3rd reco in savedRecoModels is expected to be one of the recommended keeps
+          // we're adding this keep to newKeepsInLibrary to ensure it's not in the email twice
+          val (firstRecoUri, firstReco, _) = savedRecoModels(2)
+          val keep0 = Keep(title = None, userId = user2.id.get, url = firstRecoUri.url, urlId = Id[URL](firstRecoUri.id.get.id),
+            uriId = firstRecoUri.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](3)),
+            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+
+          val keep1 = Keep(title = Some("Espn"), userId = user2.id.get, url = "http://espn.com", urlId = Id[URL](40),
+            uriId = uriModels(0)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](1)),
+            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+          val keep2 = Keep(title = Some("Digg"), userId = user2.id.get, url = "http://digg.com", urlId = Id[URL](41),
+            uriId = uriModels(1)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](2)),
+            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+          val keep3 = Keep(title = Some("The Verge"), userId = user2.id.get, url = "http://theverge.com", urlId = Id[URL](42),
+            uriId = uriModels(2)._1.id.get, source = KeepSource.keeper, createdAt = t1, libraryId = Some(Id[Library](4)),
+            inDisjointLib = false, visibility = LibraryVisibility.SECRET)
+          Seq(keep0, keep1, keep2, keep3)
+        }
+
+        shoebox.allUserExperiments(user2.id.get) = Set(UserExperiment(experimentType = ExperimentType.LIBRARIES, userId = user2.id.get))
+        shoebox.newKeepsInLibrariesExpectation(user2.id.get) = keeps
+
+        val sumU43F = sender.sendToUser(user2.id.get)
+        val sumU43 = Await.result(sumU43F, Duration(5, "seconds"))
+
+        // 1 sent to user
+        // 1 copied to QA
+        shoebox.sentMail.size === 2
+
+        sumU43.recommendations.size === 2
+        sumU43.newKeeps.size === 3
+
+        val email = shoebox.sentMail(0)
+        val html = email.htmlBody.value
+
+        // keep from library 3 should not be there because it is already a recommendation from the feed
+        html must not contain "into a library you follow: " + libraryName(Id[Library](3))
+        html must contain("into a library you follow: " + libraryName(Id[Library](1)))
+        html must contain("into a library you follow: " + libraryName(Id[Library](2)))
+        html must contain("into a library you follow: " + libraryName(Id[Library](4)))
+        html must contain("whitehouse.gov")
+        html must contain("craigslist")
+        html must contain("The Verge")
       }
     }
   }

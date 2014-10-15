@@ -184,7 +184,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         val keeper = KeepSource.keeper
         val collectionCommander = inject[CollectionCommander]
 
-        val (user, oldOrdering, tag1, tag2, tag3, tag4) = db.readWrite { implicit s =>
+        val (user, oldOrdering, tag1, tag2, tag3) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = false))
@@ -192,7 +192,6 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Mario")))
           val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Luigi")))
           val tag3 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Bowser")))
-          val tag4 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("DonkeyKong")))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -206,22 +205,23 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
 
-          val collectionIds = Seq(tag1.externalId, tag2.externalId, tag3.externalId, tag4.externalId)
+          val collectionIds = Seq(tag1.externalId, tag2.externalId, tag3.externalId)
 
           userValueRepo.save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
 
+          // keeps for Mario
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
 
+          // keeps for Bowser
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag3.id.get))
 
-          (user1, collectionIds, tag1, tag2, tag3, tag4)
+          (user1, collectionIds, tag1, tag2, tag3)
         }
 
         collectionCommander.pageCollections("user", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Luigi", "Bowser")
-        collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "DonkeyKong", "Luigi")
-        collectionCommander.pageCollections("name", 1, 3, user.id.get).map(_.name) === Seq("Mario")
-        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser") // Luigi & DonkeyKong don't have keeps!
+        collectionCommander.pageCollections("name", 0, 3, user.id.get).map(_.name) === Seq("Bowser", "Mario") // Luigi don't have keeps!
+        collectionCommander.pageCollections("num_keeps", 0, 3, user.id.get).map(_.name) === Seq("Mario", "Bowser") // Luigi don't have keeps!
       }
     }
   }

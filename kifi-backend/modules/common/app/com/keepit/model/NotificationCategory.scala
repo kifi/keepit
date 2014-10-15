@@ -50,7 +50,7 @@ object NotificationCategory {
     // Parent Categories used in analytics
     val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP,
       WHO_KEPT_MY_KEEP, DIGEST)
-    val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED)
+    val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED, LIBRARY_INVITATION)
     val aboutFriends = Set(CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED)
 
     // Formatting Categories used in the extension

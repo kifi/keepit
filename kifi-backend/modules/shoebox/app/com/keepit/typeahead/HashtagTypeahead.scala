@@ -25,7 +25,7 @@ object UserHashtagTypeahead {
   }
 }
 
-class UserHashtagTypeaheadCommander @Inject() (
+class HashtagTypeahead @Inject() (
     val airbrake: AirbrakeNotifier,
     cache: UserHashtagTypeaheadCache,
     clock: Clock,
@@ -76,15 +76,10 @@ case class UserHashtagTypeaheadUserIdKey(id: Id[User]) extends Key[UserHashtagTy
 class UserHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserHashtagTypeaheadUserIdKey, UserHashtagTypeahead](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class HashtagHitWithKeepCount(tag: Hashtag, keepCount: Int, matches: Seq[(Int, Int)])
-object HashtagHitWithKeepCount {
-  implicit val format = {
-    implicit val tupleFormat = TupleFormat.tuple2Format[Int, Int]
-    Json.format[HashtagHitWithKeepCount]
-  }
-
-  def highlight(query: String, tags: Seq[(Hashtag, Int)]): Seq[HashtagHitWithKeepCount] = {
+case class HashtagHit(tag: Hashtag, keepCount: Int, matches: Seq[(Int, Int)])
+object HashtagHit {
+  def highlight(query: String, tags: Seq[(Hashtag, Int)]): Seq[HashtagHit] = {
     val queryRegex = PrefixMatching.getHighlightingRegex(query)
-    tags.map { case (tag, keepCount) => HashtagHitWithKeepCount(tag, keepCount, PrefixMatching.highlight(tag.tag, queryRegex)) }
+    tags.map { case (tag, keepCount) => HashtagHit(tag, keepCount, PrefixMatching.highlight(tag.tag, queryRegex)) }
   }
 }
