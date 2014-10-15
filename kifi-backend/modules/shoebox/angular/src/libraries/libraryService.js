@@ -243,7 +243,9 @@ angular.module('kifi')
       },
 
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
-        return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName));
+        return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
       }
     };
 
