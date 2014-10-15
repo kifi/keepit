@@ -848,6 +848,8 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
+
 }
 
 sealed trait HelpRankSelector { val name: String }

@@ -252,4 +252,10 @@ class MobileKeepsController @Inject() (
     }
   }
 
+  def numKeeps() = UserAction { request =>
+    Ok(Json.obj(
+      "numKeeps" -> keepsCommander.numKeeps(request.userId)
+    ))
+  }
+
 }
