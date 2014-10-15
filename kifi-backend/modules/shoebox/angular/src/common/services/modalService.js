@@ -15,13 +15,14 @@ angular.module('kifi')
       }
       var $modal = angular.element($templateCache.get(template));
 
-      var scope = opts.scope || $rootScope.$new();
+      var scope = (opts.scope && opts.scope.$new()) || $rootScope.$new();
       if (opts.modalData) {
         scope.modalData = opts.modalData;
       }
 
       $compile($modal)(scope);
-      angular.element(document.body).append($modal);
+      angular.element(document.body).find('.kf-cols').append($modal);
+
       modals.push($modal);
     }
 
