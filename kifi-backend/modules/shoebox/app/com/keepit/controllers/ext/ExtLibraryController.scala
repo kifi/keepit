@@ -222,15 +222,20 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def searchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = UserAction.async { request =>
+  def searchTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchTags(request.userId, query, limit) map { hits =>
-          implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-          val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
-          Ok(result)
+        if (query.isEmpty && keepId.isDefined) {
+          val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
+          keepsCommander.suggestTags(request.userId, keep.uriId, libraryId, limit).map { suggestedTags => Ok(Json.toJson(suggestedTags)) }
+        } else {
+          keepsCommander.searchTags(request.userId, query, limit) map { hits =>
+            implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+            val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
+            Ok(result)
+          }
         }
       } getOrElse {
         Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))

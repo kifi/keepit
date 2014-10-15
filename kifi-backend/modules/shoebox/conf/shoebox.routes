@@ -138,10 +138,11 @@ POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryContro
 DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+GET     /ext/libraries/:id/keeps/:k/tags/search  @com.keepit.controllers.ext.ExtLibraryController.searchTags(id: PublicId[Library], k: Option[ExternalId[Keep]] ?= None, q: String, n: Option[Int] ?= None)
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
-GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.searchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
+GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.searchTags(id: PublicId[Library], k: Option[ExternalId[Keep]] ?= None, q: String, n: Option[Int] ?= None)
 
 ##########################################
 # Mobile
