@@ -82,13 +82,7 @@ class LibraryCommander @Inject() (
   def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
     createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
-      val accessStr = userIdOpt.map { userId =>
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
-        }.map(_.access.value)
-      }.flatten.getOrElse {
-        "none"
-      }
+      val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
   }
