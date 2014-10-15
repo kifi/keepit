@@ -157,7 +157,11 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "experiments":["admin"],
               "clickCount":0,
               "rekeepCount":0,
-              "rekeepTotalCount":0
+              "rekeepTotalCount":0,
+              "friendCount": 0,
+              "keepCount": 0,
+              "libCount": 0,
+              "libFollowerCount": 0
             }
           """)
 
@@ -225,7 +229,11 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "experiments":[],
               "clickCount":0,
               "rekeepCount":0,
-              "rekeepTotalCount":0
+              "rekeepTotalCount":0,
+              "friendCount": 0,
+              "keepCount": 0,
+              "libCount": 0,
+              "libFollowerCount": 0
             }
           """)
 
