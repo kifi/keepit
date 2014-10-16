@@ -11,7 +11,8 @@ trait EmailSenderProvider {
   def confirmation: EmailConfirmationSender
   def resetPassword: ResetPasswordEmailSender
   def waitList: FeatureWaitlistEmailSender
-  def libraryInviteEmail: LibraryInviteEmailSender
+  def libraryInvite: LibraryInviteEmailSender
+  def kifiInvite: InviteToKifiSender
 }
 
 @Singleton
@@ -23,7 +24,8 @@ class EmailSenderProviderImpl @Inject() (
     private val emailConfirmationSender: Provider[EmailConfirmationSender],
     private val resetPasswordSender: Provider[ResetPasswordEmailSender],
     private val waitListSender: Provider[FeatureWaitlistEmailSender],
-    private val libraryInviteEmailSender: Provider[LibraryInviteEmailSender]) extends EmailSenderProvider {
+    private val libraryInviteEmailSender: Provider[LibraryInviteEmailSender],
+    private val inviteToKifiSender: Provider[InviteToKifiSender]) extends EmailSenderProvider {
   lazy val connectionMade = connectionMadeEmailSender.get()
   lazy val friendRequest = friendRequestEmailSender.get()
   lazy val contactJoined = contactJoinedEmailSender.get()
@@ -31,5 +33,6 @@ class EmailSenderProviderImpl @Inject() (
   lazy val confirmation = emailConfirmationSender.get()
   lazy val resetPassword = resetPasswordSender.get()
   lazy val waitList = waitListSender.get()
-  lazy val libraryInviteEmail = libraryInviteEmailSender.get()
+  lazy val libraryInvite = libraryInviteEmailSender.get()
+  lazy val kifiInvite = inviteToKifiSender.get()
 }

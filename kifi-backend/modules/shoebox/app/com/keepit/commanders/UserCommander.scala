@@ -421,7 +421,6 @@ class UserCommander @Inject() (
 
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
 
-  // todo(josh) replace with sender
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>

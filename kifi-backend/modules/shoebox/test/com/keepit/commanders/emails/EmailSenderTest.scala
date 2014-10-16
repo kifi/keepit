@@ -5,9 +5,10 @@ import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeAB
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.template.{ EmailTip, EmailTrackingParam }
-import com.keepit.common.mail.{ EmailAddress, FakeOutbox }
+import com.keepit.common.mail.{ PostOffice, SystemEmailAddress, EmailAddress, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -40,6 +41,28 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule())
+
+  "InviteToKifiSender" should {
+    "sends email" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[InviteToKifiSender]
+        val toAddress = EmailAddress("taco@gmail.com")
+        val inviteId = ExternalId[Invitation]()
+        val fromUser = db.readWrite { implicit rw =>
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
+        }
+        val email = Await.result(sender(toAddress, fromUser.id.get, inviteId), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.fromName === Some("Billy Madison (via Kifi)")
+        email.from === SystemEmailAddress.INVITATION
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
+        email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
+      }
+    }
+  }
 
   "WelcomeEmailSender" should {
     "sends email" in {
