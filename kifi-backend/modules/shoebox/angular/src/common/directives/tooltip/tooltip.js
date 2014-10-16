@@ -31,30 +31,26 @@ angular.module('kifi')
 
         function applyPosition(pos) {
           var parentPos = container[0].getBoundingClientRect();
+
+          function setCssPos(top, left) {
+            el.css({
+              'top': top,
+              'left': left
+            });
+          }
+
           switch (pos) {
             case 'top':
-              el.css({
-                'top': parentPos.top - el.outerHeight(),
-                'left': parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth()
-              });
+              setCssPos(parentPos.top - el.outerHeight(), parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth());
               break;
             case 'bottom':
-              el.css({
-                'top': parentPos.top + container.outerHeight(),
-                'left': parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth()
-              });
+              setCssPos(parentPos.top + container.outerHeight(), parentPos.left - 0.5*el.outerWidth() + 0.5*container.outerWidth());
               break;
             case 'left':
-              el.css({
-                'top': parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(),
-                'left': parentPos.left - el.outerWidth()
-              });
+              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left - el.outerWidth());
               break;
             case 'right':
-              el.css({
-                'top': parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(),
-                'left': parentPos.left + container.outerWidth()
-              });
+              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + container.outerWidth());
               break;
           }
         }

@@ -57,7 +57,7 @@ angular.module('kifi')
           return;
         }
 
-        //test data:
+        // test data:
         // scope.keep.libraries = [
         //   {
         //     keeperPic: 'https://djty7jcqog9qu.cloudfront.net/users/256bf55a-5773-401f-8461-99cf2d5128e0/pics/200/HXDXq.jpg',
