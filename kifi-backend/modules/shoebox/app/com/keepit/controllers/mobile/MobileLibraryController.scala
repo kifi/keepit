@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.mobile.ImplicitHelper._
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,6 +23,7 @@ class MobileLibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -87,7 +89,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
