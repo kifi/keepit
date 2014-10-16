@@ -1,34 +1,27 @@
 package com.keepit.eliza.commanders
 
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.eliza.model._
-import com.keepit.common.akka.SafeFuture
-import scala.util.Try
-import play.api.libs.json._
-import com.google.inject.Inject
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.slick.Database
-import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.realtime.UrbanAirship
-import org.joda.time.DateTime
-import com.keepit.eliza.util.MessageFormatter
-import com.keepit.shoebox.ShoeboxServiceClient
-import java.nio.{ ByteBuffer, CharBuffer }
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import scala.concurrent.{ Promise, Future }
+import java.nio.{ ByteBuffer, CharBuffer }
+
+import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsArray
-import com.keepit.eliza.model.UserThreadActivity
-import scala.util.Failure
-import scala.util.Success
-import com.keepit.eliza.model.UserThread
-import com.keepit.eliza.model.Notification
-import play.api.libs.json.JsObject
-import com.keepit.realtime.PushNotification
-import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
+import com.keepit.eliza.controllers.WebSocketRouter
+import com.keepit.eliza.model.{ Notification, UserThread, UserThreadActivity, _ }
+import com.keepit.eliza.util.MessageFormatter
+import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.realtime.{ PushNotification, UrbanAirship }
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
+import org.joda.time.DateTime
+import play.api.libs.json.{ JsArray, _ }
+
+import scala.concurrent.{ ExecutionContext, Future, Promise }
+import scala.util.{ Failure, Success, Try }
 
 class NotificationCommander @Inject() (
     threadRepo: MessageThreadRepo,
@@ -42,7 +35,8 @@ class NotificationCommander @Inject() (
     urbanAirship: UrbanAirship,
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
-    emailCommander: ElizaEmailCommander) extends Logging {
+    emailCommander: ElizaEmailCommander,
+    implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(
