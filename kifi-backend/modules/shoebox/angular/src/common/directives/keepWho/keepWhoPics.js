@@ -33,4 +33,17 @@ angular.module('kifi')
       }
     };
   }
+])
+
+.directive('kfKeepWhoLib', [
+  function () {
+    return {
+      restrict: 'A',
+      replace: true,
+      templateUrl: 'common/directives/keepWho/keepWhoLib.tpl.html',
+      scope: {
+        library: '='
+      }
+    };
+  }
 ]);
