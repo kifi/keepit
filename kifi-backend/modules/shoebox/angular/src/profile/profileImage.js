@@ -229,6 +229,8 @@ angular.module('kifi')
           // Use $timeout to wait for forceClose to close the currently open modal before
           // opening the next modal.
           $timeout(function () {
+            scope.forceClose = false;
+
             modalService.open({
               template: 'profile/imageUploadFailedModal.tpl.html'
             });
