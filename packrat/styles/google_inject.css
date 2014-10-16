@@ -422,7 +422,7 @@ div.kifi-res-menu-item {
   width: 43px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  border: 1px solid #f06463;
+  border: 1px solid #dedede /*#f06463*/;
   border-radius: 11.5px;
   background-position: 99px;
   background-repeat: no-repeat;
@@ -494,7 +494,7 @@ div.kifi-res-menu-item {
 }
 .kifi-res-lib.kifi-secret {
   padding-left: 40px;
-  color: #f06463;
+  /*color: #f06463;*/
 }
 .kifi-res-lib::before {
   content: '';
@@ -507,7 +507,7 @@ div.kifi-res-menu-item {
   border-radius: inherit;
 }
 .kifi-res-lib.kifi-secret::before {
-  border-color: #f06463;
+  /*border-color: #f06463;*/
   background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 13.5"><path fill="%23f06463" d="M7.8,5H7.7V3.4C7.7,1.5,6.5,0,4.5,0c-2,0-3.2,1.5-3.2,3.4V5H1.2C0.5,5,0,5.6,0,6.3v5.9c0,0.7,0.5,1.3,1.2,1.3h6.6c0.6,0,1.2-0.6,1.2-1.3V6.3C9,5.6,8.5,5,7.8,5z M2.6,5V3.4c0-1.3,0.5-2.4,1.9-2.4c1.5,0,1.9,1.1,1.9,2.4V5H2.6z"/></svg>') 28px 5px/6px auto no-repeat;
 }
 .kifi-res-lib::after {
