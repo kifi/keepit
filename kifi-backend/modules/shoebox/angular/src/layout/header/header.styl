@@ -91,7 +91,6 @@ a.kf-header-callout:hover
   text-decoration: underline
 
 
-
 .kf-header-search-bar
   float: left
   box-sizing: border-box
@@ -114,9 +113,12 @@ a.kf-header-callout:hover
 
 .kf-query-lib
   display: inline-block
-  width: calc(70% - 100px)
+  width: calc(70% - 110px)
   position: relative
   margin-left: 5px
+
+  &.extend
+    width: calc(100% - 110px)
 
   input
     width: 100%
@@ -166,12 +168,13 @@ a.kf-header-callout:hover
   position: relative
   top: 2px
   display: inline-block
-  max-width: calc(100% - 18px)
   padding-left: 5px
+  max-width: 150px
   font-size: 13px
   font-weight: 100
   color: #fff
   overflow: hidden
+  white-space: nowrap
   text-overflow: ellipsis
 
 .kf-search-bar-lib-name-clear
