@@ -8,7 +8,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.store.S3ImageStore
-import com.keepit.common.controller.{ ShoeboxActionAuthenticator, ActionAuthenticator }
 import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.common.time.Clock
 import com.keepit.commanders.{ UserCommander, LocalUserExperimentCommander }
@@ -57,7 +56,6 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
 case class ProdShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
 
   def configure {
-    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
     bind[PasswordAuthentication].to[UserPasswordAuthentication]
   }
 
