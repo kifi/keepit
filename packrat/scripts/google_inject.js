@@ -544,11 +544,13 @@ if (searchUrlRe.test(document.URL)) !function () {
       });
       if (!details) {
         api.port.emit('get_library', library.id, function (o) {
+          o.url = response.origin + '/' + o.owner.username + '/' + o.slug;
           $a.data('details', o);
           var $card = ($a.data('hoverfu') || {}).$h;
           if ($card) {
             $card.find('.kifi-lc-pic').css('background-image', 'url(' + cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName + ')');
             $card.find('.kifi-lc-owner').text(o.owner.firstName + ' ' + o.owner.lastName);
+            $card.find('.kifi-lc-name').prop('href', o.url);
             var $n = $card.find('.kifi-lc-count-n');
             $n.first().text(o.keeps);
             $n.last().text(o.followers);

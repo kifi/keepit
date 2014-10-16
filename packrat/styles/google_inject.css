@@ -739,6 +739,7 @@ a.kifi-res-more-a:active {
   -webkit-font-smoothing: antialiased;
 }
 .kifi-lc-name {
+  display: block;
   clear: left;
   border-top: 1px solid #e8ecf0;
   padding-left: 14px;
@@ -748,6 +749,7 @@ a.kifi-res-more-a:active {
   font: bold 15px/44px serif;
   -webkit-font-smoothing: antialiased;
   color: #333;
+  text-decoration: none !important;
   margin-bottom: 6px;
 }
 .kifi-lc-counts {
