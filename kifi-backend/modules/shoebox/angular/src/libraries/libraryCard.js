@@ -141,7 +141,7 @@ angular.module('kifi')
         };
 
         scope.alreadyFollowingLibrary = function (library) {
-          return _.some(library.followers, { id: profileService.me.id });
+          return (library.access && (library.access === 'read_only')) || _.some(library.followers, { id: profileService.me.id });
         };
 
         scope.followLibrary = function (library) {
@@ -157,7 +157,8 @@ angular.module('kifi')
               return;
             }
 
-            library.followers.push({
+            // Let the user be the first one listed. :)
+            library.followers.unshift({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
@@ -174,10 +175,10 @@ angular.module('kifi')
 
         scope.unfollowLibrary = function (library) {
           libraryService.leaveLibrary(library.id).then(function () {
-            _.remove(library.followers, { id: profileService.me.id });
-
             libraryService.fetchLibrarySummaries(true).then(function () {
               $rootScope.$emit('changedLibrary');
+
+              // Note: no need to augmentData for unfollowed library.
               adjustFollowerPicsSize();
             });
           });
@@ -223,11 +224,10 @@ angular.module('kifi')
           }
         });
 
-        // When the local library object in libraryService has been updated, update
-        // our scope.library accordingly. $rootScope is used instead of scope because
-        // libraryService is not a child of any scope.
         $rootScope.$on('libraryUpdated', function (e, library) {
           _.assign(scope.library, library);
+          augmentData();
+          adjustFollowerPicsSize();
         });
 
         // Update how many follower pics are shown when the window is resized.
