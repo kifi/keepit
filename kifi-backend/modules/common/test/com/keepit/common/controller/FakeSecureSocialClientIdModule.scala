@@ -16,7 +16,7 @@ import securesocial.core._
 import net.codingwell.scalaguice.ScalaModule
 import scala.concurrent.Future
 
-case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
+case class FakeSecureSocialClientIdModule() extends ScalaModule with Logging {
   def configure(): Unit = {}
 
   @Singleton
