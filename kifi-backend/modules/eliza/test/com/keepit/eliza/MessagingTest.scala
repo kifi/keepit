@@ -1,28 +1,37 @@
 package com.keepit.eliza
 
-import com.google.inject.Injector
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.db.Id
-import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationCommander }
-import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.model._
-import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.User
-import com.keepit.realtime.FakeUrbanAirshipModule
-import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
-import com.keepit.social.BasicUser
-import com.keepit.test.ElizaTestInjector
 import org.specs2.mutable._
-import play.api.libs.json.{ JsObject, Json }
-
+import com.keepit.common.db.slick._
+import com.keepit.common.db.Id
+import com.keepit.inject._
+import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
+import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.time._
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import com.keepit.social.BasicUser
+import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
+import com.keepit.common.healthcheck.FakeAirbrakeNotifier
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.eliza.controllers.WebSocketRouter
+import com.keepit.eliza.commanders.{ MessagingCommander, MessageFetchingCommander, NotificationCommander }
+import com.keepit.eliza.controllers.internal.MessagingController
+import com.keepit.eliza.model._
+import com.keepit.common.crypto.FakeCryptoModule
+import com.google.inject.Injector
+import play.api.test.Helpers._
+import play.api.libs.json.{ Json, JsObject }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
+import akka.actor.ActorSystem
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.common.store.ElizaDevStoreModule
+import com.keepit.common.aws.AwsModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.test.ElizaTestInjector
 
 class MessagingTest extends Specification with ElizaTestInjector {
 
@@ -30,7 +39,6 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
   def modules = {
     Seq(
-      FakeExecutionContextModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
       FakeHeimdalServiceClientModule(),
@@ -152,13 +160,13 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
         val (thread, msg) = messagingCommander.sendNewMessage(user1, Seq(user2), Nil, Json.obj("url" -> "http://kifi.com"), Some("title"), "Fortytwo", None)
 
-        inject[WatchableExecutionContext].drain()
+        Thread.sleep(100) //AHHHHHH. Really need to figure out how to test Async code with multiple execution contexts. (https://app.asana.com/0/5674704693855/9223435240746)
         Await.result(notificationCommander.getLatestSendableNotifications(user2, 1, includeUriSummary = false), Duration(4, "seconds")).length === 1
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false), Duration(4, "seconds")).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
         messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty, None)
-        inject[WatchableExecutionContext].drain()
+        Thread.sleep(200) //See comment for same above
         Await.result(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false), Duration(4, "seconds")).length === 1
       }
     }

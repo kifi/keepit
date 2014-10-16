@@ -6,8 +6,6 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model.UrlPatternRuleAllCache
 
-import scala.concurrent.ExecutionContext
-
 case class FakeShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 
   def configure() {}
@@ -18,9 +16,8 @@ case class FakeShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     shoeboxCacheProvided: ShoeboxCacheProvider,
     httpClient: HttpClient,
     serviceCluster: ServiceCluster,
-    airbrakeNotifier: AirbrakeNotifier,
-    executionContext: ExecutionContext): ShoeboxServiceClient =
-    new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided, executionContext)
+    airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient =
+    new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided)
 }
 
 case class FakeShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
