@@ -223,6 +223,8 @@ angular.module('kifi')
           }
         });
 
+        $rootScope.$emit('libraryUrl', scope.library);
+
         // When the local library object in libraryService has been updated, update
         // our scope.library accordingly. $rootScope is used instead of scope because
         // libraryService is not a child of any scope.

@@ -9,12 +9,16 @@
     </div>
 
     <div class="kf-header-search-bar" ng-if="librariesEnabled">
-      <div class="kf-query-wrap" ng-class="{empty: isEmpty()}">
-        <input kf-no-drag-input class="kf-query" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-change="onChange()">
-        <div class="kf-query-icon"></div>
-        <span class="kf-search-clear-wrapper" ng-if="clearable()">
-          <a href="javascript:" ng-click="clear()">Clear</a>
-        </span>
+        <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
+          <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
+          <div class="kf-header-search-bar-lib-filler" ng-show="search.showName" ng-class="{ 'secret': search.library.visibility == 'secret', 'published': search.library.visibility == 'published', 'discoverable': search.library.visibility == 'discoverable' }">
+            <div class="kf-search-bar-lib-name"> {{search.library.name}} </div>
+            <div class="kf-search-bar-lib-name-clear" ng-click="clearLibraryName()">&times;</div>
+          </div>
+          <div class="kf-query-lib">
+            <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)">
+          </div>
+          <div class="kf-search-bar-clear sprite sprite-close-x-icon-hover" ng-show="search.text" ng-click="clearInput()">&times;</div>
       </div>
     </div>
 
