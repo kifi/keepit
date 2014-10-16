@@ -1,33 +1,29 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.test.{ ElizaTestInjector }
-import org.specs2.mutable._
-import com.keepit.common.db.slick._
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
-import com.keepit.common.time._
-import com.keepit.model.User
-import com.keepit.heimdal.HeimdalContext
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.eliza.model._
-import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import play.api.libs.json.Json
-import akka.actor.ActorSystem
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.common.cache.ElizaCacheModule
-import play.api.libs.json.JsArray
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.common.time._
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.model._
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.User
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.common.actor.{ FakeActorSystemModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.ElizaTestInjector
+import org.specs2.mutable._
+import play.api.libs.json.{ JsArray, Json }
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
 
@@ -94,8 +90,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         status(result) must equalTo(OK)
         contentType(result) must beSome("text/plain")
         val runners = inject[WatchableExecutionContext].drain()
-        //yes! 41 futures where created to get this test to pass! You can remove or edit the next line if it breaks test, just a nice to know
-        runners === 41
+        runners > 2
 
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
