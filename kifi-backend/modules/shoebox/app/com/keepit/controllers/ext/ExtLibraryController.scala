@@ -18,6 +18,7 @@ import play.api.mvc.Result
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.json
 
 class ExtLibraryController @Inject() (
   db: Database,
@@ -240,7 +241,7 @@ class ExtLibraryController @Inject() (
         } else {
           keepsCommander.searchTags(request.userId, query, limit) map { hits =>
             implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-            val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
+            val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
             Ok(result)
           }
         }

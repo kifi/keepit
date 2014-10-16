@@ -21,6 +21,9 @@ import play.api.mvc.BodyParsers
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 import ImplicitHelper._
+import com.keepit.common.core._
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 
 class LibraryController @Inject() (
   db: Database,
@@ -401,6 +404,21 @@ class LibraryController @Inject() (
     keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
       case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
+    }
+  }
+
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = if (query.trim.isEmpty) {
+      val libraryId = Library.decodePublicId(pubId).get
+      val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+      keepsCommander.suggestTags(request.userId, libraryId, uriId, limit).map(_.map((_, Seq.empty[(Int, Int)])))
+    } else {
+      keepsCommander.searchTags(request.userId, query, limit).map(_.map(hit => (hit.tag, hit.matches)))
+    }
+    futureTagsAndMatches.imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
     }
   }
 
