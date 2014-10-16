@@ -166,7 +166,7 @@ angular.module('kifi')
             });
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
               augmentData();
               adjustFollowerPicsSize();
             });
@@ -176,7 +176,7 @@ angular.module('kifi')
         scope.unfollowLibrary = function (library) {
           libraryService.leaveLibrary(library.id).then(function () {
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
 
               // Note: no need to augmentData for unfollowed library.
               adjustFollowerPicsSize();

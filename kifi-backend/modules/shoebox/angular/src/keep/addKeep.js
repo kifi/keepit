@@ -158,9 +158,9 @@ angular.module('kifi')
         $document.on('keydown', processKey);
         safeFocus();
 
-        $rootScope.$on('changedLibrary', function () {
+        $rootScope.$on('librarySummariesChanged', function () {
           if (scope.librariesEnabled) {
-            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
               return lib.access !== 'read_only';
             });
           }
