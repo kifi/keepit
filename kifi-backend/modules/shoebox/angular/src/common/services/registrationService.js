@@ -12,11 +12,16 @@ angular.module('kifi')
         return $http.post(routeService.socialSignup(provider), oauth2TokenInfo).then(function (resp) {
           console.log('regServ#succ', resp);
           return resp.data || resp;
-        })['catch'](function (err) {
-          console.log('regServ#error', err);
-          return err.data || err;
         });
       }
+    };
+
+    var socialFinalize = function (fields) {
+      console.log(fields);
+      return $http.post(routeService.socialFinalize, fields).then(function (resp) {
+        console.log('socFin#succ', resp);
+        return resp.data;
+      });
     };
 
     var emailFinalize = function (fields) {
@@ -24,14 +29,12 @@ angular.module('kifi')
       return $http.post(routeService.emailSignup, fields).then(function (resp) {
         console.log('emaFin#succ', resp);
         return resp.data;
-      })['catch'](function (err) {
-        console.log('emaFin#error', err);
-        return err.data || err;
       });
     };
 
     return {
       socialRegister: socialRegister,
+      socialFinalize: socialFinalize,
       emailFinalize: emailFinalize
     };
   }

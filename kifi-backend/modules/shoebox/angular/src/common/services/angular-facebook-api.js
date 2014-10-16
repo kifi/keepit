@@ -242,20 +242,22 @@ angular.module('jun.facebook', [])
 			var deferred = $q.defer();
 
 			if (typeof callback !== 'function') {
-				callback = null;
 				opts = callback;
+				callback = null;
 			}
 
 			function getOpt(name) {
 				var val = opts && opts[name];
-				return val === void 0 ? options[name] : val;
+				return val || options[name];
 			}
-
-			FB.login(angular.bind(deferred, handleResponse), {
+			var sendOpts = {
 				scope: getOpt('scope'),
 				'enable_profile_selector': getOpt('enable_profile_selector'),
-				'profile_selector_ids': getOpt('profile_selector_ids')
-			});
+				'profile_selector_ids': getOpt('profile_selector_ids'),
+				'return_scopes': getOpt('return_scopes')
+			};
+
+			FB.login(angular.bind(deferred, handleResponse), sendOpts);
 
 			return addCallbackToPromise(deferred, callback);
 		});

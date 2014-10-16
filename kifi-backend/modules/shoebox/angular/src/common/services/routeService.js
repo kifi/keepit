@@ -124,9 +124,7 @@ angular.module('kifi')
       socialSignup: function (provider) {
         return env.navBase + '/auth/token-signup/' + provider;
       },
-      socialFinalize: function (provider) {
-        return env.navBase + '/auth/token-finalize/' + provider;
-      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
       emailSignup: env.navBase + '/auth/email-signup',
 
       ////////////////////////////
