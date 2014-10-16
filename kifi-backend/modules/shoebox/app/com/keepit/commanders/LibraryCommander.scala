@@ -53,13 +53,12 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
-    db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
-      val numKeeps = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-      (keeps, numKeeps)
-    }
+  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): Future[Seq[Keep]] = {
+    db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, take, offset) }
+  }
+
+  def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
+    db.readOnlyMasterAsync { implicit s => keepRepo.getCountByLibrary(libraryId) }
   }
 
   def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
