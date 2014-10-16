@@ -115,7 +115,9 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           inject[SocialConnectionRepo].save(SocialConnection(socialUser1 = mySocialUser.id.get, socialUser2 = socialUserInfo.id.get))
         }
 
-        Await.ready(inject[UserConnectionCreator].updateUserConnections(socialUserInfo.userId.get, Some(network)), Duration(5, "seconds"))
+        val creator = inject[UserConnectionCreator]
+        val addedConnections = creator.saveNewSocialUserConnections(socialUserInfo.userId.get)
+        Await.ready(creator.notifyAboutNewUserConnections(socialUserInfo.userId.get, Some(network), addedConnections), Duration(5, "seconds"))
 
         outbox.size === 1
         outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
@@ -249,7 +251,9 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
             scRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser3.id.get))
           }
 
-          Await.ready(inject[UserConnectionCreator].updateUserConnections(user1.id.get), Duration(5, "seconds"))
+          val creator = inject[UserConnectionCreator]
+          val addedConnections = creator.saveNewSocialUserConnections(user1.id.get)
+          Await.ready(creator.notifyAboutNewUserConnections(user1.id.get, None, addedConnections), Duration(5, "seconds"))
 
           // should be 1 instead of 2 b/c user1 and user2 are "unfriended"
           outbox.size === 1
