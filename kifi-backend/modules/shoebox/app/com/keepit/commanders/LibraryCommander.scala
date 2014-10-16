@@ -477,12 +477,12 @@ class LibraryCommander @Inject() (
       }
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
-      trackLibraryInvitation(inviterId, eventContext)
+      trackLibraryInvitation(inviterId, eventContext, action = "sent")
       Right(res)
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library]): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -501,6 +501,7 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+        trackLibraryInvitation(userId, eventContext, action = "accepted")
         Right(updatedLib)
       }
     }
@@ -711,9 +712,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {
+  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext, action: String) = {
     val builder = contextBuilderFactory()
     builder.addExistingContext(eventContext)
+    builder += ("action", action)
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
