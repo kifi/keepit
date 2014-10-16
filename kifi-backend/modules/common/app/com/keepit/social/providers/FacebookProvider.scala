@@ -28,7 +28,7 @@ class FacebookProvider(application: Application)
     val call = WS.url(MeApi + accessToken).get()
     try {
       val response = awaitResult(call) // method signature fixed so stuck with await for now
-      log.info(s"[fillProfile] user=$user; response=${response.body} status=${response.statusText}")
+      log.info(s"[fillProfile] response=${response.body} status=${response.statusText}")
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
         case Some(error) =>
