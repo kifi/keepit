@@ -5,7 +5,7 @@ import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, ExperimentType, KifiExtVersion }
-import com.keepit.common.controller.{ BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._

@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{ ElizaServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._

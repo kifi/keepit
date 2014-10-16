@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.realtime.{ DeviceType, UrbanAirship }
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ElizaServiceController, WebsiteController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ElizaServiceController }
 import com.keepit.common.logging.Logging
 import play.api.libs.json._
 
