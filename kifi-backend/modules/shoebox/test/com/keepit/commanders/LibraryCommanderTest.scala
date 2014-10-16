@@ -299,7 +299,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "remove library, memberships & invites" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps()
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
@@ -310,6 +310,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
 
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val keeps = db.readOnlyMaster { implicit s => keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000) }
+        keeps.size === 3
+
         libraryCommander.removeLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
@@ -317,6 +321,19 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allLibs.map(_.slug.value) === Seq("avengers", "science")
           libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
+        }
+
+        db.readWrite { implicit s =>
+          val deleted = libraryRepo.get(libMurica.id.get)
+          deleted.name !== libMurica.name
+          deleted.description === None
+          deleted.state === LibraryStates.INACTIVE
+          deleted.slug !== libMurica.slug
+
+          keeps foreach { keep =>
+            val deletedKeep = keepRepo.get(keep.id.get)
+            deletedKeep.title === None
+          }
         }
 
         libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)

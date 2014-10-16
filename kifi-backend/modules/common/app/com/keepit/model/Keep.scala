@@ -31,6 +31,8 @@ case class Keep(
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
+  def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
