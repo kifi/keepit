@@ -108,6 +108,8 @@ angular.module('kifi')
       });
     };
 
+    $rootScope.$emit('libraryUrl', {});
+
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.
     if (recoStateService.recosList.length === 0) {

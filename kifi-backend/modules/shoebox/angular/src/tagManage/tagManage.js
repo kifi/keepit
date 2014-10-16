@@ -89,6 +89,8 @@ angular.module('kifi')
       });
     });
 
+    $rootScope.$emit('libraryUrl', {});
+
     $scope.clickAction = function () {
       var tagName = encodeURIComponent($scope.selectedTag.name);
       libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {

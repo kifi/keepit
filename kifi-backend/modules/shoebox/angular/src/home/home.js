@@ -123,6 +123,7 @@ angular.module('kifi')
     $rootScope.$on('keepAdded', function (e, libSlug, keep) {
       $scope.keeps.unshift(keep);
     });
+    $rootScope.$emit('libraryUrl', {});
 
 
     //
