@@ -24,8 +24,6 @@ angular.module('kifi')
       });
     }
 
-    $scope.$error = {};
-
     // First Register modal
 
     var authFb = function () {
@@ -33,7 +31,7 @@ angular.module('kifi')
         if (loginStatus.status === 'connected') {
           return loginStatus;
         } else {
-          return $FB.login({scope:'user_friends,email'}).then(function (loginResult) {
+          return $FB.login({scope:'public_profile,user_friends,email'}).then(function (loginResult) {
             if (loginResult.status === 'unknown' || !loginResult.authResponse) {
               return {'error': 'user_denied_login'};
             } else {
@@ -93,10 +91,10 @@ angular.module('kifi')
             $scope.userData.email = response.email;
           });
 
-          registrationService.socialRegister('facebook', fbResp).then(function (resp) {
+          registrationService.socialRegister('facebook', fbResp.authResponse).then(function (resp) {
             if (resp.code && resp.code === 'user_logged_in') {
-              console.log('test#user_logged_in', resp);
-              // reload page?? we're done
+              // todo: follow or other action
+              $window.location.reload();
             } else if (resp.code && resp.code === 'continue_signup') {
               console.log('test#continue_signup', resp);
               modalService.close();
@@ -132,8 +130,22 @@ angular.module('kifi')
         modalService.close();
         $scope.thanksForRegisteringModal();
       } else { // email signup
-        modalService.close();
-        $scope.thanksForRegisteringModal();
+
+        var fields = {
+          email: $scope.userData.email,
+          password: $scope.userData.password,
+          firstName: $scope.userData.firstName,
+          lastName: $scope.userData.lastName,
+          libraryPublicId: $scope.libraryId || ($scope.library && $scope.library.id)
+        };
+
+        registrationService.emailFinalize(fields).then(function (data) {
+          console.log('succz', data);
+          modalService.close();
+          $scope.thanksForRegisteringModal();
+        })['catch'](function (err) {
+          console.log('errz', err);
+        });
       }
     };
 

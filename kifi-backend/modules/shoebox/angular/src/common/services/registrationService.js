@@ -19,8 +19,20 @@ angular.module('kifi')
       }
     };
 
+    var emailFinalize = function (fields) {
+      console.log(fields);
+      return $http.post(routeService.emailSignup, fields).then(function (resp) {
+        console.log('emaFin#succ', resp);
+        return resp.data;
+      })['catch'](function (err) {
+        console.log('emaFin#error', err);
+        return err.data || err;
+      });
+    };
+
     return {
-      socialRegister: socialRegister
+      socialRegister: socialRegister,
+      emailFinalize: emailFinalize
     };
   }
 ]);
