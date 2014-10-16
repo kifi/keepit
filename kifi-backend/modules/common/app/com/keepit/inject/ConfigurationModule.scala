@@ -1,6 +1,7 @@
 package com.keepit.inject
 
 import _root_.net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
@@ -45,6 +46,7 @@ trait CommonServiceModule {
   val serviceTypeModule: ServiceTypeModule
   val discoveryModule: DiscoveryModule
 
+  val executionContextModule = ExecutionContextModule()
   val cryptoModule = ShoeboxCryptoModule()
   val healthCheckModule = ProdHealthCheckModule()
   val httpClientModule = ProdHttpClientModule()
