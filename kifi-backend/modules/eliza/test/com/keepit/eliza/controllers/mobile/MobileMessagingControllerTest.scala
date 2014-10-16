@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.mobile
 
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.test.{ ElizaTestInjector }
 import org.specs2.mutable._
@@ -34,6 +35,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
   def modules = {
     Seq(
+      FakeExecutionContextModule(),
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
@@ -51,7 +53,56 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     )
   }
 
-  "ExtMessaging Controller" should {
+  "Mobile Messaging Controller" should {
+
+    "addParticipantsToThread" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].all.isEmpty === true
+          inject[NonUserThreadRepo].all.isEmpty === true
+        }
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val eishay = User(id = Some(Id[User](44)), firstName = "Eishay", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61483"))
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(eishay)
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+        val controller = inject[MobileMessagingController]
+        val sendMessageAction = controller.sendMessageAction()
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
+        }
+
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
+        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+
+        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("text/plain")
+        val runners = inject[WatchableExecutionContext].drain()
+        //yes! 41 futures where created to get this test to pass! You can remove or edit the next line if it breaks test, just a nice to know
+        runners === 41
+
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
+        }
+      }
+    }
 
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
