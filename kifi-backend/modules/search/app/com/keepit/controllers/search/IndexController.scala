@@ -7,7 +7,6 @@ import com.keepit.search.graph.library.LibraryIndexerPlugin
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import com.keepit.search.article.ArticleIndexerPlugin
-import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.user._
 import com.keepit.search.user.UserIndexerPlugin
@@ -16,7 +15,6 @@ import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 
 class IndexController @Inject() (
     articleIndexerPlugin: ArticleIndexerPlugin,
-    uriGraphPlugin: URIGraphPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
     userGraphPlugin: UserGraphPlugin,
@@ -40,7 +38,6 @@ class IndexController @Inject() (
   def listIndexInfo() = Action { implicit request =>
     val infos = (
       articleIndexerPlugin.indexInfos ++
-      uriGraphPlugin.indexInfos ++
       collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++
       userGraphPlugin.indexInfos ++
