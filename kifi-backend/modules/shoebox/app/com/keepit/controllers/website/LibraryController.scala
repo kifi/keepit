@@ -96,6 +96,12 @@ class LibraryController @Inject() (
     }
   }
 
+  def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryById(request.userIdOpt, id)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+  }
+
   def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
       case Right(library) =>
