@@ -236,10 +236,12 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
         val take = Math.min(count, 30)
-        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
-        val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
-
-        keepInfosF.map { keepInfos =>
+        val numKeepsF = libraryCommander.getKeepsCount(libraryId)
+        for {
+          keeps <- libraryCommander.getKeeps(libraryId, take, offset)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
+          numKeeps <- numKeepsF
+        } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
         }
     }

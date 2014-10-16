@@ -44,6 +44,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def countByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new CountByLibraryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def latestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LatestKeepUriCache(stats, accessLog, (outerRepo, 7 days))
 
