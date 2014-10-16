@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import com.keepit.commanders._
 import com.keepit.common.net.URISanitizer
 import com.keepit.heimdal._
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._

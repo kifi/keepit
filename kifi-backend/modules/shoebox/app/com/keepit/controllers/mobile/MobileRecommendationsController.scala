@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent

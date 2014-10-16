@@ -60,8 +60,8 @@ angular.module('kifi')
 
         scope.$watch(function () {
           return scope.forceClose;
-        }, function (newVal) {
-          if (newVal) {
+        }, function (newVal, oldVal) {
+          if (!oldVal && newVal) {
             scope.close();
           }
         });

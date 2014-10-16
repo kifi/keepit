@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, UserActions, UserActionsHelper, SearchServiceController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, SearchServiceController }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User

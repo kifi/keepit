@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 
 import com.keepit.commanders._
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.net.URI
 import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global

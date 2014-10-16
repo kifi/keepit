@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.logging.Logging
 import com.keepit.search.message.MessageSearchCommander
 
