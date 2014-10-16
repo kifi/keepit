@@ -8,6 +8,10 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class KFilterQuery extends Query {
 
+  def label: String
+
+  protected def label(operator: String, operand: String) = """%s:"%s"""".format(operator, operand)
+
   val subQuery: Query
 
   override def createWeight(searcher: IndexSearcher): Weight = {
@@ -46,6 +50,7 @@ object KSiteQuery {
 }
 
 class KSiteQuery(term: Term) extends KFilterQuery {
+  def label: String = label("site", term.text())
   override val subQuery = new TermQuery(term)
   override def toString(s: String) = "site(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }
@@ -62,6 +67,7 @@ object KMediaQuery {
 }
 
 class KMediaQuery(term: Term) extends KFilterQuery {
+  def label: String = label("media", term.text())
   override val subQuery = new TermQuery(term)
   override def toString(s: String) = "media(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }
@@ -78,6 +84,7 @@ object KTagQuery {
 }
 
 class KTagQuery(term: Term) extends KFilterQuery {
+  def label: String = label("tag", term.text())
   override val subQuery = new TermQuery(term)
   override def toString(s: String) = "tag(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }

@@ -97,7 +97,7 @@ trait KQueryExpansion extends QueryParser {
       }
     }
 
-    val textQuery = new KTextQuery
+    val textQuery = new KTextQuery(queryText)
     textQueries += textQuery
 
     super.getFieldQuery("t", queryText, quoted).foreach { q =>
@@ -246,7 +246,7 @@ object KConcatQueryAdder {
   // side effect
   def addConcatQueries(queries: ArrayBuffer[(QuerySpec, KTextQuery)], concatBoost: Float) {
 
-    val emptyQuery = new KTextQuery
+    val emptyQuery = new KTextQuery("")
     var prevTextQuery: KTextQuery = null
     queries.foreach {
       case (spec, currTextQuery) =>

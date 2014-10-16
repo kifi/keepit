@@ -5,8 +5,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.explain.{ ScoreDetailCollector, Explanation }
 import com.keepit.search.engine.result._
-import org.apache.lucene.search.{ Explanation, Query }
 import scala.concurrent.{ Future, Promise }
 
 class KifiSearchNonUserImpl(
@@ -78,7 +78,17 @@ class KifiSearchNonUserImpl(
     }
   }
 
-  def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    throw new UnsupportedOperationException("explanation is not supported yet")
+  def explain(uriId: Id[NormalizedURI]): Explanation = {
+    val engine = engineBuilder.build()
+    val labels = engineBuilder.getQueryLabels()
+    val query = engine.getQuery()
+    val collector = new ScoreDetailCollector(uriId.id)
+
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, -1L, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
+
+    engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
+
+    Explanation(query, labels, collector.get())
   }
 }

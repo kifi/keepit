@@ -9,6 +9,8 @@ import java.util.{ Set => JSet }
 
 class KWrapperQuery(private val subQuery: Query) extends Query with Logging {
 
+  val label = subQuery.toString
+
   override def createWeight(searcher: IndexSearcher): Weight = {
     new KWrapperWeight(this, subQuery.createWeight(searcher))
   }
