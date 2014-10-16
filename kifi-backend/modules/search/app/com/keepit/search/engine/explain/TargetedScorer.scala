@@ -7,7 +7,7 @@ object TargetedScorer {
 
   def apply(readerContext: AtomicReaderContext, weight: Weight, targetId: Long, resolver: Resolver) = {
     val subScorer = weight.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
-    new TargetedScorer(weight, subScorer, targetId, resolver)
+    if (subScorer != null) new TargetedScorer(weight, subScorer, targetId, resolver) else null
   }
 
   trait Resolver {

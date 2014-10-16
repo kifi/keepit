@@ -93,7 +93,6 @@ class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
-    mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
     compatibilitySupport: SearchBackwardCompatibilitySupport,
     airbrake: AirbrakeNotifier,
@@ -220,43 +219,25 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
-    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+    val future = distSearch2(
+      localShards,
+      userId,
+      firstLang,
+      secondLang,
+      experiments,
+      query,
+      filter,
+      LibraryContext.None,
+      maxHits,
+      context,
+      predefinedConfig,
+      debug)
+    val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
 
-    if (config.asBoolean("newEngine") == true) {
-      val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
-      val future = distSearch2(
-        localShards,
-        userId,
-        firstLang,
-        secondLang,
-        experiments,
-        query,
-        filter,
-        LibraryContext.None,
-        maxHits,
-        context,
-        predefinedConfig,
-        debug)
+    val result = monitoredAwait.result(future, 3 seconds, "getting result")
+    val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
 
-      val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-      val result = monitoredAwait.result(future, 3 seconds, "getting friend ids")
-      return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
-    }
-
-    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-
-    val searchers = mainSearcherFactory(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-
-    val future = Future.traverse(searchers) { searcher =>
-      if (debug.isDefined) searcher.debug(debug.get)
-
-      SafeFuture { searcher.search() }
-    }
-    val results = monitoredAwait.result(future, 10 seconds, "slow search")
-
-    val resultMerger = new ResultMerger(false, config, false)
-    resultMerger.merge(results, maxHits)
+    compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
   }
 
   def search2(
@@ -457,10 +438,10 @@ class SearchCommanderImpl @Inject() (
     var _postsearch = 0L
     var _endTime = 0L
 
-    def presearch: Unit = { _presearch = System.currentTimeMillis() }
-    def search: Unit = { _search = System.currentTimeMillis() }
-    def postsearch: Unit = { _postsearch = System.currentTimeMillis() }
-    def done: Unit = { _endTime = System.currentTimeMillis() }
+    def presearch(): Unit = { _presearch = System.currentTimeMillis() }
+    def search(): Unit = { _search = System.currentTimeMillis() }
+    def postsearch(): Unit = { _postsearch = System.currentTimeMillis() }
+    def done(): Unit = { _endTime = System.currentTimeMillis() }
 
     def elapsed(time: Long = System.currentTimeMillis()): Long = (time - _startTime)
 
