@@ -20,9 +20,10 @@ import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.concurrent.{ ExecutionContext, Promise, Await, Future }
+import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
@@ -58,8 +59,7 @@ class MessagingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
-    messageSearchHistoryRepo: MessageSearchHistoryRepo,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
     //get all involved users
@@ -457,7 +457,6 @@ class MessagingCommander @Inject() (
       newUserParticipants <- newUserParticipantsFuture
       newNonUserParticipants <- newNonUserParticipantsFuture
     } yield {
-
       val resultInfoOpt = db.readWrite { implicit session =>
 
         val oldThread = threadRepo.get(threadExtId)
@@ -475,6 +474,7 @@ class MessagingCommander @Inject() (
           None
         } else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
+
           val message = messageRepo.save(Message(
             from = MessageSender.System,
             thread = thread.id.get,

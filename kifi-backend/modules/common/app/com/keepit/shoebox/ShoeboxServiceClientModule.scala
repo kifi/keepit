@@ -8,8 +8,6 @@ import com.keepit.common.service.ServiceType
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 
-import scala.concurrent.ExecutionContext
-
 trait ShoeboxServiceClientModule extends ScalaModule
 
 case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
@@ -19,14 +17,13 @@ case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
   @Singleton
   @Provides
   def shoeboxServiceClient(
-    executionContext: ExecutionContext,
     client: HttpClient,
     cacheProvider: ShoeboxCacheProvider,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
-      client, airbrakeNotifier, cacheProvider, executionContext
+      client, airbrakeNotifier, cacheProvider
     )
   }
 
