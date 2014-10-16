@@ -7,6 +7,10 @@
 
 @explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
 
+<h4>Boost Values</h4>
+
+@Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
+
 <h4>Score Details</h4>
 
-@Html(explanation.map(_.toHtml).getOrElse("<ul><li>none</li></ul>"))
+@Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
