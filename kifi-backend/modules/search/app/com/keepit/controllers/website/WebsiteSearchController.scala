@@ -110,9 +110,9 @@ class WebsiteSearchController @Inject() (
             }
 
             for {
-              users <- futureUsers
+              usersById <- futureUsers
               jsHits <- futureJsHits
-            } yield (jsHits, users, libraries)
+            } yield (jsHits, userIds.map(usersById(_)), libraries)
           }
         }
       }
