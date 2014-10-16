@@ -2,6 +2,7 @@ package com.keepit.common.controller
 
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeError
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
@@ -109,7 +110,7 @@ trait SecureSocialHelper {
 trait UserActionsHelper extends UserActionsRequirements {
 
   protected def getUserIdFromRequest(implicit request: Request[_]): Option[Id[User]] = {
-    request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
+    request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
   }
 
   def getUserIdOpt(implicit request: Request[_]): Future[Option[Id[User]]] = {
@@ -178,7 +179,7 @@ trait UserActions extends Logging { self: Controller =>
     userActionsHelper.getUserIdOpt map { userIdOpt =>
       userIdOpt match {
         case Some(id) if id == userId => res
-        case _ => res.withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
+        case _ => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
       }
     }
   }
@@ -258,3 +259,9 @@ trait AdminUserActions extends UserActions with ShoeboxServiceController {
   val AdminUserPage = (AdminUserAction andThen PageAction)
 
 }
+
+object KifiSession {
+  val FORTYTWO_USER_ID = "fortytwo_user_id"
+}
+
+case class ReportedException(id: ExternalId[AirbrakeError], cause: Throwable) extends Exception(id.toString, cause)
