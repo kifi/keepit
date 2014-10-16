@@ -11,6 +11,8 @@ angular.module('kifi')
       replace: true,
       link: function (scope, element, attrs) {
 
+        var visible = false;
+
         var container = element.parent();
         container.addClass("kf-tooltipped");
         var $w = angular.element($window);
@@ -29,6 +31,7 @@ angular.module('kifi')
 
         function applyPosition(pos) {
           var parentPos = container[0].getBoundingClientRect();
+          console.log(el.outerHeight());
           switch (pos) {
             case 'top':
               el.css({
@@ -71,25 +74,42 @@ angular.module('kifi')
           for (var i=0; i<poss.length && !fullyOnScreen(); i++) {
             applyPosition(poss[i]);
           }
-
-
-
-
         }
 
         function trackScroll() {
-          if (el.css('visibility') === 'visible') {
+          if (visible && el.css('visibility') === 'visible') {
             ensureCorrectPositioning();
           }
         }
 
-        container.on('mouseenter', ensureCorrectPositioning);
+        function onMouseEnter() {
+          visible = true;
+          $timeout(function (){
+            el.css({ //WARNING HACK (causing the element to be layed out so I can get the size correctly in the next event. Better ideas appreciated.)
+              top: '42px',
+              left: '42px'
+            });
+            $timeout(ensureCorrectPositioning);
+          });
+        }
+
+        function onMouseLeave() {
+          visible = false;
+        }
+
+        container.on('mouseenter', onMouseEnter);
+        container.on('mouseleave', onMouseLeave)
         $w.on('scroll', trackScroll);
 
         scope.$on('$destroy', function () {
-          container.off("mouseenter", ensureCorrectPositioning);
+          container.off('mouseenter', ensureCorrectPositioning);
+          container.off('mouseleave', onMouseLeave);
           $w.off('scroll', trackScroll);
         });
+
+        scope.showing = function() {
+          return visible;
+        }
 
       }
     };

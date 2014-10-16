@@ -125,6 +125,9 @@ angular.module('kifi')
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
       },
+      getLibrarySummaryById: function (libraryId) {
+        return route('/libraries/' + libraryId + '/summary');
+      },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
         return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
       },

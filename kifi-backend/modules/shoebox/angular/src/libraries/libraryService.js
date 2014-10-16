@@ -8,7 +8,7 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
-    var librarySummariesService = new Clutch(function () {
+    var userLibrarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
         var invites = res.data.invited || [];
@@ -36,6 +36,22 @@ angular.module('kifi')
         util.replaceArrayInPlace(invitedSummaries, invites);
         return res.data;
       });
+    });
+
+    var librarySummaryService = new Clutch(function (libraryId) {
+      var mayBeLib = _.find(librarySummaries, function (l) {
+        return l.id === libraryId;
+      });
+      if (mayBeLib) {
+        return $q.when({
+          library: mayBeLib,
+          membership: mayBeLib.access
+        })
+      } else {
+        return $http.get(routeService.getLibrarySummaryById(libraryId)).then(function (res) {
+          return res.data;
+        });
+      }
     });
 
     var libraryByIdService = new Clutch(function (libraryId) {
@@ -103,9 +119,9 @@ angular.module('kifi')
 
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
-          librarySummariesService.expire();
+          userLibrarySummariesService.expire();
         }
-        return librarySummariesService.get();
+        return userLibrarySummariesService.get();
       },
 
       getLibraryById: function (libraryId, invalidateCache) {
@@ -113,6 +129,13 @@ angular.module('kifi')
           libraryByIdService.expire(libraryId);
         }
         return libraryByIdService.get(libraryId);
+      },
+
+      getLibrarySummaryById: function (libraryId, invalidateCache) {
+        if (invalidateCache) {
+          librarySummaryService.expire(libraryId);
+        }
+        return librarySummaryService.get(libraryId);
       },
 
       getLibraryByPath: function (path) { // path is of the form /username/library-slug

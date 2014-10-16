@@ -120,13 +120,9 @@
                                      'other':' {} followers'}"></ng-pluralize>
               </div>
             </div>
-            <div kf-tooltip position="right">
+            <div kf-tooltip position="right" padding="3">
               <div kf-library-mini-card
-                curator-name="library.owner.firstName + ' ' + library.owner.lastName"
-                curator-image="library.owner.image"
-                library-name="library.firstLine + ' ' + library.secondLine"
-                num-keeps="library.numKeeps"
-                num-followers="library.numFollowers"
+                library-id="library.id"
               ></div>
             </div>
           </a>

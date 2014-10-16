@@ -1,9 +1,6 @@
 <div class="kf-keep-who-pics">
   <span class="kf-keep-who-pic-box">
     <span class="kf-keep-who-pic me" title="You! You look great!" ng-attr-style="background-image: url({{getPicUrl(me)}})" ng-if="keep.isMyBookmark"></span>
-    <div kf-tooltip position="top" padding="10">
-      <div kf-library-mini-card></div>
-    </div>
   </span>
   <span kf-keep-who-pic keeper="keeper" ng-repeat="keeper in keep.keepers | limitTo: 9"></span>
 </div>
