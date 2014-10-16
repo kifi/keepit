@@ -11,7 +11,6 @@ import com.keepit.inject.AppScoped
 import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
 import com.keepit.search.article._
-import com.keepit.search.graph._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
@@ -65,7 +64,6 @@ trait IndexModule extends ScalaModule with Logging {
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
-    bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]

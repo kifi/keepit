@@ -62,12 +62,6 @@ POST        /internal/search/events/browsed/:userId        @com.keepit.controlle
 GET         /internal/search/updateKeepIndex        @com.keepit.controllers.search.IndexController.updateKeepIndex()
 GET         /internal/search/updateLibraryIndex     @com.keepit.controllers.search.IndexController.updateLibraryIndex()
 
-POST        /internal/search/uriGraph/update        @com.keepit.controllers.search.URIGraphController.updateURIGraph()
-POST        /internal/search/uriGraph/reindex        @com.keepit.controllers.search.URIGraphController.reindex()
-POST        /internal/search/uriGraph/dumpDoc/:id        @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
-
-POST        /internal/search/collection/dumpDoc        @com.keepit.controllers.search.URIGraphController.dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User])
-
 POST        /internal/search/user/reindex        @com.keepit.controllers.search.UserIndexController.reindex()
 POST        /internal/search/user/update        @com.keepit.controllers.search.UserIndexController.update()
 POST        /internal/search/userGraph/update        @com.keepit.controllers.search.UserGraphController.updateUserGraph()
