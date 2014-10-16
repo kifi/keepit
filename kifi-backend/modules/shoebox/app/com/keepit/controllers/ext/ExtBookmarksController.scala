@@ -211,6 +211,7 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
+  // deprecated, remove after users are switched to libraries - Andrew (Oct 14 2014)
   def addBookmarks() = UserAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId

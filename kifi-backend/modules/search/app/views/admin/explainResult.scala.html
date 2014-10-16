@@ -1,6 +1,12 @@
-@(query: String, userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[(org.apache.lucene.search.Query, org.apache.lucene.search.Explanation)])
+@(userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[com.keepit.search.engine.explain.Explanation])
 
-<h3>Explaining [@query] for User:@userId, URI=@uriId</h3>
 
-<h4>@explanation.map(_._1.toString).getOrElse("none")</h4>
-@Html(explanation.map(_._2.toHtml).getOrElse("<ul><li>none</li></ul>"))
+<h3>Explaining for User:@userId, URI=@uriId</h3>
+
+<h4>Query</h4>
+
+@explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
+
+<h4>Score Details</h4>
+
+@Html(explanation.map(_.toHtml).getOrElse("<ul><li>none</li></ul>"))

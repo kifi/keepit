@@ -263,6 +263,31 @@ angular.module('kifi')
       return deferred.promise;
     }
 
+    function uploadBookmarkFileToLibraryHelper(file, libraryId) {
+      var deferred = $q.defer();
+      if (file) {
+        var xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+        xhr.upload.addEventListener('progress', function (e) {
+          deferred.notify({'name': 'progress', 'event': e});
+        });
+        xhr.addEventListener('load', function () {
+          deferred.resolve(JSON.parse(xhr.responseText));
+        });
+        xhr.addEventListener('error', function (e) {
+          deferred.reject(e);
+        });
+        xhr.addEventListener('loadend', function (e) {
+          deferred.notify({'name': 'loadend', 'event': e});
+        });
+        xhr.open('POST', routeService.uploadBookmarkFileToLibrary(libraryId), true);
+        xhr.send(file);
+      } else {
+        deferred.reject({'error': 'no file'});
+      }
+      return deferred.promise;
+    }
+
     $scope.uploadBookmarkFile = function ($event, makePublic) {
       if (!$scope.disableBookmarkImport) {
         var $file = $rootElement.find('.bookmark-file-upload');
@@ -316,20 +341,55 @@ angular.module('kifi')
     };
 
     $scope.importBookmarkFileToLibrary = function (library) {
-      $scope.forceClose = true;
+      if (!$scope.disableBookmarkImport) {
+        var $file = $rootElement.find('.bookmark-file-upload');
+        var file = $file && $file[0] && $file[0].files && $file[0].files[0];
+        if (file) {
+          $scope.disableBookmarkImport = true;
 
-      $scope.$evalAsync(function () {
-        // This check is a fake check. Remove when we have real endpoints.
-        if (library) {
-          modalService.open({
-            template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
+          $analytics.eventTrack('user_clicked_page', {
+            'type': '3rdPartyImport',
+            'action': 'ImportToLibrary'  // TODO: update this when we have the full tracking spec.
+          });
+
+          var tooSlowTimer = $timeout(function () {
+            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight.';
+            $scope.disableBookmarkImport = false;
+          }, 20000);
+
+          $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
+          $scope.importFilename = '';
+
+          uploadBookmarkFileToLibraryHelper(file, library.id).then(function success(result) {
+            $timeout.cancel(tooSlowTimer);
+            $scope.importFileStatus = '';
+
+            $scope.forceClose = true;
+
+            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // opening the next modal.
+            $scope.$evalAsync(function () {
+              if (!result.error) { // success!
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
+                });
+              } else { // hrmph.
+                modalService.open({
+                  template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
+                });
+              }
+            });
+
+          }, function fail() {
+            $timeout.cancel(tooSlowTimer);
+            $scope.disableBookmarkImport = false;
+            $scope.importFileStatus = 'We may have had problems with your links. Reload the page to see if they’re coming in. ' +
+              'If not, please contact support so we can fix it.';
           });
         } else {
-          modalService.open({
-            template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
-          });
+          $scope.importFileStatus = 'Hm, couldn’t upload your file. Try picking it again.';
         }
-      });
+      }
     };
 
     $scope.cancelBookmarkUpload = function () {
@@ -366,9 +426,7 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    $scope.showDelightedSurvey = function () {
-      return profileService.prefs && profileService.prefs.show_delighted_question;
-    };
+    $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
 
     /**
      * Make the page "extension-friendly"

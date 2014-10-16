@@ -34,6 +34,7 @@ class LibraryCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
+    libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
@@ -51,6 +52,51 @@ class LibraryCommander @Inject() (
     contextBuilderFactory: HeimdalContextBuilderFactory,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
+
+  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
+    db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      val numKeeps = keepRepo.getCountByLibrary(libraryId)
+      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
+      (keeps, numKeeps)
+    }
+  }
+
+  def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
+    val membership: Option[LibraryMembership] = db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+    }
+    membership.map(_.access.value)
+  }
+
+  def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
+    future {
+      db.readWrite { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map { mem =>
+          libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
+        }
+      }
+    }
+  }
+
+  def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
+    val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
+    createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
+      val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
+      (libInfo, accessStr)
+    }
+  }
+
+  def getLibrarySummaryById(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
+    val libInfo = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(id)
+      val owner = basicUserRepo.load(lib.ownerId)
+      val numKeeps = keepRepo.getCountByLibrary(id)
+      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
+    }
+    val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
+    (libInfo, accessStr)
+  }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
     db.readOnlyReplica { implicit s =>
@@ -328,7 +374,17 @@ class LibraryCommander @Inject() (
           )
 
           // send emails to both users & non-users
-          key._2.map(libraryInviteSender.get.inviteUserToLibrary)
+          key._2.map { invite =>
+            invite.userId match {
+              case Some(id) =>
+                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, key._2.length)
+                Left(id)
+              case _ =>
+                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, key._2.length)
+                Right(invite.emailAddress.get)
+            }
+            libraryInviteSender.get.inviteUserToLibrary(invite)
+          }
         }.toSeq.flatten
     }
     val emailsF = Future.sequence(emailFutures)

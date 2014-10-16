@@ -11,4 +11,12 @@ public final class Visibility { // use value class?
   //  unused = 0x10
   public static final int HAS_SECONDARY_ID = 0x20;
   // unused = 0x40
+
+  public static String name(int visibility) {
+    if ((visibility & Visibility.OWNER) != 0) return "owner";
+    if ((visibility & Visibility.MEMBER) != 0) return "member";
+    if ((visibility & Visibility.NETWORK) != 0) return "network";
+    if ((visibility & Visibility.OTHERS) != 0) return "others";
+    return "restricted";
+  }
 }

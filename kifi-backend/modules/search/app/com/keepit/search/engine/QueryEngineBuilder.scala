@@ -33,6 +33,8 @@ class QueryEngineBuilder(coreQuery: Query) {
     new QueryEngine(_final._1, _final._2, _final._3, _core._3, _core._4)
   }
 
+  def getQueryLabels(): Array[String] = buildLabels()
+
   private[this] def buildFinal(): (ScoreExpr, Query, Int) = {
     built = true
     val (query, expr, totalSize, noClickBoostNoSharingBoost) = _boosters.foldLeft(_core) {
@@ -90,5 +92,39 @@ class QueryEngineBuilder(coreQuery: Query) {
       case q =>
         (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
     }
+  }
+
+  private[this] def buildLabels(): Array[String] = {
+    built = true
+
+    val labels = new ArrayBuffer[String]
+
+    coreQuery match {
+      case booleanQuery: KBooleanQuery =>
+        booleanQuery.clauses.foreach { clause =>
+          val label = {
+            clause.getOccur match {
+              case MUST_NOT => s"${clause.getQuery.asInstanceOf[KTextQuery].label} (-)"
+              case occur =>
+                clause.getQuery match {
+                  case q: KFilterQuery => q.label
+                  case q: KTextQuery => if (occur == MUST) s"${q.label} (+)" else q.label
+                  case q => q.toString
+                }
+            }
+          }
+          labels += label
+        }
+
+      case textQuery: KTextQuery => labels += textQuery.label
+
+      case tagQuery: KFilterQuery => labels += tagQuery.label
+
+      case q => labels += q.toString
+    }
+
+    _boosters.foreach { case (q, _) => labels += q.toString }
+
+    labels.toArray
   }
 }

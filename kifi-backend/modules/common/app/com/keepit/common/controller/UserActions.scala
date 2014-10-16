@@ -14,10 +14,24 @@ import securesocial.core.{ UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
 
-sealed trait MaybeUserRequest[T] extends Request[T]
+sealed trait MaybeUserRequest[T] extends Request[T] {
+  // for backward compatibility only; use UserRequest/NonUserRequest where possible
+  def userIdOpt: Option[Id[User]] = this match {
+    case ur: UserRequest[T] => Some(ur.userId)
+    case _ => None
+  }
+  def userOpt: Option[User] = this match {
+    case ur: UserRequest[T] => Some(ur.user)
+    case _ => None
+  }
+  def identityOpt: Option[Identity] = this match {
+    case ur: UserRequest[T] => ur.identityOpt
+    case nr: NonUserRequest[_] => nr.identityOpt
+  }
+}
 
 case class NonUserRequest[T](request: Request[T], private val identityF: () => Option[Identity] = () => None) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] {
-  def identityOpt: Option[Identity] = identityF.apply()
+  override def identityOpt: Option[Identity] = identityF.apply()
 }
 
 case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Option[Id[User]], helper: UserActionsHelper) extends WrappedRequest[T](request) with MaybeUserRequest[T] with SecureSocialIdentityAccess[T] with MaybeCostlyUserAttributes[T] {
@@ -40,7 +54,7 @@ case class UserRequest[T](request: Request[T], userId: Id[User], adminUserId: Op
 
   private val identityOpt0: Lazily[Option[Identity]] = new Lazily(helper.getSecureSocialIdentityOpt(userId))
   def identityOptF = identityOpt0.get
-  def identityOpt = identityOpt0.awaitGet
+  override def identityOpt = identityOpt0.awaitGet
 
   lazy val kifiInstallationId: Option[ExternalId[KifiInstallation]] = helper.getKifiInstallationIdOpt
 }
@@ -142,20 +156,22 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   private def maybeAugmentKcid[A](res: Result)(implicit request: Request[A]): Result = { // for campaign tracking
-    request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
-      res.addingToSession("kcid" -> kcid)(request)
-    } getOrElse {
-      val referrer: String = request.headers.get("Referer").flatMap { ref =>
-        URI.parse(ref).toOption.flatMap(_.host).map(_.name)
-      } getOrElse ("na")
-      request.session.get("kcid").map { existingKcid =>
-        if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
-          res.addingToSession("kcid" -> s"organic-$referrer")(request)
-        } else res
+    Play.maybeApplication.map { app =>
+      request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
+        res.addingToSession("kcid" -> kcid)(request)
       } getOrElse {
-        res.addingToSession("kcid" -> s"organic-$referrer")(request)
+        val referrer: String = request.headers.get("Referer").flatMap { ref =>
+          URI.parse(ref).toOption.flatMap(_.host).map(_.name)
+        } getOrElse ("na")
+        request.session.get("kcid").map { existingKcid =>
+          if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
+            res.addingToSession("kcid" -> s"organic-$referrer")(request)
+          } else res
+        } getOrElse {
+          res.addingToSession("kcid" -> s"organic-$referrer")(request)
+        }
       }
-    }
+    } getOrElse res
   }
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Future[Result] = {

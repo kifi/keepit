@@ -24,13 +24,12 @@ object ExtSearchController {
 }
 
 class ExtSearchController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
+    val userActionsHelper: UserActionsHelper,
     val shoeboxClient: ShoeboxServiceClient,
     augmentationCommander: AugmentationCommander,
     libraryIndexer: LibraryIndexer,
     searchCommander: SearchCommander,
-    val userActionsHelper: UserActionsHelper,
-    implicit val publicIdConfig: PublicIdConfiguration) extends BrowserExtensionController(actionAuthenticator) with UserActions with SearchServiceController with SearchControllerUtil with Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   import ExtSearchController._
 
@@ -46,7 +45,7 @@ class ExtSearchController @Inject() (
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None,
-    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+    withUriSummary: Boolean = false) = UserAction { request =>
 
     val userId = request.userId
     val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
@@ -106,7 +105,7 @@ class ExtSearchController @Inject() (
   }
 
   //external (from the extension)
-  def warmUp() = JsonAction.authenticated { request =>
+  def warmUp() = UserAction { request =>
     searchCommander.warmUp(request.userId)
     Ok
   }

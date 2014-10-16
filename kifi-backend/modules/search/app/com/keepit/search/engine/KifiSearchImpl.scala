@@ -5,10 +5,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.explain.{ ScoreDetailCollector, Explanation }
 import com.keepit.search.engine.result._
 import com.keepit.search.engine.result.KifiResultCollector._
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Explanation
 import scala.math._
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
@@ -148,7 +147,17 @@ class KifiSearchImpl(
     KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
-  def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    throw new UnsupportedOperationException("explanation is not supported yet")
+  def explain(uriId: Id[NormalizedURI]): Explanation = {
+    val engine = engineBuilder.build()
+    val labels = engineBuilder.getQueryLabels()
+    val query = engine.getQuery()
+    val collector = new ScoreDetailCollector(uriId.id)
+
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
+
+    engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
+
+    Explanation(query, labels, collector.get())
   }
 }

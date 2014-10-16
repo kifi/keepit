@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -20,6 +21,9 @@ import play.api.mvc.BodyParsers
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 import ImplicitHelper._
+import com.keepit.common.core._
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 
 class LibraryController @Inject() (
   db: Database,
@@ -77,46 +81,38 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)) { request =>
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
-    libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-      case Right(success) => Ok(JsString("success"))
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
     }
   }
 
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
-    val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-    libraryCommander.createFullLibraryInfo(request.userIdOpt, lib).map { libInfo =>
-      val accessStr = request.userIdOpt.map { userId =>
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
-        }.map(_.access.value)
-      }.flatten.getOrElse {
-        "none"
-      }
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    libraryCommander.getLibraryById(request.userIdOpt, id) map {
+      case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
+  }
+
+  def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryById(request.userIdOpt, id)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
-          request.userIdOpt.map { userId =>
-            db.readWrite { implicit s =>
-              libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId).map { mem =>
-                libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
-              }
-            }
-          }
+          request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, library).map { libInfo =>
             val accessStr = request.userIdOpt.map { userId =>
-              db.readOnlyMaster { implicit s =>
-                libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, userId)
-              }.map(_.access.value)
+              libraryCommander.getAccessStr(userId, library.id.get)
             }.flatten.getOrElse {
               "none"
             }
@@ -240,12 +236,7 @@ class LibraryController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
         val take = Math.min(count, 30)
-        val (keeps, numKeeps) = db.readOnlyReplica { implicit session =>
-          val lib = libraryRepo.get(libraryId)
-          val numKeeps = keepRepo.getCountByLibrary(libraryId)
-          val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-          (keeps, numKeeps)
-        }
+        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
         val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
 
         keepInfosF.map { keepInfos =>
@@ -416,10 +407,18 @@ class LibraryController @Inject() (
     }
   }
 
-  def searchLibraryTags(pubId: PublicId[Library], query: String, limit: Option[Int] = None) = UserAction.async { request =>
-    val libraryId = Library.decodePublicId(pubId).get
-    keepsCommander.searchLibraryTags(libraryId, query, limit).map { hashTagResults =>
-      Ok(Json.obj("results" -> hashTagResults))
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = if (query.trim.isEmpty) {
+      val libraryId = Library.decodePublicId(pubId).get
+      val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+      keepsCommander.suggestTags(request.userId, libraryId, uriId, limit).map(_.map((_, Seq.empty[(Int, Int)])))
+    } else {
+      keepsCommander.searchTags(request.userId, query, limit).map(_.map(hit => (hit.tag, hit.matches)))
+    }
+    futureTagsAndMatches.imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
     }
   }
 

@@ -67,7 +67,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
-          inject[FakeActionAuthenticator].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user)
         }
 
         val payload = Json.obj("oldPassword" -> "welcome", "newPassword" -> "welcome1")
@@ -139,7 +139,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         ctrl.method === "GET"
 
         val controller = inject[MobileUserController]
-        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
         val call = controller.currentUser
         val result = call(FakeRequest())
@@ -157,7 +157,11 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "experiments":["admin"],
               "clickCount":0,
               "rekeepCount":0,
-              "rekeepTotalCount":0
+              "rekeepTotalCount":0,
+              "friendCount": 0,
+              "keepCount": 0,
+              "libCount": 0,
+              "libFollowerCount": 0
             }
           """)
 
@@ -171,7 +175,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
           inject[UserRepo].save(User(firstName = "James", lastName = "Franco"))
         }
 
-        inject[FakeActionAuthenticator].setUser(user)
+        inject[FakeUserActionsHelper].setUser(user)
 
         val ctrl = com.keepit.controllers.mobile.routes.MobileUserController.basicUserInfo(user.externalId, true)
         ctrl.toString === s"/m/1/user/${user.externalId}?friendCount=true"
@@ -200,7 +204,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         ctrl.method === "POST"
 
         val controller = inject[MobileUserController]
-        inject[FakeActionAuthenticator].setUser(user, Set())
+        inject[FakeUserActionsHelper].setUser(user, Set())
 
         val bodyInput = Json.parse("""
           {
@@ -225,7 +229,11 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "experiments":[],
               "clickCount":0,
               "rekeepCount":0,
-              "rekeepTotalCount":0
+              "rekeepTotalCount":0,
+              "friendCount": 0,
+              "keepCount": 0,
+              "libCount": 0,
+              "libFollowerCount": 0
             }
           """)
 
@@ -240,7 +248,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         route === "/m/1/user/friendsDetails"
 
         val (user1965, friends) = setupSomeUsers()
-        inject[FakeActionAuthenticator].setUser(user1965)
+        inject[FakeUserActionsHelper].setUser(user1965)
         val mobileController = inject[MobileUserController]
         val result = mobileController.friends(0, 1000)(FakeRequest())
         status(result) must equalTo(OK)
@@ -269,7 +277,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = SocialNetworks.FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
-          inject[FakeActionAuthenticator].setUser(user)
+          inject[FakeUserActionsHelper].setUser(user)
         }
         val mobileController = inject[MobileUserController]
         val result = mobileController.socialNetworkInfo()(FakeRequest())

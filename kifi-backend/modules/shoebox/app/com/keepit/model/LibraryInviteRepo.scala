@@ -13,6 +13,8 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+  def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
+  def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
   def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)]
   def getByEmailAddress(email: EmailAddress, excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
@@ -53,14 +55,32 @@ class LibraryInviteRepoImpl @Inject() (
     }
   }
 
+  private def getWithLibraryIdCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt)
+  }
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
+    getWithLibraryIdCompiled(libraryId, excludeState).list
+  }
+
+  private def getWithUserIdCompiled(userId: Column[Id[User]], excludeState: Option[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt)
   }
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
-    (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
+    getWithUserIdCompiled(userId, excludeState).list
+  }
+
+  private def getWithLibraryIdAndUserIdCompiled(libraryId: Column[Id[Library]], userId: Column[Id[User]], excludeState: Option[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt)
   }
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
-    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
+    getWithLibraryIdAndUserIdCompiled(libraryId, userId, excludeState).list
+  }
+
+  def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int = {
+    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && !b.state.inSet(excludeSet)) yield b).sortBy(_.createdAt).length.run
+  }
+  def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int = {
+    (for (b <- rows if b.libraryId === libraryId && b.emailAddress === email && !b.state.inSet(excludeSet)) yield b).sortBy(_.createdAt).length.run
   }
 
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {

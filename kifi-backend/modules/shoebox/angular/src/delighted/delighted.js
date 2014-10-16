@@ -7,11 +7,12 @@ angular.module('kifi')
   function ($timeout, $analytics, profileService) {
     return {
       restrict: 'A',
-      scope: {},
+      scope: {
+        showSurvey: '='
+      },
       templateUrl: 'delighted/delightedSurvey.tpl.html',
       link: function (scope, element) {
         scope.delighted = {};
-        scope.showSurvey = true;
 
         var answerId = null;
 
@@ -67,7 +68,7 @@ angular.module('kifi')
         };
 
         function hideSurvey() {
-          element.find('.kf-delighted-wrap').addClass('hide');
+          scope.showSurvey = false;
         }
 
         function submitAnswer() {

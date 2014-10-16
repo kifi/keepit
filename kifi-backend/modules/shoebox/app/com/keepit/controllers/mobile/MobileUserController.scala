@@ -1,14 +1,14 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
+import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.commanders._
 import com.keepit.social.BasicUser
 
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.libs.json.Json.toJson
 
@@ -17,7 +17,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import securesocial.core.{ SecureSocial, Authenticator }
 import play.api.libs.json.JsSuccess
-import com.keepit.common.controller.AuthenticatedRequest
 import scala.util.Failure
 import com.keepit.commanders.ConnectionInfo
 import scala.util.Success
@@ -25,15 +24,18 @@ import play.api.libs.json.JsObject
 import com.keepit.common.http._
 
 class MobileUserController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
+  val userActionsHelper: UserActionsHelper,
   userCommander: UserCommander,
   typeaheadCommander: TypeaheadCommander,
+  keepCountCache: KeepCountCache,
+  keepRepo: KeepRepo,
+  libraryRepo: LibraryRepo,
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
   db: Database)
-    extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    extends UserActions with ShoeboxServiceController {
 
-  def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
+  def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = connectionsPage.map {
       case ConnectionInfo(friend, _, unfriended, unsearched) =>
@@ -48,17 +50,17 @@ class MobileUserController @Inject() (
     ))
   }
 
-  def socialNetworkInfo() = JsonAction.authenticated { request =>
+  def socialNetworkInfo() = UserAction { request =>
     Ok(Json.toJson(userCommander.socialNetworkInfo(request.userId)))
   }
 
-  def abookInfo() = JsonAction.authenticatedAsync { request =>
+  def abookInfo() = UserAction.async { request =>
     userCommander.getGmailABookInfos(request.userId) map { abooks =>
       Ok(Json.toJson(abooks))
     }
   }
 
-  def uploadContacts(origin: ABookOriginType) = JsonAction.authenticatedAsync(parse.json(maxLength = 1024 * 50000)) { request =>
+  def uploadContacts(origin: ABookOriginType) = UserAction.async(parse.json(maxLength = 1024 * 50000)) { request =>
     val json: JsValue = request.body
     userCommander.uploadContactsProxy(request.userId, origin, json) collect {
       case Success(abookInfo) => Ok(Json.toJson(abookInfo))
@@ -66,11 +68,12 @@ class MobileUserController @Inject() (
     }
   }
 
-  def currentUser = JsonAction.authenticatedAsync(allowPending = true) { implicit request =>
-    getUserInfo(request)
+  def currentUser = UserAction.async { implicit request =>
+    getUserInfo(request, true)
+
   }
 
-  def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
+  def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
@@ -83,7 +86,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = JsonAction.authenticated { implicit request =>
+  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = UserAction { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         Ok {
@@ -97,8 +100,18 @@ class MobileUserController @Inject() (
     }
   }
 
-  private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
+  private def getProfileInfo(userId: Id[User])(implicit session: RSession): (Int, Int, Int, Int) = {
+    val friendCount = userConnectionRepo.getConnectionCount(userId)
+    val keepCount = keepCountCache.getOrElse(KeepCountKey(userId)) { keepRepo.getCountByUser(userId) } // getCountByUser goes directly to db
+    val libraries = libraryRepo.getAllByOwner(userId)
+    val libCount = libraries.size
+    val libFollowerCount = libraries.foldLeft(0) { (a, c) => a + c.memberCount } - libCount // memberCount includes owner
+    (friendCount, keepCount, libCount, libFollowerCount)
+  }
+
+  private def getUserInfo[T](request: UserRequest[T], profileInfo: Boolean = false) = {
     val user = userCommander.getUserInfo(request.user)
+    val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
     userCommander.getKeepAttributionInfo(request.userId) map { info =>
       Ok(toJson(user.basicUser).as[JsObject] ++
         toJson(user.info).as[JsObject] ++
@@ -107,13 +120,17 @@ class MobileUserController @Inject() (
           "experiments" -> request.experiments.map(_.value),
           "clickCount" -> info.clickCount,
           "rekeepCount" -> info.rekeepCount,
-          "rekeepTotalCount" -> info.rekeepTotalCount
+          "rekeepTotalCount" -> info.rekeepTotalCount,
+          "friendCount" -> friendCount,
+          "keepCount" -> keepCount,
+          "libCount" -> libCount,
+          "libFollowerCount" -> libFollowerCount
         )
       )
     }
   }
 
-  def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
+  def changePassword = UserAction(parse.tolerantJson) { implicit request =>
     val oldPassword = (request.body \ "oldPassword").as[String] // todo: use char[]
     val newPassword = (request.body \ "newPassword").as[String]
     if (newPassword.length < 7) {
@@ -127,19 +144,19 @@ class MobileUserController @Inject() (
   }
 
   // legacy
-  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean = false) = JsonAction.authenticatedAsync { request =>
+  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean = false) = UserAction.async { request =>
     typeaheadCommander.queryAll(request.userId, search, network, limit, pictureUrl) map { r =>
       Ok(Json.toJson(r))
     }
   }
 
-  def friend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
+  def friend(externalId: ExternalId[User]) = UserAction { request =>
     val (success, code) = userCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
-  def unfriend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
+  def unfriend(externalId: ExternalId[User]) = UserAction { request =>
     if (userCommander.unfriend(request.userId, externalId)) {
       Ok(Json.obj("code" -> "removed"))
     } else {
@@ -147,23 +164,23 @@ class MobileUserController @Inject() (
     }
   }
 
-  def ignoreFriendRequest(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
+  def ignoreFriendRequest(externalId: ExternalId[User]) = UserAction { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
-  def incomingFriendRequests = JsonAction.authenticated { request =>
+  def incomingFriendRequests = UserAction { request =>
     val users = userCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def outgoingFriendRequests = JsonAction.authenticated { request =>
+  def outgoingFriendRequests = UserAction { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
-  def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
+  def postDelightedAnswer = UserAction.async(parse.tolerantJson) { request =>
     implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
     Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
       userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
@@ -174,13 +191,13 @@ class MobileUserController @Inject() (
     } getOrElse Future.successful(BadRequest)
   }
 
-  def cancelDelightedSurvey = JsonAction.authenticatedAsync { implicit request =>
+  def cancelDelightedSurvey = UserAction.async { implicit request =>
     userCommander.cancelDelightedSurvey(request.userId) map { success =>
       if (success) Ok else BadRequest
     }
   }
 
-  def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>
+  def disconnect(networkString: String) = UserAction { implicit request =>
     val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => BadRequest(Json.obj("code" -> code))
@@ -197,7 +214,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  def excludeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def excludeFriend(id: ExternalId[User]) = UserAction { request =>
     userCommander.excludeFriend(request.userId, id) map { changed =>
       val msg = if (changed) "changed" else "no_change"
       Ok(Json.obj("code" -> msg))
@@ -206,7 +223,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  def includeFriend(id: ExternalId[User]) = JsonAction.authenticated { request =>
+  def includeFriend(id: ExternalId[User]) = UserAction { request =>
     userCommander.includeFriend(request.userId, id) map { changed =>
       val msg = if (changed) "changed" else "no_change"
       Ok(Json.obj("code" -> msg))
@@ -217,7 +234,7 @@ class MobileUserController @Inject() (
 
   private val MobilePrefNames = Set(UserValueName.SHOW_DELIGHTED_QUESTION)
 
-  def getPrefs() = JsonAction.authenticatedAsync { request =>
+  def getPrefs() = UserAction.async { request =>
     // Make sure the user's last active date has been updated before returning the result
     userCommander.setLastUserActive(request.userId)
     userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map (Ok(_))

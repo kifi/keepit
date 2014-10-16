@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'profileService', 'util',
-  function ($location, $window, $rootScope, friendService, libraryService, profileService, util) {
+  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'modalService', 'profileService', 'util',
+  function ($location, $window, $rootScope, friendService, libraryService, modalService, profileService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -24,6 +24,7 @@ angular.module('kifi')
         scope.username = profileService.me.username;
         scope.userHasEditedSlug = false;
         scope.$error = {};
+        scope.showFollowers = false;
 
 
         //
@@ -92,9 +93,16 @@ angular.module('kifi')
                 scope.$error.general = 'The URL you picked isn\'t valid. Try using only letters and numbers.';
                 break;
               default:
-                scope.close();
+                scope.$error.general = 'Hmm, something went wrong. Try again later?';
                 break;
             }
+          });
+        };
+
+        scope.openDeleteLibraryModal = function () {
+          modalService.open({
+            template: 'libraries/deleteLibraryConfirmModal.tpl.html',
+            scope: scope
           });
         };
 
@@ -103,17 +111,21 @@ angular.module('kifi')
             return;
           }
 
-          var confirmDelete = $window.confirm('Are you sure you want to delete this library? This action cannot be undone.');
+          submitting = true;
+          libraryService.deleteLibrary(scope.library.id).then(function () {
+            submitting = false;
+            $rootScope.$emit('changedLibrary');
+            scope.close();
+            $location.path('/');
+          });
+        };
 
-          if (confirmDelete) {
-            submitting = true;
+        scope.showFollowersPanel = function () {
+          scope.showFollowers = true;
+        };
 
-            libraryService.deleteLibrary(scope.library.id).then(function () {
-              $rootScope.$emit('changedLibrary');
-              scope.close();
-              $location.path('/');
-            });
-          }
+        scope.hideFollowersPanel = function () {
+          scope.showFollowers = false;
         };
 
 
@@ -145,7 +157,7 @@ angular.module('kifi')
             'description': '',
             'slug': '',
 
-            // By default, the create library form selects the "discoverable" visiblity for a new library.
+            // By default, the create library form selects the "discoverable" visibility for a new library.
             'visibility': 'discoverable'
           };
           scope.modalTitle = 'Create a library';

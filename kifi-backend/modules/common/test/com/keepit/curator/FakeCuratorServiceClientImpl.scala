@@ -30,8 +30,6 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(true)
   }
 
-  def triggerEmail(code: String): Future[String] = Future.successful("done")
-
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
   def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
