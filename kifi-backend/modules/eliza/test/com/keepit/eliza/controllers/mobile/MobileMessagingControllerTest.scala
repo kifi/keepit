@@ -51,6 +51,29 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
   "Mobile Messaging Controller" should {
 
+    "getUnreadNotificationsCount" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].all.isEmpty === true
+          inject[NonUserThreadRepo].all.isEmpty === true
+        }
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getUnreadNotificationsCount().toString
+        path === s"/m/1/eliza/messages/unreadNotificationsCount"
+
+        val result = inject[MobileMessagingController].getUnreadNotificationsCount()(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("text/plain")
+        contentAsString(result) === "0"
+      }
+    }
+
     "addParticipantsToThread" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s =>
