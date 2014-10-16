@@ -534,29 +534,53 @@ if (searchUrlRe.test(document.URL)) !function () {
       var $a = $(this);
       var i = $a.prevAll('.kifi-res-lib').length;
       var library = $a.closest('.kifi-res-why').data('libraries')[i];
-      var details = $a.data('details');
-      render('html/library_card', $.extend({}, library, details), function (html) {
+      render('html/library_card', library, function (html) {
         configureHover(html, {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
           hideAfter: 4000,
           click: 'toggle'});
       });
-      if (!details) {
-        api.port.emit('get_library', library.id, function (o) {
-          o.url = response.origin + '/' + o.owner.username + '/' + o.slug;
-          $a.data('details', o);
+      if (!library.owner) {
+        detailLibrary(library, function (lib) {
           var $card = ($a.data('hoverfu') || {}).$h;
           if ($card) {
-            $card.find('.kifi-lc-pic').css('background-image', 'url(' + cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName + ')');
-            $card.find('.kifi-lc-owner').text(o.owner.firstName + ' ' + o.owner.lastName);
-            $card.find('.kifi-lc-name').prop('href', o.url);
+            $card.find('.kifi-lc-pic').css('background-image', 'url(' + lib.owner.pictureUrl + ')');
+            $card.find('.kifi-lc-owner').text(lib.owner.name);
+            $card.find('.kifi-lc-name').prop('href', lib.url);
             var $n = $card.find('.kifi-lc-count-n');
-            $n.first().text(o.keeps);
-            $n.last().text(o.followers);
+            $n.first().text(lib.keeps);
+            $n.last().text(lib.followers);
           }
         });
       }
+    }).hoverfu('.kifi-res-libs-n', function (configureHover) {
+      var $a = $(this);
+      var data = $a.closest('.kifi-res-why').data();
+      var nLibsShown = $a.prevAll('.kifi-res-lib').length;
+      var moreLibs = data.libraries.slice(nLibsShown, nLibsShown + 3);
+      render('html/search/more_libraries', {
+        libraries: moreLibs,
+        others: +$a.text() - moreLibs.length
+      }, function (html) {
+        configureHover(html, {
+          position: {my: 'center bottom-16', at: 'center top', of: $a, collision: 'none'},
+          click: 'toggle'});
+      });
+      moreLibs.forEach(function (lib) {
+        if (!lib.owner) {
+          detailLibrary(lib, function (lib) {
+            var $lib = (($a.data('hoverfu') || {}).$h || $()).find('.kifi-ml-lib[data-id=' + lib.id + ']');
+            if ($lib) {
+              $lib.find('.kifi-ml-name').prop('href', lib.url);
+              $lib.find('.kifi-ml-owner').text(lib.owner.name);
+              var $n = $lib.find('.kifi-ml-count');
+              $n.first().attr('data-n', lib.keeps);
+              $n.last().attr('data-n', lib.followers);
+            }
+          });
+        }
+      });
     }).hoverfu('.kifi-res-tags-n', function (configureHover) {
       var $a = $(this);
       var data = $a.closest('.kifi-res-why').data();
@@ -650,6 +674,16 @@ if (searchUrlRe.test(document.URL)) !function () {
         }
       });
     }
+  }
+
+  function detailLibrary(lib, callback) {
+    api.port.emit('get_library', lib.id, function (o) {
+      $.extend(lib, o);
+      lib.url = response.origin + '/' + o.owner.username + '/' + o.slug;
+      lib.owner.pictureUrl = cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
+      lib.owner.name = o.owner.firstName + ' ' + o.owner.lastName;
+      callback(lib);
+    });
   }
 
   function exitPreview() {

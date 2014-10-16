@@ -1,0 +1,15 @@
+<div class="kifi-ml">
+  {{#libraries}}
+  <div class="kifi-ml-lib {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}" data-id="{{id}}">
+    <a class="kifi-ml-name"{{#url}} href="{{url}}"{{/url}} target="_blank">{{name}}</a>
+    <div class="kifi-ml-owner">{{owner.name}}</div>
+    <div class="kifi-ml-counts">
+      <span class="kifi-ml-count" data-n="{{keeps}}">Keep</span>
+      <span class="kifi-ml-count-sep">&bull;</span>
+      <span class="kifi-ml-count" data-n="{{followers}}">Follower</span>
+    </div>
+  </div>
+  {{/libraries}}
+  <div class="kifi-ml-others" data-n="{{others}}">other</div>
+  <div class="kifi-ml-tri"></div>
+</div>
