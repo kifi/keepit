@@ -180,7 +180,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserValueCache(stats, accessLog, (outerRepo, 7 days))
+    new UserValueCache(stats, accessLog, (outerRepo, 30 days))
 
   @Provides @Singleton
   def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
