@@ -209,3 +209,10 @@ input.register-full-input {
   display: block;
   margin: 0 auto;
 }
+.register-unsupported {
+  padding-top: 30px;
+}
+.register-unsupported-p {
+  font-size: 18px;
+  color: #333;
+}

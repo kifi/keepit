@@ -1,7 +1,7 @@
 <div kf-modal class="kf-register-modal">
   <a class="dialog-x" ng-click="close()"></a>
   <div class="register-modal-wrap">
-      <div class="dialog-body">
+      <div class="dialog-body" ng-if="thanksVersion === 'installExt'">
         <div class="kf-register-header">Experience the full power of Kifi</div>
 
         <div class="register-kifi-under-clover svg-kifi-under-clover"></div>
@@ -9,6 +9,18 @@
         <div class="register-install-ext-btn" ng-click="installExtension()">Get Kifi for {{platformName}}</div>
 
         <a href="https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin?hl=en" title="Kifi in the Chrome Web Store"><img src="/img/available-in-chrome-webstore.png" class="register-chrome-webstore" ng-if="platformName === 'Chrome'"></a>
+
+      </div>
+      <div class="dialog-body" ng-if="thanksVersion === 'notSupported'">
+        <div class="kf-register-header">Experience the full power of Kifi</div>
+
+        <div class="register-unsupported">
+          <p class="register-unsupported-p">To get the most out of your Kifi experience, you should install the browser plug-in.</p>
+
+          <p class="register-unsupported-p">The Kifi plugin is not yet available for your browser.</p>
+
+          <p class="register-unsupported-p">In the meantime, you can try <a href="https://www.google.com/chrome/browser/">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/">Firefox</a> and come back to install the plugin.</p>
+        </div>
 
       </div>
   </div>
