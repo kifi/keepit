@@ -163,7 +163,8 @@ trait KQueryExpansion extends QueryParser {
     val clauses = ArrayBuffer.empty[BooleanClause]
     val queries = ArrayBuffer.empty[(QuerySpec, KTextQuery)]
 
-    querySpecList.foreach { spec =>
+    // truncate query if there are too many (>100) terms
+    querySpecList.take(100).foreach { spec =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
       query match {
         case Some(query) =>
