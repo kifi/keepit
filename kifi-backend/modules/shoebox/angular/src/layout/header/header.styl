@@ -117,6 +117,7 @@ a.kf-header-callout:hover
   display: inline-block
   width: calc(70% - 100px)
   position: relative
+  margin-left: 5px
 
   input
     width: 100%
@@ -129,32 +130,37 @@ a.kf-header-callout:hover
   display: inline-block
   sprite2x($search-icon-default)
   margin-left: 5px
-  margin-right: 5px
   vertical-align: bottom
 
   &.focused
     sprite2x($search-icon-active)
 
-.kf-header-search-bar-lib-filler
+.kf-header-search-bar-lib-chip
   display: inline-block
   border: none
   box-sizing: border-box
   border-radius: 8px
-  padding: 3px 7px 2px 5px
-  margin-right: 10px
+  padding: 2px 7px 2px 14px
   position: relative
   top 1px
   max-width: 35%
 
   &.secret
-    background-color: red
+    background-color: #f06463
 
   &.discoverable
-    background-color: yellow
+    background-color: #333
 
   &.published
-    background-color: green
+    background-color: #73c785
 
+.kf-search-bar-lib-owner-img
+  width: 23px
+  height: 23px
+  position: relative
+  left: 14px
+  z-index: 1
+  border-radius: 100%
 
 .kf-search-bar-lib-name
   display: inline-block

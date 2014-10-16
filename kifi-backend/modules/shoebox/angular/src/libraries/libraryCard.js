@@ -97,6 +97,7 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
+          $rootScope.$emit('libraryUrl', scope.library);
         }
 
 
@@ -222,8 +223,6 @@ angular.module('kifi')
             adjustFollowerPicsSize();
           }
         });
-
-        $rootScope.$emit('libraryUrl', scope.library);
 
         // When the local library object in libraryService has been updated, update
         // our scope.library accordingly. $rootScope is used instead of scope because

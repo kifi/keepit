@@ -11,7 +11,9 @@
     <div class="kf-header-search-bar" ng-if="librariesEnabled">
         <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
           <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
-          <div class="kf-header-search-bar-lib-filler" ng-show="search.showName" ng-class="{ 'secret': search.library.visibility == 'secret', 'published': search.library.visibility == 'published', 'discoverable': search.library.visibility == 'discoverable' }">
+          <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{search.library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+          <div class="kf-header-search-bar-lib-chip" ng-show="search.showName" ng-class="{ 'secret': search.library.visibility == 'secret', 'published': search.library.visibility == 'published', 'discoverable': search.library.visibility == 'discoverable' }">
+
             <div class="kf-search-bar-lib-name"> {{search.library.name}} </div>
             <div class="kf-search-bar-lib-name-clear" ng-click="clearLibraryName()">&times;</div>
           </div>
