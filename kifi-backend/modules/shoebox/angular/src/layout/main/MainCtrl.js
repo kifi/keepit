@@ -155,9 +155,9 @@ angular.module('kifi')
     $scope.importBookmarksToLibrary = function (library) {
       $scope.forceClose = true;
 
-      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
-      $scope.$evalAsync(function () {
+      $timeout(function () {
         var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -188,15 +188,15 @@ angular.module('kifi')
         modalService.open({
           template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html'
         });
-      });
+      }, 0);
     };
 
     $scope.importBookmarks = function (makePublic) {
       $scope.forceClose = true;
 
-      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
-      $scope.$evalAsync(function () {
+      $timeout(function () {
         var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -226,7 +226,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarksInProgressModal.tpl.html'
         });
 
-      });
+      }, 0);
     };
 
     $scope.cancelImport = function () {
@@ -333,9 +333,9 @@ angular.module('kifi')
 
             $scope.forceClose = true;
 
-            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
-            $scope.$evalAsync(function () {
+            $timeout(function () {
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
@@ -345,7 +345,7 @@ angular.module('kifi')
                   template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
                 });
               }
-            });
+            }, 0);
 
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
@@ -386,9 +386,9 @@ angular.module('kifi')
 
             $scope.forceClose = true;
 
-            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
-            $scope.$evalAsync(function () {
+            $timeout(function () {
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
@@ -398,7 +398,7 @@ angular.module('kifi')
                   template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
                 });
               }
-            });
+            }, 0);
 
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
