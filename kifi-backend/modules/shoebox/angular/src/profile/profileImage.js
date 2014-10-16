@@ -226,14 +226,14 @@ angular.module('kifi')
         function imageUploadError() {
           scope.forceClose = true;
 
-          // Use $evalAsync to wait for forceClose to close the currently open modal before
+          // Use $timeout to wait for forceClose to close the currently open modal before
           // opening the next modal.
-          scope.$evalAsync(function () {
+          $timeout(function () {
             modalService.open({
               template: 'profile/imageUploadFailedModal.tpl.html'
             });
             scope.resetChooseImage();
-          });
+          }, 0);
         }
 
         scope.uploadImage = function () {
