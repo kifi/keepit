@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
+import com.keepit.search.engine.explain.{ DirectExplainContext, ExplainContext, ScoreDetailCollector, ScoreDetail }
 import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBufferReader, JoinerManager, DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
@@ -23,14 +24,36 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     sources.foreach(prepare(_))
 
     matchWeightNormalizer.normalizeMatchWeight()
-    val directScoreContext = new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+    val directScoreContext = createDirectScoreContext(collector)
 
     sources.foreach(execute(_, directScoreContext))
 
-    join(collector)
+    join(createScoreContextManager(collector))
 
     if ((debugFlags & DebugOption.Log.flag) != 0) {
       debugLog(s"engine executed: pages=${dataBuffer.numPages} rows=${dataBuffer.size} bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directScoreContext.getCount}")
+    }
+  }
+
+  def explain(targetId: Long, collector: ScoreDetailCollector, sources: ScoreVectorSource*): Unit = {
+
+    // if NullExpr, no need to execute
+    if (scoreExpr.isNullExpr) {
+      debugLog("engine not executed: NullExpr")
+      return
+    }
+
+    sources.foreach(prepare(_))
+
+    matchWeightNormalizer.normalizeMatchWeight()
+    val directExplainContext = createDirectExplainContext(collector, targetId)
+
+    sources.foreach(explain(_, targetId, directExplainContext))
+
+    join(createExplainContextManager(collector, targetId))
+
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"engine executed (explain): pages=${dataBuffer.numPages} rows=${dataBuffer.size} bytes=${dataBuffer.numPages * DataBuffer.PAGE_SIZE} direct=${directExplainContext.getCount}")
     }
   }
 
@@ -59,7 +82,18 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     newTotal
   }
 
-  private[this] def join(collector: ResultCollector[ScoreContext]): Unit = {
+  private[this] def explain(source: ScoreVectorSource, targetId: Long, directExplainContext: DirectExplainContext): Unit = {
+    val startTime = System.currentTimeMillis()
+
+    source.explain(targetId, coreSize, dataBuffer, directExplainContext)
+
+    val elapsed = System.currentTimeMillis() - startTime
+    if ((debugFlags & DebugOption.Log.flag) != 0) {
+      debugLog(s"source executed (explain): class=${source.getClass.getSimpleName} time=$elapsed")
+    }
+  }
+
+  private[this] def join(joinerManager: JoinerManager): Unit = {
     val startTime = System.currentTimeMillis()
 
     if (debugTracedIds != null) dumpBuf(debugTracedIds)
@@ -67,7 +101,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
     val size = dataBuffer.size
     if (size > 0) {
       val numBuckets = ((size / 10 + 1) | 0x01)
-      val hashJoin = new HashJoin(dataBuffer, numBuckets, createJoinerManager(collector))
+      val hashJoin = new HashJoin(dataBuffer, numBuckets, joinerManager)
       hashJoin.execute()
     }
 
@@ -81,7 +115,11 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
   def getCoreSize(): Int = coreSize
   def getMatchWeightNormalizer(): MatchWeightNormalizer = matchWeightNormalizer
 
-  private[this] def createJoinerManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
+  private[this] def createDirectScoreContext(collector: ResultCollector[ScoreContext]): DirectScoreContext = {
+    new DirectScoreContext(scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+  }
+
+  private[this] def createScoreContextManager(collector: ResultCollector[ScoreContext]): JoinerManager = {
     val debugOption = this
     if (debugTracedIds == null) {
       new JoinerManager(32) {
@@ -95,6 +133,16 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize
           ctx
         }
       }
+    }
+  }
+
+  private[this] def createDirectExplainContext(collector: ScoreDetailCollector, targetId: Long): DirectExplainContext = {
+    new DirectExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
+  }
+
+  private[this] def createExplainContextManager(collector: ScoreDetailCollector, targetId: Long): JoinerManager = {
+    new JoinerManager(1) {
+      def create() = new ExplainContext(targetId, scoreExpr, totalSize, matchWeightNormalizer.get, collector)
     }
   }
 

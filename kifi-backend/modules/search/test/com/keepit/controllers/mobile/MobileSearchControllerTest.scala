@@ -7,13 +7,13 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.KifiShardResult
 import com.keepit.search.index._
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
 import com.keepit.social.BasicUser
 import com.keepit.test.SearchTestInjector
-import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.common.util.Configuration
 import com.keepit.common.util.PlayAppConfigurationModule
 import org.specs2.mutable._
@@ -221,6 +221,7 @@ class FixedResultSearchCommander extends SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): Future[KifiShardResult] = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

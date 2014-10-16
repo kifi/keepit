@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.{ KifiSearch, DebugOption, SearchFactory }
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger, KifiShardResult }
 import scala.concurrent.duration._
@@ -17,7 +18,6 @@ import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.{ Sharding, Shard, ActiveShards }
 import com.keepit.search.result._
-import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
 
@@ -81,9 +81,11 @@ trait SearchCommander {
     uriId: Id[NormalizedURI],
     lang: Option[String],
     experiments: Set[ExperimentType],
-    query: String): Future[Option[(Query, Explanation)]]
+    query: String): Future[Option[Explanation]]
 
   def warmUp(userId: Id[User]): Unit
+
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]]
 }
 
 @Singleton
@@ -410,17 +412,31 @@ class SearchCommanderImpl @Inject() (
   //external (from the extension/website)
   def warmUp(userId: Id[User]): Unit = searchFactory.warmUp(userId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = {
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
+
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = {
+    val langs = lang match {
+      case Some(str) => str.split(",").toSeq.map(Lang(_))
+      case None => Seq(DefaultAnalyzer.defaultLang)
+    }
+    val firstLang = langs(0)
+    val secondLang = if (langs.size > 0) Some(langs(1)) else None
+
     searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>
-        val langs = lang match {
-          case Some(str) => str.split(",").toSeq.map(Lang(_))
-          case None => Seq(DefaultAnalyzer.defaultLang)
-        }
-
-        shards.find(uriId).flatMap { shard =>
-          val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
-          searcher.explain(uriId)
+        findShard(uriId).flatMap { shard =>
+          val searchOpt = if (userId.id < 0) {
+            try {
+              searchFactory.getKifiNonUserSearch(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+            } catch {
+              case e: Exception =>
+                log.error("unable to create KifiNonUserSearch", e)
+                None
+            }
+          } else {
+            searchFactory.getKifiSearch(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+          }
+          searchOpt.map(_.explain(uriId))
         }
     }
   }
