@@ -31,9 +31,6 @@ trait SearchServiceClient extends ServiceClient {
   def updateKeepIndex(): Unit
   def updateLibraryIndex(): Unit
 
-  def updateURIGraph(): Unit
-  def reindexURIGraph(): Unit
-
   def updateUserGraph(): Unit
   def updateSearchFriendGraph(): Unit
   def reindexUserGraphs(): Unit
@@ -58,8 +55,6 @@ trait SearchServiceClient extends ServiceClient {
   def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
 
-  def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
-  def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
@@ -95,14 +90,6 @@ class SearchServiceClientImpl(
 
   def updateLibraryIndex(): Unit = {
     broadcast(Search.internal.updateLibraryIndex())
-  }
-
-  def updateURIGraph(): Unit = {
-    broadcast(Search.internal.updateURIGraph())
-  }
-
-  def reindexURIGraph(): Unit = {
-    broadcast(Search.internal.uriGraphReindex())
   }
 
   def index(): Unit = {
@@ -200,14 +187,6 @@ class SearchServiceClientImpl(
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
     call(Search.internal.explain(query, userId, uriId, Some(lang))).map(r => Html(r.body))
-  }
-
-  def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
-    call(Search.internal.uriGraphDumpLuceneDocument(userId)).map(r => Html(r.body))
-  }
-
-  def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = {
-    call(Search.internal.collectionDumpLuceneDocument(colId, userId)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
