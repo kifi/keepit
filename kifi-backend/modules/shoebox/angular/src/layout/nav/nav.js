@@ -55,6 +55,8 @@ angular.module('kifi')
           scope.userLibsToShow = newList[0];
           scope.invitedLibsToShow  = newList[1];
 
+          librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
+          invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
           scope.$broadcast('refreshScroll');
         }
 
@@ -172,9 +174,6 @@ angular.module('kifi')
 
 
         scope.changeList = function () {
-          librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
-          invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
-
           var term = scope.filter.name;
           var newLibs = allUserLibs;
           var newInvited = libraryService.invitedSummaries;

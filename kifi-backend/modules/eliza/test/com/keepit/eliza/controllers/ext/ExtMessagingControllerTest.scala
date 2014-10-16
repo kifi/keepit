@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers.ext
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ ExternalId, Id }
@@ -28,6 +29,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeSearchServiceClientModule(),
     ElizaCacheModule(),
     FakeShoeboxServiceModule(),

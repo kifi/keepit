@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMailRepo, FakeMailModule }
@@ -26,6 +27,7 @@ import scala.concurrent.duration.Duration
 class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     ProdShoeboxServiceClientModule(),

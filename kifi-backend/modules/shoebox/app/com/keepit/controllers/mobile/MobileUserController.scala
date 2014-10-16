@@ -2,6 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
@@ -26,6 +27,9 @@ class MobileUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userCommander: UserCommander,
   typeaheadCommander: TypeaheadCommander,
+  keepCountCache: KeepCountCache,
+  keepRepo: KeepRepo,
+  libraryRepo: LibraryRepo,
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
   db: Database)
@@ -65,7 +69,8 @@ class MobileUserController @Inject() (
   }
 
   def currentUser = UserAction.async { implicit request =>
-    getUserInfo(request)
+    getUserInfo(request, true)
+
   }
 
   def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -95,8 +100,18 @@ class MobileUserController @Inject() (
     }
   }
 
-  private def getUserInfo[T](request: UserRequest[T]) = {
+  private def getProfileInfo(userId: Id[User])(implicit session: RSession): (Int, Int, Int, Int) = {
+    val friendCount = userConnectionRepo.getConnectionCount(userId)
+    val keepCount = keepCountCache.getOrElse(KeepCountKey(userId)) { keepRepo.getCountByUser(userId) } // getCountByUser goes directly to db
+    val libraries = libraryRepo.getAllByOwner(userId)
+    val libCount = libraries.size
+    val libFollowerCount = libraries.foldLeft(0) { (a, c) => a + c.memberCount } - libCount // memberCount includes owner
+    (friendCount, keepCount, libCount, libFollowerCount)
+  }
+
+  private def getUserInfo[T](request: UserRequest[T], profileInfo: Boolean = false) = {
     val user = userCommander.getUserInfo(request.user)
+    val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
     userCommander.getKeepAttributionInfo(request.userId) map { info =>
       Ok(toJson(user.basicUser).as[JsObject] ++
         toJson(user.info).as[JsObject] ++
@@ -105,7 +120,11 @@ class MobileUserController @Inject() (
           "experiments" -> request.experiments.map(_.value),
           "clickCount" -> info.clickCount,
           "rekeepCount" -> info.rekeepCount,
-          "rekeepTotalCount" -> info.rekeepTotalCount
+          "rekeepTotalCount" -> info.rekeepTotalCount,
+          "friendCount" -> friendCount,
+          "keepCount" -> keepCount,
+          "libCount" -> libCount,
+          "libFollowerCount" -> libFollowerCount
         )
       )
     }

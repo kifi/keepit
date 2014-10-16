@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import akka.actor.ActorSystem
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
@@ -22,6 +23,7 @@ import com.keepit.search.{ FakeDistributedSearchServiceClientModule, SearchConfi
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
+    FakeExecutionContextModule(),
     SearchServiceTypeModule(),
     FakeHttpClientModule(),
     FakeHeimdalServiceClientModule(),
@@ -48,6 +50,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   implicit val system = ActorSystem("test")
 
   val module = Modules.combine(
+    FakeExecutionContextModule(),
     FakeActorSystemModule(),
     FakeHttpClientModule(),
     FakeUserActionsModule(),

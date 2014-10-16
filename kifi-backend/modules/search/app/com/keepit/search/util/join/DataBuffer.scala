@@ -21,7 +21,7 @@ object DataBuffer {
   @inline def clearTag(value: Float): Float = JFloat.intBitsToFloat(JFloat.floatToRawIntBits(value) & 0xffffff00)
 
   class FloatTagger(tag: Int) {
-    require(0 <= tag && tag <= Byte.MaxValue, "tag value out of range")
+    require(0 <= tag && tag <= Byte.MaxValue, s"tag value out of range : $tag")
     @inline def tagFloat(value: Float): Int = tag | (JFloat.floatToRawIntBits(value) & 0xffffff00)
   }
 }

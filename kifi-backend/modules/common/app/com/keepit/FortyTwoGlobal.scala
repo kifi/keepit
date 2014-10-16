@@ -14,6 +14,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime }
+import play.api.libs.json.Json
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConversions._
@@ -130,14 +131,27 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val overrideConfig = Configuration(ConfigFactory.parseFile(new File(path, "override.conf"))) // Configuration override (erased with the next deploy)
     super.onLoadConfig(config ++ localConfig ++ overrideConfig, path, classloader, mode)
   }
-  override def onBadRequest(request: RequestHeader, error: String): Future[Result] = {
+
+  override def onBadRequest(request: RequestHeader, error: String): Future[Result] = Future.successful {
     val errorId = ExternalId[Exception]()
     val msg = s"BAD REQUEST: $errorId: [$error] on ${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
     log.warn(msg)
+
     if (mode == Mode.Test) {
       throw new Exception(s"error [$msg] on $request")
     }
-    Future.successful(allowCrossOrigin(request, BadRequest(msg)))
+
+    if (request.path.startsWith("/internal/")) {
+      allowCrossOrigin(request, BadRequest(msg))
+    } else if (speaksJson(request)) {
+      allowCrossOrigin(request, BadRequest(Json.obj(
+        "error" -> errorId.id,
+        "status" -> "bad_request",
+        "request" -> s"${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
+      )))
+    } else {
+      allowCrossOrigin(request, BadRequest(views.html.error.internalError(errorId.id)))
+    }
   }
 
   override def onRouteRequest(request: RequestHeader) = super.onRouteRequest(request).orElse {
@@ -145,10 +159,22 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     Some(request.path).filter(_.endsWith("/")).map(p => Action(Results.MovedPermanently(p.dropRight(1))))
   }
 
-  override def onHandlerNotFound(request: RequestHeader): Future[Result] = {
+  override def onHandlerNotFound(request: RequestHeader): Future[Result] = Future.successful {
     val errorId = ExternalId[Exception]()
-    log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
-    Future.successful(allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId))))
+    val msg = s"Handler Not Found ${errorId.id}: on ${request.method} ${request.path}"
+    log.warn(msg)
+
+    if (request.path.startsWith("/internal/")) {
+      allowCrossOrigin(request, NotFound(msg))
+    } else if (speaksJson(request)) {
+      allowCrossOrigin(request, NotFound(Json.obj(
+        "error" -> errorId.id,
+        "status" -> "not_found",
+        "request" -> s"${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
+      )))
+    } else {
+      allowCrossOrigin(request, BadRequest(views.html.error.notFound()))
+    }
   }
 
   private[this] val lastAlert = new AtomicLong(-1)
@@ -182,17 +208,24 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       ex.printStackTrace()
       log.error(errorMessage)
       serviceDiscoveryHandleError()
-      val message = if (request.path.startsWith("/internal/")) {
+      if (request.path.startsWith("/internal/")) {
         //todo(eishay) consider use the original ex.getCause instead
-        s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
+        val message = s"${ex.getClass.getSimpleName}:${ex.getMessage.abbreviate(100)}, errorId:${errorId.id}"
+        allowCrossOrigin(request, InternalServerError(message))
+      } else if (speaksJson(request)) {
+        allowCrossOrigin(request, InternalServerError(Json.obj(
+          "error" -> errorId.id,
+          "status" -> "internal_error",
+          "request" -> s"${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
+        )))
       } else {
-        errorId.id
+        allowCrossOrigin(request, InternalServerError(views.html.error.internalError(errorId.id)))
       }
-      allowCrossOrigin(request, InternalServerError(message))
     } catch {
       case NonFatal(e) =>
-        Logger.error("Error while rendering default error page", e)
-        InternalServerError
+        val id = ExternalId[Exception]()
+        Logger.error(s"Error while rendering default error page: ${id.id}", e)
+        InternalServerError(views.html.error.internalError(id.id))
     }
   }
 
@@ -255,6 +288,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         "Access-Control-Allow-Origin" -> h,
         "Access-Control-Allow-Credentials" -> "true")
     }.getOrElse(result)
+  }
+
+  private def speaksJson(request: RequestHeader) = {
+    // todo: check if request.accepts works better
+    request.path.startsWith("/site/") || request.path.startsWith("/m/") || request.path.startsWith("/ext/") || request.path.startsWith("/search/") || request.path.startsWith("/eliza/")
   }
 
 }

@@ -1,12 +1,15 @@
-.kf-delighted-wrap
-  overflow: hidden
-  padding: 0 25px 0 30px
-  max-height 200px
-  
-  &.hide
+.delighted-survey
+  max-height: 200px
+  opacity: 1
+
+  &.ng-hide
     transition: opacity .4s, max-height .4s .4s
     max-height: 0
     opacity: 0
+
+.kf-delighted-wrap
+  overflow: hidden
+  padding: 0 25px 0 30px
 
 .kf-delighted-title
   padding: 8px 28px // make sure the title doesn't underlap the cancel button
@@ -21,7 +24,7 @@
   border: 1px solid #dadae2
   text-align: center
   position: relative
-  
+
   button
     background-color: #4372b1
     color: #fff

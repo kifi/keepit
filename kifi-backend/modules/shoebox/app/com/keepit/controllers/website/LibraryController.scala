@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -20,6 +21,9 @@ import play.api.mvc.BodyParsers
 import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 import ImplicitHelper._
+import com.keepit.common.core._
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 
 class LibraryController @Inject() (
   db: Database,
@@ -77,12 +81,14 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)) { request =>
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
     val hashtag = Hashtag(tag)
     val id = Library.decodePublicId(libraryId).get
-    libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-      case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-      case Right(success) => Ok(JsString("success"))
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
     }
   }
 
@@ -91,6 +97,12 @@ class LibraryController @Inject() (
     libraryCommander.getLibraryById(request.userIdOpt, id) map {
       case (libInfo, accessStr) => Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
     }
+  }
+
+  def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryById(request.userIdOpt, id)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
@@ -392,6 +404,21 @@ class LibraryController @Inject() (
     keepsCommander.unkeepManyFromLibrary(keepExtIds, libraryId, request.userId) match {
       case Left(failMsg) => BadRequest(Json.obj("error" -> failMsg))
       case Right((infos, failures)) => Ok(Json.obj("failures" -> failures, "unkept" -> infos))
+    }
+  }
+
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = if (query.trim.isEmpty) {
+      val libraryId = Library.decodePublicId(pubId).get
+      val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+      keepsCommander.suggestTags(request.userId, libraryId, uriId, limit).map(_.map((_, Seq.empty[(Int, Int)])))
+    } else {
+      keepsCommander.searchTags(request.userId, query, limit).map(_.map(hit => (hit.tag, hit.matches)))
+    }
+    futureTagsAndMatches.imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
     }
   }
 

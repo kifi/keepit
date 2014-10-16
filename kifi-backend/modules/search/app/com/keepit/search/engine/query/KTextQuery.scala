@@ -13,7 +13,7 @@ object KTextQuery {
   val tieBreakerMultiplier = 0.5f
 }
 
-class KTextQuery extends Query with Logging {
+class KTextQuery(val label: String) extends Query with Logging {
 
   private var subQuery: Query = new DisjunctionMaxQuery(KTextQuery.tieBreakerMultiplier)
 

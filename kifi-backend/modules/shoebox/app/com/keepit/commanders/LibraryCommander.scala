@@ -82,15 +82,20 @@ class LibraryCommander @Inject() (
   def getLibraryById(userIdOpt: Option[Id[User]], id: Id[Library]): Future[(FullLibraryInfo, String)] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
     createFullLibraryInfo(userIdOpt, lib).map { libInfo =>
-      val accessStr = userIdOpt.map { userId =>
-        db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(id, userId)
-        }.map(_.access.value)
-      }.flatten.getOrElse {
-        "none"
-      }
+      val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
+  }
+
+  def getLibrarySummaryById(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
+    val libInfo = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(id)
+      val owner = basicUserRepo.load(lib.ownerId)
+      val numKeeps = keepRepo.getCountByLibrary(id)
+      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
+    }
+    val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
+    (libInfo, accessStr)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {

@@ -60,24 +60,19 @@ class CuratorController @Inject() (
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = Action.async {
+    log.info(s"[triggerEmailToUser] code=$code userId=$userId")
     code match {
       case "feed" =>
-        log.info(s"trigger email $code to user $userId")
-        feedEmailSender.sendToUser(userId).map(_ => NoContent)
+        feedEmailSender.sendToUser(userId).map { digestMail =>
+          if (digestMail.mailSent) NoContent else BadRequest
+        }
+      case "feedRecentInterest" =>
+        feedEmailSender.sendToUser(userId, RecentInterestRankStrategy).map { digestMail =>
+          if (digestMail.mailSent) NoContent else BadRequest
+        }
       case _ =>
-        log.warn(s"trigger email error: code $code not found")
+        airbrake.notify(s"triggerEmailToUser(code=$code userId=$userId) bad code")
         Future.successful(BadRequest)
-    }
-  }
-
-  def triggerEmail(code: String) = Action {
-    code match {
-      case "feed" =>
-        feedDigestActor.ref ! Queue
-        NoContent
-      case _ =>
-        log.warn(s"trigger email error: code $code not found")
-        BadRequest
     }
   }
 
@@ -111,7 +106,7 @@ class CuratorController @Inject() (
 
     sendEmailF.filter(_ == true).foreach { _ =>
       // todo(josh) add a delayed job onto SQS queue
-      log.info(s"[refreshUserRecos] scheduled to send digest email to $userId")
+      log.info(s"[refreshUserRecos] scheduled to send digest email to userId=$userId")
 
       // note: use of scheduler is for internal prototyping
       scheduler.scheduleOnce(10 minutes) {
@@ -120,9 +115,9 @@ class CuratorController @Inject() (
         digestRecoMailF.onComplete {
           case Success(digestRecoMail) =>
             if (digestRecoMail.mailSent) {
-              log.info(s"[refreshUserRecos] digest email sent to $userId")
-            } else log.info(s"[refreshUserRecos] digest email NOT sent to $userId")
-          case Failure(e) => airbrake.notify(s"refreshUserRecos failed to send to $userId", e)
+              log.info(s"[refreshUserRecos] digest email sent to userId=$userId")
+            } else log.info(s"[refreshUserRecos] digest email NOT sent to userId=$userId")
+          case Failure(e) => airbrake.notify(s"refreshUserRecos failed to send to userId=$userId", e)
         }
       }
     }

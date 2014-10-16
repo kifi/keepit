@@ -155,30 +155,49 @@ angular.module('kifi')
     $scope.importBookmarksToLibrary = function (library) {
       $scope.forceClose = true;
 
-      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
-      $scope.$evalAsync(function () {
-        // Fake check. To do: use real endpoints to determine which modal to open.
-        if (library) {
-          modalService.open({
-            template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html',
-            scope: $scope
-          });
-        } else {
+      $timeout(function () {
+        var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
+
+        if (!kifiVersion) {
           modalService.open({
             template: 'common/modal/importBookmarksErrorModal.tpl.html'
           });
+          return;
         }
-      });
+
+        // TODO(yiping): update this when we have the full tracking spec.
+        // $analytics.eventTrack('user_clicked_page', {
+        //   'type': 'browserImport',
+        //   'action': '???'
+        // });
+
+        var event = $scope.msgEvent;
+        var message = {
+          type: 'import_bookmarks',
+          libraryId: library.id
+        };
+
+        if (event) {
+          event.source.postMessage(message, event.origin);
+        } else {
+          $window.postMessage(message, '*');
+        }
+
+        modalService.open({
+          template: 'common/modal/importBookmarksLibraryInProgressModal.tpl.html'
+        });
+      }, 0);
     };
 
     $scope.importBookmarks = function (makePublic) {
       $scope.forceClose = true;
 
-      // Use $evalAsync to wait for forceClose to close the currently open modal before opening
+      // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
-      $scope.$evalAsync(function () {
-        var kifiVersion = $window.document.getElementsByTagName('html')[0].getAttribute('data-kifi-ext');
+      $timeout(function () {
+        var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
           modalService.open({
@@ -192,13 +211,13 @@ angular.module('kifi')
           'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
         });
 
-        var event = $scope.msgEvent && $scope.msgEvent.origin && $scope.msgEvent.source && $scope.msgEvent;
+        var event = $scope.msgEvent;
         var message = 'import_bookmarks';
         if (makePublic) {
           message = 'import_bookmarks_public';
         }
         if (event) {
-          event.source.postMessage(message, $scope.msgEvent.origin);
+          event.source.postMessage(message, event.origin);
         } else {
           $window.postMessage(message, '*');
         }
@@ -207,7 +226,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarksInProgressModal.tpl.html'
         });
 
-      });
+      }, 0);
     };
 
     $scope.cancelImport = function () {
@@ -314,9 +333,9 @@ angular.module('kifi')
 
             $scope.forceClose = true;
 
-            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
-            $scope.$evalAsync(function () {
+            $timeout(function () {
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
@@ -326,7 +345,7 @@ angular.module('kifi')
                   template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
                 });
               }
-            });
+            }, 0);
 
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
@@ -347,10 +366,11 @@ angular.module('kifi')
         if (file) {
           $scope.disableBookmarkImport = true;
 
-          $analytics.eventTrack('user_clicked_page', {
-            'type': '3rdPartyImport',
-            'action': 'ImportToLibrary'  // TODO: update this when we have the full tracking spec.
-          });
+          // TODO(yiping): update this when we have the full tracking spec.
+          // $analytics.eventTrack('user_clicked_page', {
+          //   'type': '3rdPartyImport',
+          //   'action': '???'
+          // });
 
           var tooSlowTimer = $timeout(function () {
             $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight.';
@@ -366,9 +386,9 @@ angular.module('kifi')
 
             $scope.forceClose = true;
 
-            // Use $evalAsync to wait for forceClose to close the currently open modal before
+            // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
-            $scope.$evalAsync(function () {
+            $timeout(function () {
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'
@@ -378,7 +398,7 @@ angular.module('kifi')
                   template: 'common/modal/importBookmarkFileErrorModal.tpl.html'
                 });
               }
-            });
+            }, 0);
 
           }, function fail() {
             $timeout.cancel(tooSlowTimer);
@@ -426,14 +446,12 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    $scope.showDelightedSurvey = function () {
-      return profileService.prefs && profileService.prefs.show_delighted_question;
-    };
+    $scope.showDelightedSurvey = profileService.prefs && profileService.prefs.show_delighted_question;
 
     /**
      * Make the page "extension-friendly"
      */
-    var htmlElement = angular.element(document.getElementsByTagName('html')[0]);
+    var htmlElement = angular.element(document.documentElement);
     // override right margin to always be 0
     htmlElement.css({marginRight: 0});
     $rootScope.$watch(function () {

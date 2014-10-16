@@ -5,6 +5,7 @@ import java.io.File
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -29,6 +30,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeElizaServiceClientModule(),
     FakeHeimdalServiceClientModule(),

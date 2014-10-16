@@ -1,5 +1,6 @@
 package com.keepit.curator
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -15,6 +16,7 @@ import com.keepit.common.time._
 
 class RecommendationCleanupCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
     FakeCortexServiceClientModule(),

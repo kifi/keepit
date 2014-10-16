@@ -44,7 +44,7 @@ angular.module('kifi')
         manageTagService.reset();
         getPage();
       } else {
-        $scope.tagsToShow = localSortLibs($scope.tagsToShow);
+        $scope.tagsToShow = localSortTags($scope.tagsToShow);
       }
     });
 
@@ -92,11 +92,15 @@ angular.module('kifi')
     $scope.clickAction = function () {
       var tagName = encodeURIComponent($scope.selectedTag.name);
       libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {
+        modalService.open({
+          template: 'tagManage/tagToLibModal.tpl.html',
+          modalData: { library : $scope.selection.library }
+        });
         libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
-      });
-      modalService.open({
-        template: 'tagManage/tagToLibModal.tpl.html',
-        modalData: { library : $scope.selection.library }
+      })['catch'](function () {
+        modalService.open({
+          template: 'common/modal/genericErrorModal.tpl.html'
+        });
       });
     };
 
@@ -132,18 +136,18 @@ angular.module('kifi')
       }
       $scope.more = false;
       manageTagService.search($scope.filter.name).then(function (tags) {
-        $scope.tagsToShow = localSortLibs(tags);
+        $scope.tagsToShow = localSortTags(tags);
         return $scope.tagsToShow;
       });
     }, 200, {
       leading: true
     });
 
-    function localSortLibs(tags) {
+    function localSortTags(tags) {
       var sortedTags = tags;
       if ($scope.selectedSort === 'name') {
         sortedTags = _.sortBy(sortedTags, function(t) {
-          return t.name;
+          return t.name.toLowerCase();
         }).reverse();
       } else if ($scope.selectedSort === 'num_keeps') {
         sortedTags = _.sortBy(sortedTags, function(t) {
@@ -157,12 +161,10 @@ angular.module('kifi')
     // Manage Tags
     //
     $scope.removeTag = function (tag) {
-      // todo (aaron): Get a nicer looking window thing
-      var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
-      if (choice) {
-        tagService.remove(tag);
-        _.remove($scope.tagsToShow, function(t) { return t === tag; });
-      }
+      modalService.open({
+        template: 'tagManage/deleteTagModal.tpl.html',
+        modalData: { tag: tag, tagsToShow: $scope.tagsToShow }
+      });
     };
 
   }

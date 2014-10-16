@@ -1,9 +1,12 @@
 package com.keepit.search.engine
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.model.NormalizedURI
 import com.keepit.search.Searcher
 import com.keepit.search.article.ArticleRecord
+import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.{ Hit, HitQueue, KifiShardResult, KifiShardHit }
 import com.keepit.search.graph.keep.{ KeepFields, KeepRecord }
 import org.apache.lucene.index.Term
@@ -18,6 +21,7 @@ object KifiSearch {
 abstract class KifiSearch(articleSearcher: Searcher, keepSearcher: Searcher, timeLogs: SearchTimeLogs) extends DebugOption { self: Logging =>
 
   def execute(): KifiShardResult
+  def explain(uriId: Id[NormalizedURI]): Explanation
 
   @inline def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
 
