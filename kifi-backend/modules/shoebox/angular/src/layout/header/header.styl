@@ -93,25 +93,24 @@ a.kf-header-callout:hover
 
 
 .kf-header-search-bar
+  float: left
   box-sizing: border-box
-  padding-top: 8px
   max-width: 820px
   width: calc(100% - 270px - 270px)
-  float: left
+  padding-top: 8px
 
 .kf-query-lib-container
   position: relative
-  white-space: nowrap
   z-index: 1
+  box-sizing: border-box
   width: 90%
   margin-left: 30px
   margin-top: 5px
+  padding: 5px 0
   border: defaultBorder
   border-radius: 3px
-  box-sizing: border-box
   background-color: #fff
-  padding-bottom: 5px
-  padding-top: 5px
+  white-space: nowra
 
 .kf-query-lib
   display: inline-block
@@ -128,22 +127,23 @@ a.kf-header-callout:hover
 
 .kf-query-lib-icon
   display: inline-block
-  sprite2x($search-icon-default)
   margin-left: 5px
+  sprite2x($search-icon-default)
   vertical-align: bottom
 
   &.focused
     sprite2x($search-icon-active)
 
 .kf-header-search-bar-lib-chip
-  display: inline-block
-  border: none
-  box-sizing: border-box
-  border-radius: 8px
-  padding: 2px 7px 2px 14px
   position: relative
   top 1px
+  display: inline-block
+  box-sizing: border-box
+  margin-right: 5px
+  padding: 2px 7px 2px 14px
   max-width: 35%
+  border: none
+  border-radius: 8px
 
   &.secret
     background-color: #f06463
@@ -155,37 +155,40 @@ a.kf-header-callout:hover
     background-color: #73c785
 
 .kf-search-bar-lib-owner-img
-  width: 23px
-  height: 23px
   position: relative
   left: 14px
   z-index: 1
+  width: 23px
+  height: 23px
   border-radius: 100%
 
 .kf-search-bar-lib-name
+  position: relative
+  top: 2px
   display: inline-block
+  max-width: calc(100% - 18px)
+  padding-left: 5px
   font-size: 13px
   font-weight: 100
   color: #fff
-  max-width: calc(100% - 18px)
-  padding-left: 5px
   overflow: hidden
   text-overflow: ellipsis
-  position: relative
-  top: 2px
 
 .kf-search-bar-lib-name-clear
+  position: relative
+  top: -1px
   display: inline-block
   margin-left: 5px
   color: #fff
   cursor: pointer
-  position: relative
-  top: -1px
 
 .kf-search-bar-clear
-  margin-top: 6px
-  margin-right: 5px
   float: right
+  margin-top: 3px
+  margin-right: 8px
+  font-weight: 200
+  font-size: 16px
+  color: blueColor
   cursor: pointer
 
 .kf-header-right

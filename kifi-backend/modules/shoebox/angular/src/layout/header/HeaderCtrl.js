@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService',
-    '$location', 'util', 'keyIndices', 'modalService', 'libraryService', '$timeout',
+    '$location', 'util', 'keyIndices', 'modalService', 'libraryService', '$timeout', 'searchActionService', '$routeParams',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService,
-    $location, util, keyIndices, modalService, libraryService, $timeout) {
+    $location, util, keyIndices, modalService, libraryService, $timeout, searchActionService, $routeParams) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-active');
@@ -21,14 +21,18 @@ angular.module('kifi')
     });
 
     $scope.isFocused = false;
-    $scope.search = { text: '', library: {}, showName: true};
+    $scope.library = {};
+    $scope.search = { text: '', showName: true};
+    $scope.stayInLibraryPath = '';
 
     $rootScope.$on('libraryUrl', function (e, library) {
-      $scope.search.library = library;
-      if ($scope.search.library.id) {
+      $scope.library = library;
+      $scope.search.text = '';
+      if ($scope.library.id) {
         $scope.search.showName = true;
+        $scope.stayInLibraryPath = $scope.library.url;
       } else {
-        $scope.search.showName = false;
+        $scope.clearLibraryName();
       }
     });
 
@@ -42,19 +46,32 @@ angular.module('kifi')
 
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
+      $scope.stayInLibraryPath = '';
     };
 
+    var query = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       if ($scope.search.text === '') {
-        $timeout($scope.clearInput(), 0);
+        if ($scope.stayInLibraryPath !== '') {
+          $timeout(function() {
+            $location.url($scope.stayInLibraryPath);
+          }, 0);
+        }
+        $scope.clearInput();
+      } else {
+        query = $scope.search.text;
+        $timeout(function() {
+          $location.url('/find?q=' + query + '&f=' + 'm');
+        }, 0);
       }
-      // manageTagService.search($scope.filter.name).then(function (tags) {
-      //   $scope.tagsToShow = localSortTags(tags);
-      //   return $scope.tagsToShow;
-      // });
     }, 200);
 
     $scope.clearInput = function () {
+      if ($scope.stayInLibraryPath !== '') {
+        $timeout(function () {
+          $location.url($scope.stayInLibraryPath);
+        }, 0);
+      }
       $scope.search.text = '';
     };
 
@@ -70,10 +87,6 @@ angular.module('kifi')
           $scope.clearInput();
           break;
       }
-    };
-
-    $scope.clearInput = function () {
-      $scope.search.text = '';
     };
 
     $scope.me = profileService.me;
