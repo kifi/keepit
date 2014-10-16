@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import java.io.File
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.inject.{ FakeFortyTwoModule }
 import com.google.inject.Module
 import com.google.inject.util.Modules
@@ -20,6 +21,7 @@ case class CommonServiceTypeModule() extends ServiceTypeModule {
 class CommonTestApplication(overridingModules: Module*)(implicit path: File = new File("."))
   extends TestApplication(path, overridingModules,
     Seq(
+      FakeExecutionContextModule(),
       CommonServiceTypeModule(),
       FakeClockModule(),
       FakeHealthcheckModule(),
@@ -32,5 +34,5 @@ class CommonTestApplication(overridingModules: Module*)(implicit path: File = ne
   )
 
 trait CommonTestInjector extends TestInjector {
-  lazy val module = Modules.combine(CommonServiceTypeModule(), FakeClockModule(), FakeHealthcheckModule(), FakeAirbrakeModule())
+  lazy val module = Modules.combine(FakeExecutionContextModule(), CommonServiceTypeModule(), FakeClockModule(), FakeHealthcheckModule(), FakeAirbrakeModule())
 }

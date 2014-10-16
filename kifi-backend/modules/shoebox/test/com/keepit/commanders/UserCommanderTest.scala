@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -58,6 +59,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),

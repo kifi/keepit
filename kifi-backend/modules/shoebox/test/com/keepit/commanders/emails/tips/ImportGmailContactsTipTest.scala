@@ -2,6 +2,7 @@ package com.keepit.commanders.emails.tips
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -16,6 +17,7 @@ import org.specs2.mutable.Specification
 
 class ImportGmailContactsTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),

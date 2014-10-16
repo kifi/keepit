@@ -3,6 +3,7 @@ package com.keepit.curator
 import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -29,6 +30,7 @@ import scala.concurrent.duration.Duration
 
 class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeHealthcheckModule(),
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
@@ -39,8 +41,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeFeedDigestEmailQueueModule(),
-    FakeSearchServiceClientModule())
+    FakeFeedDigestEmailQueueModule())
 
   implicit def userToIdInt(user: User): Int = user.id.get.id.toInt
 

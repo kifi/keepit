@@ -2,6 +2,7 @@ package com.keepit.cortex
 
 import com.google.inject.util.Modules
 import com.keepit.common.cache.{ CortexCacheModule, HashMapMemoryCacheModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -12,6 +13,7 @@ import com.keepit.test.{ TestInjector, DbInjectionHelper }
 
 trait CortexTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(
+    FakeExecutionContextModule(),
     FakeUserActionsModule(),
     CortexServiceTypeModule(),
     FakeAirbrakeModule(),

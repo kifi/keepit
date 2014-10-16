@@ -3,6 +3,7 @@ package com.keepit.commanders.emails.tips
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
@@ -27,6 +28,7 @@ import scala.concurrent.duration.Duration
 
 class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
