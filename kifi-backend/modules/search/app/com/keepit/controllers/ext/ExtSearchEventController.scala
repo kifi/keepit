@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.keepit.common.http._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices

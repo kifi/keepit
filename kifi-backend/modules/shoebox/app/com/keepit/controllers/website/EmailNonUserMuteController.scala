@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, WebsiteController }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.Action

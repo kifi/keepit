@@ -3,7 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
 import com.keepit.commanders.UserCommander
-import com.keepit.common.controller.{ BrowserExtensionController, ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._

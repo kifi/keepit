@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
