@@ -14,7 +14,6 @@ import securesocial.core.IdentityId
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.controller.{ RemoteActionAuthenticator, ActionAuthenticator }
 import securesocial.controllers.{ TemplatesPlugin, DefaultTemplatesPlugin }
 
 @AppScoped
@@ -104,7 +103,6 @@ class RemoteSecureSocialUserPlugin @Inject() (
 
 case class RemoteSecureSocialModule() extends SecureSocialModule {
   def configure() {
-    bind[ActionAuthenticator].to[RemoteActionAuthenticator]
   }
 
   @Singleton

@@ -2,7 +2,7 @@ package com.keepit.social
 
 import _root_.java.net.URLEncoder
 import _root_.java.util.UUID
-import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.KifiSession
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
@@ -33,7 +33,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
   abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
     log.info(s"UserIdentityProvider got request: $request")
     log.info(s"session data: ${request.session.data}")
-    val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
+    val userIdOpt = request.session.get(KifiSession.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
     doAuth()(request) match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)

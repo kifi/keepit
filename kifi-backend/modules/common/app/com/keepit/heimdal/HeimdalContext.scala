@@ -4,7 +4,7 @@ import com.keepit.common.mail.template.EmailTrackingParam
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.RequestHeader
-import com.keepit.common.controller.AuthenticatedRequest
+import com.keepit.common.controller.UserRequest
 import com.keepit.model.{ NotificationCategory, KeepSource, ExperimentType }
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ URI, UserAgent }
@@ -119,13 +119,13 @@ class HeimdalContextBuilder {
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
 
     request match {
-      case authRequest: AuthenticatedRequest[_] =>
-        this += ("userCreatedAt", authRequest.user.createdAt)
-        val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - authRequest.user.createdAt.getMillis) / (24 * 3600 * 1000)
+      case userRequest: UserRequest[_] =>
+        this += ("userCreatedAt", userRequest.user.createdAt)
+        val daysSinceUserJoined = (currentDateTime.getMillis.toFloat - userRequest.user.createdAt.getMillis) / (24 * 3600 * 1000)
         this += ("daysSinceUserJoined", daysSinceUserJoined - daysSinceUserJoined % 0.01)
-        authRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
-        addExperiments(authRequest.experiments)
-        Try(SocialNetworkType(authRequest.identity.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
+        userRequest.kifiInstallationId.foreach { id => this += ("kifiInstallationId", id.toString) }
+        addExperiments(userRequest.experiments)
+        Try(SocialNetworkType(userRequest.identityOpt.get.identityId.providerId)).foreach { socialNetwork => this += ("identityProvider", socialNetwork.toString) }
       case _ =>
     }
   }

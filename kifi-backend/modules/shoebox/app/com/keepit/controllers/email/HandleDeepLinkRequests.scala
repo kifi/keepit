@@ -1,6 +1,6 @@
 package com.keepit.controllers.email
 
-import com.keepit.common.controller.{ UserRequest, AuthenticatedRequest, ShoeboxServiceController }
+import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.model.{ User, DeepLocator, NormalizedURI }

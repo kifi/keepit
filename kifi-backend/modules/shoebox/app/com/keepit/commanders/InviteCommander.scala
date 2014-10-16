@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ UserRequest, AuthenticatedRequest, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._

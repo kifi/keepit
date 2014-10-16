@@ -1,28 +1,12 @@
 package com.keepit.common.social
 
-import com.google.inject.{ Inject, Provides, Singleton }
-import com.keepit.commanders.UserCommander
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.controller.{ FakeUserActionsHelper, ActionAuthenticator, AuthenticatedRequest, ReportedException }
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
-import com.keepit.common.logging.Logging
-import com.keepit.model.{ UserRepo, ExperimentType, KifiInstallation, User }
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.social._
 import com.keepit.social.providers.PasswordAuthentication
-import net.codingwell.scalaguice.ScalaModule
-import play.api.mvc._
 import securesocial.core._
-
-import scala.concurrent.Future
-import scala.concurrent.duration._
 
 case class FakeShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule {
   // This has a Play Application dependency.
-  // If possible, use `TestActionAuthenticator`! See https://team42.atlassian.net/wiki/display/ENG/Testing+at+FortyTwo
   override def configure(): Unit = {
     import play.api.Play.current
     new SecureSocialUserService().onStart()
