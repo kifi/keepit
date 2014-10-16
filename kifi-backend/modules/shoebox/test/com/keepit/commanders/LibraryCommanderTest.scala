@@ -319,6 +319,14 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
+        db.readWrite { implicit s =>
+          val deleted = libraryRepo.get(libMurica.id.get)
+          deleted.name !== libMurica.name
+          deleted.description === None
+          deleted.state === LibraryStates.INACTIVE
+          deleted.slug !== libMurica.slug
+        }
+
         libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)
         libraryCommander.removeLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>

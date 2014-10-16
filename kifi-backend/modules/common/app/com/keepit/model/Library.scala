@@ -31,6 +31,12 @@ case class Library(
     memberCount: Int,
     lastKept: Option[DateTime] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
+  def sanitizeForDelete(): Library = copy(
+    name = RandomStringUtils.randomAlphanumeric(20),
+    description = None,
+    state = LibraryStates.INACTIVE,
+    slug = LibrarySlug(RandomStringUtils.randomAlphanumeric(20)))
+
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
