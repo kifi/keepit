@@ -1,7 +1,7 @@
 @(email: String, opts: Seq[NotificationCategory], msg: Option[String], secureSocialClientIds: com.keepit.social.SecureSocialClientIds)
 
 @import com.keepit.model.NotificationCategory
-@invite = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.INVITATION) }
+@invite = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.NonUser.INVITATION) }
 @message = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.MESSAGE) }
 @digest = @{ !opts.contains(NotificationCategory.ALL) && !opts.contains(NotificationCategory.User.DIGEST) }
 @all = @{ !opts.contains(NotificationCategory.ALL) }

@@ -1,7 +1,10 @@
 @()
 @import com.keepit.common.mail.template.helpers._
 @email.tips.didYouKnow() {
-  You can can import your links into kifi from Pocket, Delicious, Kippt, Instapaper, or Pinboard.
+  You can import your links from Pocket, Delicious, Kippt, Instapaper,
+  and Pinboard in just a few clicks from
+  <a href="@kifiUrl("bmImportTipHomeLink")">kifi.com</a> or
+  <a href="@htmlUrl("http://support.kifi.com/customer/portal/topics/715092-importing-bookmarks/articles?", "bmImportTipLearnMoreLink")">learn more</a>.
   <br/><br/>
   <img src="@assetUrl("bookmark-import.png")" border="0"/>
 }

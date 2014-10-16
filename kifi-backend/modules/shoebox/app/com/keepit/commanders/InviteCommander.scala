@@ -39,7 +39,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.SecureSocialClientIds
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.commanders.emails.{ EmailSenderProvider, EmailOptOutCommander }
 import com.keepit.abook.model.{ InviteRecommendation, RichContact }
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress], name: Option[String] = None) {
@@ -107,6 +107,7 @@ class InviteCommander @Inject() (
     emailOptOutCommander: EmailOptOutCommander,
     shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
     abookServiceClient: ABookServiceClient,
+    emailSenderProvider: EmailSenderProvider,
     scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
@@ -263,36 +264,15 @@ class InviteCommander @Inject() (
 
   private def sendEmailInvitation(inviteInfo: InviteInfo): InviteStatus = {
     val invite = inviteInfo.invitation
-    val userId = invite.senderUserId.get
-    val invitingUser = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-    val c = inviteInfo.friend.right.get
-    val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
+    val senderUserId = invite.senderUserId.get
+    val invitee = inviteInfo.friend.right.get
 
-    val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
-    val subject = inviteInfo.subject.getOrElse("Join me on kifi")
-    log.info(s"[sendEmailInvitation(${userId},${c}})] sending with subject=$subject message=$message")
-    val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
-    val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(c.email))}"
-
+    emailSenderProvider.kifiInvite.apply(invitee.email, invite.senderUserId.get, invite.externalId)
     db.readWrite { implicit session =>
-      val electronicMail = ElectronicMail(
-        senderUserId = None,
-        from = SystemEmailAddress.INVITATION,
-        fromName = Some(s"${invitingUser.firstName} ${invitingUser.lastName} (via Kifi)"),
-        to = Seq(c.email),
-        subject = subject,
-        htmlBody = views.html.email.invitationInlined(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body,
-        textBody = Some(views.html.email.invitationText(invitingUser.firstName, invitingUser.lastName, inviterImage, message, acceptLink, unsubLink).body),
-        category = NotificationCategory.User.INVITATION,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> emailAddressRepo.getByUser(invitingUser.id.get).address))
-      )
-      postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
-      log.info(s"[sendEmailInvitation(${userId},${c},})] invitation sent")
+      val basicContact = BasicContact(email = invitee.email)
 
-      val basicContact = BasicContact(email = c.email)
-      abookServiceClient.internKifiContacts(userId, basicContact)
-
+      abookServiceClient.internKifiContacts(senderUserId, basicContact)
       InviteStatus.sent(savedInvite)
     }
   }
