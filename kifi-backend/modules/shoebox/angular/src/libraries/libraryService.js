@@ -46,7 +46,7 @@ angular.module('kifi')
         return $q.when({
           library: mayBeLib,
           membership: mayBeLib.access
-        })
+        });
       } else {
         return $http.get(routeService.getLibrarySummaryById(libraryId)).then(function (res) {
           return res.data;

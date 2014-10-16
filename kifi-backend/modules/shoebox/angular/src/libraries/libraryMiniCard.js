@@ -51,12 +51,12 @@ angular.module('kifi')
           }
 
           function unfollowLibrary() {
-            libraryService.leaveLibrary(scope.libraryId)
+            libraryService.leaveLibrary(scope.libraryId);
           }
 
           scope.toggleFollow = function () {
             if (scope.isMine()) {
-              alert("You can't follow your own Libraries!");
+              $window.alert('You cannot follow your own Libraries!');
               return;
             }
             if (scope.following()) {

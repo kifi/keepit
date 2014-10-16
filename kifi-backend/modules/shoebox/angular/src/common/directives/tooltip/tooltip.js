@@ -14,7 +14,7 @@ angular.module('kifi')
         var visible = false;
 
         var container = element.parent();
-        container.addClass("kf-tooltipped");
+        container.addClass('kf-tooltipped');
         var $w = angular.element($window);
 
         var el = element;
@@ -31,7 +31,6 @@ angular.module('kifi')
 
         function applyPosition(pos) {
           var parentPos = container[0].getBoundingClientRect();
-          console.log(el.outerHeight());
           switch (pos) {
             case 'top':
               el.css({
@@ -65,9 +64,9 @@ angular.module('kifi')
           var pos = attrs.position;
 
           var poss = _.filter(['top', 'right', 'bottom', 'left'], function (p) {
-            return p!=pos;
+            return p!==pos;
           });
-          poss.push(pos)
+          poss.push(pos);
 
           applyPosition(pos);
 
@@ -98,7 +97,7 @@ angular.module('kifi')
         }
 
         container.on('mouseenter', onMouseEnter);
-        container.on('mouseleave', onMouseLeave)
+        container.on('mouseleave', onMouseLeave);
         $w.on('scroll', trackScroll);
 
         scope.$on('$destroy', function () {
@@ -109,7 +108,7 @@ angular.module('kifi')
 
         scope.showing = function() {
           return visible;
-        }
+        };
 
       }
     };
