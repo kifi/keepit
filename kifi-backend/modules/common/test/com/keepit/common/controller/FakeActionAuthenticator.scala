@@ -17,16 +17,7 @@ import net.codingwell.scalaguice.ScalaModule
 import scala.concurrent.Future
 
 case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
-  log.debug("using new FakeActionAuthenticatorModule")
   def configure(): Unit = {}
-
-  @Singleton
-  @Provides
-  def actionAuthenticator(myFakeActionAuthenticator: FakeActionAuthenticator): ActionAuthenticator = myFakeActionAuthenticator
-
-  @Singleton
-  @Provides
-  def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
 
   @Singleton
   @Provides
@@ -34,59 +25,3 @@ case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
 
 }
 
-case class FakeIdentity(user: User) extends Identity {
-  def identityId: IdentityId = IdentityId("const_fake_id@mailserver.com", "some_network")
-  def firstName: String = user.firstName
-  def lastName: String = user.lastName
-  def fullName: String = s"$firstName $lastName"
-  def email: Option[String] = None
-  def avatarUrl: Option[String] = None
-  def authMethod: AuthenticationMethod = ???
-  def oAuth1Info: Option[OAuth1Info] = None
-  def oAuth2Info: Option[OAuth2Info] = None
-  def passwordInfo: Option[PasswordInfo] = None
-}
-
-class FakeActionAuthenticator extends ActionAuthenticator with Logging {
-  log.debug("using new FakeActionAuthenticator")
-
-  var fixedUser: Option[User] = None
-  var fixedExperiments: Set[ExperimentType] = Set[ExperimentType]()
-  var isAuthenticated = true
-
-  def setUser(user: User, experiments: Set[ExperimentType] = Set[ExperimentType]()): FakeActionAuthenticator = {
-    fixedUser = Some(user)
-    fixedExperiments = experiments
-    log.debug("using fixed user: $user")
-    this
-  }
-
-  private[controller] def authenticatedAction[T](apiClient: Boolean, allowPending: Boolean, bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Future[Result],
-    onSocialAuthenticated: SecuredRequest[T] => Future[Result],
-    onUnauthenticated: Request[T] => Future[Result]): Action[T] = Action.async(bodyParser) { request =>
-    try {
-      if (isAuthenticated) {
-        val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent", username = None))
-        log.debug(s"running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
-        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
-        log.debug(s"executed action with res: $res")
-        res
-      } else {
-        log.debug(s"running unauthenticated action, request on path ${request.path} api: $apiClient")
-        val res = onUnauthenticated(request)
-        log.debug(s"executed action with res: $res")
-        res
-      }
-    } catch {
-      case t: Throwable =>
-        t.printStackTrace()
-        log.error("action fail!", t)
-        throw t
-    }
-  }
-
-  private[controller] def isAdmin(experiments: Set[ExperimentType]) = false
-
-  private[controller] def isAdmin(userId: Id[User]) = false
-}
