@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -32,6 +33,7 @@ import scala.concurrent.Future
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
+    ExecutionContextModule(),
     FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),

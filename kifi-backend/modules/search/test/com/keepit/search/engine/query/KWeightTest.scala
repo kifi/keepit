@@ -19,14 +19,14 @@ class KWeightTest extends Specification {
   private val searcher = indexer.getSearcher
 
   private def mkKTextQuery(tok: String): KTextQuery = {
-    val tq = new KTextQuery
+    val tq = new KTextQuery(tok)
     tq.addQuery(new TermQuery(new Term("c", tok)))
     tq
   }
 
   "KWeight" should {
     "return a single (KTextWeight, 1.0f) for KTextQuery" in {
-      val q0 = new KTextQuery
+      val q0 = new KTextQuery("")
       val w0 = searcher.createWeight(q0).asInstanceOf[KWeight]
       val out = new ArrayBuffer[(Weight, Float)]
       w0.getWeights(out)

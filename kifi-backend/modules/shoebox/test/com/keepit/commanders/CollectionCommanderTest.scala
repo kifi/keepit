@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.model._
@@ -19,7 +20,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
 
-  def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
+  def modules = FakeExecutionContextModule() :: FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
 
   def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 

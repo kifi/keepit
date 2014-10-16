@@ -20,7 +20,6 @@ trait CuratorServiceClient extends ServiceClient {
   def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[RecoInfo]]
   def topPublicRecos(): Future[Seq[RecoInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
-  def triggerEmail(code: String): Future[String]
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String]
   def refreshUserRecos(userId: Id[User]): Future[Unit]
 }
@@ -59,12 +58,6 @@ class CuratorServiceClientImpl(
     call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
       response.json.as[Boolean]
     )
-  }
-
-  def triggerEmail(code: String) = {
-    call(Curator.internal.triggerEmail(code), callTimeouts = longTimeout).map { response =>
-      response.json.as[String]
-    }
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = {

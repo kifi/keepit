@@ -53,13 +53,12 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
-    db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
-      val numKeeps = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-      (keeps, numKeeps)
-    }
+  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): Future[Seq[Keep]] = {
+    db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, take, offset) }
+  }
+
+  def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
+    db.readOnlyMasterAsync { implicit s => keepRepo.getCountByLibrary(libraryId) }
   }
 
   def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
@@ -85,6 +84,17 @@ class LibraryCommander @Inject() (
       val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
       (libInfo, accessStr)
     }
+  }
+
+  def getLibrarySummaryById(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
+    val libInfo = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(id)
+      val owner = basicUserRepo.load(lib.ownerId)
+      val numKeeps = keepRepo.getCountByLibrary(id)
+      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
+    }
+    val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
+    (libInfo, accessStr)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[(Int, String), (Library, BasicUser, Int, Int)] = {
@@ -466,12 +476,12 @@ class LibraryCommander @Inject() (
       }
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
-      trackLibraryInvitation(inviterId, eventContext)
+      trackLibraryInvitation(inviterId, eventContext, action = "sent")
       Right(res)
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library]): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -490,6 +500,7 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+        trackLibraryInvitation(userId, eventContext, action = "accepted")
         Right(updatedLib)
       }
     }
@@ -700,9 +711,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {
+  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext, action: String) = {
     val builder = contextBuilderFactory()
     builder.addExistingContext(eventContext)
+    builder += ("action", action)
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }

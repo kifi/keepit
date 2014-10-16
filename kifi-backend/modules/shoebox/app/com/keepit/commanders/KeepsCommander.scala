@@ -792,7 +792,7 @@ class KeepsCommander @Inject() (
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
-  def suggestTags(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Id[Library], limit: Option[Int]): Future[Seq[Hashtag]] = {
+  def suggestTags(userId: Id[User], libraryId: Id[Library], uriId: Id[NormalizedURI], limit: Option[Int]): Future[Seq[Hashtag]] = {
     val item = AugmentableItem(uriId, Some(libraryId))
     val request = ItemAugmentationRequest.uniform(userId, item)
     searchClient.augmentation(request).map { response =>

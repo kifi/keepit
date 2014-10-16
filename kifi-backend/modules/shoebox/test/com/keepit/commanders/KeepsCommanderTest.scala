@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -25,6 +26,7 @@ import play.api.test.Helpers._
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
+    FakeExecutionContextModule() ::
     FakeShoeboxStoreModule() ::
     FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::

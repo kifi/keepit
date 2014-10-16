@@ -3,7 +3,7 @@ package com.keepit.controllers.api
 import com.google.inject.Inject
 import play.api.mvc.Action
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import play.api.libs.json.{ JsError, JsSuccess, Json }
 import com.keepit.commanders.{ SendgridCommander, SendgridEvent }
 import scala.Exception

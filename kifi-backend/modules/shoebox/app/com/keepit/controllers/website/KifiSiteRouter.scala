@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import play.api.mvc.Results._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
@@ -61,7 +62,7 @@ class KifiSiteRouter @Inject() (
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
-          NotFound("I'm sorry, I couldn't find what you're looking for. :(") // better 404 please!
+          NotFound(views.html.error.notFound())
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
           AngularDistAssets.angularApp(ng.preload.map(s => s(r)))

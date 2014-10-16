@@ -198,4 +198,34 @@ class DataBufferTest extends Specification {
       (result == expectedWithSkippingTaggedFloat) === true
     }
   }
+
+  "repeat reading after rewind" in {
+
+    val buf = new DataBuffer
+    val writer = new DataBufferWriter
+
+    var recType = 0
+    val expected = (0 until 3).map { id =>
+      val tag = rand.nextInt().toByte
+      val value = rand.nextFloat()
+      val datum = (recType, rand.nextLong(), DataBuffer.taggedFloatBits(tag, value), false)
+      buf.alloc(writer, recType, 12)
+      writer.putLong(datum._2)
+      writer.putTaggedFloat(tag, value)
+      recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
+      datum
+    }
+
+    val result1 = new ArrayBuffer[(Int, Long, Int, Boolean)]()
+    val result2 = new ArrayBuffer[(Int, Long, Int, Boolean)]()
+
+    buf.scan(new DataBufferReader) { reader =>
+      result1 += ((reader.recordType, reader.nextLong(), reader.nextTaggedFloatBits(), reader.hasMore))
+      reader.rewind()
+      result2 += ((reader.recordType, reader.nextLong(), reader.nextTaggedFloatBits(), reader.hasMore))
+    }
+
+    (result1 == expected.map(d => (d._1, d._2, d._3, d._4))) === true
+    (result2 == expected.map(d => (d._1, d._2, d._3, d._4))) === true
+  }
 }

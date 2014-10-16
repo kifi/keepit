@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.commanders.UserConnectionsCommander
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, WebsiteController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.google.inject.Inject
 import com.keepit.model.SocialUserInfoRepo
 import play.api.libs.json.{ Json, JsNumber, JsArray }

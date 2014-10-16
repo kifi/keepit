@@ -162,14 +162,30 @@ angular.module('kifi')
     //
     // Manage Tags
     //
-    $scope.removeTag = function (tag) {
-      // todo (aaron): Get a nicer looking window thing
-      var choice = $window.confirm('Are you sure you want to delete '+ tag.name + '?');
-      if (choice) {
-        tagService.remove(tag);
-        _.remove($scope.tagsToShow, function(t) { return t === tag; });
-      }
+    $scope.showRemoveTagModal = function (tag) {
+      $scope.changeSelection(tag);
+      modalService.open({
+        template: 'tagManage/deleteTagModal.tpl.html',
+        scope: $scope
+      });
     };
+
+    var removedIndex = -1;
+    var removedTag = {};
+    $scope.deleteTag = function () {
+      tagService.remove($scope.selectedTag);
+      removedIndex = _.findIndex($scope.tagsToShow, function(t) { return t === $scope.selectedTag; });
+      removedTag = $scope.tagsToShow[removedIndex];
+      $scope.tagsToShow.splice(removedIndex, 1);
+    };
+
+    $rootScope.$on('undoRemoveTag', function () {
+      if (removedIndex > 0) {
+        $scope.tagsToShow.splice(removedIndex, 0, removedTag);
+        removedIndex = -1;
+        removedTag = {};
+      }
+    });
 
   }
 ]);

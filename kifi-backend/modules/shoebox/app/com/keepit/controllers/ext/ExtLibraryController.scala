@@ -2,14 +2,17 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.controllers.LibraryAccessActions
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -18,10 +21,11 @@ import play.api.mvc.Result
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.json
 
 class ExtLibraryController @Inject() (
   db: Database,
-  libraryCommander: LibraryCommander,
+  val libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -31,8 +35,11 @@ class ExtLibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
+  airbrake: AirbrakeNotifier,
+  keepInterner: KeepInterner,
+  rawKeepFactory: RawKeepFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends UserActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
@@ -222,22 +229,25 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, None, query, limit)
+  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, None, query, limit)
 
-  def searchTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSearchTags(libraryPubId, Some(keepId), query, limit)
+  def suggestTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, Some(keepId), query, limit)
 
-  private def doSearchTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
+  private def doSuggestTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
         if (query.trim.isEmpty && keepId.isDefined) {
           val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
-          keepsCommander.suggestTags(request.userId, keep.uriId, libraryId, limit).map { suggestedTags => Ok(Json.toJson(suggestedTags)) }
+          keepsCommander.suggestTags(request.userId, libraryId, keep.uriId, limit).map { suggestedTags =>
+            val result = JsArray(suggestedTags.map { tag => Json.obj("tag" -> tag) })
+            Ok(result)
+          }
         } else {
           keepsCommander.searchTags(request.userId, query, limit) map { hits =>
             implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-            val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
+            val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
             Ok(result)
           }
         }
@@ -247,6 +257,22 @@ class ExtLibraryController @Inject() (
     } getOrElse {
       Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
     }
+  }
+
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+  def importBrowserBookmarks(id: PublicId[Library]) = (UserAction andThen LibraryWriteAction(id))(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
+    val userId = request.userId
+    val installationId = request.kifiInstallationId
+    val json = request.body
+
+    SafeFuture {
+      log.debug(s"adding bookmarks import of user $userId")
+
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.bookmarkImport).build
+      val libraryId = Library.decodePublicId(id).get
+      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
+    }
+    Status(ACCEPTED)(JsNumber(0))
   }
 
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
