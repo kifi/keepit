@@ -235,7 +235,7 @@ GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
-GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0)
+GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, count: Int ?= 10)
 
 
 
@@ -324,9 +324,9 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
-GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0)
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, count: Int ?= 10)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
-GET     /site/libraries/:id/collabs @com.keepit.controllers.website.LibraryController.getCollaborators(id: PublicId[Library], count: Int, offset: Int ?= 0)
+GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)

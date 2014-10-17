@@ -28,6 +28,7 @@ import play.api.libs.json._
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.Success
+import com.keepit.common.json
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -53,11 +54,10 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
+  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): (Seq[Keep], Int) = {
     db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
       val numKeeps = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
+      val keeps = keepRepo.getByLibrary(libraryId, offset, limit)
       (keeps, numKeeps)
     }
   }
@@ -116,17 +116,15 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
-    val (lib, owner, collabs, follows, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
+    val members = getLibraryMembers(library.id.get, 0, 10)
+
+    val (lib, owner, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
-      val (firstFollows, firstCollabs) = libraryMembershipRepo.pageWithLibraryIdAndAccess(library.id.get, 10, 0, Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE, LibraryAccess.READ_ONLY)).partition(u => u.access == LibraryAccess.READ_ONLY)
-      val collabs = firstCollabs.map(m => basicUserRepo.load(m.userId))
-      val follows = firstFollows.map(m => basicUserRepo.load(m.userId))
       val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
-
       val keeps = keepRepo.getByLibrary(library.id.get, 10, 0)
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
-      (library, owner, collabs, follows, collabCount, followCount, keeps, keepCount)
+      (library, owner, collabCount, followCount, keeps, keepCount)
     }
 
     keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps).map { keepInfos =>
@@ -139,13 +137,68 @@ class LibraryCommander @Inject() (
         url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
         kind = lib.kind,
         visibility = lib.visibility,
-        collaborators = collabs,
-        followers = follows,
+        followers = members,
         keeps = keepInfos,
         numKeeps = keepCount,
         numCollaborators = numCollabs,
         numFollowers = numFollows,
         lastKept = lib.lastKept)
+    }
+  }
+
+  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int): Seq[MaybeLibraryMember] = {
+    val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
+    val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
+    val membersAccess = collaboratorsAccess ++ followersAccess
+    val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
+
+    db.readOnlyMaster { implicit session =>
+      // Get Collaborators
+      val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
+
+      // Get Followers
+      val collaboratorsShown = collaborators.length
+      val followersLimit = limit - collaboratorsShown
+      val followers = if (followersLimit == 0) Seq.empty[LibraryMembership] else {
+        val followersOffset = if (collaboratorsShown > 0) 0 else {
+          val collaboratorsTotal = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, collaboratorsAccess)
+          offset - collaboratorsTotal
+        }
+        libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, followersOffset, followersLimit, followersAccess)
+      }
+
+      // Get Invitees with Invites
+      val membersShown = collaborators.length + followers.length
+      val inviteesLimit = limit - membersShown
+      val inviteesWithInvites = if (inviteesLimit == 0) Seq.empty[(Either[Id[User], EmailAddress], Set[LibraryInvite])] else {
+        val inviteesOffset = if (membersShown > 0) 0 else {
+          val membersTotal = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, membersAccess)
+          offset - membersTotal
+        }
+        libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates)
+      }
+
+      // Build MaybeLibraryMembers
+
+      val usersById = {
+        val usersShown = collaborators.map(_.userId).toSet ++ followers.map(_.userId) ++ inviteesWithInvites.flatMap(_._1.left.toOption)
+        basicUserRepo.loadAll(usersShown)
+      }
+
+      val actualMembers = (collaborators ++ followers).map { membership =>
+        val member = Left(usersById(membership.userId))
+        MaybeLibraryMember(member, membership.access, None)
+      }
+
+      val invitedMembers = inviteesWithInvites.map {
+        case (invitee, invites) =>
+          val member = invitee.left.map(usersById(_))
+          val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+          val access = invites.map(_.access).maxBy(_.priority)
+          MaybeLibraryMember(member, access, Some(lastInvitedAt))
+      }
+
+      actualMembers ++ invitedMembers
     }
   }
 
@@ -820,6 +873,19 @@ private object KeepsHolder {
   )(KeepsHolder.apply, unlift(KeepsHolder.unapply))
 }
 
+case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: LibraryAccess, lastInvitedAt: Option[DateTime])
+
+object MaybeLibraryMember {
+  implicit val writes = Writes[MaybeLibraryMember] { member =>
+    val identityFields = member.member match {
+      case Left(user) => Json.toJson(user).as[JsObject]
+      case Right(emailAddress) => Json.obj("email" -> emailAddress)
+    }
+    val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
+    json.minify(identityFields ++ libraryRelatedFields)
+  }
+}
+
 case class FullLibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -830,31 +896,29 @@ case class FullLibraryInfo(
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,
-  collaborators: Seq[BasicUser],
-  followers: Seq[BasicUser],
+  followers: Seq[MaybeLibraryMember],
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,
   numFollowers: Int)
 
 object FullLibraryInfo {
-  implicit val format = (
-    (__ \ 'id).format[PublicId[Library]] and
-    (__ \ 'name).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'slug).format[LibrarySlug] and
-    (__ \ 'url).format[String] and
-    (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'owner).format[BasicUser] and
-    (__ \ 'collaborators).format[Seq[BasicUser]] and
-    (__ \ 'followers).format[Seq[BasicUser]] and
-    (__ \ 'keeps).format[Seq[KeepInfo]] and
-    (__ \ 'numKeeps).format[Int] and
-    (__ \ 'numCollaborators).format[Int] and
-    (__ \ 'numFollowers).format[Int]
-  )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
+  implicit val writes = (
+    (__ \ 'id).write[PublicId[Library]] and
+    (__ \ 'name).write[String] and
+    (__ \ 'visibility).write[LibraryVisibility] and
+    (__ \ 'description).writeNullable[String] and
+    (__ \ 'slug).write[LibrarySlug] and
+    (__ \ 'url).write[String] and
+    (__ \ 'kind).write[LibraryKind] and
+    (__ \ 'lastKept).writeNullable[DateTime] and
+    (__ \ 'owner).write[BasicUser] and
+    (__ \ 'followers).write[Seq[MaybeLibraryMember]] and
+    (__ \ 'keeps).write[Seq[KeepInfo]] and
+    (__ \ 'numKeeps).write[Int] and
+    (__ \ 'numCollaborators).write[Int] and
+    (__ \ 'numFollowers).write[Int]
+  )(unlift(FullLibraryInfo.unapply))
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {

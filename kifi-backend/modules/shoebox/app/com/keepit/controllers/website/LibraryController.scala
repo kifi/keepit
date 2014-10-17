@@ -229,42 +229,26 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, count: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val take = Math.min(count, 30)
-        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
+        val limit = Math.min(count, 30)
+        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, offset, limit)
         val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
 
         keepInfosF.map { keepInfos =>
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(limit, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
         }
     }
   }
 
-  def getCollaborators(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+  def getMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
-      val take = Math.min(count, 10)
-      val memberships = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, take, offset, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT, LibraryAccess.READ_ONLY))
-      val (f, c) = memberships.partition(_.access == LibraryAccess.READ_ONLY)
-      val followers = f.map(m => basicUserRepo.load(m.userId))
-      val collaborators = c.map(m => basicUserRepo.load(m.userId))
-
-      val numF = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, Set(LibraryAccess.READ_ONLY))
-      val numC = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
-
-      Ok(Json.obj("collaborators" -> Json.toJson(collaborators),
-        "followers" -> Json.toJson(followers),
-        "numCollaborators" -> numC,
-        "numFollowers" -> numF,
-        "count" -> take,
-        "offset" -> offset))
-    }
+    val maybeMembers = libraryCommander.getLibraryMembers(libraryId, offset, limit)
+    Ok(Json.toJson(maybeMembers))
   }
 
   def copyKeeps = UserAction(parse.tolerantJson) { request =>

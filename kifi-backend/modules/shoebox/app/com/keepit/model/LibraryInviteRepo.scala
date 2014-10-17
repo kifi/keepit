@@ -2,11 +2,12 @@ package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ State, ExternalId, Id }
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
@@ -18,6 +19,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getByUser(userId: Id[User], excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(LibraryInvite, Library)]
   def getByEmailAddress(email: EmailAddress, excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+  def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]
 }
 
 @Singleton
@@ -115,4 +117,27 @@ class LibraryInviteRepoImpl @Inject() (
     }
   }
 
+  def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])] = {
+    val invitees = {
+      val invitesGroupedByInvitee = (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates)) yield r).groupBy(r => (r.userId, r.emailAddress))
+      val inviteesWithLastInvitedAt = invitesGroupedByInvitee.map { case ((userId, emailAddress), invites) => (userId.?, emailAddress.?, invites.map(_.createdAt).min.get) }
+      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isNotNull, firstInvitedAt) }
+      sortedInvitees.drop(offset).take(limit).list
+    }
+
+    val (userIds, emailAddresses) = {
+      val (userInvitees, emailInvitees) = invitees.partition { case (userId, _, _) => userId.isDefined }
+      (userInvitees.map(_._1.get), emailInvitees.map(_._2.get))
+    }
+
+    val invitesByUserId = {
+      (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates) && r.userId.inSet(userIds)) yield r).list
+    }.groupBy(_.userId.get).mapValues(_.toSet)
+
+    val invitesByEmailAddress = {
+      (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates) && r.emailAddress.inSet(emailAddresses)) yield r).list
+    }.groupBy(_.emailAddress.get).mapValues(_.toSet)
+
+    userIds.map(userId => Left(userId) -> invitesByUserId(userId)) ++ emailAddresses.map(emailAddress => Right(emailAddress) -> invitesByEmailAddress(emailAddress))
+  }
 }

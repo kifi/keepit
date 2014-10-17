@@ -123,18 +123,18 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, count: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val take = Math.min(count, 30)
-        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
+        val limit = Math.min(count, 30)
+        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, offset, limit)
         val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
 
         keepInfosF.map { keepInfos =>
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(limit, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
         }
     }
   }
