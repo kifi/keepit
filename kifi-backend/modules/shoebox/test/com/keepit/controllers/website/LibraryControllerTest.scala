@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
@@ -245,10 +245,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |"membership":"owner"
           }""".stripMargin))
 
-        val (user2, user2InvitedAt) = db.readWrite { implicit s =>
+        val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Some(Username("bhsu"))))
-          val invite = libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
-          (user2, invite.createdAt)
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
         val request2 = FakeRequest("GET", testPath)
@@ -271,15 +271,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "pictureName":"${basicUser1.pictureName}",
              |  "username":"${basicUser1.username.get.value}"
              |},
-             |"followers":[
-             |  {"id":"${user2.externalId}",
-             |  "firstName":"${user2.firstName}",
-             |  "lastName":"${user2.lastName}",
-             |  "pictureName":"0.jpg",
-             |  "username":"${user2.username.get.value}",
-             |  "membership":"read_only",
-             |  "lastInvitedAt":${Json.toJson(user2InvitedAt).toString}}
-             |],
+             |"followers":[],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -839,16 +831,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
           libraryMembershipRepo.save(LibraryMembership(userId = u2.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1.plusHours(1)))
           libraryMembershipRepo.save(LibraryMembership(userId = u3.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusHours(2)))
-          libraryMembershipRepo.save(LibraryMembership(userId = u4.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = u1.id.get, userId = Some(u4.id.get), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = u1.id.get, emailAddress = Some(EmailAddress("sonic@sega.co.jp")), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
           (u1, u2, u3, u4, lib)
         }
 
         inject[FakeUserActionsHelper].setUser(user1)
 
         val pubId1 = Library.publicId(lib.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getMembers(pubId1, 0, 1).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 0, 1).url
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getMembers(pubId1, 0, 1)(request1)
+        val result1 = libraryController.getLibraryMembers(pubId1, 0, 1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -861,14 +854,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Plumber",
                |  "pictureName":"0.jpg",
                |  "membership":"read_write"}
-               |],
-               |"offset":0,
-               |"limit":1
-               |}""".stripMargin))
+               |]
+             |}""".stripMargin))
 
-        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getMembers(pubId1, 1, 2).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryMembers(pubId1, 1, 4).url
         val request2 = FakeRequest("POST", testPath2)
-        val result2 = libraryController.getMembers(pubId1, 1, 2)(request2)
+        val result2 = libraryController.getLibraryMembers(pubId1, 1, 3)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -885,11 +876,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "firstName":"Peach",
                |  "lastName":"Princess",
                |  "pictureName":"0.jpg",
-               |  "membership":"read_only"}
-               |],
-               |"offset":1,
-               |"limit":2
-               |}""".stripMargin))
+               |  "membership":"read_only",
+               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))}},
+               |  {"email":"sonic@sega.co.jp",
+               |  "membership":"read_only",
+               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))}}
+               |]
+             |}""".stripMargin))
       }
     }
 

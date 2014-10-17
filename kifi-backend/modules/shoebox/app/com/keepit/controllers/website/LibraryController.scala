@@ -247,11 +247,12 @@ class LibraryController @Inject() (
     }
   }
 
-  def getMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val enforcedLimit = Math.min(limit, 30)
-    val maybeMembers = libraryCommander.getLibraryMembers(libraryId, offset, enforcedLimit)
-    Ok(Json.obj("members" -> Json.toJson(maybeMembers), "offset" -> offset, "limit" -> enforcedLimit))
+    val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, enforcedLimit, fillInWithInvites = true)
+    val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+    Ok(Json.obj("members" -> maybeMembers))
   }
 
   def copyKeeps = UserAction(parse.tolerantJson) { request =>

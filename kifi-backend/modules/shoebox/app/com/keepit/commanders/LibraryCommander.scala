@@ -117,15 +117,20 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
 
-    val members = getLibraryMembers(library.id.get, 0, 10)
+    val memberIds = {
+      val (collaborators, followers, _) = getLibraryMembers(library.id.get, 0, 10, fillInWithInvites = false)
+      (collaborators ++ followers).map(_.userId)
+    }
 
-    val (lib, owner, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
-      val owner = basicUserRepo.load(library.ownerId)
+    val (lib, owner, members, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
+      val usersById = basicUserRepo.loadAll(memberIds.toSet + library.ownerId)
+      val owner = usersById(library.ownerId)
+      val members = memberIds.map(usersById(_))
       val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
       val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
-      (library, owner, collabCount, followCount, keeps, keepCount)
+      (library, owner, members, collabCount, followCount, keeps, keepCount)
     }
 
     keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps).map { keepInfos =>
@@ -147,7 +152,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int): Seq[MaybeLibraryMember] = {
+  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]) = {
     val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val membersAccess = collaboratorsAccess ++ followersAccess
@@ -171,36 +176,38 @@ class LibraryCommander @Inject() (
       // Get Invitees with Invites
       val membersShown = collaborators.length + followers.length
       val inviteesLimit = limit - membersShown
-      val inviteesWithInvites = if (inviteesLimit == 0) Seq.empty[(Either[Id[User], EmailAddress], Set[LibraryInvite])] else {
+      val inviteesWithInvites = if (inviteesLimit == 0 || !fillInWithInvites) Seq.empty[(Either[Id[User], EmailAddress], Set[LibraryInvite])] else {
         val inviteesOffset = if (membersShown > 0) 0 else {
           val membersTotal = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, membersAccess)
           offset - membersTotal
         }
         libraryInviteRepo.pageInviteesByLibraryId(libraryId, inviteesOffset, inviteesLimit, relevantInviteStates)
       }
-
-      // Build MaybeLibraryMembers
-
-      val usersById = {
-        val usersShown = collaborators.map(_.userId).toSet ++ followers.map(_.userId) ++ inviteesWithInvites.flatMap(_._1.left.toOption)
-        basicUserRepo.loadAll(usersShown)
-      }
-
-      val actualMembers = (collaborators ++ followers).map { membership =>
-        val member = Left(usersById(membership.userId))
-        MaybeLibraryMember(member, membership.access, None)
-      }
-
-      val invitedMembers = inviteesWithInvites.map {
-        case (invitee, invites) =>
-          val member = invitee.left.map(usersById(_))
-          val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
-          val access = invites.map(_.access).maxBy(_.priority)
-          MaybeLibraryMember(member, access, Some(lastInvitedAt))
-      }
-
-      actualMembers ++ invitedMembers
+      (collaborators, followers, inviteesWithInvites)
     }
+  }
+
+  def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember] = {
+
+    val usersById = {
+      val usersShown = collaborators.map(_.userId).toSet ++ followers.map(_.userId) ++ inviteesWithInvites.flatMap(_._1.left.toOption)
+      db.readOnlyMaster { implicit session => basicUserRepo.loadAll(usersShown) }
+    }
+
+    val actualMembers = (collaborators ++ followers).map { membership =>
+      val member = Left(usersById(membership.userId))
+      MaybeLibraryMember(member, membership.access, None)
+    }
+
+    val invitedMembers = inviteesWithInvites.map {
+      case (invitee, invites) =>
+        val member = invitee.left.map(usersById(_))
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        val access = invites.map(_.access).maxBy(_.priority)
+        MaybeLibraryMember(member, access, Some(lastInvitedAt))
+    }
+
+    actualMembers ++ invitedMembers
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -881,24 +888,13 @@ private object KeepsHolder {
 case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: LibraryAccess, lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
-  implicit val format = {
-    val writes = Writes[MaybeLibraryMember] { member =>
-      val identityFields = member.member match {
-        case Left(user) => Json.toJson(user).as[JsObject]
-        case Right(emailAddress) => Json.obj("email" -> emailAddress)
-      }
-      val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
-      json.minify(identityFields ++ libraryRelatedFields)
+  implicit val writes = Writes[MaybeLibraryMember] { member =>
+    val identityFields = member.member match {
+      case Left(user) => Json.toJson(user).as[JsObject]
+      case Right(emailAddress) => Json.obj("email" -> emailAddress)
     }
-
-    val reads = Reads[MaybeLibraryMember] { jsValue =>
-      for {
-        member <- jsValue.validate[BasicUser].map(Left(_)) orElse (jsValue \ "email").validate[EmailAddress].map(Right(_))
-        access <- (jsValue \ "membership").validate[LibraryAccess]
-        lastInvitedAt <- (jsValue \ "lastInvitedAt").validate[Option[DateTime]]
-      } yield MaybeLibraryMember(member, access, lastInvitedAt)
-    }
-    Format(reads, writes)
+    val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
+    json.minify(identityFields ++ libraryRelatedFields)
   }
 }
 
@@ -912,7 +908,7 @@ case class FullLibraryInfo(
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,
-  followers: Seq[MaybeLibraryMember],
+  followers: Seq[BasicUser],
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,
@@ -929,7 +925,7 @@ object FullLibraryInfo {
     (__ \ 'kind).format[LibraryKind] and
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'owner).format[BasicUser] and
-    (__ \ 'followers).format[Seq[MaybeLibraryMember]] and
+    (__ \ 'followers).format[Seq[BasicUser]] and
     (__ \ 'keeps).format[Seq[KeepInfo]] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numCollaborators).format[Int] and

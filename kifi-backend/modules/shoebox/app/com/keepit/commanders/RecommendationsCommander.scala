@@ -219,7 +219,7 @@ class RecommendationsCommander @Inject() (
               url = libInfo.url,
               description = libInfo.description,
               owner = db.readOnlyReplica { implicit session => basicUserRepo.load(ownerId) },
-              followers = libInfo.followers.takeWhile(_.lastInvitedAt.isEmpty).map(_.member.left.get),
+              followers = libInfo.followers,
               numFollowers = libInfo.numFollowers,
               numKeeps = libInfo.numKeeps)
 
