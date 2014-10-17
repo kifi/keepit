@@ -118,7 +118,9 @@ angular.module('kifi')
             var newResults;
 
             if (contacts && contacts.length) {
-              newResults = _.clone(contacts);
+              // Clone deeply; otherwise, the data augmentation we do on individual contacts
+              // will be cached as part of the contacts cached by Clutch.
+              newResults = _.clone(contacts, true);
 
               newResults.forEach(function (result) {
                 if (result.id) {
