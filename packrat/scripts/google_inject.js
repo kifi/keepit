@@ -164,15 +164,18 @@ if (searchUrlRe.test(document.URL)) !function () {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && (resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || resp.context === 'guide') || newFilter);
+      var showAny = Boolean(resp.cutPoint && (resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || resp.context === 'guide') || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
-      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc);
+      log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'cutPoint:', resp.cutPoint, 'inDoc:', inDoc);
       unpack(resp);
-      if (!resp.hits.length) resp.mayHaveMore = false;
+      if (resp.hits.length) {
+        stashExtraHits(resp, resp.cutPoint);
+      } else {
+        resp.mayHaveMore = false;
+      }
 
       if (!newFilter || newFilter.who === 'a') {
-        // TODO: honor .cutPoint (number of "top" results)
-        var numTop = resp.numTop = resp.show ? resp.hits.length : 0;
+        var numTop = resp.cutPoint;
         if (!newFilter) {
           $status
             .attr('data-n', numTop)
@@ -187,11 +190,8 @@ if (searchUrlRe.test(document.URL)) !function () {
         $res.find('.kifi-filter-yours').attr('data-n', insertCommas(resp.myTotal));
         $res.find('.kifi-filter-friends').attr('data-n', insertCommas(resp.friendsTotal));
       }
-      if (showPreview && resp.hits.length > resp.prefs.maxResults) {
-        resp.nextHits = resp.hits.splice(resp.prefs.maxResults);
-        resp.nextUUID = resp.uuid;
-        resp.nextContext = resp.context;
-        resp.mayHaveMore = true;
+      if (showPreview) {
+        stashExtraHits(resp, resp.prefs.maxResults);
       }
       attachResults();
       $bar[0].className = 'kifi-res-bar' + (showPreview ? ' kifi-preview' : showAny ? '' : ' kifi-collapsed');
@@ -225,6 +225,15 @@ if (searchUrlRe.test(document.URL)) !function () {
       } catch (e) {
         log('[parseQ] non-UTF-8 query:', m[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
       }
+    }
+  }
+
+  function stashExtraHits(resp, n) {
+    if (resp.hits.length > n) {
+      resp.nextHits = resp.hits.splice(n);
+      resp.nextUUID = resp.uuid;
+      resp.nextContext = resp.context;
+      resp.mayHaveMore = true;
     }
   }
 
@@ -706,7 +715,8 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   function renderMore() {
     var hits = response.nextHits;
-    var hitHtml = response.numTop === response.hits.length ? ['<li class=kifi-res-more-heading>More keeps</li>'] : [];
+    var hitHtml = (!response.filter || response.filter.who === 'a') && response.cutPoint === response.hits.length ?
+      ['<li class=kifi-res-more-heading>More keeps</li>'] : [];
     log("[renderMore] hits:", hits);
     response.hits.push.apply(response.hits, hits);
     response.uuid = response.nextUUID;
