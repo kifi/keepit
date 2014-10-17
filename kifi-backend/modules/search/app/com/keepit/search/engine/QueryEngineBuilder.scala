@@ -130,7 +130,7 @@ class QueryEngineBuilder(coreQuery: Query) {
       case (q, _) =>
         labels += {
           q match {
-            case _: ProximityQuery => "proximity boost"
+            case _: KProximityQuery => "proximity boost"
             case _: HomePageQuery => "home page boost"
             case f: FilterQuery => s"filter(${f.subQuery.toString})"
             case _ => s"boost(${q.toString})"
