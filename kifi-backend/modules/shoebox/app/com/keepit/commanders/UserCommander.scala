@@ -521,19 +521,20 @@ class UserCommander @Inject() (
     if (overrideRestrictions || UsernameOps.isValid(username.value)) {
       db.readWrite { implicit session =>
         val existingUser = userRepo.getByUsername(username)
-
-        if (existingUser.isEmpty || existingUser.get.id.get == userId) {
+        if (existingUser.isDefined && existingUser.get.id.get != userId) {
+          log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
+          Left("username_exists")
+        } else {
           if (!readOnly) {
             userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
           } else {
             log.info(s"[dry run] user $userId set with username $username")
           }
           Right(username)
-        } else {
-          Left("username_exists")
         }
       }
     } else {
+      log.warn(s"[dry run] for user $userId invalid username: $username")
       Left("invalid_username")
     }
   }
@@ -546,6 +547,9 @@ class UserCommander @Inject() (
     } else name
     def randomNumber = scala.util.Random.nextInt(999)
     val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList
+    candidates.map { username =>
+      if (!UsernameOps.isValid(username)) throw new Exception(s"username $username is invalid for user $user")
+    }
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
