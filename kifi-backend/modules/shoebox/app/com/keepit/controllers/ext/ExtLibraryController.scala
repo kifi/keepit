@@ -138,7 +138,7 @@ class ExtLibraryController @Inject() (
             mine = true, // TODO: stop assuming keep is mine and removable
             removable = true,
             secret = keepInfo.isPrivate,
-            libraryId = Library.publicId(libraryId))).as[JsObject] ++ imageStatus)
+            libraryId = libraryPubId)).as[JsObject] ++ imageStatus)
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
