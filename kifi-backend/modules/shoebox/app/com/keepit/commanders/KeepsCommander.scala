@@ -174,7 +174,7 @@ class KeepsCommander @Inject() (
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
-          if (info.name.startsWith("BookmarkStore")) {
+          if (info.name.startsWith("KeepIndex")) {
             countMap.get(info.name) match {
               case Some(count) if count >= info.numDocs =>
               case _ => countMap += (info.name -> info.numDocs)
