@@ -150,6 +150,7 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl());
             return;
           }
+
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
               // TODO(yiping): make a better error message. One idea is to update
@@ -158,8 +159,7 @@ angular.module('kifi')
               return;
             }
 
-            // Let the user be the first one listed. :)
-            library.followers.unshift({
+            library.followers.push({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
               lastName: profileService.me.lastName,
