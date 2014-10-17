@@ -88,7 +88,6 @@ angular.module('kifi')
         });
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
-        $rootScope.$on('changedLibrary', updateNavLibs);
 
         scope.$watch(function () {
           return friendService.requests.length;
