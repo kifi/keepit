@@ -102,46 +102,37 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit s =>
         libraryMembershipRepo.getOpt(request.userId, libraryId)
       } match {
-        case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
-          val info = request.body
+        case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
+          val body = request.body
           val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-          if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
+          if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)
           }
           implicit val context = hcb.build
 
-          val keep = keepsCommander.keepOne(info.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
-
-          val tags = db.readOnlyMaster { implicit s =>
-            collectionRepo.getTagsByKeepId(keep.id.get)
-          }
-
-          // Determine image choice.
-          val imageStatusPath = (info \ "image") match {
-            case JsString(imageUrl) if imageUrl.startsWith("http") =>
-              val keepImageRequest = db.readWrite { implicit s =>
-                keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
-              }
-              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Some(routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
-            case JsNull => // user purposely wants no image
-              None
-            case _ =>
-              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
-              None
+          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
+          val (tags, image) = if (isNewKeep) {
+            (Seq.empty, None) // optimizing the common case
+          } else {
+            val tags = db.readOnlyReplica { implicit s =>
+              collectionRepo.getTagsByKeepId(keep.id.get)
+            }
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize)
+            (tags, image)
           }
 
           val keepData = KeepData(
             keep.externalId,
-            mine = true, // TODO: stop assuming keep is mine and removable
-            removable = true,
+            mine = keep.userId == request.userId,
+            removable = mem.canWrite,
             secret = keep.visibility == LibraryVisibility.SECRET,
             libraryId = libraryPubId)
-          val moarKeepData = MoarKeepData(keep.title, None, tags.map(_.tag).toSeq)
-          Ok(Json.toJson(keepData).as[JsObject] ++
-            Json.toJson(moarKeepData).as[JsObject] ++
-            json.minify(Json.obj("imageStatusPath" -> imageStatusPath)))
+          val moarKeepData = MoarKeepData(
+            title = keep.title,
+            image = image.map(keepImageCommander.getUrl),
+            tags = tags.map(_.tag).toSeq)
+          Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
@@ -192,7 +183,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
@@ -213,7 +204,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               db.readOnlyReplica { implicit s =>

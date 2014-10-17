@@ -140,7 +140,7 @@ class PageCommander @Inject() (
           val mine = userId == keeperId
           val libraryId = keep.libraryId.get
           val lib = libraryRepo.get(libraryId)
-          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.hasWriteAccess)
+          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
           KeepData(
             id = keep.externalId,
             mine = mine,
