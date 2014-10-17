@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import play.api.mvc.Action
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, WebsiteController, ShoeboxServiceController }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.google.inject.Inject
 
 class ContactsImportController @Inject() (val userActionsHelper: UserActionsHelper)

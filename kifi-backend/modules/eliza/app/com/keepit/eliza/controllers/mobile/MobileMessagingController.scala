@@ -229,4 +229,9 @@ class MobileMessagingController @Inject() (
     }
     Ok("")
   }
+
+  def getUnreadNotificationsCount = UserAction { request =>
+    val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+    Ok(numUnreadUnmuted.toString)
+  }
 }

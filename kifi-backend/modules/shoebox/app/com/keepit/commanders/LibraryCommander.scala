@@ -19,6 +19,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -53,13 +54,12 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): (Seq[Keep], Int) = {
-    db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
-      val numKeeps = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, take, offset)
-      (keeps, numKeeps)
-    }
+  def getKeeps(libraryId: Id[Library], take: Int, offset: Int): Future[Seq[Keep]] = {
+    db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, take, offset) }
+  }
+
+  def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
+    db.readOnlyMasterAsync { implicit s => keepRepo.getCountByLibrary(libraryId) }
   }
 
   def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
@@ -250,21 +250,23 @@ class LibraryCommander @Inject() (
       Some((BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
-        val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
-        libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
+        libraryMembershipRepo.getWithLibraryId(oldLibrary.id.get).map { m =>
           libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
         }
-        libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
+        libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).map { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
-        keepRepo.getByLibrary(removedLibrary.id.get, Int.MaxValue, 0)
+        keepRepo.getByLibrary(oldLibrary.id.get, Int.MaxValue, 0)
       }
-      future {
-        val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, k) =>
-          keepRepo.save(k.copy(state = KeepStates.INACTIVE))(s)
-        }
-        keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
-        searchClient.updateKeepIndex()
+      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
+        keepRepo.save(keep.sanitizeForDelete())(s)
+      }
+      keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
+      searchClient.updateKeepIndex()
+      //Note that this is at the end, if there was an error while cleaning other library assets
+      //we would want to be able to get back to the library and clean it again
+      db.readWrite { implicit s =>
+        libraryRepo.save(oldLibrary.sanitizeForDelete())
       }
       None
     }
@@ -477,12 +479,12 @@ class LibraryCommander @Inject() (
       }
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
-      trackLibraryInvitation(inviterId, eventContext)
+      trackLibraryInvitation(inviterId, eventContext, action = "sent")
       Right(res)
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library]): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -501,6 +503,7 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+        trackLibraryInvitation(userId, eventContext, action = "accepted")
         Right(updatedLib)
       }
     }
@@ -711,9 +714,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {
+  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext, action: String) = {
     val builder = contextBuilderFactory()
     builder.addExistingContext(eventContext)
+    builder += ("action", action)
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }

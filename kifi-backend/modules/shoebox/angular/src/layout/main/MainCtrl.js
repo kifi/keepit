@@ -158,6 +158,8 @@ angular.module('kifi')
       // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
       $timeout(function () {
+        $scope.forceClose = false;
+
         var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -197,6 +199,8 @@ angular.module('kifi')
       // Use $timeout to wait for forceClose to close the currently open modal before opening
       // the next modal.
       $timeout(function () {
+        $scope.forceClose = false;
+
         var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
         if (!kifiVersion) {
@@ -336,6 +340,8 @@ angular.module('kifi')
             // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
             $timeout(function () {
+              $scope.forceClose = false;
+
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileInProgressModal.tpl.html'
@@ -389,6 +395,8 @@ angular.module('kifi')
             // Use $timeout to wait for forceClose to close the currently open modal before
             // opening the next modal.
             $timeout(function () {
+              $scope.forceClose = false;
+
               if (!result.error) { // success!
                 modalService.open({
                   template: 'common/modal/importBookmarkFileLibraryInProgressModal.tpl.html'

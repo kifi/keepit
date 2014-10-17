@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, SearchServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.heimdal.{ KifiHitContext, SearchEngine, BasicSearchContext, HeimdalContextBuilderFactory }
 import com.keepit.search.SearchEventCommander
 import com.keepit.common.service.FortyTwoServices

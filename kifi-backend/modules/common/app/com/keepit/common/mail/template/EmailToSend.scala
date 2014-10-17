@@ -2,7 +2,7 @@ package com.keepit.common.mail.template
 
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress }
-import com.keepit.heimdal.{ ContextStringData, ContextData }
+import com.keepit.heimdal.{ HeimdalContext, ContextStringData, ContextData }
 import com.keepit.model.User
 import play.twirl.api.Html
 import com.keepit.common.json.EitherFormat
@@ -52,7 +52,8 @@ case class EmailToSend(
   senderUserId: Option[Id[User]] = None,
   tips: Seq[EmailTip] = Seq.empty,
   templateOptions: Map[String, ContextData] = Map.empty,
-  extraHeaders: Option[Map[String, String]] = None)
+  extraHeaders: Option[Map[String, String]] = None,
+  auxiliaryData: Option[HeimdalContext] = None)
 
 object EmailToSend {
   import com.keepit.common.mail.ElectronicMail.emailCategoryFormat
@@ -82,7 +83,8 @@ object EmailToSend {
     (__ \ 'senderUserId).formatNullable[Id[User]] and
     (__ \ 'tips).format[Seq[EmailTip]] and
     (__ \ 'templateOptions).format[Map[String, ContextData]] and
-    (__ \ 'extraHeaders).formatNullable[Map[String, String]]
+    (__ \ 'extraHeaders).formatNullable[Map[String, String]] and
+    (__ \ 'auxiliaryData).formatNullable[HeimdalContext]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }
 

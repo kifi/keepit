@@ -83,11 +83,13 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$on('changedLibrary', function () {
+    $rootScope.$on('librarySummariesChanged', function () {
       $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
         return lib.access !== 'read_only';
       });
     });
+
+    $rootScope.$emit('libraryUrl', {});
 
     $scope.clickAction = function () {
       var tagName = encodeURIComponent($scope.selectedTag.name);
@@ -160,12 +162,30 @@ angular.module('kifi')
     //
     // Manage Tags
     //
-    $scope.removeTag = function (tag) {
+    $scope.showRemoveTagModal = function (tag) {
+      $scope.changeSelection(tag);
       modalService.open({
         template: 'tagManage/deleteTagModal.tpl.html',
-        modalData: { tag: tag, tagsToShow: $scope.tagsToShow }
+        scope: $scope
       });
     };
+
+    var removedIndex = -1;
+    var removedTag = {};
+    $scope.deleteTag = function () {
+      tagService.remove($scope.selectedTag);
+      removedIndex = _.findIndex($scope.tagsToShow, function(t) { return t === $scope.selectedTag; });
+      removedTag = $scope.tagsToShow[removedIndex];
+      $scope.tagsToShow.splice(removedIndex, 1);
+    };
+
+    $rootScope.$on('undoRemoveTag', function () {
+      if (removedIndex > 0) {
+        $scope.tagsToShow.splice(removedIndex, 0, removedTag);
+        removedIndex = -1;
+        removedTag = {};
+      }
+    });
 
   }
 ]);

@@ -8,7 +8,7 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
-    var librarySummariesService = new Clutch(function () {
+    var userLibrarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
         var invites = res.data.invited || [];
@@ -38,6 +38,22 @@ angular.module('kifi')
       });
     });
 
+    var librarySummaryService = new Clutch(function (libraryId) {
+      var mayBeLib = _.find(librarySummaries, function (l) {
+        return l.id === libraryId;
+      });
+      if (mayBeLib) {
+        return $q.when({
+          library: mayBeLib,
+          membership: mayBeLib.access
+        });
+      } else {
+        return $http.get(routeService.getLibrarySummaryById(libraryId)).then(function (res) {
+          return res.data;
+        });
+      }
+    });
+
     var libraryByIdService = new Clutch(function (libraryId) {
       return $http.get(routeService.getLibraryById(libraryId)).then(function (res) {
         return res.data;
@@ -46,7 +62,13 @@ angular.module('kifi')
 
     var libraryByUserSlugService = new Clutch(function (username, slug, authToken) {
       return $http.get(routeService.getLibraryByUserSlug(username, slug, authToken)).then(function (res) {
-        return res.data && res.data.library;
+        // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
+        //       on the library object.
+        if (res.data && res.data.library) {
+          res.data.library.access = res.data.membership;
+          return res.data.library;
+        }
+        return null;
       });
     });
 
@@ -103,9 +125,9 @@ angular.module('kifi')
 
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
-          librarySummariesService.expire();
+          userLibrarySummariesService.expire();
         }
-        return librarySummariesService.get();
+        return userLibrarySummariesService.get();
       },
 
       getLibraryById: function (libraryId, invalidateCache) {
@@ -113,6 +135,13 @@ angular.module('kifi')
           libraryByIdService.expire(libraryId);
         }
         return libraryByIdService.get(libraryId);
+      },
+
+      getLibrarySummaryById: function (libraryId, invalidateCache) {
+        if (invalidateCache) {
+          librarySummaryService.expire(libraryId);
+        }
+        return librarySummaryService.get(libraryId);
       },
 
       getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
@@ -205,6 +234,7 @@ angular.module('kifi')
             librarySummaries.push(response.data);
             _.remove(invitedSummaries, { id: libraryId });
             $rootScope.$emit('librarySummariesChanged');
+            $rootScope.$emit('libraryUpdated', response.data);
           });
         }
 
@@ -215,6 +245,13 @@ angular.module('kifi')
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, { id: libraryId });
           $rootScope.$emit('librarySummariesChanged');
+
+          return api.getLibraryById(libraryId, true).then(function (data) {
+            // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
+            //       on the library object.
+            data.library.access = data.membership;
+            $rootScope.$emit('libraryUpdated', data.library);
+          });
         });
       },
 

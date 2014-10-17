@@ -1,5 +1,22 @@
 @(userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[com.keepit.search.engine.explain.Explanation])
 
+<html>
+
+<head>
+<title>Explaining for User=@userId, URI=@uriId</title>
+<style>
+ table, th, td {
+   border: 1px solid #ddd;
+   border-collapse: collapse;
+ }
+ th, td {
+   padding: 5px;
+   text-align: right;
+ }
+</style>
+</head>
+
+<body>
 
 <h3>Explaining for User:@userId, URI=@uriId</h3>
 
@@ -14,3 +31,6 @@
 <h4>Score Details</h4>
 
 @Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
+
+</body>
+</html>

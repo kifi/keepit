@@ -86,7 +86,7 @@ package object template {
       htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index)
 
     // wrap a url (String) in HTML (so tags aren't escaped)
-    private def htmlUrl(url: String, content: String): Html =
+    def htmlUrl(url: String, content: String): Html =
       Html(appendTrackingParams(url = url, content = content))
 
     // url param must end with a ? or &

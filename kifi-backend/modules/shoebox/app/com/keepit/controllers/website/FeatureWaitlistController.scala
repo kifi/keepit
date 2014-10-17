@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, WebsiteController }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.commanders.FeatureWaitlistCommander
 import com.keepit.common.db.ExternalId
 import com.keepit.model.FeatureWaitlistEntry

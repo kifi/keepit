@@ -33,10 +33,12 @@ angular.module('kifi')
 
     function close () {
       var ref = modals.pop();
-      var $modal = ref[0];
-      var scope = ref[1];
-      scope.$destroy();
-      $modal.remove();
+      if (ref && ref.length > 0 && ref[0].length) {
+        var $modal = ref[0];
+        var scope = ref[1];
+        scope.$destroy();
+        $modal.remove();
+      }
     }
 
     return {

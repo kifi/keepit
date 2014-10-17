@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
+import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
@@ -29,7 +29,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
   def modules = {
     Seq(
       FakeActorSystemModule(),
-      FakeActionAuthenticatorModule(),
+      FakeSecureSocialClientIdModule(),
       FakeUserActionsModule(),
       FixedResultIndexModule(),
       PlayAppConfigurationModule(),

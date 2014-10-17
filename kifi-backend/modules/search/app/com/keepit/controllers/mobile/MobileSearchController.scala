@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{ MobileController, SearchServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.result.DecoratedResult

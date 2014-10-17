@@ -4,12 +4,12 @@ import com.google.inject.Inject
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.model.{ LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
+import com.keepit.model.{ Invitation, LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
@@ -71,6 +71,7 @@ class EmailTestController @Inject() (
     def tip = request.getQueryString("tip")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
+      case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
       case "welcome" => emailSenderProvider.welcome.sendToUser(userId)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
@@ -85,11 +86,11 @@ class EmailTestController @Inject() (
       case "libraryInviteUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, userId = Some(friendId), access = LibraryAccess.READ_ONLY, message = msg)
-        emailSenderProvider.libraryInviteEmail.inviteUserToLibrary(invite).map(_.get)
+        emailSenderProvider.libraryInvite.inviteUserToLibrary(invite).map(_.get)
       case "libraryInviteNonUser" =>
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, ownerId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
-        emailSenderProvider.libraryInviteEmail.inviteUserToLibrary(invite).map(_.get)
+        emailSenderProvider.libraryInvite.inviteUserToLibrary(invite).map(_.get)
       case "confirm" => emailSenderProvider.confirmation.sendToUser(UserEmailAddress(userId = userId, address = sendTo).withVerificationCode(currentDateTime))
       case "tip" if tip.isDefined =>
         val emailTip = EmailTip(tip.get).get
