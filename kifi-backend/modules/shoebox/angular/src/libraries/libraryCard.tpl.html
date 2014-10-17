@@ -2,11 +2,11 @@
   <div class="kf-keep-body">
     <div class="kf-keep-lib-header">
       <div ng-switch="library.kind" class="kf-keep-lib-icon-container">
-        <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-icon"></div>
-        <div ng-switch-when="system_secret" class="kf-keep-lib-icon svg-secret-library-icon"></div>
+        <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-big"></div>
+        <div ng-switch-when="system_secret" class="kf-keep-lib-icon svg-secret-library-big"></div>
         <div ng-switch-default ng-switch="library.visibility">
-          <div ng-switch-when="published" class="kf-keep-lib-icon svg-public-library-icon"></div>
-          <div ng-switch-when="secret" class="kf-keep-lib-icon svg-private-library-icon"></div>
+          <div ng-switch-when="published" class="kf-keep-lib-icon svg-public-library-big"></div>
+          <div ng-switch-when="secret" class="kf-keep-lib-icon svg-private-library-big"></div>
 
           <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
           <div ng-switch-when="discoverable" class="kf-keep-lib-icon svg-yellow-card-with-globe"></div>
