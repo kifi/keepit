@@ -141,22 +141,23 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[AngularRoute] = {
+  private def userOrLibrary(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
     if (path.split.length == 1 || path.split.length == 2) {
       val userOpt = userRepo.getByUsername(Username(path.primary))
-      if (userOpt.isDefined) {
-        if (path.split.length == 1) { // user profile page
-          Some(AngularLoggedIn()) // great place to preload request data since we have `user` available
+
+      userOpt.flatMap { user =>
+        if (user.username.isDefined && user.username.get.value != path.primary) {
+          Some(RedirectRoute("/" + path.path.replaceFirst(path.primary, user.username.get.value)))
+        } else if (path.split.length == 1) { // user profile page
+          Some(Angular()) // great place to preload request data since we have `user` available
         } else {
-          val libOpt = libraryRepo.getBySlugAndUserId(userOpt.get.id.get, LibrarySlug(path.secondary.get))
+          val libOpt = libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get))
           if (libOpt.isDefined) {
             Some(Angular()) // great place to preload request data since we have `lib` available
           } else {
             None
           }
         }
-      } else {
-        None
       }
     } else {
       None
