@@ -81,6 +81,7 @@ angular.module('kifi')
         return route('/user/' + id + '/hide');
       },
       search: searchRoute('/site/search'),
+      search2: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
