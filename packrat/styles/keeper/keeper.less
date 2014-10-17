@@ -203,6 +203,18 @@
     }
   }
 }
+.kifi-pulse-before::before {
+  -webkit-animation: kifi-pulse .4s 1;
+  animation: kifi-pulse .4s 1;
+}
+@keyframes kifi-pulse { .kifi-pulse-keyframes }
+@-moz-keyframes kifi-pulse { .kifi-pulse-keyframes }
+@-webkit-keyframes kifi-pulse { .kifi-pulse-keyframes }
+.kifi-pulse-keyframes () {
+  0% {-webkit-transform: scale(.4)}
+  50% {-webkit-transform: scale(1.6)}
+  100% {-webkit-transform: scale(1)}
+}
 
 .kifi-keepers-box {
   position: fixed;

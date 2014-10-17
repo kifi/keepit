@@ -382,6 +382,9 @@ var keepBox = keepBox || (function () {
       if (keep) {
         library.keep = keep;
         showKeep(library, keep, true);
+        $box.parent().find('.kifi-keep-btn')
+          .filter('.kifi-pulse-before').removeClass('kifi-pulse-before').layout().end()
+          .addClass('kifi-pulse-before');
       }
     });
   }
