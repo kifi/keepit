@@ -550,13 +550,18 @@ class UserCommander @Inject() (
     var selectedUsername: Option[Username] = None
     var i = 0
     while (keepTrying && i < 30) {
-      setUsername(user.id.get, Username(candidates(i)), readOnly = readOnly) match {
+      val candidate = Username(candidates(i))
+      setUsername(user.id.get, candidate, readOnly = readOnly) match {
         case Right(username) =>
           keepTrying = false
           selectedUsername = Some(username)
         case Left(_) =>
           i += 1
+          log.warn(s"[trial $i] could not set username $candidate for user $user")
       }
+    }
+    if (keepTrying) {
+      log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
     }
     selectedUsername
   }
