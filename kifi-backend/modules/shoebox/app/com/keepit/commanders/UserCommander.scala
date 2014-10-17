@@ -525,6 +525,8 @@ class UserCommander @Inject() (
         if (existingUser.isEmpty || existingUser.get.id.get == userId) {
           if (!readOnly) {
             userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
+          } else {
+            log.info(s"[dry run] user ${userId} set with username $username")
           }
           Right(username)
         } else {
@@ -609,6 +611,27 @@ class UserCommander @Inject() (
         FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
       }
     }
+  }
+
+  def updateUsersWithNoUserName(readOnly: Boolean): Int = {
+    var counter = 0
+    val batchSize = 50
+    var batch = db.readOnlyMaster { implicit s =>
+      userRepo.getUsersWithNoUsername(batchSize)
+    }
+    while (batch.nonEmpty) {
+      batch foreach { user =>
+        if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
+        val username = autoSetUsername(user, readOnly)
+        if (username.isEmpty) throw new Exception(s"could not set a username for $user")
+        log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
+        counter += 1
+      }
+      batch = db.readOnlyMaster { implicit s =>
+        userRepo.getUsersWithNoUsername(batchSize)
+      }
+    }
+    counter
   }
 
 }
