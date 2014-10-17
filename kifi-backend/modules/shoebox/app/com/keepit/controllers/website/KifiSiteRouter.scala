@@ -44,7 +44,7 @@ class KifiSiteRouter @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   val redirects = Map[String, String](
-    "recommendation" -> "recommendations" //can be removed after Sept. 10th 2014 -Stephen
+    "recommendation" -> "/recommendations" //can be removed after Sept. 10th 2014 -Stephen
   )
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
@@ -67,7 +67,7 @@ class KifiSiteRouter @Inject() (
           // logged in user, logged in only ng. deliver.
           AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
         case (r: MaybeUserRequest[T], route: RedirectRoute) =>
-          Redirect("/" + route.url)
+          Redirect(route.url)
         case (r: NonUserRequest[T], _) if r.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
