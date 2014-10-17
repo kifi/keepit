@@ -17,10 +17,10 @@
 .kf-header-left
   float: left
   height: 100%
+  width: 240px
   margin-left: 30px
   line-height: 62px
   box-sizing: border-box
-  text-align: center
 
 .kf-header-toggle-menu
 .kf-header-left-separator
@@ -89,6 +89,110 @@ a.kf-header-callout
 
 a.kf-header-callout:hover
   text-decoration: underline
+
+
+.kf-header-search-bar
+  float: left
+  box-sizing: border-box
+  max-width: 820px
+  width: calc(100% - 270px - 270px)
+  padding-top: 8px
+
+.kf-query-lib-container
+  position: relative
+  z-index: 1
+  box-sizing: border-box
+  width: 90%
+  margin-left: 30px
+  margin-top: 5px
+  padding: 5px 0
+  border: defaultBorder
+  border-radius: 3px
+  background-color: #fff
+  white-space: nowra
+
+.kf-query-lib
+  display: inline-block
+  width: calc(70% - 110px)
+  position: relative
+  margin-left: 5px
+
+  &.extend
+    width: calc(100% - 110px)
+
+  input
+    width: 100%
+    color: textDarkGray
+
+.kf-query-lib:focus + .kf-query-lib-icon
+  sprite2x($search-icon-active)
+
+.kf-query-lib-icon
+  display: inline-block
+  margin-left: 5px
+  sprite2x($search-icon-default)
+  vertical-align: bottom
+
+  &.focused
+    sprite2x($search-icon-active)
+
+.kf-header-search-bar-lib-chip
+  position: relative
+  top 1px
+  display: inline-block
+  box-sizing: border-box
+  margin-right: 5px
+  padding: 2px 7px 2px 14px
+  max-width: 35%
+  border: none
+  border-radius: 8px
+
+  &.secret
+    background-color: #f06463
+
+  &.discoverable
+    background-color: #333
+
+  &.published
+    background-color: #73c785
+
+.kf-search-bar-lib-owner-img
+  position: relative
+  left: 14px
+  z-index: 1
+  width: 23px
+  height: 23px
+  border-radius: 100%
+
+.kf-search-bar-lib-name
+  position: relative
+  top: 2px
+  display: inline-block
+  padding-left: 5px
+  max-width: 150px
+  font-size: 13px
+  font-weight: 100
+  color: #fff
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+
+.kf-search-bar-lib-name-clear
+  position: relative
+  top: -1px
+  display: inline-block
+  margin-left: 5px
+  color: #fff
+  cursor: pointer
+
+.kf-search-bar-clear
+  float: right
+  margin-top: 3px
+  margin-right: 8px
+  font-weight: 200
+  font-size: 16px
+  color: blueColor
+  cursor: pointer
 
 .kf-header-right
   overflow: hidden

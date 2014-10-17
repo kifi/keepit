@@ -163,7 +163,7 @@ class EmailTemplateProcessorImpl @Inject() (
             subAction = Json.fromJson[String](tagArgs(0)).asOpt,
             variableComponents = Seq.empty, // todo(josh) this needs to be passed in EmailToSend
             tip = emailTipOpt,
-            auxiliaryData = None // todo(josh) this needs to either be set individually for each link in the template or passed in EmailToSend
+            auxiliaryData = emailToSend.auxiliaryData
           ).encode
       }
     })

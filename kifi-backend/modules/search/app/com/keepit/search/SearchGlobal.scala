@@ -5,7 +5,6 @@ import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
 import com.keepit.search.graph.keep.KeepIndexerPlugin
 import com.keepit.search.message.MessageIndexerPlugin
-import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.article.ArticleIndexerPlugin
 import play.api.Mode._
 import play.api._
@@ -30,7 +29,6 @@ object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
 trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
     require(injector.instance[ArticleIndexerPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[URIGraphPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[CollectionGraphPlugin] != null)
     require(injector.instance[MessageIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UserIndexerPlugin] != null) //make sure its not lazy loaded

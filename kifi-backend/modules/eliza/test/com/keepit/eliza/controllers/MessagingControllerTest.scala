@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
@@ -28,6 +29,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class MessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeSearchServiceClientModule(),
     ElizaCacheModule(),
     FakeShoeboxServiceModule(),

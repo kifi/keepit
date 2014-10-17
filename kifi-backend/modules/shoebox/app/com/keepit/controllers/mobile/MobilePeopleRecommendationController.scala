@@ -1,16 +1,16 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.commanders.UserConnectionsCommander
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, WebsiteController }
 import com.google.inject.Inject
+import com.keepit.commanders.UserCommander
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.model.SocialUserInfoRepo
-import play.api.libs.json.{ Json, JsNumber, JsArray }
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsArray, JsNumber, Json }
 
 class MobilePeopleRecommendationController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    peopleRecoCommander: UserConnectionsCommander,
+    peopleRecoCommander: UserCommander,
     socialUserRepo: SocialUserInfoRepo) extends UserActions with ShoeboxServiceController {
 
   def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>

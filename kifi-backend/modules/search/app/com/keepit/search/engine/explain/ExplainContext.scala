@@ -25,7 +25,9 @@ class ExplainContext(
       }
       collector.collectDetail(id, id2, theVisibility, scoreArray.clone())
 
-      super.join(reader.rewind())
+      reader.rewind()
+      reader.nextLong() // discard the Id
+      super.join(reader)
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.keepit.curator
 
 import com.google.inject.Injector
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -19,6 +20,7 @@ import scala.concurrent.duration.Duration
 class PublicFeedGenerationCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
     FakeCortexServiceClientModule(),

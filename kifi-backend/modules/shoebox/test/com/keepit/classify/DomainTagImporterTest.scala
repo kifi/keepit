@@ -1,5 +1,6 @@
 package com.keepit.classify
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
@@ -18,6 +19,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 class DomainTagImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   val domainTagImporterTestModules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeAnalyticsModule(),
     FakeHeimdalServiceClientModule(),

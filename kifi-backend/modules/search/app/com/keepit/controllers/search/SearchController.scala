@@ -8,29 +8,22 @@ import com.keepit.search._
 import play.api.mvc.Action
 import views.html
 import com.keepit.model.User
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
 import com.keepit.search.sharding.ShardSpecParser
-import com.keepit.search.user.UserQueryParser
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.user.UserHit
-import com.keepit.search.user.UserSearchResult
-import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.routes.Search
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentationCommander }
 
 class SearchController @Inject() (
-    searcherFactory: MainSearcherFactory,
-    userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,
+    userSearchCommander: UserSearchCommander,
     distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
@@ -165,42 +158,14 @@ class SearchController @Inject() (
   }
 
   def searchUsers() = Action(parse.tolerantJson) { request =>
-    val UserSearchRequest(userId, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
-    val searcher = searcherFactory.getUserSearcher
-    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val userFilter = filter match {
-      case "f" if userId.isDefined => userSearchFilterFactory.friendsOnly(userId.get, Some(context))
-      case "nf" if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
-      case _ => userSearchFilterFactory.default(userId, Some(context))
-    }
-    val res = parser.parse(queryText) match {
-      case None => UserSearchResult(Array.empty[UserHit], context)
-      case Some(q) => searcher.search(q, maxHits, userFilter)
-    }
+    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val res = userSearchCommander.searchUsers(userSearchRequest)
     Ok(Json.toJson(res))
   }
 
-  private def createFilter(userId: Option[Id[User]], filter: Option[String], context: Option[String]) = {
-    filter match {
-      case Some("f") => userSearchFilterFactory.friendsOnly(userId.get, context)
-      case Some("nf") => userSearchFilterFactory.nonFriendsOnly(userId.get, context)
-      case _ => userSearchFilterFactory.default(userId, context, excludeSelf = true) // may change this later
-    }
-  }
-
   def userTypeahead() = Action(parse.json) { request =>
-    val UserSearchRequest(userIdOpt, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
-    val userId = userIdOpt.get
-    log.info(s"user search: userId = ${userId}")
-    val excludedExperiments = Seq("fake") // TODO(yingjie): Address admins differently
-    val searchFilter = createFilter(Some(userId), Some(filter), None)
-    val searcher = searcherFactory.getUserSearcher
-    val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
-    val queryTerms = PrefixFilter.normalize(queryText).split("\\s+")
-    val res = parser.parseWithUserExperimentConstrains(queryText, excludedExperiments) match {
-      case None => UserSearchResult(Array.empty[UserHit], context = "")
-      case Some(q) => searcher.searchPaging(q, searchFilter, 0, maxHits, queryTerms)
-    }
+    val userSearchRequest = Json.fromJson[UserSearchRequest](request.body).get
+    val res = userSearchCommander.userTypeahead(userSearchRequest, excludedExperiments = Seq("fake")) // TODO(yingjie): Address admins differently
     Ok(Json.toJson(res))
   }
 

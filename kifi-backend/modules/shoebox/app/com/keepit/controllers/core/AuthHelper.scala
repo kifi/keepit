@@ -13,7 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.commanders._
 import com.keepit.social._
 import securesocial.core.providers.utils.PasswordHasher
-import com.keepit.common.controller.ActionAuthenticator._
+import com.keepit.common.controller.KifiSession._
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
@@ -29,7 +29,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ SecureSocialHelper, MaybeUserRequest, UserRequest, ActionAuthenticator }
+import com.keepit.common.controller.{ SecureSocialHelper, MaybeUserRequest, UserRequest, KifiSession }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -197,7 +197,7 @@ class AuthHelper @Inject() (
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => Ok(Json.obj("uri" -> uri))
         .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
-        .withSession(request.session + (ActionAuthenticator.FORTYTWO_USER_ID -> user.id.get.toString))
+        .withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> user.id.get.toString))
     )
   }
 

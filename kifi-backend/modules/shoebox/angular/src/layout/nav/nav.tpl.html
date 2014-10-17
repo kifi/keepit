@@ -56,9 +56,9 @@
     </ul>
 
     <div class="kf-nav-lib-item">
-      <a class="kf-nav-link">
+      <a class="kf-nav-link" ng-click="addLibrary()">
         <span class="library-icon svg-add-a-library-icon"></span>
-        <span class="kf-nav-name" ng-click="addLibrary()">Create a new Library</span>
+        <span class="kf-nav-name">Create a new Library</span>
       </a>
     </div>
 
@@ -120,7 +120,11 @@
                                      'other':' {} followers'}"></ng-pluralize>
               </div>
             </div>
+            <div kf-tooltip position="right" padding="3">
+              <div kf-library-mini-card library-id="library.id"></div>
+            </div>
           </a>
+
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">

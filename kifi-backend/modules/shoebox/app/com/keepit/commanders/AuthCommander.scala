@@ -331,6 +331,7 @@ class AuthCommander @Inject() (
 
   def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
     Library.decodePublicId(libPubId) map { libId =>
+      implicit val context = HeimdalContext(Map())
       libraryCommander.joinLibrary(userId, libId).fold(
         libFail =>
           airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),

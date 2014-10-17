@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -58,6 +59,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
@@ -127,20 +129,20 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
             connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
             (user1, user2, user3, user4)
         }
-        val (connections1, total1) = inject[UserCommander].getConnectionsPage(user1.id.get, 0, 1000)
+        val (connections1, total1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 0, 1000)
         connections1.size === 3
         total1 === 3
 
-        val (connections2, total2) = inject[UserCommander].getConnectionsPage(user2.id.get, 0, 1000)
+        val (connections2, total2) = inject[UserConnectionsCommander].getConnectionsPage(user2.id.get, 0, 1000)
         connections2.size === 2
         total2 === 2
 
-        val (connections1p1, total1p1) = inject[UserCommander].getConnectionsPage(user1.id.get, 1, 2)
+        val (connections1p1, total1p1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 1, 2)
         connections1p1.size === 1
         connections1p1.head.userId === user4.id.get
         total1p1 === 3
 
-        inject[UserCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
+        inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
       }
     }
 

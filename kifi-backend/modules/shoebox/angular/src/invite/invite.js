@@ -3,9 +3,10 @@
 angular.module('kifi')
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService',
-  function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService) {
+  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService', '$rootScope',
+  function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService, $rootScope) {
     $window.document.title = 'Kifi • Invite your friends';
+    $rootScope.$emit('libraryUrl', {});
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
       $scope.isRefreshingSocialGraph = v;

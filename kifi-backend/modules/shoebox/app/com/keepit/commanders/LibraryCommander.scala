@@ -19,6 +19,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -54,12 +55,12 @@ class LibraryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
-  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): (Seq[Keep], Int) = {
-    db.readOnlyReplica { implicit session =>
-      val numKeeps = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, offset, limit)
-      (keeps, numKeeps)
-    }
+  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
+    db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
+  }
+
+  def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
+    db.readOnlyMasterAsync { implicit s => keepRepo.getCountByLibrary(libraryId) }
   }
 
   def getAccessStr(userId: Id[User], libraryId: Id[Library]): Option[String] = {
@@ -303,21 +304,23 @@ class LibraryCommander @Inject() (
       Some((BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
-        val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
-        libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
+        libraryMembershipRepo.getWithLibraryId(oldLibrary.id.get).map { m =>
           libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
         }
-        libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
+        libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).map { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
-        keepRepo.getByLibrary(removedLibrary.id.get, Int.MaxValue, 0)
+        keepRepo.getByLibrary(oldLibrary.id.get, Int.MaxValue, 0)
       }
-      future {
-        val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, k) =>
-          keepRepo.save(k.copy(state = KeepStates.INACTIVE))(s)
-        }
-        keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
-        searchClient.updateKeepIndex()
+      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
+        keepRepo.save(keep.sanitizeForDelete())(s)
+      }
+      keptAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, context)
+      searchClient.updateKeepIndex()
+      //Note that this is at the end, if there was an error while cleaning other library assets
+      //we would want to be able to get back to the library and clean it again
+      db.readWrite { implicit s =>
+        libraryRepo.save(oldLibrary.sanitizeForDelete())
       }
       None
     }
@@ -530,12 +533,12 @@ class LibraryCommander @Inject() (
       }
       val (inv1, res) = successInvites.unzip
       inviteBulkUsers(inv1)
-      trackLibraryInvitation(inviterId, eventContext)
+      trackLibraryInvitation(inviterId, eventContext, action = "sent")
       Right(res)
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library]): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -554,6 +557,7 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+        trackLibraryInvitation(userId, eventContext, action = "accepted")
         Right(updatedLib)
       }
     }
@@ -764,9 +768,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext) = {
+  private def trackLibraryInvitation(userId: Id[User], eventContext: HeimdalContext, action: String) = {
     val builder = contextBuilderFactory()
     builder.addExistingContext(eventContext)
+    builder += ("action", action)
     builder += ("category", "libraryInvitation")
     heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.INVITED))
   }
@@ -876,13 +881,24 @@ private object KeepsHolder {
 case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: LibraryAccess, lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
-  implicit val writes = Writes[MaybeLibraryMember] { member =>
-    val identityFields = member.member match {
-      case Left(user) => Json.toJson(user).as[JsObject]
-      case Right(emailAddress) => Json.obj("email" -> emailAddress)
+  implicit val format = {
+    val writes = Writes[MaybeLibraryMember] { member =>
+      val identityFields = member.member match {
+        case Left(user) => Json.toJson(user).as[JsObject]
+        case Right(emailAddress) => Json.obj("email" -> emailAddress)
+      }
+      val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
+      json.minify(identityFields ++ libraryRelatedFields)
     }
-    val libraryRelatedFields = Json.obj("membership" -> member.access, "lastInvitedAt" -> member.lastInvitedAt)
-    json.minify(identityFields ++ libraryRelatedFields)
+
+    val reads = Reads[MaybeLibraryMember] { jsValue =>
+      for {
+        member <- jsValue.validate[BasicUser].map(Left(_)) orElse (jsValue \ "email").validate[EmailAddress].map(Right(_))
+        access <- (jsValue \ "membership").validate[LibraryAccess]
+        lastInvitedAt <- (jsValue \ "lastInvitedAt").validate[Option[DateTime]]
+      } yield MaybeLibraryMember(member, access, lastInvitedAt)
+    }
+    Format(reads, writes)
   }
 }
 
@@ -903,22 +919,22 @@ case class FullLibraryInfo(
   numFollowers: Int)
 
 object FullLibraryInfo {
-  implicit val writes = (
-    (__ \ 'id).write[PublicId[Library]] and
-    (__ \ 'name).write[String] and
-    (__ \ 'visibility).write[LibraryVisibility] and
-    (__ \ 'description).writeNullable[String] and
-    (__ \ 'slug).write[LibrarySlug] and
-    (__ \ 'url).write[String] and
-    (__ \ 'kind).write[LibraryKind] and
-    (__ \ 'lastKept).writeNullable[DateTime] and
-    (__ \ 'owner).write[BasicUser] and
-    (__ \ 'followers).write[Seq[MaybeLibraryMember]] and
-    (__ \ 'keeps).write[Seq[KeepInfo]] and
-    (__ \ 'numKeeps).write[Int] and
-    (__ \ 'numCollaborators).write[Int] and
-    (__ \ 'numFollowers).write[Int]
-  )(unlift(FullLibraryInfo.unapply))
+  implicit val formats = (
+    (__ \ 'id).format[PublicId[Library]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'url).format[String] and
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'lastKept).formatNullable[DateTime] and
+    (__ \ 'owner).format[BasicUser] and
+    (__ \ 'followers).format[Seq[MaybeLibraryMember]] and
+    (__ \ 'keeps).format[Seq[KeepInfo]] and
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'numFollowers).format[Int]
+  )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {

@@ -151,13 +151,17 @@ class KifiSearchImpl(
     val engine = engineBuilder.build()
     val labels = engineBuilder.getQueryLabels()
     val query = engine.getQuery()
-    val collector = new ScoreDetailCollector(uriId.id)
+    val collector = if (engine.recencyOnly) {
+      new ScoreDetailCollector(uriId.id, None, None)
+    } else {
+      new ScoreDetailCollector(uriId.id, Some(clickBoostsProvider), Some(sharingBoostInNetwork))
+    }
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, engine.recencyOnly, config, monitoredAwait)
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
 
     engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.get())
+    Explanation(query, labels, collector.getDetails(), collector.getBoostValues())
   }
 }

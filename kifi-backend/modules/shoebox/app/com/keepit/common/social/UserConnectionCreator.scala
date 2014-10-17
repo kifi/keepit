@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import akka.actor.Scheduler
 import com.google.inject.Inject
 import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
 import com.keepit.common.db.Id
@@ -11,13 +12,18 @@ import com.keepit.common.performance.timing
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
-import com.keepit.model._
-import com.keepit.social.{ SocialId, SocialNetworkType }
+import com.keepit.model.{ SocialConnectionStates, UserValueName, SocialConnection, SocialUserInfo, UserValueRepo, UserConnectionRepo, SocialConnectionRepo, SocialUserInfoRepo, User }
+import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
+
+case class NewConnections(newConnections: Set[Id[User]], user: BasicUser,
+  newConnectionUsers: Set[BasicUser], connectionCount: Int,
+  socialConnectionCount: Int)
 
 class UserConnectionCreator @Inject() (
   db: Database,
@@ -30,6 +36,7 @@ class UserConnectionCreator @Inject() (
   basicUserRepo: BasicUserRepo,
   eliza: ElizaServiceClient,
   heimdal: HeimdalServiceClient,
+  scheduler: Scheduler,
   sendFriendConnectionMadeHelper: SendFriendConnectionMadeNotificationHelper)
     extends Logging {
 
@@ -39,7 +46,12 @@ class UserConnectionCreator @Inject() (
     } else {
       disableOldConnections(socialUserInfo, socialIds)
       val socialConnections = createNewConnections(socialUserInfo, socialIds)
-      socialUserInfo.userId.map(userId => updateUserConnections(userId, Some(socialUserInfo.networkType)))
+      socialUserInfo.userId.foreach { userId =>
+        val userConnections = saveNewSocialUserConnections(userId)
+        scheduler.scheduleOnce(5 minutes) {
+          notifyAboutNewUserConnections(userId, Some(socialUserInfo.networkType), userConnections)
+        }
+      }
       socialConnections
     }
   }
@@ -48,8 +60,27 @@ class UserConnectionCreator @Inject() (
     userValueRepo.getValueStringOpt(userId, UserValueName.UPDATED_USER_CONNECTIONS) map parseStandardTime
   }
 
-  def updateUserConnections(userId: Id[User], networkType: Option[SocialNetworkType] = None): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
-    val (newConnections, user, newConnectionsObjects, connectionCount, socialConnectionCount) = db.readWrite { implicit s =>
+  def notifyAboutNewUserConnections(userId: Id[User], networkType: Option[SocialNetworkType], userConnections: NewConnections): Future[Seq[Unit]] = timing(s"updateUserConnections($userId)") {
+    val newConnections = userConnections.newConnections
+    val emailsF = newConnections.map { connId =>
+      log.info(s"Sending new connection to user $connId (to $userId)")
+      eliza.sendToUser(connId, Json.arr("new_friends", Set(userConnections.user)))
+      sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
+    }.toSeq
+
+    if (newConnections.nonEmpty) {
+      eliza.sendToUser(userId, Json.arr("new_friends", userConnections.newConnectionUsers))
+      heimdal.setUserProperties(userId,
+        "kifiConnections" -> ContextDoubleData(userConnections.connectionCount),
+        "socialConnections" -> ContextDoubleData(userConnections.socialConnectionCount)
+      )
+    }
+
+    Future.sequence(emailsF)
+  }
+
+  def saveNewSocialUserConnections(userId: Id[User]): NewConnections = {
+    db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
       val unfriendedConnections = userConnectionRepo.getUnfriendedUsers(userId)
@@ -57,25 +88,10 @@ class UserConnectionCreator @Inject() (
       val newConnections = socialConnections -- existingConnections -- unfriendedConnections
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
-      (newConnections, basicUserRepo.load(userId), newConnections.map(basicUserRepo.load),
+
+      NewConnections(newConnections, basicUserRepo.load(userId), newConnections.map(basicUserRepo.load),
         userConnectionRepo.getConnectionCount(userId), socialConnectionRepo.getUserConnectionCount(userId))
     }
-
-    val emailsF = newConnections.map { connId =>
-      log.info(s"Sending new connection to user $connId (to $userId)")
-      eliza.sendToUser(connId, Json.arr("new_friends", Set(user)))
-      sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
-    }.toSeq
-
-    if (newConnections.nonEmpty) {
-      eliza.sendToUser(userId, Json.arr("new_friends", newConnectionsObjects))
-      heimdal.setUserProperties(userId,
-        "kifiConnections" -> ContextDoubleData(connectionCount),
-        "socialConnections" -> ContextDoubleData(socialConnectionCount)
-      )
-    }
-
-    Future.sequence(emailsF)
   }
 
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId])(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {

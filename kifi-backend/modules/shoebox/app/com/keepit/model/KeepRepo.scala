@@ -60,7 +60,8 @@ class KeepRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     val countCache: KeepCountCache,
-    bookmarkUriUserCache: KeepUriUserCache,
+    keepUriUserCache: KeepUriUserCache,
+    countByLibraryCache: CountByLibraryCache,
     latestKeepUriCache: LatestKeepUriCache,
     latestKeepUrlCache: LatestKeepUrlCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
@@ -147,32 +148,34 @@ class KeepRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  override def deleteCache(bookmark: Keep)(implicit session: RSession): Unit = {
-    bookmarkUriUserCache.remove(KeepUriUserKey(bookmark.uriId, bookmark.userId))
-    countCache.remove(KeepCountKey(bookmark.userId))
-    latestKeepUriCache.remove(LatestKeepUriKey(bookmark.uriId))
-    latestKeepUrlCache.remove(LatestKeepUrlKey(bookmark.url))
+  override def deleteCache(keep: Keep)(implicit session: RSession): Unit = {
+    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
+    countCache.remove(KeepCountKey(keep.userId))
+    latestKeepUriCache.remove(LatestKeepUriKey(keep.uriId))
+    latestKeepUrlCache.remove(LatestKeepUrlKey(keep.url))
   }
 
-  override def invalidateCache(bookmark: Keep)(implicit session: RSession): Unit = {
-    if (bookmark.state == KeepStates.INACTIVE) {
-      deleteCache(bookmark)
+  override def invalidateCache(keep: Keep)(implicit session: RSession): Unit = {
+    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    if (keep.state == KeepStates.INACTIVE) {
+      deleteCache(keep)
     } else {
-      bookmarkUriUserCache.set(KeepUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-      countCache.remove(KeepCountKey(bookmark.userId))
-      val latestKeepUriKey = LatestKeepUriKey(bookmark.uriId)
-      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, bookmark) }
-      val latestKeepUrlKey = LatestKeepUrlKey(bookmark.url)
-      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.createdAt.isAfter(bookmark.createdAt))) { latestKeepUrlCache.set(latestKeepUrlKey, bookmark) }
+      keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
+      countCache.remove(KeepCountKey(keep.userId))
+      val latestKeepUriKey = LatestKeepUriKey(keep.uriId)
+      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.createdAt.isAfter(keep.createdAt))) { latestKeepUriCache.set(latestKeepUriKey, keep) }
+      val latestKeepUrlKey = LatestKeepUrlKey(keep.url)
+      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.createdAt.isAfter(keep.createdAt))) { latestKeepUrlCache.set(latestKeepUrlKey, keep) }
     }
   }
 
   // preserved for backward compatibility
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] =
-    bookmarkUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
-      val bookmarks = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
-      if (bookmarks.length > 1) log.warn(s"[getByUriAndUser] ${bookmarks.length} keeps found for (uri, user) pair ${(uriId, userId)}")
-      bookmarks.find(_.inDisjointLib).orElse(bookmarks.headOption) // order: disjoint, custom
+    keepUriUserCache.getOrElseOpt(KeepUriUserKey(uriId, userId)) {
+      val keeps = (for (b <- rows if b.uriId === uriId && b.userId === userId && b.isPrimary === true && b.state === KeepStates.ACTIVE) yield b).list
+      if (keeps.length > 1) log.warn(s"[getByUriAndUser] ${keeps.length} keeps found for (uri, user) pair ${(uriId, userId)}")
+      keeps.find(_.inDisjointLib).orElse(keeps.headOption) // order: disjoint, custom
     }
 
   def getAllByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Keep] = {
@@ -262,7 +265,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
-    val res = bookmarkUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
+    val res = keepUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
       val missing = keys.map(_.uriId)
       val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list()
       keeps.map { k => KeepUriUserKey(k.uriId, userId) -> k }.toMap
@@ -407,8 +410,9 @@ class KeepRepoImpl @Inject() (
   }
 
   // Make compiled in Slick 2.1
+
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.id desc).drop(offset).take(limit).list
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt desc).drop(offset).take(limit).list
   }
 
   private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
@@ -416,7 +420,9 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int = {
-    getCountByLibraryCompiled(libraryId, excludeState).run
+    countByLibraryCache.getOrElse(CountByLibraryKey(libraryId)) {
+      getCountByLibraryCompiled(libraryId, excludeState).run
+    }
   }
 
   private def getByExtIdandLibraryIdCompiled(extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {

@@ -1,6 +1,6 @@
 package com.keepit.controllers.site
 
-import com.keepit.common.controller.{ ElizaServiceController, WebsiteController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.slick.Database
