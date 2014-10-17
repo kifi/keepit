@@ -5,12 +5,12 @@ import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.lucene.search.Query
 
 object Explanation {
-  def apply(query: Query, labels: Array[String], details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
-    new Explanation(query, labels, details, boostValues._1, boostValues._2)
+  def apply(query: Query, labels: Array[String], rawScore: Float, details: Map[String, Seq[ScoreDetail]], boostValues: (Float, Float)) = {
+    new Explanation(query, labels, rawScore, details, boostValues._1, boostValues._2)
   }
 }
 
-class Explanation(val query: Query, val labels: Array[String], val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
+class Explanation(val query: Query, val labels: Array[String], val rawScore: Float, val details: Map[String, Seq[ScoreDetail]], clickBoostValue: Float, sharingBoostValue: Float) {
 
   def boostValuesHtml: String = {
     val sb = new StringBuilder
