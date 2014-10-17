@@ -311,11 +311,12 @@
   color: @lib-color !important;
 }
 .kifi-keep-box-new-lib-visibility {
-  margin: 16px 30px 0;
+  padding: 16px 30px 0;
   min-height: 140px;
   line-height: 17px;
   font-size: 13px;
   color: #777;
+  position: relative;
   &.kifi-checked>.kifi-n,
   &:not(.kifi-checked)>.kifi-y {
     display: none;
@@ -635,17 +636,32 @@
 .kifi-keep-box-progress {
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+  bottom: -1px;
+  height: 2px;
   width: 0;
-  background: #4daf7c;
-  .kifi-done>& {
+  background: #7bacf1;
+  &.kifi-done {
     width: 100% !important;
     transition: width .16s ease-in-out;
   }
-  .kifi-fail>& {
+  &.kifi-fail {
     background: #b00;
     width: 0 !important;
     transition: width .24s ease-in-out;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    right: 4px;
+    width: 16px;
+    height: 12px;
+    @url: %(@svgCheckDataUrl, #48b07a);
+    background: url(@url) right center/contain no-repeat !important;
+    clip: rect(0,0,12px,0);
+    transition: clip .16s .16s;
+  }
+  &.kifi-done::after {
+    clip: rect(0,16px,12px,0);
   }
 }

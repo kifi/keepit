@@ -364,9 +364,15 @@ var keepBox = keepBox || (function () {
     if (libraryId) {
       var library = $box.data('libraries').find(idIs(libraryId));
       if (library.keep) {
-        api.port.emit('get_keep', library.keep.id, showKeep.bind(null, library));
+        api.port.emit('get_keep', library.keep.id, function (keep) {
+          library.keep = keep;
+          showKeep(library);
+        });
       } else {
-        keepTo(library);
+        el.style.position = 'relative';
+        progress(el, keepTo(library)).done(function (keep) {
+          showKeep(library, true);
+        });
       }
     } else {
       var $view = $(render('html/keeper/keep_box_new_lib'));
@@ -378,18 +384,23 @@ var keepBox = keepBox || (function () {
   function keepTo(library) {
     var data = {libraryId: library.id, title: authoredTitle()};
     log('[keep]', data);
+    var deferred = Q.defer();
     api.port.emit('keep', withUrls(data), function (keep) {
       if (keep) {
         library.keep = keep;
-        showKeep(library, keep, true);
+        deferred.resolve(keep);
         $box.parent().find('.kifi-keep-btn')
           .filter('.kifi-pulse-before').removeClass('kifi-pulse-before').layout().end()
           .addClass('kifi-pulse-before');
+      } else {
+        deferred.reject();
       }
     });
+    return deferred.promise;
   }
 
-  function showKeep(library, keep, justKept) {
+  function showKeep(library, justKept) {
+    var keep = library.keep;
     var title = keep.title || formatTitleFromUrl(document.URL);
     var images = findImages(), canvases = [], imageIdx;
     if (keep.image) {
@@ -566,6 +577,41 @@ var keepBox = keepBox || (function () {
     }
   }
 
+  // Takes a promise for a task's outcome. Returns a promise that relays
+  // the outcome after visual indication of the outcome is complete.
+  function progress(parent, promise) {
+    var $el = $('<div class=kifi-keep-box-progress>').appendTo(parent);
+    var frac = 0, ms = 10, deferred = Q.defer();
+    var timeout = setTimeout(function update() {
+      var left = .9 - frac;
+      frac += .06 * left;
+      log('[progress:update]', left, frac);
+      $el[0].style.width = Math.min(frac * 100, 100) + '%';
+      if (left > .0001) {
+        timeout = setTimeout(update, ms);
+      }
+    }, ms);
+
+    promise.done(function (val) {
+      log('[progress:done]');
+      clearTimeout(timeout), timeout = null;
+      $el.removeClass('kifi-doing').on('transitionend', function (e) {
+        if (e.originalEvent.propertyName === 'clip') {
+          $el.off('transitionend');
+          deferred.resolve(val);
+        }
+      }).addClass('kifi-done');
+    }, function (reason) {
+      log('[progress:fail]');
+      clearTimeout(timeout), timeout = null;
+      $el.removeClass('kifi-doing').one('transitionend', function () {
+        $el.remove();
+        deferred.reject(reason);
+      }).addClass('kifi-fail');
+    });
+    return deferred.promise;
+  }
+
   function searchTags(libraryId, numTokens, query, withResults) {
     if (query) {
       api.port.emit('search_tags', {q: query, n: 4, libraryId: libraryId}, function (items) {
@@ -603,7 +649,8 @@ var keepBox = keepBox || (function () {
     var name = $name.val().trim();
     if (name) {
       $name.prop('disabled', true);
-      $btn.removeAttr('href').addClass('kifi-doing');
+      $btn.removeAttr('href');
+      var deferred = Q.defer();
       api.port.emit('create_library', {
         name: name,
         visibility: $secret.prop('checked') ? 'secret' : 'discoverable'
@@ -611,8 +658,18 @@ var keepBox = keepBox || (function () {
         if (library) {
           $box.data('libraryCreated', library);
           $box.data('libraries').push(library);
-          keepTo(library);
+          keepTo(library).done(function () {
+            deferred.resolve(library);
+          }, function () {
+            // TODO: undo create library?
+            deferred.reject();
+          });
+        } else {
+          deferred.reject();
         }
+      });
+      progress($view.find('.kifi-keep-box-new-lib-visibility'), deferred.promise).done(function (library) {
+        showKeep(library, true);
       });
     } else {
       $name.focus().select();
