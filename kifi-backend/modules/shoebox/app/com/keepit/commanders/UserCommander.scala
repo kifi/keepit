@@ -526,7 +526,7 @@ class UserCommander @Inject() (
           if (!readOnly) {
             userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
           } else {
-            log.info(s"[dry run] user ${userId} set with username $username")
+            log.info(s"[dry run] user $userId set with username $username")
           }
           Right(username)
         } else {
@@ -539,12 +539,13 @@ class UserCommander @Inject() (
   }
 
   def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val name = UsernameOps.lettersOnly((user.firstName + user.lastName).toLowerCase)
+    val name = s"${UsernameOps.lettersOnly(user.firstName)}-${UsernameOps.lettersOnly(user.lastName)}".toLowerCase
     val seed = if (name.length < 4) {
-      name + Seq.fill(4 - name.length)(0)
+      val filler = Seq.fill(4 - name.length)(0)
+      s"$name-$filler"
     } else name
-
-    val candidates = seed :: (1 to 30).map(n => seed + scala.util.Random.nextInt(999)).toList
+    def randomNumber = scala.util.Random.nextInt(999)
+    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
