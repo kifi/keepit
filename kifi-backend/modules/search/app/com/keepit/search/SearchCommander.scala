@@ -401,7 +401,7 @@ class SearchCommanderImpl @Inject() (
       case None => Seq(DefaultAnalyzer.defaultLang)
     }
     val firstLang = langs(0)
-    val secondLang = if (langs.size > 0) Some(langs(1)) else None
+    val secondLang = if (langs.size > 1) Some(langs(1)) else None
 
     searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>

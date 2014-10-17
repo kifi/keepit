@@ -122,6 +122,11 @@ class WebsiteSearchController @Inject() (
           val result = Json.obj(
             "uuid" -> kifiPlainResult.uuid,
             "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter),
+            "experimentId" -> kifiPlainResult.searchExperimentId,
+            "mayHaveMore" -> kifiPlainResult.mayHaveMoreHits,
+            "myTotal" -> kifiPlainResult.myTotal,
+            "friendsTotal" -> kifiPlainResult.friendsTotal,
+            "othersTotal" -> kifiPlainResult.othersTotal,
             "hits" -> hits,
             "libraries" -> libraries,
             "users" -> users
