@@ -2,6 +2,7 @@ package com.keepit.search.engine.explain
 
 import com.keepit.search.engine.{ Visibility, DirectScoreContext, ScoreExpr, ScoreContext }
 import com.keepit.search.util.join.{ DataBuffer, DataBufferReader }
+import java.util.Arrays
 
 class ExplainContext(
     targetId: Long,
@@ -16,6 +17,8 @@ class ExplainContext(
     if (id == targetId) {
       val theVisibility = reader.recordType
       val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
+
+      Arrays.fill(scoreArray, 0.0f)
 
       while (reader.hasMore) {
         val bits = reader.nextTaggedFloatBits()
