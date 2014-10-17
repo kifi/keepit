@@ -207,6 +207,7 @@ class NotificationCommander @Inject() (
             "thread" -> message.threadExtId.id,
             "unread" -> true,
             "category" -> categoryString,
+            "fullCategory" -> category.category,
             "title" -> title,
             "bodyHtml" -> body,
             "linkText" -> linkText,
