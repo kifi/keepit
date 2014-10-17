@@ -142,7 +142,7 @@ angular.module('kifi')
         };
 
         scope.alreadyFollowingLibrary = function (library) {
-          return _.some(library.followers, { id: profileService.me.id });
+          return (library.access && (library.access === 'read_only')) || _.some(library.followers, { id: profileService.me.id });
         };
 
         scope.followLibrary = function (library) {
@@ -150,6 +150,7 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl());
             return;
           }
+
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
               // TODO(yiping): make a better error message. One idea is to update
@@ -166,7 +167,7 @@ angular.module('kifi')
             });
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
               augmentData();
               adjustFollowerPicsSize();
             });
@@ -175,10 +176,10 @@ angular.module('kifi')
 
         scope.unfollowLibrary = function (library) {
           libraryService.leaveLibrary(library.id).then(function () {
-            _.remove(library.followers, { id: profileService.me.id });
-
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
+
+              // Note: no need to augmentData for unfollowed library.
               adjustFollowerPicsSize();
             });
           });
@@ -224,11 +225,10 @@ angular.module('kifi')
           }
         });
 
-        // When the local library object in libraryService has been updated, update
-        // our scope.library accordingly. $rootScope is used instead of scope because
-        // libraryService is not a child of any scope.
         $rootScope.$on('libraryUpdated', function (e, library) {
           _.assign(scope.library, library);
+          augmentData();
+          adjustFollowerPicsSize();
         });
 
         // Update how many follower pics are shown when the window is resized.

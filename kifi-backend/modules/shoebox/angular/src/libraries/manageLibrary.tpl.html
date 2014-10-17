@@ -60,7 +60,7 @@
             <div ng-if="$error.general" class="manage-lib-input-wrapper manage-lib-error">{{$error.general}}</div>
         </div>
 
-        <div class="manage-lib-followers-content">
+        <div class="manage-lib-followers-content" smart-scroll scroll-distance="followerScrollDistance" scroll-disabled="isFollowerScrollDisabled()" scroll-next="followerScrollNext()">
           <ul class="manage-lib-followers">
             <li class="manage-lib-follower manage-lib-owner">
               <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-follower-image">
@@ -68,7 +68,7 @@
               <div class="manage-lib-follower-status">Owner</div>
             </li>
 
-            <li class="manage-lib-follower" ng-repeat="follower in library.followers">
+            <li class="manage-lib-follower" ng-repeat="follower in followerList">
               <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-follower-image">
               <div class="manage-lib-follower-name">{{follower.firstName}} {{follower.lastName}}</div>
               <div class="manage-lib-follower-status">Following</div>

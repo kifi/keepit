@@ -35,6 +35,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
+  def getUsersWithNoUsername(batchSize: Int)(implicit session: RSession): Seq[User]
 }
 
 @Singleton
@@ -190,6 +191,11 @@ class UserRepoImpl @Inject() (
 
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]] = {
     (for (f <- rows if f.state === UserStates.ACTIVE) yield f.id).list
+  }
+
+  // using this only for migration period, will delete afterwards
+  def getUsersWithNoUsername(batchSize: Int)(implicit session: RSession): Seq[User] = {
+    (for (f <- rows if f.username isNull) yield f).take(batchSize).list
   }
 
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User] = super.getBySequenceNumber(seq, fetchSize)

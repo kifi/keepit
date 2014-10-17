@@ -65,6 +65,7 @@ angular.module('kifi')
               $window.alert('You cannot follow your own Libraries!');
               return;
             }
+
             if (scope.following()) {
               unfollowLibrary();
             } else  {

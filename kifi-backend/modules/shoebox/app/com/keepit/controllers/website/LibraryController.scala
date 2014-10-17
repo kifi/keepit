@@ -229,43 +229,32 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeeps(pubId: PublicId[Library], offset: Int, count: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val take = Math.min(count, 30)
+        val limit = Math.min(count, 30)
         val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
-          keeps <- libraryCommander.getKeeps(libraryId, take, offset)
+          keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
           numKeeps <- numKeepsF
         } yield {
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(limit, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
         }
     }
   }
 
-  def getCollaborators(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(libraryId)
-      val take = Math.min(count, 10)
-      val memberships = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, take, offset, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT, LibraryAccess.READ_ONLY))
-      val (f, c) = memberships.partition(_.access == LibraryAccess.READ_ONLY)
-      val followers = f.map(m => basicUserRepo.load(m.userId))
-      val collaborators = c.map(m => basicUserRepo.load(m.userId))
-
-      val numF = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, Set(LibraryAccess.READ_ONLY))
-      val numC = libraryMembershipRepo.countWithLibraryIdAndAccess(libraryId, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
-
-      Ok(Json.obj("collaborators" -> Json.toJson(collaborators),
-        "followers" -> Json.toJson(followers),
-        "numCollaborators" -> numC,
-        "numFollowers" -> numF,
-        "count" -> take,
-        "offset" -> offset))
+    if (limit > 30) {
+      BadRequest(Json.obj("error" -> "invalid_limit"))
+    } else {
+      val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
+      val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+      Ok(Json.obj("members" -> maybeMembers))
     }
   }
 
@@ -334,7 +323,7 @@ class LibraryController @Inject() (
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
       val existingKeeps = db.readOnlyMaster { implicit s =>
-        keepRepo.getByLibrary(libraryId, Int.MaxValue, 0).map(_.externalId).toSet
+        keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
       val (keeps, _, failures, _) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, false)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))

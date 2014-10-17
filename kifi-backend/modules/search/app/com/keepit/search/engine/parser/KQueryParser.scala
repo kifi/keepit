@@ -1,9 +1,9 @@
 package com.keepit.search.engine.parser
 
 import org.apache.lucene.index.Term
-import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.search.engine.query.KProximityQuery
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer
@@ -49,21 +49,14 @@ class KQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
 
           val phrases = monitoredAwait.result(detectPhrases(queryText, parser.lang), 3 seconds, "phrase detection")
-          val proxQ = new DisjunctionMaxQuery(0.0f)
+          val proxQ = new KProximityQuery
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, 1f)) // disable phrase scoring for title. penalty could be too big
           engBuilder.addBoosterQuery(proxQ, proximityBoost)
 
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
 
-          val homePageQuery = if (phTerms.size == 1) {
-            new FixedScoreQuery(new TermQuery(new Term("home_page", phTerms(0).text)))
-          } else {
-            val hpQ = new PhraseQuery()
-            phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
-            new FixedScoreQuery(hpQ)
-          }
-          engBuilder.addBoosterQuery(homePageQuery, homePageBoost)
+          engBuilder.addBoosterQuery(new HomePageQuery(phTerms), homePageBoost)
 
         }
       }

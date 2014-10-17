@@ -22,36 +22,60 @@ class Explanation(val query: Query, val labels: Array[String], val details: Map[
     sb.toString
   }
 
+  def sharingHtml: String = {
+    def sharingCountByVisibility(visibility: Int): Int = {
+      // a record with no score is loaded for network information only
+      details(Visibility.name(visibility)).count { detail => detail.scoreMax.forall(_ == 0f) }
+    }
+
+    val sb = new StringBuilder
+    sb.append("<table>")
+    sb.append("<tr><th> owner </th><th> member </th> <th> network </th></tr>\n")
+    sb.append("<tr>")
+    sb.append(s"<td> ${sharingCountByVisibility(Visibility.OWNER)} </td>")
+    sb.append(s"<td> ${sharingCountByVisibility(Visibility.MEMBER)} </td>")
+    sb.append(s"<td> ${sharingCountByVisibility(Visibility.NETWORK)} </td>")
+    sb.append("</tr>")
+    sb.append("</table>\n")
+
+    sb.toString
+  }
+
   def detailsHtml: String = {
     val sb = new StringBuilder
 
     def categoryByVisibility(visibility: Int): Unit = categoryByName(Visibility.name(visibility))
 
     def categoryByName(name: String): Unit = {
-      val count = details(name).size
+      val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
+      val count = detailsWithScores.size
       if (count > 0) {
-        details(name).headOption.foreach { detail =>
+        detailsWithScores.headOption.foreach { detail =>
           sb.append("<tr>")
           sb.append(s"<th rowspan=$count> $name </th>\n")
           listScore(detail)
           sb.append("</tr>\n")
-        }
-        details(name).tail.foreach { detail =>
-          sb.append("<tr>")
-          listScore(detail)
-          sb.append("</tr>\n")
+          detailsWithScores.tail.foreach { detail =>
+            sb.append("<tr>")
+            listScore(detail)
+            sb.append("</tr>\n")
+          }
         }
       }
     }
 
     def listScore(detail: ScoreDetail): Unit = {
-      detail.scoreSum match {
-        case Some(scoreSum) =>
-          (detail.scoreMax zip scoreSum).foreach { case (max, sum) => sb.append(s"<td> $max : $sum </td>") }
-        case None =>
-          detail.scoreMax.foreach { value => sb.append(s"<td> $value </td>") }
+      if (detail.scoreMax.exists(_ != 0f)) {
+        detail.scoreSum match {
+          case Some(scoreSum) =>
+            (detail.scoreMax zip scoreSum).foreach { case (max, sum) => sb.append(s"<td> $max : $sum </td>") }
+          case None =>
+            detail.scoreMax.foreach { value =>
+              if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
+              else sb.append(s"<td> $value </td>")
+            }
+        }
       }
-
     }
 
     sb.append(s"""<table class="table table-bordered">\n""")

@@ -15,14 +15,14 @@
       </span>
     </div>
   </div>
-  <div class="kf-library-mini-card-body">
 
+
+  <div class="kf-library-mini-card-body">
     <div class="kf-library-mini-card-name" ng-click="view()">
       {{libraryName()}}
     </div>
 
     <div>
-
       <span class="kf-library-mini-card-stat">
         <div class="kf-library-mini-card-stat-title">Keeps</div>
         <div class="kf-library-mini-card-stat-num">{{numKeeps() || 0}}</div>
@@ -41,16 +41,14 @@
         <div class="kf-library-mini-card-stat-title">New Keeps<div>
         <div class="kf-library-mini-card-stat-num">{{numNewKeeps()}}</div>
       </span>
-
     </div>
   </div>
-
 
   <div class="kf-library-mini-card-hdivider"></div>
 
   <div>
     <button ng-if="!isMine()"
-      ng-class="{'kf-library-mini-card-button-follow': !following() && !isMine(),'kf-library-mini-card-button-unfollow': following()}"
+      ng-class="{'kf-library-mini-card-button-follow': !following() && !isMine(), 'kf-library-mini-card-button-unfollow': following()}"
       class="kf-library-mini-card-button"
       ng-click="toggleFollow()"
     ></button>
