@@ -213,21 +213,21 @@ class MobileMessagingController @Inject() (
     Ok("")
   }
 
-  def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
+  def addParticipantsToThread(threadId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
     val source = UserAgent(request) match {
       case agent if agent.isAndroid => MessageSource.ANDROID
       case agent if agent.isIphone => MessageSource.IPHONE
       case agent => throw new IllegalArgumentException(s"user agent not supported: $agent")
     }
-    if (users.nonEmpty || emailContacts.nonEmpty) {
+    //assuming the client does the proper checks!
+    val validEmails = (request.body \ "emails").asOpt[Seq[String]] getOrElse Seq.empty flatMap { s => BasicContact.fromString(s).toOption }
+    val validUserIds = (request.body \ "users").asOpt[Seq[ExternalId[User]]] getOrElse Seq.empty
+    if (validEmails.nonEmpty || validUserIds.nonEmpty) {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       contextBuilder += ("source", "mobile")
-      //assuming the client does the proper checks!
-      val validEmails = emailContacts.split(",").map { email => BasicContact.fromString(email.trim) }.map(_.get)
-      val validUserIds = users.split(",").map { id => ExternalId[User](id.trim) }
       messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, Some(source))(contextBuilder.build)
     }
-    Ok("")
+    NoContent
   }
 
   def getUnreadNotificationsCount = UserAction { request =>
