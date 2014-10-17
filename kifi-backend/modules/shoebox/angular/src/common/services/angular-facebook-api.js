@@ -185,8 +185,23 @@ angular.module('jun.facebook', [])
 
 	this.getLoginStatus = function (callback) {
 		// https://developers.facebook.com/docs/reference/javascript/FB.getLoginStatus
-		return that.init().then(function (FB) {
+		var init = that.init();
+		return init.then(function (FB) {
 			var deferred = $q.defer();
+			var resolved = false;
+
+			deferred.promise.then(function () {
+				resolved = true;
+			});
+			$timeout(function () {
+				if (!resolved) {
+					that.loading = false;
+					that.failedToLoad = true;
+					document.getElementById('facebook-jssdk').remove();
+					FBPromise = null;
+					deferred.reject({'error': 'no_FB_on_page'});
+				}
+			}, 1500);
 
 			FB.getLoginStatus(angular.bind(deferred, handleResponse));
 

@@ -3,10 +3,51 @@
 angular.module('kifi')
 
 .factory('signupService', [
-  '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$rootScope', '$log',
-  function ($FB, modalService, registrationService, $window, installService, $q, $rootScope, $log) {
+  '$rootScope', '$compile', '$window',
+  function ($rootScope, $compile, $window) {
 
-    var $scope = $rootScope.$new();
+
+    var api = {
+      register: function (userData, handlers) {
+
+        var template = angular.element('<div ng-controller="SignupCtrl"></div>');
+        var scope = $rootScope.$new();
+
+        userData = userData || {};
+        handlers = handlers || {};
+
+        scope.userData = userData;
+
+        scope.onError = function (reason) {
+          (handlers.onError || function (reason) {
+            scope.$destroy();
+            $window.location.href = (reason && reason.redirect) || 'https://www.kifi.com/signup';
+          })(reason);
+        };
+
+
+        scope.onSuccess = function () {
+          (handlers.onSuccess || function () {
+            scope.$destroy();
+            $window.location.reload();
+          })();
+        };
+
+        scope.$on('$destroy', function () {
+          console.log('destroyed');
+        });
+
+        $compile(template)(scope); // This immediately launches the modal;
+      }
+    };
+
+    return api;
+  }
+])
+
+.controller('SignupCtrl', [
+  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log',
+  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log) {
 
     // Shared data across several modals
     function resetUserData() {
@@ -45,8 +86,6 @@ angular.module('kifi')
             return {'error': a.error || 'login_error'};
           });
         }
-      }, function (a) {
-        return {'error': a.error || 'status_error'};
       });
     };
 
@@ -75,12 +114,12 @@ angular.module('kifi')
 
     $scope.fbAuth = function () {
       if ($FB.failedToLoad) {
-        $window.location.href = '/signup/facebook';
+        $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
         return;
       }
       facebookLogin().then(function (fbResp) {
         if (!fbResp) {
-          //error
+          $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
           return;
         } else if (fbResp.status === 'connected') {
           // todo: remove?
@@ -94,7 +133,7 @@ angular.module('kifi')
             $scope.userData.email = fbMe.email;
             if (resp.code && resp.code === 'user_logged_in') {
               // todo: follow or other action
-              $window.location.reload();
+              $scope.onSuccess();
             } else if (resp.code && resp.code === 'continue_signup') {
               $log.log('test#continue_signup', resp);
               modalService.close();
@@ -104,11 +143,13 @@ angular.module('kifi')
               $log.log('test#unknown_code??', resp);
             }
           })['catch'](function (err) {
-            $log.log('errz1', err);
             // we failed. bail.
-            $window.location.href = 'https://www.kifi.com/signup';
+            $scope.onError({'code': 'remote_social_fail', 'error': err});
           });
         }
+      })['catch'](function() {
+        $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
+        return;
       });
     };
 
@@ -184,18 +225,13 @@ angular.module('kifi')
           template: 'signup/thanksForRegisteringModal.tpl.html',
           scope: $scope
         }), function onClose() {
-          $window.location.reload();
+          $scope.onSuccess();
         });
       } else {
-        $window.location.reload();
+        $scope.onSuccess();
       }
     };
 
-
-    var api = {
-      register: registerModal
-    };
-
-    return api;
+    registerModal();
   }
 ]);
