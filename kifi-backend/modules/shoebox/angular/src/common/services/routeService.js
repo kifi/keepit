@@ -155,6 +155,9 @@ angular.module('kifi')
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
+      getMoreLibraryFollowers: function(libraryId, pageSize, offset) {
+        return route('/libraries/' + libraryId + '/collabs?count=' + pageSize + '&offset=' + (offset * pageSize));
       }
     };
   }
