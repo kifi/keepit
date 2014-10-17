@@ -223,8 +223,8 @@ class MobileMessagingController @Inject() (
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       contextBuilder += ("source", "mobile")
       //assuming the client does the proper checks!
-      val validEmails = emailContacts.split(",").map { email => BasicContact.fromString(email.trim) }.map(_.get)
-      val validUserIds = users.split(",").map { id => ExternalId[User](id.trim) }
+      val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
+      val validUserIds = users.split(",").map(_.trim).filterNot(_.isEmpty).map { id => ExternalId[User](id) }
       messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, Some(source))(contextBuilder.build)
     }
     Ok("")

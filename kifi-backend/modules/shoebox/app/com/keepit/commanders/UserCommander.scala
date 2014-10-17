@@ -525,6 +525,8 @@ class UserCommander @Inject() (
         if (existingUser.isEmpty || existingUser.get.id.get == userId) {
           if (!readOnly) {
             userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
+          } else {
+            log.info(s"[dry run] user $userId set with username $username")
           }
           Right(username)
         } else {
@@ -537,23 +539,29 @@ class UserCommander @Inject() (
   }
 
   def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val name = UsernameOps.lettersOnly((user.firstName + user.lastName).toLowerCase)
+    val name = s"${UsernameOps.lettersOnly(user.firstName)}-${UsernameOps.lettersOnly(user.lastName)}".toLowerCase
     val seed = if (name.length < 4) {
-      name + Seq.fill(4 - name.length)(0)
+      val filler = Seq.fill(4 - name.length)(0)
+      s"$name-$filler"
     } else name
-
-    val candidates = seed :: (1 to 30).map(n => seed + scala.util.Random.nextInt(999)).toList
+    def randomNumber = scala.util.Random.nextInt(999)
+    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
     while (keepTrying && i < 30) {
-      setUsername(user.id.get, Username(candidates(i)), readOnly = readOnly) match {
+      val candidate = Username(candidates(i))
+      setUsername(user.id.get, candidate, readOnly = readOnly) match {
         case Right(username) =>
           keepTrying = false
           selectedUsername = Some(username)
         case Left(_) =>
           i += 1
+          log.warn(s"[trial $i] could not set username $candidate for user $user")
       }
+    }
+    if (keepTrying) {
+      log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
     }
     selectedUsername
   }
@@ -609,6 +617,27 @@ class UserCommander @Inject() (
         FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
       }
     }
+  }
+
+  def updateUsersWithNoUserName(readOnly: Boolean): Int = {
+    var counter = 0
+    val batchSize = 50
+    var batch = db.readOnlyMaster { implicit s =>
+      userRepo.getUsersWithNoUsername(batchSize)
+    }
+    while (batch.nonEmpty) {
+      batch foreach { user =>
+        if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
+        val username = autoSetUsername(user, readOnly)
+        if (username.isEmpty) throw new Exception(s"could not set a username for $user")
+        log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
+        counter += 1
+      }
+      batch = db.readOnlyMaster { implicit s =>
+        userRepo.getUsersWithNoUsername(batchSize)
+      }
+    }
+    counter
   }
 
 }

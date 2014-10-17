@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.engine.query._
-import com.keepit.search.query.FixedScoreQuery
+import com.keepit.search.query.{ FixedScoreQuery, HomePageQuery, ProximityQuery }
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
@@ -9,24 +9,27 @@ import scala.collection.mutable.ArrayBuffer
 
 object QueryEngineBuilder {
   val tieBreakerMultiplier = 1.5f
+
+  class FilterQuery(subQuery: Query) extends FixedScoreQuery(subQuery)
 }
 
 class QueryEngineBuilder(coreQuery: Query) {
+  import QueryEngineBuilder._
 
-  private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
+  private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
   private[this] val _core = buildExpr(coreQuery) // (query, expr, size, recencyOnly)
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] lazy val _final = buildFinal()
   private[this] var built = false
 
-  def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
+  def addBoosterQuery(boosterQuery: Query, boostStrength: Float): QueryEngineBuilder = {
     if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
-    _boosters = (booster, boostStrength) :: _boosters
+    _boosters = (boosterQuery, boostStrength) :: _boosters
     this
   }
 
   def addFilterQuery(filter: Query): QueryEngineBuilder = {
-    addBoosterQuery(new FixedScoreQuery(filter), 1.0f)
+    addBoosterQuery(new FilterQuery(filter), 1.0f)
   }
 
   def build(): QueryEngine = {
@@ -83,11 +86,11 @@ class QueryEngineBuilder(coreQuery: Query) {
       case textQuery: KTextQuery =>
         (coreQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
 
-      case tagQuery: KFilterQuery =>
+      case filterQuery: KFilterQuery =>
         // this is a filter only query, use FixedScoreQuery and MaxExpr, and disable click boost and sharing boost
         // so that the recency boosting takes over ranking
         // this is a special requirement for "tag:" only query on kifi.com
-        (new KWrapperQuery(new FixedScoreQuery(tagQuery.subQuery)), MaxExpr(0), 1, true)
+        (new KWrapperQuery(new FixedScoreQuery(filterQuery.subQuery)), MaxExpr(0), 1, true)
 
       case q =>
         (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), 1, false)
@@ -118,12 +121,22 @@ class QueryEngineBuilder(coreQuery: Query) {
 
       case textQuery: KTextQuery => labels += textQuery.label
 
-      case tagQuery: KFilterQuery => labels += tagQuery.label
+      case filterQuery: KFilterQuery => labels += filterQuery.label
 
       case q => labels += q.toString
     }
 
-    _boosters.foreach { case (q, _) => labels += q.toString }
+    _boosters.foreach {
+      case (q, _) =>
+        labels += {
+          q match {
+            case _: ProximityQuery => "proximity boost"
+            case _: HomePageQuery => "home page boost"
+            case f: FilterQuery => s"filter(${f.subQuery.toString})"
+            case _ => s"boost(${q.toString})"
+          }
+        }
+    }
 
     labels.toArray
   }
