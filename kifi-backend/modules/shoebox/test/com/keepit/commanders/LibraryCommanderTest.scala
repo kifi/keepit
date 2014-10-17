@@ -659,7 +659,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -669,9 +669,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val keepsInIronMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // Ironman attempts to copy from IronMurica to Murica (but only has read_only access to Murica) (tests RW -> RO)
@@ -684,9 +684,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Freedom", "Reddit")
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Freedom", "Reddit")
         }
 
         // Ironman copies duplicates from Murica to Freedom
@@ -696,7 +696,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 9
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
         }
       }
     }
@@ -716,7 +716,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -728,8 +728,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // Ironman moves 2 keeps from IronMurica to Freedom (tests RW -> RW)
@@ -738,9 +738,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val keepsInFreedom = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20)
         }
 
         // Ironman attempts to move keeps from IronMurica to Murica (tests RW -> RO)
@@ -751,8 +751,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // move duplicates (Reddit) IronMurica -> Freedom
@@ -762,8 +762,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
         }
       }
     }
@@ -836,7 +836,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res2.isRight === true
         res2.right.get.length === 1 // one failed keep, one keep activated and one keep added (Library "Murica" already has Reddit active Keep)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
         }
@@ -845,7 +845,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res3.isRight === true
         res3.right.get.length === 4 // all 4 should fail since library already has all 3 URIs
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
         }

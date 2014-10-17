@@ -8,6 +8,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -101,44 +102,37 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit s =>
         libraryMembershipRepo.getOpt(request.userId, libraryId)
       } match {
-        case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
-          val info = request.body.as[JsObject]
+        case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
+          val body = request.body
           val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-          if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
+          if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)
           }
           implicit val context = hcb.build
 
-          val rawBookmark = info.as[RawBookmarkRepresentation]
-          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
-
-          // Determine image choice.
-          val imageStatus = (info \ "image") match {
-            case JsNull => // user purposely wants no image
-              Json.obj()
-            case JsString(imageUrl) if imageUrl.startsWith("http") =>
-              val (keep, keepImageRequest) = db.readWrite { implicit session =>
-                val keep = keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-                val keepImageRequest = keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
-                (keep, keepImageRequest)
-              }
-              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Json.obj("imageStatusPath" -> routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
-            case _ =>
-              val keep = db.readOnlyMaster { implicit session =>
-                keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-              }
-              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
-              Json.obj()
+          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
+          val (tags, image) = if (isNewKeep) {
+            (Seq.empty, None) // optimizing the common case
+          } else {
+            val tags = db.readOnlyReplica { implicit s =>
+              collectionRepo.getTagsByKeepId(keep.id.get)
+            }
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize)
+            (tags, image)
           }
 
-          Ok(Json.toJson(KeepData(
-            keepInfo.id.get,
-            mine = true, // TODO: stop assuming keep is mine and removable
-            removable = true,
-            secret = keepInfo.isPrivate,
-            libraryId = Library.publicId(libraryId))).as[JsObject] ++ imageStatus)
+          val keepData = KeepData(
+            keep.externalId,
+            mine = keep.userId == request.userId,
+            removable = mem.canWrite,
+            secret = keep.visibility == LibraryVisibility.SECRET,
+            libraryId = libraryPubId)
+          val moarKeepData = MoarKeepData(
+            title = keep.title,
+            image = image.map(keepImageCommander.getUrl),
+            tags = tags.map(_.tag).toSeq)
+          Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
@@ -189,7 +183,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
@@ -210,7 +204,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               db.readOnlyReplica { implicit s =>

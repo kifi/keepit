@@ -63,7 +63,7 @@ angular.module('kifi')
             submitting = false;
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
               scope.close();
 
               if (!returnAction) {
@@ -114,7 +114,7 @@ angular.module('kifi')
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
             submitting = false;
-            $rootScope.$emit('changedLibrary');
+            $rootScope.$emit('librarySummariesChanged');
             scope.close();
             $location.path('/');
           });

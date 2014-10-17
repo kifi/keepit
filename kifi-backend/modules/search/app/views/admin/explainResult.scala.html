@@ -3,7 +3,7 @@
 <html>
 
 <head>
-<title>Explaining for User=@userId, URI=@uriId</title>
+<title>Explaining for User:@userId URI:@uriId</title>
 <style>
  table, th, td {
    border: 1px solid #ddd;
@@ -18,17 +18,17 @@
 
 <body>
 
-<h3>Explaining for User:@userId, URI=@uriId</h3>
+<h2>Explaining for User:@userId URI:@uriId</h2>
 
-<h4>Query</h4>
+<h3>Query</h3>
 
 @explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
 
-<h4>Boost Values</h4>
+<h3>Boost Values</h3>
 
 @Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
 
-<h4>Score Details</h4>
+<h3>Score Details</h3>
 
 @Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
 

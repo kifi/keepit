@@ -1,19 +1,23 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientImpl, ABookServiceClient }
+import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.db.Id
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.User
-import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
+import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, Json }
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.scraper.FakeScrapeSchedulerModule
 
 class MobilePeopleRecommendationControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
-    FakeABookServiceClientModule()
+    FakeABookServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    FakeSocialGraphModule()
   )
 
   "MobilePeopleRecommendationController" should {
