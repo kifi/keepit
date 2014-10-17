@@ -12,7 +12,7 @@ import play.api.mvc.Results._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
-import java.net.URLDecoder
+import java.net.{ URLEncoder, URLDecoder }
 
 import scala.concurrent.Future
 
@@ -62,7 +62,7 @@ class KifiSiteRouter @Inject() (
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
-          NotFound(views.html.error.notFound())
+          NotFound(views.html.error.notFound(request.path))
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
           AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
@@ -147,7 +147,8 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
 
       userOpt.flatMap { user =>
         if (user.username.isDefined && user.username.get.value != path.primary) {
-          Some(RedirectRoute("/" + path.path.replaceFirst(path.primary, user.username.get.value)))
+          val redir = "/" + (user.username.get.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+          Some(RedirectRoute(redir))
         } else if (path.split.length == 1) { // user profile page
           Some(Angular()) // great place to preload request data since we have `user` available
         } else {
