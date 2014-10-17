@@ -123,7 +123,7 @@ class LibraryCommander @Inject() (
       val owner = basicUserRepo.load(library.ownerId)
       val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
       val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
-      val keeps = keepRepo.getByLibrary(library.id.get, 10, 0)
+      val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
       val keepCount = keepRepo.getCountByLibrary(library.id.get)
       (library, owner, collabCount, followCount, keeps, keepCount)
     }
@@ -281,7 +281,7 @@ class LibraryCommander @Inject() (
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
-            keepRepo.getByLibrary(libraryId, Int.MaxValue, 0)
+            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue)
           }
           if (keeps.nonEmpty) {
             db.readWriteBatch(keeps) { (s, k) =>
@@ -310,7 +310,7 @@ class LibraryCommander @Inject() (
         libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).map { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
-        keepRepo.getByLibrary(oldLibrary.id.get, Int.MaxValue, 0)
+        keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
         keepRepo.save(keep.sanitizeForDelete())(s)
@@ -595,7 +595,7 @@ class LibraryCommander @Inject() (
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
       // todo: make more performant
-      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet // note only contains ACTIVE keeps
+      val existingURIs = keepRepo.getByLibrary(library.id.get, 0, 10000).map(_.uriId).toSet // note only contains ACTIVE keeps
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>

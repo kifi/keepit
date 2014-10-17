@@ -236,7 +236,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "pictureName":"${basicUser1.pictureName}",
              |  "username":"${basicUser1.username.get.value}"
              |  },
-             |"collaborators":[],
              |"followers":[],
              |"keeps":[],
              |"numKeeps":0,
@@ -246,10 +245,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |"membership":"owner"
           }""".stripMargin))
 
-        val user2 = db.readWrite { implicit s =>
+        val (user2, user2InvitedAt) = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Some(Username("bhsu"))))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
-          user2
+          val invite = libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          (user2, invite.createdAt)
         }
         inject[FakeUserActionsHelper].setUser(user2)
         val request2 = FakeRequest("GET", testPath)
@@ -271,9 +270,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "lastName":"${basicUser1.lastName}",
              |  "pictureName":"${basicUser1.pictureName}",
              |  "username":"${basicUser1.username.get.value}"
-             |  },
-             |"collaborators":[],
-             |"followers":[],
+             |},
+             |"followers":[
+             |  {"id":"${user2.externalId}",
+             |  "firstName":"${user2.firstName}",
+             |  "lastName":"${user2.lastName}",
+             |  "pictureName":"0.jpg",
+             |  "username":"${user2.username.get.value}",
+             |  "membership":"read_only",
+             |  "lastInvitedAt":${Json.toJson(user2InvitedAt).toString}}
+             |],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -354,7 +360,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "pictureName":"${basicUser1.pictureName}",
                |  "username":"${basicUser1.username.get.value}"
                |  },
-               |"collaborators":[],
                |"followers":[],
                |"keeps":[],
                |"numKeeps":0,
@@ -671,10 +676,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getKeeps(pubId1, 10, 0)(request1)
+        val result1 = libraryController.getKeeps(pubId1, 0, 10)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -818,7 +823,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get collaborators & followers" in {
+    "get members" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -841,57 +846,49 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user1)
 
         val pubId1 = Library.publicId(lib.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getCollaborators(pubId1, 2, 0).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getMembers(pubId1, 0, 1).url
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getCollaborators(pubId1, 2, 0)(request1)
+        val result1 = libraryController.getMembers(pubId1, 0, 1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         Json.parse(contentAsString(result1)) must equalTo(Json.parse(
           s"""
              |{
-               |"collaborators": [
+               |"members":[
                |  {"id":"${user2.externalId}",
                |  "firstName":"Luigi",
                |  "lastName":"Plumber",
-               |  "pictureName":"0.jpg"}
-               |  ],
-               |"followers":[
-               |  {"id":"${user3.externalId}",
-               |  "firstName":"Bowser",
-               |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg"}
-               |  ],
-               |"numCollaborators":1,
-               |"numFollowers":2,
-               |"count":2,
-               |"offset":0
+               |  "pictureName":"0.jpg",
+               |  "membership":"read_write"}
+               |],
+               |"offset":0,
+               |"limit":1
                |}""".stripMargin))
 
-        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getCollaborators(pubId1, 2, 1).url
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getMembers(pubId1, 1, 2).url
         val request2 = FakeRequest("POST", testPath2)
-        val result2 = libraryController.getCollaborators(pubId1, 2, 1)(request2)
+        val result2 = libraryController.getMembers(pubId1, 1, 2)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
              |{
-               |"collaborators": [],
-               |"followers":[
+               |"members":[
                |  {"id":"${user3.externalId}",
                |  "firstName":"Bowser",
                |  "lastName":"Koopa",
-               |  "pictureName":"0.jpg"},
+               |  "pictureName":"0.jpg",
+               |  "membership":"read_only"},
                |  {"id":"${user4.externalId}",
                |  "firstName":"Peach",
                |  "lastName":"Princess",
-               |  "pictureName":"0.jpg"}
-               |  ],
-               |"numCollaborators":1,
-               |"numFollowers":2,
-               |"count":2,
-               |"offset":1
+               |  "pictureName":"0.jpg",
+               |  "membership":"read_only"}
+               |],
+               |"offset":1,
+               |"limit":2
                |}""".stripMargin))
       }
     }
@@ -935,7 +932,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
 
         val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 10, 0).sortBy(_.createdAt)
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }
@@ -959,7 +956,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
 
         val (k4, k5, k6) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib2.id.get, 10, 0).sortBy(_.createdAt)
+          val keeps = keepRepo.getByLibrary(lib2.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }
@@ -1028,7 +1025,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
 
         val (k1, k2, k3) = db.readOnlyMaster { implicit s =>
-          val keeps = keepRepo.getByLibrary(lib1.id.get, 10, 0).sortBy(_.createdAt)
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10).sortBy(_.createdAt)
           keeps.length === 3
           (keeps(0), keeps(1), keeps(2))
         }

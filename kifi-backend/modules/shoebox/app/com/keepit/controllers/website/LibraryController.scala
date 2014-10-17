@@ -249,8 +249,9 @@ class LibraryController @Inject() (
 
   def getMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    val maybeMembers = libraryCommander.getLibraryMembers(libraryId, offset, limit)
-    Ok(Json.toJson(maybeMembers))
+    val enforcedLimit = Math.min(limit, 30)
+    val maybeMembers = libraryCommander.getLibraryMembers(libraryId, offset, enforcedLimit)
+    Ok(Json.obj("members" -> Json.toJson(maybeMembers), "offset" -> offset, "limit" -> enforcedLimit))
   }
 
   def copyKeeps = UserAction(parse.tolerantJson) { request =>
@@ -318,7 +319,7 @@ class LibraryController @Inject() (
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
 
       val existingKeeps = db.readOnlyMaster { implicit s =>
-        keepRepo.getByLibrary(libraryId, Int.MaxValue, 0).map(_.externalId).toSet
+        keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
       val (keeps, _, failures, _) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, false)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
