@@ -1,12 +1,10 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-
-import com.keepit.commanders.{ KeepsCommander, InviteCommander, UserCommander, LocalUserExperimentCommander }
-import com.keepit.common.core._
+import com.keepit.commanders.{ InviteCommander, KeepsCommander, LocalUserExperimentCommander, UserCommander, UserConnectionsCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.core._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
@@ -16,23 +14,15 @@ import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
-
-import play.api
-import play.api.libs.json.{ JsValue, JsObject, JsString, Json }
+import com.keepit.social.SocialGraphPlugin
 import play.api.Play
-
 import play.api.Play.current
-import play.api.http.HeaderNames.USER_AGENT
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
-import play.api.mvc.DiscardingCookie
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
+import securesocial.core.{ Authenticator, SecureSocial }
 
-import securesocial.core.{ SecureSocial, Authenticator }
-
-import scala.Some
 import scala.concurrent.Future
 
 class HomeController @Inject() (
@@ -50,6 +40,7 @@ class HomeController @Inject() (
   fortyTwoServices: FortyTwoServices,
   userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
+  userConnectionsCommander: UserConnectionsCommander,
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
   userExperimentCommander: LocalUserExperimentCommander,
@@ -277,7 +268,7 @@ class HomeController @Inject() (
 
   // todo: move this to UserController
   def disconnect(networkString: String) = UserAction { implicit request =>
-    val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
+    val (suiOpt, code) = userConnectionsCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => code match {
         case "no_other_connected_network" => BadRequest("You must have at least one other network connected.")
