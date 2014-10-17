@@ -119,10 +119,12 @@ class InviteController @Inject() (db: Database,
   }
 
   def acceptInvite(id: ExternalId[Invitation]) = MaybeUserAction.async { implicit request =>
-    request match {
-      case u: UserRequest[_] =>
+    request.userIdOpt match {
+      case Some(userId) =>
+        log.info(s"acceptInvite of an already user $userId for invitation $id")
         resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
-      case _ =>
+      case None =>
+        log.info(s"acceptInvite of a non user with invitation $id")
         val (invitation, inviterUserOpt) = db.readOnlyMaster { implicit session =>
           invitationRepo.getOpt(id).map {
             case invite if invite.senderUserId.isDefined =>
@@ -134,6 +136,7 @@ class InviteController @Inject() (db: Database,
         invitation match {
           case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
             if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
+              log.warn(s"request identity is ${request.identityOpt} and sender is ${invite.senderUserId}, redirecting to home")
               resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withCookies(Cookie("inv", invite.externalId.id)))
             } else {
               val senderUserId = invite.senderUserId.get
@@ -149,6 +152,7 @@ class InviteController @Inject() (db: Database,
               nameOpt.map {
                 case Some(name) =>
                   val inviter = inviterUserOpt.get.firstName
+                  log.info(s"invitation $id from ${inviterUserOpt.get} went through!")
                   Ok(views.html.marketing.landing(
                     useCustomMetaData = true,
                     pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
