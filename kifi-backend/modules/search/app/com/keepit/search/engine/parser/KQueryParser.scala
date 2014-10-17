@@ -56,14 +56,7 @@ class KQueryParser(
 
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
 
-          val homePageQuery = if (phTerms.size == 1) {
-            new FixedScoreQuery(new TermQuery(new Term("home_page", phTerms(0).text)))
-          } else {
-            val hpQ = new PhraseQuery()
-            phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
-            new FixedScoreQuery(hpQ)
-          }
-          engBuilder.addBoosterQuery(homePageQuery, homePageBoost)
+          engBuilder.addBoosterQuery(new HomePageQuery(phTerms), homePageBoost)
 
         }
       }
