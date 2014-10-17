@@ -28,6 +28,10 @@
 
 @Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
 
+<h3>Sharing</h3>
+
+@Html(explanation.map(_.sharingHtml).getOrElse("<ul><li>none</li></ul>"))
+
 <h3>Score Details</h3>
 
 @Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
