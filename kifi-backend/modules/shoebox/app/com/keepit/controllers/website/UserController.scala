@@ -50,6 +50,7 @@ class UserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     friendRequestRepo: FriendRequestRepo,
     postOffice: LocalPostOffice,
+    userConnectionsCommander: UserConnectionsCommander,
     userCommander: UserCommander,
     elizaServiceClient: ElizaServiceClient,
     clock: Clock,
@@ -63,7 +64,7 @@ class UserController @Inject() (
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
-    val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
+    val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = db.readOnlyMaster { implicit s =>
       connectionsPage.map {
         case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
@@ -105,7 +106,7 @@ class UserController @Inject() (
   }
 
   def unfriend(id: ExternalId[User]) = UserAction { request =>
-    if (userCommander.unfriend(request.userId, id)) {
+    if (userConnectionsCommander.unfriend(request.userId, id)) {
       Ok(Json.obj("removed" -> true))
     } else {
       NotFound(Json.obj("error" -> s"User with id $id not found."))
@@ -119,7 +120,7 @@ class UserController @Inject() (
   }
 
   def friend(id: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userCommander.friend(request.userId, id)
+    val (success, code) = userConnectionsCommander.friend(request.userId, id)
     if (success) {
       Ok(Json.obj("success" -> true, code -> true))
     } else {
@@ -128,7 +129,7 @@ class UserController @Inject() (
   }
 
   def ignoreFriendRequest(id: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userCommander.ignoreFriendRequest(request.userId, id)
+    val (success, code) = userConnectionsCommander.ignoreFriendRequest(request.userId, id)
     if (success) Ok(Json.obj("success" -> true))
     else if (code == "friend_request_not_found") NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
     else if (code == "user_not_found") BadRequest(Json.obj("error" -> s"User with id $id not found."))
@@ -152,17 +153,17 @@ class UserController @Inject() (
   }
 
   def incomingFriendRequests = UserAction { request =>
-    val users = userCommander.incomingFriendRequests(request.userId)
+    val users = userConnectionsCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
   def outgoingFriendRequests = UserAction { request =>
-    val users = userCommander.outgoingFriendRequests(request.userId)
+    val users = userConnectionsCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
   def excludeFriend(id: ExternalId[User]) = UserAction { request =>
-    userCommander.excludeFriend(request.userId, id) map { changed =>
+    userConnectionsCommander.excludeFriend(request.userId, id) map { changed =>
       Ok(Json.obj("changed" -> changed))
     } getOrElse {
       BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
@@ -170,7 +171,7 @@ class UserController @Inject() (
   }
 
   def includeFriend(id: ExternalId[User]) = UserAction { request =>
-    userCommander.includeFriend(request.userId, id) map { changed =>
+    userConnectionsCommander.includeFriend(request.userId, id) map { changed =>
       Ok(Json.obj("changed" -> changed))
     } getOrElse {
       BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
