@@ -407,22 +407,17 @@ class KeepsCommander @Inject() (
   }
 
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
-  // TODO: Can this return a Keep object?
-  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): Keep = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId) match {
-      case Failure(e) =>
-        throw e
-      case Success(keep) =>
-        SafeFuture {
-          searchClient.updateKeepIndex()
-          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
-        }
-        KeepInfo.fromKeep(keep)
+    val keep = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
+    SafeFuture {
+      searchClient.updateKeepIndex()
+      curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
     }
+    keep
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {

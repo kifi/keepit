@@ -175,7 +175,7 @@ class ExtBookmarksController @Inject() (
       }
     }
 
-    Ok(Json.toJson(bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
+    Ok(Json.toJson(KeepInfo.fromKeep(bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source))))
   }
 
   def unkeep(id: ExternalId[Keep]) = UserAction { request =>

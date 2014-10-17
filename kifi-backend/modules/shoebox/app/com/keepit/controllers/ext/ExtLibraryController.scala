@@ -8,6 +8,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -102,7 +103,7 @@ class ExtLibraryController @Inject() (
         libraryMembershipRepo.getOpt(request.userId, libraryId)
       } match {
         case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
-          val info = request.body.as[JsObject]
+          val info = request.body
           val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
           if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
@@ -110,35 +111,37 @@ class ExtLibraryController @Inject() (
           }
           implicit val context = hcb.build
 
-          val rawBookmark = info.as[RawBookmarkRepresentation]
-          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+          val keep = keepsCommander.keepOne(info.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
 
-          // Determine image choice.
-          val imageStatus = (info \ "image") match {
-            case JsNull => // user purposely wants no image
-              Json.obj()
-            case JsString(imageUrl) if imageUrl.startsWith("http") =>
-              val (keep, keepImageRequest) = db.readWrite { implicit session =>
-                val keep = keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-                val keepImageRequest = keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
-                (keep, keepImageRequest)
-              }
-              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Json.obj("imageStatusPath" -> routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
-            case _ =>
-              val keep = db.readOnlyMaster { implicit session =>
-                keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-              }
-              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
-              Json.obj()
+          val tags = db.readOnlyMaster { implicit s =>
+            collectionRepo.getTagsByKeepId(keep.id.get)
           }
 
-          Ok(Json.toJson(KeepData(
-            keepInfo.id.get,
+          // Determine image choice.
+          val imageStatusPath = (info \ "image") match {
+            case JsString(imageUrl) if imageUrl.startsWith("http") =>
+              val keepImageRequest = db.readWrite { implicit s =>
+                keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
+              }
+              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
+              Some(routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
+            case JsNull => // user purposely wants no image
+              None
+            case _ =>
+              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
+              None
+          }
+
+          val keepData = KeepData(
+            keep.externalId,
             mine = true, // TODO: stop assuming keep is mine and removable
             removable = true,
-            secret = keepInfo.isPrivate,
-            libraryId = libraryPubId)).as[JsObject] ++ imageStatus)
+            secret = keep.visibility == LibraryVisibility.SECRET,
+            libraryId = libraryPubId)
+          val moarKeepData = MoarKeepData(keep.title, None, tags.map(_.tag).toSeq)
+          Ok(Json.toJson(keepData).as[JsObject] ++
+            Json.toJson(moarKeepData).as[JsObject] ++
+            json.minify(Json.obj("imageStatusPath" -> imageStatusPath)))
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
