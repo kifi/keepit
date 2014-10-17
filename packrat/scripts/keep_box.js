@@ -381,7 +381,7 @@ var keepBox = keepBox || (function () {
     api.port.emit('keep', withUrls(data), function (keep) {
       if (keep) {
         library.keep = keep;
-        showKeep(library, {title: data.title, image: null, tags: []}, true);
+        showKeep(library, keep, true);
       }
     });
   }
@@ -552,7 +552,7 @@ var keepBox = keepBox || (function () {
     var val = input.value.trim();
     if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
       data.saving.title = val;
-      api.port.emit('save_keep', {libraryId: data.library.id, updates: {title: val}}, function (success) {
+      api.port.emit('save_keep_title', {libraryId: data.library.id, title: val}, function (success) {
         if (data.saving.title === val) {
           delete data.saving.title;
         }

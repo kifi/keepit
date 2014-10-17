@@ -545,7 +545,6 @@ api.port.on({
       ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
         title: data.title,
-        image: data.image,
         canonical: data.canonical,
         og: data.og,
         guided: data.guided
@@ -562,7 +561,6 @@ api.port.on({
         } else {
           d.keeps.push(keep);
         }
-        delete keep.imageStatusPath;
         respond(keep);
         updateTabsWithKeptState(tab.url, tab.nUri, d.howKept());
         notifyKifiAppTabs({type: 'keep', libraryId: libraryId, keepId: keep.id});
@@ -612,7 +610,7 @@ api.port.on({
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
-          keep.details = details;
+          extend(keep, details);
           // TODO: trigger get_keep response if any are waiting
         });
       });
@@ -662,23 +660,17 @@ api.port.on({
   get_keep: function (keepId, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
-      var details = d.keeps.find(idIs(keepId)).details;
-      // TODO: wait if details are not yet loaded
-      respond(details);
+      var keep = d.keeps.find(idIs(keepId));
+      // TODO: wait if details (title, image, tags) are not yet loaded
+      respond(keep);
     }
   },
-  save_keep: function (data, respond, tab) {
+  save_keep_title: function (data, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
-      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, data.updates, function () {
-        if (keep.details) {
-          ['title'].forEach(function (prop) {
-            if (prop in data.updates) {
-              keep.details[prop] = data.updates[prop];
-            }
-          });
-        }
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, {title: data.title}, function () {
+        keep.title = data.title;
         respond(true);
       }, respond.bind(null, false));
     }
@@ -688,9 +680,7 @@ api.port.on({
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
       ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/image', {image: data.image}, function (resp) {
-        if (keep.details) {
-          keep.details.image = resp.image;
-        }
+        keep.image = resp.image;
         respond(true);
       }, respond.bind(null, false));
     }
@@ -703,8 +693,10 @@ api.port.on({
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
       ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
-        if (keep.details) {
-          keep.details.tags.push(resp.tag);
+        if (keep.tags) {
+          keep.tags.push(resp.tag);
+        } else {
+          keep.tags = [resp.tag];
         }
         respond(resp.tag);
       }, respond.bind(null, false));
@@ -715,10 +707,9 @@ api.port.on({
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
       ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
-        if (keep.details) {
-          for (var i; (i = keep.details.tags.indexOf(data.tag)) >= 0;) {
-            keep.details.tags.splice(i, 1);
-          }
+        var tags = keep.tags || [];
+        for (var i; (i = tags.indexOf(data.tag)) >= 0;) {
+          tags.splice(i, 1);
         }
         respond(true);
       }, respond.bind(null, false));
