@@ -625,6 +625,7 @@ class UserCommander @Inject() (
         val username = autoSetUsername(user, readOnly)
         if (username.isEmpty) throw new Exception(s"could not set a username for $user")
         log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
+        counter += 1
       }
       batch = db.readOnlyMaster { implicit s =>
         userRepo.getUsersWithNoUsername(batchSize)
