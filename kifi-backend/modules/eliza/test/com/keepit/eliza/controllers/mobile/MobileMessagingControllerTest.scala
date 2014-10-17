@@ -74,7 +74,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       }
     }
 
-    "addParticipantsToThread" in {
+    "add participants to a thread" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].all.isEmpty === true
@@ -103,17 +103,15 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
-        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
+        routes.MobileMessagingController.addParticipantsToThread(thread.externalId).url === s"/m/1/eliza/thread/${thread.externalId}/participants"
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
-        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
-
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("text/plain")
-        val runners = inject[WatchableExecutionContext].drain()
-        runners > 2
+        val result = inject[MobileMessagingController].addParticipantsToThread(thread.externalId)(FakeRequest()
+          .withBody(Json.obj("users" -> Seq(eishay.externalId), "emails" -> Seq("joe@smith.com", "jack@smith.com")))
+          .withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        status(result) must equalTo(NO_CONTENT)
+        inject[WatchableExecutionContext].drain()
 
         inject[Database].readOnlyMaster { implicit s =>
           inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
