@@ -159,7 +159,6 @@ angular.module('kifi')
               return;
             }
 
-            // Let the user be the first one listed. :)
             library.followers.push({
               id: profileService.me.id,
               firstName: profileService.me.firstName,
