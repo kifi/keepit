@@ -96,13 +96,18 @@ trait UserActionsRequirements {
 
 }
 
-trait SecureSocialHelper {
+trait SecureSocialHelper extends Logging {
   def getSecureSocialUserFromRequest(implicit request: Request[_]): Option[Identity] = {
-    for (
-      authenticator <- SecureSocial.authenticatorFromRequest;
-      user <- UserService.find(authenticator.identityId)
-    ) yield {
-      user
+    try {
+      val maybeAuthenticator = SecureSocial.authenticatorFromRequest
+      log.info(s"[getSecureSocialUserFromRequest] identityId=${maybeAuthenticator.map(_.identityId)} maybeAuthenticator=$maybeAuthenticator")
+      maybeAuthenticator flatMap { authenticator =>
+        UserService.find(authenticator.identityId) tap { u => log.info(s"[getSecureSocialUserFromRequest] authenticator=${authenticator.id} identityId=${authenticator.identityId} user=${u.map(_.email)}") }
+      }
+    } catch {
+      case t: Throwable =>
+        log.error(s"[getSecureSocialUserFromRequest] Caught exception $t; cause=${t.getCause}", t)
+        None
     }
   }
 }
