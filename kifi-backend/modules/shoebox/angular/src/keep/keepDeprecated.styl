@@ -1,13 +1,11 @@
 keepBorderRadius = 3px
-tagOutlineColor = #bdc4c9
-kifiGreen = #73c583
 
 .kf-my-keeps
-  .kf-keep
+  .kf-keep-deprecated
   .kf-keep-selection-tools
     margin-top: 10px
 
-.kf-keep
+.kf-keep-deprecated
 .kf-keep-selection-tools
   box-sizing: border-box
   box-shadow: defaultBoxShadow
@@ -86,7 +84,6 @@ kifiGreen = #73c583
 
 .kf-keep-selection-option
   display: inline-block
-  color: linkBlueColor
 
   span
     cursor: pointer
@@ -95,7 +92,7 @@ kifiGreen = #73c583
   content: "|"
   padding: 5px
 
-.kf-keep
+.kf-keep-deprecated
   position: relative
 
   &.detailed
@@ -136,11 +133,8 @@ kifiGreen = #73c583
 
 .kf-keep-who
   padding: 6px 35px 5px 0
-  background-size: 9px 10px
-  background-repeat: no-repeat
-  background-position: 0 0
 
-.kf-keep-tag-new
+.kf-keep-tag
   margin-top: 3px
 
 .kf-keep-footer
@@ -154,61 +148,10 @@ kifiGreen = #73c583
   a:active
     color: #92add3
 
-.kf-keep-footer-buttons-wrapper
-  .kf-keep-lib-footer-button
-    float: right
-    box-sizing: border-box
-    padding-left: 0
-    padding-right: 0
-    text-align: center
-
-.kf-keep-footer.kf-keep-footer-buttons-wrapper
-  padding: 7px 5px
-
-.kf-keep-footer-button-wrapper
-  .kf-keep-lib-footer-button
-    margin-right: 10px
-    padding-left: 10px
-    padding-right: 10px
-
-.kf-keep-tag-button
-  span
-    background-size: 17px 14px
-    background-repeat: no-repeat
-    background-position: 0 0
-    padding-left: 23px
-
-.kf-keep-share-button
-  margin-right: 10px
-  span
-    background-size: 17px 14px
-    background-repeat: no-repeat
-    background-position: 0 0
-    padding-left: 23px
-
-.kf-keep-master-btn
-  margin-right: 10px
-  &.state-kept-public
-    span
-      color: #73c885
-      background-size: 16px 14px
-      background-repeat: no-repeat
-      padding-left: 21px
-  &.state-kept-private
-    span
-      color: #f06463
-      background-size: 10px 14px
-      background-repeat: no-repeat
-      padding-left: 15px
-
-  &.state-not-kept
-    span
-      background-size: 16px 14px
-      background-repeat: no-repeat
-      padding-left: 21px
+.kf-keep-tags
+  padding: 7px 0
 
 .kf-keep-footer-link a
-  color: linkBlueColor
   cursor: pointer
 
   &:hover
@@ -318,13 +261,12 @@ kifiGreen = #73c583
 .kf-keep-loading
   padding-right: 5px
 
-.kf-keep-subtitle
+.kf-keep-subtitle-deprecated
   line-height: 11px
   color: #909aa8
   vertical-align: middle
   font-smoothing: antialiased
   font-size: 13px
-  margin-bottom: 10px
 
 .kf-keep-dot
   font-size: 16px
@@ -360,125 +302,87 @@ kifiGreen = #73c583
   vertical-align: middle
   color: #74C485
 
-  .kf-keep.example &
+  .kf-keep-deprecated.example &
     color: #c6cbd3
 
 // tag
-
-.kf-keep-tags-new
-  padding: 7px 0
+.kf-keep-tags
 
   &:empty
     border-bottom-width: 0
 
 @-moz-document url-prefix()
-  .kf-keep-tags-new
+  .kf-keep-tags
     background-position: 0 1px
 
-.kf-tag-list-new > li
-  display: inline-block
 
-.kf-tag-list-new
-  margin-right: 10px
-
-.kf-keep-tags-new
-  border-top: 1px solid #e7e7e7
-  box-sizing: border-box
-  padding: 20px 0
-  margin-top: 16px
-
-
-.kf-keep-tag-link-new > a
-  line-height: 21px
-  padding: 0 7px
-  color: #777
-  font-size: 12px
-
-.kf-keep-add-tag-link
-  background-size: 20px 20px
-  background-repeat: no-repeat
-  background-position: 0 2px
-  width: 20px
-  height: 23px
-  display: block
-  cursor: pointer
-
-.kf-keep-tag-new
-input.kf-keep-tag-input-new
-  border: 1px solid tagOutlineColor
+.kf-keep-tag
+input.kf-keep-tag-input
+  border: 1px solid blueColor
   border-radius: 3px
   margin-right: 4px
   vertical-align: middle
 
-.kf-keep-tag-new
-input.kf-keep-tag-input-new
+.kf-keep-tag
+input.kf-keep-tag-input
 .kf-keep-tag-opt
 .kf-keep-tag-hidden
   max-width: 150px
-  box-sizing: border-box
   font-size: 12px
   font-smoothing: antialiased
-  color: linkBlueColor
+  color: linkColor
 
-.kf-keep-tag-add-tag-wrapper
-.kf-keep-tag-new
-input.kf-keep-tag-input-new
+.kf-keep-tag
+input.kf-keep-tag-input
   padding: 2px 6px 1px
   margin-bottom: 3px
 
 .kf-keep-tag-opt
   padding: 3px 6px 3px
 
-input.kf-keep-tag-input-new
+input.kf-keep-tag-input
 .kf-keep-tag-opt
   long-text()
 
-input.kf-keep-tag-input-new
+input.kf-keep-tag-input
   width: 100%
   min-width: 141px
 
-.kf-keep-tag-new
+.kf-keep-tag
   display: inline-block
   position: relative
   overflow: hidden
   white-space: nowrap
-  float: left
 
   &.removed
     width: 0 !important
     transition: width .12s ease-in-out
 
-.kf-keep-tag-link-new
-  padding: 0
+.kf-keep-tag-link
+  padding: 0 11px 0 0
   font-smoothing: antialiased
   long-text()
 
   &:active
     color: clearBlueColor
 
-.kf-keep-tag-x-new
-  display: none
+.kf-keep-tag-x
   position: absolute
-  right: 2px
-  top: -2px
+  right: 5px
+  top: 1px
   cursor: pointer
-  color: kifiGreen
-
-.kf-keep-tag-new:hover .kf-keep-tag-x-new
-  display: block
 
 .kf-keep-tag-opts-container
   position: absolute
 
-.kf-keep-tag-opts-new
+.kf-keep-tag-opts
   position: relative
   top: -4px
-  border: 1px solid tagOutlineColor
+  border: 1px solid blueColor
   border-radius: 3px
   background-color: #fff
   z-index: 1
-  min-width: 150px
-  box-sizing: border-box
+  min-width: 153px
 
 .kf-keep-tag-opt
   cursor: pointer
@@ -527,7 +431,7 @@ input.kf-keep-tag-input-new
   width: 1px
   height: 100%
 
-  .kf-keep:hover &
+  .kf-keep-deprecated:hover &
     display: block
 
 .kf-keep-hover-button-table
@@ -551,32 +455,23 @@ input.kf-keep-tag-input-new
   cursor: pointer
   user-select: none
 
-  .kf-keep.detailed &
+  .kf-keep-deprecated.detailed &
     background: #67829c
 
 .kf-keep-button-close
   display: none
 
-  .kf-keep.detailed &
+  .kf-keep-deprecated.detailed &
     display: block
 
-.kf-keep.detailed .kf-keep-button-preview
+.kf-keep-deprecated.detailed .kf-keep-button-preview
   display: none
 
 .kf-tag-list>li
   display: inline-block
 
-.kf-keep-tag-add-tag-wrapper
-  float: left
-  padding-top: 2px
-  margin-top: 3px 
-
-.kf-keep-add-tag-button-new
-.kf-keep-add-tag-button-new
+.kf-keep-add-tag-button
   cursor: pointer
-  width: 20px
-  height: 20px
-  display: inline-block
 
 .kf-keep-loader
   position: relative

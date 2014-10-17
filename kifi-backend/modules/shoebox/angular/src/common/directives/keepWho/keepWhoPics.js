@@ -26,11 +26,23 @@ angular.module('kifi')
         keep: '='
       },
       link: function (scope) {
+        var keep = scope.keep;
+
         scope.me = profileService.me;
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.librariesEnabled = libraryService.isAllowed();
+        
+        if (scope.librariesEnabled) {
+          scope.visibleKeepLibaries = _.union(keep.libraries, keep.myLibraries);
+          scope.$emit('getCurrentLibrary', { callback: function (currentLibrary) {
+            var currentLibraryIdx = _.findIndex(scope.visibleKeepLibaries, { id: currentLibrary.id });
+            if (currentLibraryIdx > -1) {
+              scope.visibleKeepLibaries.splice(currentLibraryIdx, 1);
+            }
+          }});
+        }
       }
     };
   }
