@@ -118,7 +118,7 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def acceptInvite(id: ExternalId[Invitation]) = UserAction.async { implicit request =>
+  def acceptInvite(id: ExternalId[Invitation]) = MaybeUserAction.async { implicit request =>
     request match {
       case u: UserRequest[_] =>
         resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
