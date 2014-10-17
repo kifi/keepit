@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.commanders.{ EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult }
+import com.keepit.commanders.{ UserConnectionsCommander, EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -11,7 +11,7 @@ import com.google.inject.Inject
 class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
-  userCommander: UserCommander)
+  userCommander: UserConnectionsCommander)
     extends UserActions with ShoeboxServiceController {
 
   def getFriends() = UserAction { request =>
