@@ -546,10 +546,11 @@ class UserCommander @Inject() (
       s"$name-$filler"
     } else name
     def randomNumber = scala.util.Random.nextInt(999)
-    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList
-    candidates.map { username =>
-      if (!UsernameOps.isValid(username)) throw new Exception(s"username $username is invalid for user $user")
-    }
+    val censorList = UsernameOps.censorList.mkString("|")
+    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList.map { name =>
+      if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C$randomNumber")
+    }.filter(UsernameOps.isValid)
+    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
