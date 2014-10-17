@@ -248,11 +248,9 @@ class LibraryController @Inject() (
   }
 
   def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
-    if (limit > 30) {
-      BadRequest(Json.obj("error" -> "invalid_limit"))
-    } else Library.decodePublicId(pubId) match {
-      case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+    if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
         val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
