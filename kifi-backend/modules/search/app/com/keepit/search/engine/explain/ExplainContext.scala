@@ -21,7 +21,7 @@ class ExplainContext(
         val bits = reader.nextTaggedFloatBits()
         val idx = DataBuffer.getTaggedFloatTag(bits)
         val scr = DataBuffer.getTaggedFloatValue(bits)
-        scoreArray(idx)
+        scoreArray(idx) = scr
       }
       collector.collectDetail(id, id2, theVisibility, scoreArray.clone())
 
