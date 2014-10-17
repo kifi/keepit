@@ -192,7 +192,7 @@ angular.module('kifi')
             'slug': '',
 
             // By default, the create library form selects the "discoverable" visibility for a new library.
-            'visibility': 'discoverable'
+            'visibility': 'published'
           };
           scope.modalTitle = 'Create a library';
         }
