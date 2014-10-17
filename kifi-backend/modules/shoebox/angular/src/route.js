@@ -44,9 +44,6 @@ angular.module('kifi')
     }).when('/tags/manage', {
       templateUrl: 'tagManage/tagManage.tpl.html',
       controller: 'ManageTagCtrl'
-    }).when('/test', {
-      templateUrl: 'test.tpl.html',
-      controller: 'TestCtrl'
     })
     // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
     .when('/:username/:librarySlug', {

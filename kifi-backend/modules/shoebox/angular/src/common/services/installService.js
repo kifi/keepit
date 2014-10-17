@@ -20,7 +20,7 @@ angular.module('kifi')
     var detectIfIsInstalled = function () {
       var kifiAttr = $window.document.children[0].attributes['data-kifi-ext'];
       return !!(kifiAttr && kifiAttr.value);
-    }
+    };
 
     function installedVersion() {
       return angular.element(document.documentElement).attr('data-kifi-ext');
