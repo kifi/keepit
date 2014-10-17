@@ -173,7 +173,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         "request" -> s"${request.method}:${request.path} query: ${request.queryString.mkString("::")}"
       )))
     } else {
-      allowCrossOrigin(request, BadRequest(views.html.error.notFound()))
+      allowCrossOrigin(request, NotFound(views.html.error.notFound(request.path)))
     }
   }
 

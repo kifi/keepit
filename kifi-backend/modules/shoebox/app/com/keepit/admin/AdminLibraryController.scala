@@ -80,7 +80,7 @@ class AdminLibraryController @Inject() (
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
       val keepCount = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, pageSize, page * pageSize).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
