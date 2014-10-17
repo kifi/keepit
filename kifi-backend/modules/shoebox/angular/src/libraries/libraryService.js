@@ -62,7 +62,13 @@ angular.module('kifi')
 
     var libraryByUserSlugService = new Clutch(function (username, slug, authToken) {
       return $http.get(routeService.getLibraryByUserSlug(username, slug, authToken)).then(function (res) {
-        return res.data && res.data.library;
+        // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
+        //       on the library object.
+        if (res.data && res.data.library) {
+          res.data.library.access = res.data.membership;
+          return res.data.library;
+        }
+        return null;
       });
     });
 
@@ -238,6 +244,7 @@ angular.module('kifi')
             librarySummaries.push(response.data);
             _.remove(invitedSummaries, { id: libraryId });
             $rootScope.$emit('librarySummariesChanged');
+            $rootScope.$emit('libraryUpdated', response.data);
           });
         }
 
@@ -248,6 +255,13 @@ angular.module('kifi')
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, { id: libraryId });
           $rootScope.$emit('librarySummariesChanged');
+
+          return api.getLibraryById(libraryId, true).then(function (data) {
+            // TODO: Take this manual check out when the backend endpoint properly has an 'access' property
+            //       on the library object.
+            data.library.access = data.membership;
+            $rootScope.$emit('libraryUpdated', data.library);
+          });
         });
       },
 
@@ -267,6 +281,12 @@ angular.module('kifi')
 
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      getMoreFollowers: function (libraryId, pageSize, offset) {
+        return $http.get(routeService.getMoreLibraryFollowers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
       }

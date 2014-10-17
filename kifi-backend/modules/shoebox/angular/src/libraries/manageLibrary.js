@@ -63,7 +63,7 @@ angular.module('kifi')
             submitting = false;
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('changedLibrary');
+              $rootScope.$emit('librarySummariesChanged');
               scope.close();
 
               if (!returnAction) {
@@ -114,7 +114,7 @@ angular.module('kifi')
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
             submitting = false;
-            $rootScope.$emit('changedLibrary');
+            $rootScope.$emit('librarySummariesChanged');
             scope.close();
             $location.path('/');
           });
@@ -128,6 +128,39 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
+        scope.moreFollowers = true;
+        scope.followerList = [];
+        scope.followerScrollDistance = '100%';
+
+        scope.isFollowerScrollDisabled = function () {
+          return !(scope.moreFollowers);
+        };
+        scope.followerScrollNext = function () {
+
+          pageFollowers();
+        };
+
+        var pageSize = 10;
+        scope.offset = 0;
+        var loading = false;
+        function pageFollowers() {
+          if (loading) { return; }
+          loading = true;
+          libraryService.getMoreFollowers(scope.library.id, pageSize, scope.offset).then(function (resp) {
+            var followers = resp.followers;
+            loading = false;
+            if (followers.length === 0) {
+              scope.moreFollowers = false;
+            } else {
+              scope.moreFollowers = true;
+              scope.offset += 1;
+              followers.forEach(function (follower) {
+                follower.picUrl = friendService.getPictureUrlForUser(follower);
+              });
+              scope.followerList.push.apply(scope.followerList, followers);
+            }
+          });
+        }
 
         //
         // Watches and listeners.
@@ -147,6 +180,8 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          scope.followerList.push.apply(scope.followerList, scope.library.followers);
+          scope.offset = 1;
           returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
           scope.userHasEditedSlug = true;
