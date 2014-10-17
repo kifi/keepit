@@ -171,6 +171,8 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       UsernameOps.normalize("andrew.conner2") === "andrewconner2"
       UsernameOps.normalize("康弘康弘") === "康弘康弘"
       UsernameOps.normalize("ân_dréw-c.ön.nér") === "andrewconner"
+      UsernameOps.normalize("bob1234") === "bob1234"
+      UsernameOps.normalize("123bob1234") === "123bob1234"
     }
 
     "allow change of username" in {

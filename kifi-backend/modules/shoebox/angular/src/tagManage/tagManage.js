@@ -83,7 +83,7 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$on('changedLibrary', function () {
+    $rootScope.$on('librarySummariesChanged', function () {
       $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
         return lib.access !== 'read_only';
       });
