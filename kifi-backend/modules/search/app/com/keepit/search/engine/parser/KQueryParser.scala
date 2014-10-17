@@ -1,9 +1,9 @@
 package com.keepit.search.engine.parser
 
 import org.apache.lucene.index.Term
-import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.search.engine.query.KProximityQuery
 import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer
@@ -49,7 +49,7 @@ class KQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
 
           val phrases = monitoredAwait.result(detectPhrases(queryText, parser.lang), 3 seconds, "phrase detection")
-          val proxQ = new DisjunctionMaxQuery(0.0f)
+          val proxQ = new KProximityQuery
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, 1f)) // disable phrase scoring for title. penalty could be too big
           engBuilder.addBoosterQuery(proxQ, proximityBoost)
