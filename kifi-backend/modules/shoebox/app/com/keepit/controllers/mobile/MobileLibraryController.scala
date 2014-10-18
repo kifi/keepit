@@ -131,13 +131,11 @@ class MobileLibraryController @Inject() (
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
-          numKeeps <- numKeepsF
         } yield {
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> keepInfos))
         }
     }
   }
