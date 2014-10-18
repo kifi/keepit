@@ -39,6 +39,49 @@
     font-weight: bold
     vertical-align: middle
 
+  .library-title-display
+    overflow: hidden
+    width: 100%
+    height: 58px
+    line-height: 29px
+
+  .library-title-display:before
+    content: ""
+    float: left
+    width: 5px
+    height: 58px
+
+  .library-title-display > *:first-child
+    float: right
+    width: 100%
+    margin-left: -5px
+
+  .library-title-display:after
+    content: "..."
+    color: #dddddd
+    text-align: right
+    float: right
+    position: relative
+    top: -33px
+    left: 99%
+    width: 70px
+    margin-left: -70px
+    padding-left: 5px
+    padding-top: 5px
+    font-size: 26px
+    z-index: 1
+
+    box-sizing: content-box
+    -webkit-box-sizing: content-box
+    -moz-box-sizing: content-box
+
+    background: -webkit-gradient(linear, left top, right top,
+      from(rgba(255, 255, 255, 0)), to(white), color-stop(50%, white))
+    background: -moz-linear-gradient(to right, rgba(255, 255, 255, 0), white 50%, white)
+    background: -o-linear-gradient(to right, rgba(255, 255, 255, 0), white 50%, white)
+    background: -ms-linear-gradient(to right, rgba(255, 255, 255, 0), white 50%, white)
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), white 50%, white)
+
   .kf-keep-lib-info
     margin: 0 25px 10px 80px
     color: kifiBlack
