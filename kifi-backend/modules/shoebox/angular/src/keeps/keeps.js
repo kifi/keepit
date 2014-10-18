@@ -114,6 +114,34 @@ angular.module('kifi')
           }
         }
 
+        function copyToLibrary () {
+          // Copies the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('librarySummariesChanged');
+            });
+          });
+        }
+
+        function moveToLibrary () {
+          // Moves the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('librarySummariesChanged');
+            });
+          });
+        }
+
 
         //
         // Scope data.
@@ -178,24 +206,6 @@ angular.module('kifi')
         scope.isScrollDisabled = function () {
           return scope.scrollDisabled;
         };
-
-        function copyToLibrary () {
-          // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.keeps);
-          var selectedLibrary = scope.librarySelection.library;
-
-          keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), selectedLibrary.id).then(function (result) {
-            if (result.failures && result.failures.length) {
-              modalService.open({
-                template: 'common/modal/genericErrorModal.tpl.html'
-              });
-            } else {
-              libraryService.fetchLibrarySummaries(true).then(function () {
-                $rootScope.$emit('librarySummariesChanged');
-              });
-            }
-          });
-        }
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
@@ -278,7 +288,13 @@ angular.module('kifi')
 
                 scope.librarySelection = {};
                 scope.libSelectTopOffset = 300;  // This needs to be dynamic.
-                scope.clickAction = copyToLibrary;
+                scope.clickAction = function (widgetElement) {
+                  if (widgetElement.closest('.copy-to-library').length) {
+                    copyToLibrary();
+                  } else if (widgetElement.closest('.move-to-library').length) {
+                    moveToLibrary();
+                  }
+                };
               });
             }
           }
@@ -296,6 +312,14 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
+          }
+        });
+
+        $rootScope.$on('librarySummariesChanged', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+              return lib.access !== 'read_only';
+            });
           }
         });
 
