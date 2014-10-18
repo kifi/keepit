@@ -15,7 +15,8 @@ angular.module('kifi')
        *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   clickAction() - a function that can be called once a library is selected
+       *   clickAction() - a function that can be called once a library is selected;
+       *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
        */
       link: function (scope, element/*, attrs*/) {
@@ -78,7 +79,7 @@ angular.module('kifi')
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
             if (_.isFunction(scope.clickAction)) {
-              scope.clickAction();
+              scope.clickAction(element);
             }
             return;
           }
@@ -205,7 +206,7 @@ angular.module('kifi')
 
               scope.librarySelection.library = scope.libraries[selectedIndex];
               if (_.isFunction(scope.clickAction)) {
-                scope.clickAction();
+                scope.clickAction(element);
               }
               removeWidget();
               break;
@@ -247,7 +248,7 @@ angular.module('kifi')
               scope.$evalAsync(function () {
                 scope.librarySelection.library = _.find(scope.libraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction();
+                  scope.clickAction(element);
                 }
                 removeWidget();
               });
