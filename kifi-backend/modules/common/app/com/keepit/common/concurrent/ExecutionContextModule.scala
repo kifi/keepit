@@ -3,7 +3,7 @@ package com.keepit.common.concurrent
 import com.google.inject.{ Provides, Singleton }
 import net.codingwell.scalaguice.ScalaModule
 
-import scala.concurrent.{ExecutionContext => ScalaExecutionContext}
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
 case class ExecutionContextModule() extends ScalaModule {
 
