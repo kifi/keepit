@@ -2,14 +2,10 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.service.ServiceType
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.libs.json.{ JsNumber, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
+import scala.concurrent.Future
 import com.keepit.search.IndexInfo
 
 class AdminIndexInfoController @Inject() (
