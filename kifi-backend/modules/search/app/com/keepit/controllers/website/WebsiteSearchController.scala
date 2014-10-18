@@ -88,7 +88,13 @@ class WebsiteSearchController @Inject() (
           case augmentedItems => {
             val librarySearcher = libraryIndexer.getSearcher
             val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
-            val futureUsers = shoeboxClient.getBasicUsers(userIds)
+
+            val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+
+            val futureUsers = {
+              val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
+              shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+            }
 
             val futureJsHits = futureUriSummaries.map { summaries =>
               (kifiPlainResult.hits zip allSecondaryFields).map {
@@ -103,16 +109,17 @@ class WebsiteSearchController @Inject() (
                 }
               }
             }
-
-            val libraries = {
-              val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
-              libraryIds.map(libraryById(_))
-            }
-
             for {
               usersById <- futureUsers
               jsHits <- futureJsHits
-            } yield (jsHits, userIds.map(usersById(_)), libraries)
+            } yield {
+              val libraries = libraryIds.map { libId =>
+                val (libraryRecord, isSecret) = libraryRecordById(libId)
+                val owner = usersById(libraryRecord.owner)
+                BasicLibrary(libraryRecord, isSecret, owner)
+              }
+              (jsHits, userIds.map(usersById(_)), libraries)
+            }
           }
         }
       }

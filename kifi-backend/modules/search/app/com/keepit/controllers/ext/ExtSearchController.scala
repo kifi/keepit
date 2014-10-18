@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.util.SearchControllerUtil
+import com.keepit.controllers.util.{ BasicLibrary, SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
@@ -81,17 +81,22 @@ class ExtSearchController @Inject() (
 
         val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
-        val futureUsers = shoeboxClient.getBasicUsers(userIds)
+        val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+
+        val futureUsers = {
+          val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
+          shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+        }
 
         val hitsJson = allSecondaryFields.map(json.minify)
 
-        val libraries = {
-          val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
-          libraryIds.map(libraryById(_))
-        }
-
         futureUsers.map { usersById =>
           val users = userIds.map(usersById(_))
+          val libraries = libraryIds.map { libId =>
+            val (libraryRecord, isSecret) = libraryRecordById(libId)
+            val owner = usersById(libraryRecord.owner)
+            BasicLibrary(libraryRecord, isSecret, owner)
+          }
           Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
         }
       }
