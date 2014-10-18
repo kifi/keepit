@@ -548,13 +548,14 @@ class UserCommander @Inject() (
     def randomNumber = scala.util.Random.nextInt(999)
     val censorList = UsernameOps.censorList.mkString("|")
     val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList.map { name =>
-      if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C$randomNumber")
+      if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
     }.filter(UsernameOps.isValid)
     if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
-    while (keepTrying && i < 30) {
+    log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
+    while (keepTrying && i < candidates.size) {
       val candidate = Username(candidates(i))
       setUsername(user.id.get, candidate, readOnly = readOnly) match {
         case Right(username) =>
