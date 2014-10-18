@@ -47,6 +47,8 @@ case class UserStatistics(
   experiments: Set[ExperimentType],
   kifiInstallations: Seq[KifiInstallation])
 
+case class InvitationInfo(active: Int, accepted: Int)
+
 case class UserStatisticsPage(
     userViewType: UserViewType,
     users: Seq[UserStatistics],
@@ -54,7 +56,8 @@ case class UserStatisticsPage(
     page: Int,
     userCount: Int,
     pageSize: Int,
-    newUsers: Option[Int]) {
+    newUsers: Option[Int],
+    invitationInfo: Option[InvitationInfo] = None) {
 
   def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
 }
@@ -335,9 +338,13 @@ class AdminUserController @Inject() (
       }
     }
 
-    val newUsers = userViewType match {
-      case RegisteredUsersViewType => db.readOnlyReplica { implicit s => Some(userRepo.countNewUsers) }
-      case _ => None
+    val (newUsers, inviteInfo) = userViewType match {
+      case RegisteredUsersViewType =>
+        db.readOnlyReplica { implicit s =>
+          (Some(userRepo.countNewUsers), Some(InvitationInfo(invitationRepo.getRecentSent(), invitationRepo.getRecentAccepted())))
+        }
+      case _ =>
+        (None, None)
     }
 
     val userThreadStats = (users.par.map { u =>
@@ -345,7 +352,7 @@ class AdminUserController @Inject() (
       (userId -> eliza.getUserThreadStats(u.user.id.get))
     }).seq.toMap
 
-    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers)
+    UserStatisticsPage(userViewType, users, userThreadStats, page, userCount, PAGE_SIZE, newUsers, inviteInfo)
   }
 
   def usersView(page: Int = 0) = AdminUserPage { implicit request =>
