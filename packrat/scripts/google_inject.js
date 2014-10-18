@@ -169,7 +169,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'cutPoint:', resp.cutPoint, 'inDoc:', inDoc);
       unpack(resp);
       if (resp.hits.length) {
-        stashExtraHits(resp, resp.cutPoint);
+        if (resp.cutPoint) {
+          stashExtraHits(resp, resp.cutPoint);
+        }
       } else {
         resp.mayHaveMore = false;
       }
