@@ -23,10 +23,12 @@ import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.util.{ Left, Right, Try }
 
@@ -547,7 +549,11 @@ class UserCommander @Inject() (
     } else name
     def randomNumber = scala.util.Random.nextInt(999)
     val censorList = UsernameOps.censorList.mkString("|")
-    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList.map { name =>
+    val preCandidates = ArrayBuffer[String]()
+    preCandidates + seed
+    preCandidates ++ (1 to 30).map(n => s"$seed-$randomNumber").toList
+    preCandidates ++ (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
+    val candidates = preCandidates.map { name =>
       if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
     }.filter(UsernameOps.isValid)
     if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
