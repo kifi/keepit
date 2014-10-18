@@ -19,6 +19,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
   "UsernameOps" should {
     "valid" in {
       UsernameOps.isValid("eishay-kifi") === false
+      UsernameOps.isValid("nada-boutros") === false
     }
   }
 
