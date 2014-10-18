@@ -285,8 +285,8 @@ angular.module('kifi')
         });
       },
 
-      getMoreFollowers: function (libraryId, pageSize, offset) {
-        return $http.get(routeService.getMoreLibraryFollowers(libraryId, pageSize, offset)).then(function(resp) {
+      getMoreMembers: function (libraryId, pageSize, offset) {
+        return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
       }
