@@ -898,7 +898,7 @@ class AdminUserController @Inject() (
     NoContent
   }
 
-  def updateUsersWithNoUserName(readOnly: Boolean) = Action { implicit request =>
-    Ok(userCommander.updateUsersWithNoUserName(readOnly).toString)
+  def updateUsersWithNoUserName(readOnly: Boolean, max: Int) = Action { implicit request =>
+    Ok(userCommander.updateUsersWithNoUserName(readOnly, max).toString)
   }
 }
