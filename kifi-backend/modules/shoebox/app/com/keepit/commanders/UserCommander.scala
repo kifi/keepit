@@ -550,9 +550,9 @@ class UserCommander @Inject() (
     def randomNumber = scala.util.Random.nextInt(999)
     val censorList = UsernameOps.censorList.mkString("|")
     val preCandidates = ArrayBuffer[String]()
-    preCandidates + seed
-    preCandidates ++ (1 to 30).map(n => s"$seed-$randomNumber").toList
-    preCandidates ++ (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
+    preCandidates += seed
+    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
+    preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
     val candidates = preCandidates.map { name =>
       if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
     }.filter(UsernameOps.isValid)
