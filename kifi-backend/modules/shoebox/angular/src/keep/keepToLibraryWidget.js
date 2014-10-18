@@ -12,13 +12,11 @@ angular.module('kifi')
       /*
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
-       *  selection - an object whose 'library' property will be the selected library.
+       *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
        *   clickAction() - a function that can be called once a library is selected
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
-       *
-       *  // todo (yiping): Try to turn this into isolated scope
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -163,7 +161,7 @@ angular.module('kifi')
           } else {
             clearSelection();
             library.selected = true;
-            scope.selection.library = library;
+            scope.librarySelection.library = library;
             selectedIndex = _.indexOf(scope.libraries, library);
           }
         };
@@ -205,7 +203,7 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              scope.selection.library = scope.libraries[selectedIndex];
+              scope.librarySelection.library = scope.libraries[selectedIndex];
               if (_.isFunction(scope.clickAction)) {
                 scope.clickAction();
               }
@@ -247,7 +245,7 @@ angular.module('kifi')
               $rootScope.$emit('librarySummariesChanged');
 
               scope.$evalAsync(function () {
-                scope.selection.library = _.find(scope.libraries, { 'name': library.name });
+                scope.librarySelection.library = _.find(scope.libraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction();
                 }
@@ -258,6 +256,13 @@ angular.module('kifi')
             submitting = false;
           });
         };
+
+
+        //
+        // On link.
+        //
+        scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+
 
         //
         // Clean up.

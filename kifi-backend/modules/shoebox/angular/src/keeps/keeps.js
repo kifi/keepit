@@ -61,12 +61,13 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'selectionService', 'tagService', 'undoService',
-  function ($window, $timeout, keepActionService, libraryService, selectionService, tagService, undoService) {
+  '$rootScope', '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'tagService', 'undoService',
+  function ($rootScope, $window, $timeout, keepActionService, libraryService, modalService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
       scope: {
+        library: '=',
         keeps: '=',
         keepsLoading: '=',
         keepsHasMore: '=',
@@ -124,9 +125,6 @@ angular.module('kifi')
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
 
-        // Not used in template right now but will be when we hide bulk privacy changes.
-        scope.librariesEnabled = libraryService.isAllowed();
-
 
         //
         // Scope methods.
@@ -180,6 +178,24 @@ angular.module('kifi')
         scope.isScrollDisabled = function () {
           return scope.scrollDisabled;
         };
+
+        function copyToLibrary () {
+          // Copies the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), selectedLibrary.id).then(function (result) {
+            if (result.failures && result.failures.length) {
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html'
+              });
+            } else {
+              libraryService.fetchLibrarySummaries(true).then(function () {
+                $rootScope.$emit('librarySummariesChanged');
+              });
+            }
+          });
+        }
 
         scope.unkeep = function (keeps) {
           var selectedKeeps = scope.selection.getSelected(keeps);
@@ -246,6 +262,28 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
+        scope.$watch(function () {
+          return libraryService.isAllowed();
+        }, function (newVal) {
+          scope.librariesEnabled = newVal;
+        });
+
+        scope.$watch('keepsLoading', function (newVal) {
+          if (!newVal) {
+            if (scope.librariesEnabled) {
+              libraryService.fetchLibrarySummaries().then(function () {
+                scope.libraries = _.filter(libraryService.librarySummaries, function (library) {
+                  return (library.access !== 'read_only') && (library.id !== scope.library.id);
+                });
+
+                scope.librarySelection = {};
+                scope.libSelectTopOffset = 300;  // This needs to be dynamic.
+                scope.clickAction = copyToLibrary;
+              });
+            }
+          }
+        });
+
         scope.$watch(function () {
           return scope.selection.getSelected(scope.keeps).length;
         }, function (numSelected) {
