@@ -14,10 +14,9 @@
       content: 'beta';
       position: absolute;
       bottom: -8px;
-      right: -30px;
+      right: -40px;
       padding: 2px 40px 0;
-      background: radial-gradient(#fff 30%, rgba(255,255,255,0) 80%);
-      font: 11px Helvetica,Arial,sans-serif;
+      font: 11px Lato, Helvetica, Arial, sans-serif;
       text-align: center;
       color: #c00;
 
@@ -141,7 +140,7 @@
   border-top-left-radius: 3px
   border-top-right-radius: 3px
   background-color: #fff
-  font-size: 14px
+  font-size: 13px
   font-weight: 400
   color: #9d9d9d
   span
@@ -156,7 +155,7 @@
   padding: 15px 0 15px
   width: 90%
   box-shadow: defaultBoxShadow
-  font-size: 16px
+  font-size: 13px
   text-align: center
 
   &.kf-reco-multiple-reasons
@@ -164,8 +163,10 @@
 
 .kf-reco-reason
   margin: 0 auto
-  width: 58%
+  width: calc(100% - 120px);
   line-height: 1.5em
+  height: 19px
+  overflow: hidden
 
   time
     white-space: nowrap
@@ -183,7 +184,7 @@
 
 .kf-reason-bullet
   padding: 0 1px
-  font-size: 28px
+  font-size: 19px
   color: #ddd
 
   &.kf-dark-reason-bullet
