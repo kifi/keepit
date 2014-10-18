@@ -166,11 +166,11 @@ class InvitationRepoImpl @Inject() (
     (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress.isNotNull) yield b).list
   }
 
-  override def getRecentAccepted(since: DateTime)(implicit session: RSession): Int = {
+  def getRecentAccepted(since: DateTime)(implicit session: RSession): Int = {
     (for (b <- rows if b.state === InvitationStates.ACCEPTED && b.createdAt > since && b.lastSentAt.isNotNull) yield b).length.run
   }
 
-  override def getRecentSent(since: DateTime)(implicit session: RSession): Int = {
+  def getRecentSent(since: DateTime)(implicit session: RSession): Int = {
     (for (b <- rows if b.state === InvitationStates.ACTIVE && b.createdAt > since && b.lastSentAt.isNotNull) yield b).length.run
   }
 }
