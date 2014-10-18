@@ -631,22 +631,51 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUsersWithNoUserName(readOnly: Boolean): Int = {
+  def updateUsersWithNoUserName(readOnly: Boolean, max: Int): Int = {
     var counter = 0
     val batchSize = 50
     var batch = db.readOnlyMaster { implicit s =>
       userRepo.getUsersWithNoUsername(batchSize)
     }
-    while (batch.nonEmpty) {
+    while (batch.nonEmpty && counter < max) {
       batch foreach { user =>
         if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
         val username = autoSetUsername(user, readOnly)
         if (username.isEmpty) throw new Exception(s"could not set a username for $user")
         log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
         counter += 1
+        if (counter >= max) return counter
       }
       batch = db.readOnlyMaster { implicit s =>
         userRepo.getUsersWithNoUsername(batchSize)
+      }
+    }
+    counter
+  }
+
+  def reNormalizedUsername(readOnly: Boolean): Int = {
+    var counter = 0
+    val batchSize = 50
+    var page = 0
+    var batch: Seq[User] = db.readOnlyMaster { implicit s =>
+      val batch = userRepo.page(page, batchSize)
+      page += 1
+      batch
+    }
+    while (batch.nonEmpty) {
+      batch.map { user =>
+        val orig = user.normalizedUsername.get
+        val candidate = UsernameOps.normalize(user.username.get.value)
+        if (orig != candidate) {
+          log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username $candidate")
+          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = Some(candidate))) }
+          counter += 1
+        }
+      }
+      batch = db.readOnlyMaster { implicit s =>
+        val batch = userRepo.page(page, batchSize)
+        page += 1
+        batch
       }
     }
     counter
