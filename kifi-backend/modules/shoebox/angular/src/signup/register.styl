@@ -9,6 +9,69 @@
 .register-modal-wrap
   padding: 53px 59px 58px
 
+.register-active-request
+  .kf-register-modal-loading
+    display: block
+
+  .register-modal-wrap
+    filter: blur(2px)
+    -webkit-filter: blur(2px)
+    -moz-filter: blur(1px)
+
+.kf-register-modal-loading
+  display: none
+  width: 100%
+  height: 100%
+  position: absolute
+  z-index: 4
+  animation: 2s fade-in
+
+  .kf-logo-pulse
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 5
+    animation: jump-spin 2s linear infinite
+    transform: translate(-50%, -50%) rotate(0deg)
+
+
+@keyframes jump-spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg)
+  }
+  12.5% {
+    transform: translate(-50%, -50%) rotate(10deg)
+  }
+  25% {
+    transform: translate(-50%, -50%) rotate(90deg)
+  }
+  37.5% {
+    transform: translate(-50%, -50%) rotate(100deg)
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(180deg)
+  }
+  62.5% {
+    transform: translate(-50%, -50%) rotate(190deg)
+  }
+  75% {
+    transform: translate(-50%, -50%) rotate(270deg)
+  }
+  87.5% {
+    transform: translate(-50%, -50%) rotate(280deg)
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg)
+  }
+}
+
+@keyframes fade-in {
+from { opacity: 0; }
+to { opacity: 1; }
+}
+
 .kf-register-header
   color: #687A8D
   font-size: 24px

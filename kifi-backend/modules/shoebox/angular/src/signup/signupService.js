@@ -20,7 +20,6 @@ angular.module('kifi')
 
         scope.onError = function (reason) {
           (handlers.onError || function (reason) {
-            scope.$destroy();
             $window.location.href = (reason && reason.redirect) || 'https://www.kifi.com/signup';
           })(reason);
         };
@@ -28,16 +27,12 @@ angular.module('kifi')
 
         scope.onSuccess = function () {
           (handlers.onSuccess || function () {
-            scope.$destroy();
-            $window.location.reload();
+            return true;
+            //$window.location.reload();
           })();
         };
 
-        scope.$on('$destroy', function () {
-          console.log('destroyed');
-        });
-
-        $compile(template)(scope); // This immediately launches the modal;
+        $compile(template)(scope); // This immediately launches the modal
       }
     };
 
@@ -46,28 +41,28 @@ angular.module('kifi')
 ])
 
 .controller('SignupCtrl', [
-  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log',
-  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log) {
+  '$scope', '$FB', 'modalService', 'registrationService', '$window', 'installService', '$q', '$log', '$rootScope',
+  function ($scope, $FB, modalService, registrationService, $window, installService, $q, $log, $rootScope) {
 
     // Shared data across several modals
-    function resetUserData() {
-      $scope.userData = $scope.userData || {};
-      $scope.userData.firstName = null;
-      $scope.userData.lastName = null;
-      $scope.userData.password = null;
-    }
 
-    resetUserData();
+    $scope.userData = $scope.userData || {};
 
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
       $modalScope.$on('$destroy', function () {
         $scope.registerFinalizeSubmitted = false;
+        $scope.requestActive = false;
         if (typeof onClose === 'function') {
           onClose($modalScope);
         }
       });
     }
+
+    $scope.fieldHasError = function (field) {
+      var hasError = field.$invalid && $scope.registerFinalizeSubmitted;
+      return hasError;
+    };
 
     // First Register modal
 
@@ -82,8 +77,6 @@ angular.module('kifi')
             } else {
               return loginResult;
             }
-          }, function (a) {
-            return {'error': a.error || 'login_error'};
           });
         }
       });
@@ -117,37 +110,50 @@ angular.module('kifi')
         $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
         return;
       }
+      $scope.requestActive = true;
       facebookLogin().then(function (fbResp) {
         if (!fbResp) {
           $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
           return;
+        } else if (fbResp.error) {
+          $scope.requestActive = false;
+          return;
         } else if (fbResp.status === 'connected') {
-          // todo: remove?
           var fbMeP = $FB.api('/me', {});
           var regP = registrationService.socialRegister('facebook', fbResp.authResponse);
+
           $q.all([fbMeP, regP]).then(function (responses) {
+            $scope.requestActive = false;
             var fbMe = responses[0];
             var resp = responses[1];
+
             $scope.userData.firstName = fbMe.first_name;
             $scope.userData.lastName = fbMe.last_name;
             $scope.userData.email = fbMe.email;
-            if (resp.code && resp.code === 'user_logged_in') {
+
+            if (resp.code === 'user_logged_in') {
               // todo: follow or other action
+              $rootScope.$emit('appStart');
+              modalService.close();
               $scope.onSuccess();
             } else if (resp.code && resp.code === 'continue_signup') {
-              $log.log('test#continue_signup', resp);
+              // todo: handle case when emails match, so backend auto-logs in user - andrew
               modalService.close();
               $scope.userData.method = 'social';
               registerFinalizeModal();
             } else {
+              // todo, figure out what this could be, handle errors - andrew
               $log.log('test#unknown_code??', resp);
             }
           })['catch'](function (err) {
-            // we failed. bail.
+            // Combo request failed. Would love to get logs of this.
+            $scope.requestActive = false;
             $scope.onError({'code': 'remote_social_fail', 'error': err});
           });
         }
       })['catch'](function() {
+        // Facebook login failed. Usually an adblocker.
+        $scope.requestActive = false;
         $scope.onError({'code': 'fb_blocked', redirect: 'https://www.kifi.com/signup/facebook'});
         return;
       });
@@ -155,6 +161,7 @@ angular.module('kifi')
 
     // 2nd Register modal
     var registerFinalizeModal = function () {
+      $scope.requestActive = false;
       $scope.registerFinalizeSubmitted = false;
       setModalScope(modalService.open({
         template: 'signup/registerFinalizeModal.tpl.html',
@@ -162,15 +169,12 @@ angular.module('kifi')
       }));
     };
 
-    $scope.fieldHasError = function (field) {
-      var hasError = field.$invalid && $scope.registerFinalizeSubmitted;
-      return hasError;
-    };
-
     $scope.registerFinalizeSubmit = function (form) {
       $scope.registerFinalizeSubmitted = true;
+      $scope.requestActive = true;
       var fields;
       if (!form.$valid) {
+        $scope.requestActive = false;
         return false;
       } else if ($scope.userData.method === 'social') {
         fields = {
@@ -178,15 +182,16 @@ angular.module('kifi')
           password: $scope.userData.password,
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.libraryId || ($scope.library && $scope.library.id)
+          libraryPublicId: $scope.userData.libraryId
         };
 
-        registrationService.socialFinalize(fields).then(function (data) {
-          $log.log('succz', data);
+        registrationService.socialFinalize(fields).then(function () {
+          // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
-        })['catch'](function (err) {
-          $log.log('errz2', err);
+        })['catch'](function () {
+          // Would love to get logs of this.
+          $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
         });
       } else { // email signup
         fields = {
@@ -194,22 +199,24 @@ angular.module('kifi')
           password: $scope.userData.password,
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.libraryId || ($scope.library && $scope.library.id)
+          libraryPublicId: $scope.userData.libraryId
         };
 
-        registrationService.emailFinalize(fields).then(function (data) {
-          $log.log('succz', data);
+        registrationService.emailFinalize(fields).then(function () {
+          // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
-        })['catch'](function (err) {
-          $log.log('errz3', err);
+        })['catch'](function () {
+          // Would love to get logs of this.
+          $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
         });
       }
     };
 
     // 3rd confirm modal
     var thanksForRegisteringModal = function () {
-      if (true/*!installService.detectIfIsInstalled()*/) {
+      $scope.requestActive = false;
+      if (!installService.detectIfIsInstalled()) {
         if (installService.canInstall) {
           if (installService.isValidChrome) {
             $scope.platformName = 'Chrome';
@@ -230,6 +237,7 @@ angular.module('kifi')
       } else {
         $scope.onSuccess();
       }
+      $rootScope.$emit('appStart');
     };
 
     registerModal();

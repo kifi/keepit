@@ -1,4 +1,7 @@
-<div kf-modal class="kf-register-modal">
+<div kf-modal class="kf-register-modal" ng-class="{'register-active-request': requestActive}">
+  <div class="kf-register-modal-loading">
+    <div class="kf-logo-pulse svg-small-new-logo"></div>
+  </div>
   <a class="dialog-x" ng-click="close()"></a>
   <div class="register-modal-wrap">
       <div class="dialog-body">

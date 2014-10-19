@@ -150,7 +150,7 @@ angular.module('kifi')
             platformService.goToAppOrStore($location.absUrl());
             return;
           } else if ($rootScope.userLoggedIn === false) {
-            return signupService.register();
+            return signupService.register({libraryId: scope.library.id});
           }
 
           libraryService.joinLibrary(library.id).then(function (result) {
