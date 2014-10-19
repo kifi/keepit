@@ -554,7 +554,10 @@ class UserCommander @Inject() (
     preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
     preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
     val candidates = preCandidates.map { name =>
-      if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
+      log.info(s"validating username $name for user $user")
+      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
+      log.info(s"username $name is valid")
+      valid
     }.filter(UsernameOps.isValid)
     if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
     var keepTrying = true
@@ -634,20 +637,25 @@ class UserCommander @Inject() (
   def updateUsersWithNoUserName(readOnly: Boolean, max: Int): Int = {
     var counter = 0
     val batchSize = 50
-    var batch = db.readOnlyMaster { implicit s =>
-      userRepo.getUsersWithNoUsername(batchSize)
+    var page = 0
+    var batch: Seq[User] = db.readOnlyMaster { implicit s =>
+      val batch = userRepo.getUsersWithNoUsername(page, batchSize)
+      page += 1
+      batch
     }
     while (batch.nonEmpty && counter < max) {
       batch foreach { user =>
         if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
         val username = autoSetUsername(user, readOnly)
         if (username.isEmpty) throw new Exception(s"could not set a username for $user")
-        log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
+        log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
         counter += 1
         if (counter >= max) return counter
       }
       batch = db.readOnlyMaster { implicit s =>
-        userRepo.getUsersWithNoUsername(batchSize)
+        val batch = userRepo.getUsersWithNoUsername(page, batchSize)
+        page += 1
+        batch
       }
     }
     counter
@@ -667,7 +675,7 @@ class UserCommander @Inject() (
         val orig = user.normalizedUsername.get
         val candidate = UsernameOps.normalize(user.username.get.value)
         if (orig != candidate) {
-          log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username $candidate")
+          log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
           db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = Some(candidate))) }
           counter += 1
         }
