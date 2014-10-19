@@ -29,7 +29,7 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.mvc.{ AnyContent, Result }
+import play.api.mvc.{ Action, AnyContent, Result }
 
 import views.html
 import com.keepit.typeahead.{ KifiUserTypeahead, TypeaheadHit, SocialUserTypeahead }
@@ -896,5 +896,13 @@ class AdminUserController @Inject() (
   def refreshRecos(userId: Id[User]) = AdminUserPage { implicit request =>
     SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
+  }
+
+  def updateUsersWithNoUserName(readOnly: Boolean, max: Int) = Action { implicit request =>
+    Ok(userCommander.updateUsersWithNoUserName(readOnly, max).toString)
+  }
+
+  def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
+    Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
 }

@@ -124,7 +124,7 @@ class KeepInterner @Inject() (
     (newKeeps, existingKeeps, failures)
   }
 
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[Keep] = {
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
     db.readWrite { implicit s =>
       internUriAndBookmark(rawBookmark, userId, library, source, installationId)
     } map { persistedBookmarksWithUri =>
@@ -134,7 +134,7 @@ class KeepInterner @Inject() (
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
       db.readWrite { implicit s => libraryRepo.updateLastKept(library.id.get) } // do not update seq num, only update if successful keep
-      bookmark
+      (bookmark, persistedBookmarksWithUri.isNewKeep)
     }
   }
 

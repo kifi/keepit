@@ -273,6 +273,12 @@ angular.module('kifi')
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
           return resp.data;
         });
+      },
+
+      getMoreFollowers: function (libraryId, pageSize, offset) {
+        return $http.get(routeService.getMoreLibraryFollowers(libraryId, pageSize, offset)).then(function(resp) {
+          return resp.data;
+        });
       }
     };
 
