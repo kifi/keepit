@@ -639,7 +639,7 @@ class UserCommander @Inject() (
     val batchSize = 50
     var page = 0
     var batch: Seq[User] = db.readOnlyMaster { implicit s =>
-      userRepo.getUsersWithNoUsername(page, batchSize)
+      val batch = userRepo.getUsersWithNoUsername(page, batchSize)
       page += 1
       batch
     }
