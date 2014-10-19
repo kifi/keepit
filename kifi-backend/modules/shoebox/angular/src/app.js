@@ -129,7 +129,7 @@ angular.module('kifi', [
             profileService.fetchPrefs();
             friendService.getRequests();
           }
-        })
+        });
       });
     }
 
