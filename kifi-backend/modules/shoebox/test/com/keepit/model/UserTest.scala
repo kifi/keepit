@@ -20,6 +20,9 @@ class UserTest extends Specification with ShoeboxTestInjector {
     "valid" in {
       UsernameOps.isValid("eishay-kifi") === false
       UsernameOps.isValid("nada-boutros") === false
+      //the following line takes more then a minute to run!
+      //UsernameOps.isValid("eishaytestwithaveryveryveryveryveryveryveryverylongmailgocom-") === false
+      UsernameOps.isValid("eishaytestwitha-") === false
     }
   }
 

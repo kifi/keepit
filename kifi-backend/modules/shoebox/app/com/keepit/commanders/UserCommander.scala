@@ -542,7 +542,13 @@ class UserCommander @Inject() (
   }
 
   def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val name = s"${UsernameOps.lettersOnly(user.firstName)}-${UsernameOps.lettersOnly(user.lastName)}".toLowerCase
+    val firstName = UsernameOps.lettersOnly(user.firstName.trim).take(15).toLowerCase
+    val lastName = UsernameOps.lettersOnly(user.lastName.trim).take(15).toLowerCase
+    val name = if (firstName.isEmpty || lastName.isEmpty) {
+      if (firstName.isEmpty) lastName else firstName
+    } else {
+      s"$firstName-$lastName"
+    }
     val seed = if (name.length < 4) {
       val filler = Seq.fill(4 - name.length)(0)
       s"$name-$filler"
@@ -661,7 +667,7 @@ class UserCommander @Inject() (
     counter
   }
 
-  def reNormalizedUsername(readOnly: Boolean): Int = {
+  def reNormalizedUsername(readOnly: Boolean, max: Int): Int = {
     var counter = 0
     val batchSize = 50
     var page = 0
@@ -670,7 +676,7 @@ class UserCommander @Inject() (
       page += 1
       batch
     }
-    while (batch.nonEmpty) {
+    while (batch.nonEmpty && counter < max) {
       batch.map { user =>
         val orig = user.normalizedUsername.get
         val candidate = UsernameOps.normalize(user.username.get.value)
@@ -678,6 +684,9 @@ class UserCommander @Inject() (
           log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
           db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = Some(candidate))) }
           counter += 1
+          if (counter >= max) return counter
+        } else {
+          log.info(s"username normalization did not change: $orig")
         }
       }
       batch = db.readOnlyMaster { implicit s =>
