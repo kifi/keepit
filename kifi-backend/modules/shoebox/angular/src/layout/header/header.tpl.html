@@ -14,10 +14,8 @@
 
           <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
 
-          <div class="kf-header-search-bar-lib-chip" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }">
-            <div class="kf-search-bar-lib-name"> {{library.name}} </div>
-            <div class="kf-search-bar-lib-name-clear" ng-click="clearLibraryName()">&times;</div>
-          </div>
+          <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }"> {{library.name}} </div>
+          <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }" ng-click="clearLibraryName()">&times;</div>
 
           <div class="kf-query-lib" ng-class="{'extend': !search.showName}">
             <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)">

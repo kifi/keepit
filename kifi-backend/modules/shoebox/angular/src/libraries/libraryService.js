@@ -144,16 +144,6 @@ angular.module('kifi')
         return librarySummaryService.get(libraryId);
       },
 
-      getLibraryByPath: function (path) { // path is of the form /username/library-slug
-        var split = path.split('/').filter(function (a) { return a.length !== 0; });
-        var username = split[0];
-        var slug = split[1];
-        if (!username || !slug) {
-          return $q.reject({'error': 'invalid_path'});
-        }
-        return libraryByUserSlugService.get(username, slug);
-      },
-
       getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
         if (invalidateCache) {
           libraryByUserSlugService.expire(username, slug, authToken);
@@ -281,6 +271,12 @@ angular.module('kifi')
 
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      getMoreFollowers: function (libraryId, pageSize, offset) {
+        return $http.get(routeService.getMoreLibraryFollowers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
       }

@@ -81,6 +81,7 @@ angular.module('kifi')
         return route('/user/' + id + '/hide');
       },
       search: searchRoute('/site/search'),
+      search2: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -119,6 +120,15 @@ angular.module('kifi')
       },
 
       ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
+
+      ////////////////////////////
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),
@@ -155,6 +165,9 @@ angular.module('kifi')
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
+      getMoreLibraryFollowers: function(libraryId, pageSize, offset) {
+        return route('/libraries/' + libraryId + '/collabs?count=' + pageSize + '&offset=' + (offset * pageSize));
       }
     };
   }

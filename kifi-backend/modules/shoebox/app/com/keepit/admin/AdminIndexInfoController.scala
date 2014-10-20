@@ -2,14 +2,10 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.service.ServiceType
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.libs.json.{ JsNumber, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import scala.concurrent.Future
 import com.keepit.search.IndexInfo
 
 class AdminIndexInfoController @Inject() (
@@ -17,24 +13,25 @@ class AdminIndexInfoController @Inject() (
     adminClusterController: AdminClusterController,
     searchClient: SearchServiceClient) extends AdminUserActions {
 
-  def all = AdminUserPage { implicit request =>
-    val infoFutures = searchClient.indexInfoList()
+  def all = AdminUserPage.async { implicit request =>
     val clusterMemberInfos = adminClusterController.clustersInfo.filter(_.serviceType == ServiceType.SEARCH).map { i => (i.zkid, i) }.toMap
 
-    val infos = infoFutures.flatMap { future =>
-      val (serviceInstance, indexInfos) = Await.result(future, 10 seconds)
-      indexInfos.map { info => (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableIndexInfo(info)) }
+    val futureInstanceInfos = searchClient.indexInfoList.map { futureInstanceInfo =>
+      futureInstanceInfo.map {
+        case (serviceInstance, indexInfos) =>
+          val indexInfo = indexInfos.map { info => (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableIndexInfo(info)) }
+          val totalArticleIndexSize = indexInfos.filter { _.name startsWith "ArticleIndex" }.flatMap { _.indexSize }.foldLeft(0L)(_ + _)
+          val totalSize = indexInfos.flatMap { _.indexSize }.foldLeft(0L)(_ + _)
+          val totalSizeInfo = (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableSize(totalArticleIndexSize), IndexInfo.toReadableSize(totalSize))
+          (indexInfo, totalSizeInfo)
+      }
     }
 
-    val totalSizeInfo = infoFutures.map { future =>
-      val (serviceInstance, indexInfos) = Await.result(future, 10 seconds)
-      val totalArticleIndexSize = indexInfos.filter { _.name startsWith "ArticleIndex" }.flatMap { _.indexSize }.foldLeft(0L)(_ + _)
-      val totalSize = indexInfos.flatMap { _.indexSize }.foldLeft(0L)(_ + _)
-
-      (clusterMemberInfos.get(serviceInstance.id), IndexInfo.toReadableSize(totalArticleIndexSize), IndexInfo.toReadableSize(totalSize))
+    Future.sequence(futureInstanceInfos).map {
+      case instanceInfos =>
+        val (indexInfos, totalSizeInfos) = instanceInfos.unzip
+        Ok(views.html.admin.indexer(indexInfos.flatten, totalSizeInfos))
     }
-
-    Ok(views.html.admin.indexer(infos, totalSizeInfo))
   }
 
   def viewIndexGrowth = AdminUserPage { implicit request =>
