@@ -22,8 +22,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1))
-      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2))
+      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2, username = Username("test2"), normalizedUsername = "test2"))
 
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -237,6 +237,14 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getByUserAndName(user1.id.get, Hashtag("scala")) === collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala"))
         }
       }
+    }
+
+    "detect sensitive terms in tags" in {
+      Hashtag("fuck you").isSensitive === true
+      Hashtag("Fuck you").isSensitive === true
+      Hashtag("you suck").isSensitive === true
+      Hashtag("abüse").isSensitive === true
+      Hashtag("how nice of you").isSensitive === false
     }
   }
 }

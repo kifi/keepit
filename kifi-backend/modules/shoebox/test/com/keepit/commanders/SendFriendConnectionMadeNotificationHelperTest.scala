@@ -6,7 +6,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.model.{ User, UserRepo }
+import com.keepit.model.{ Username, User, UserRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -23,12 +23,12 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
       val user1 = userRepo.save(User(
         firstName = "Homer",
         lastName = "Simpson",
-        primaryEmail = Some(EmailAddress("homer@gmail.com"))
+        primaryEmail = Some(EmailAddress("homer@gmail.com")), username = Username("test"), normalizedUsername = "test"
       ))
       val user2 = userRepo.save(User(
         firstName = "Peter",
         lastName = "Griffin",
-        primaryEmail = Some(EmailAddress("peter@gmail.com"))
+        primaryEmail = Some(EmailAddress("peter@gmail.com")), username = Username("test"), normalizedUsername = "test"
       ))
 
       (user1, user2)

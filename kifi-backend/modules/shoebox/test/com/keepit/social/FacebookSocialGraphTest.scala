@@ -10,7 +10,7 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{ FakeHttpClient, DirectUrl }
 import com.keepit.common.time._
-import com.keepit.model.{ SocialUserInfo, SocialUserInfoRepo, User }
+import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, User }
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test._
 
@@ -56,7 +56,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
         val socialUserInfo = inject[Database].readWrite { implicit s =>

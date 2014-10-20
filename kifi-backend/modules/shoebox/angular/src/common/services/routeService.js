@@ -112,12 +112,27 @@ angular.module('kifi')
       addKeepsToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps');
       },
+      copyKeepsToLibrary: function () {
+        return route('/libraries/copy');
+      },
+      moveKeepsToLibrary: function () {
+        return route('/libraries/move');
+      },
       removeKeepFromLibrary: function (libraryId, keepId) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId);
       },
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+
+      ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
 
       ////////////////////////////
       // Libraries              //

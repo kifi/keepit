@@ -46,10 +46,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Some(Username("ironman"))))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Some(Username("captainamerica"))))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Some(Username("agentfury"))))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Some(Username("incrediblehulk"))))
+      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Username("ironman"), normalizedUsername = "foo1"))
+      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Username("captainamerica"), normalizedUsername = "foo2"))
+      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Username("agentfury"), normalizedUsername = "foo3"))
+      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Username("incrediblehulk"), normalizedUsername = "foo4"))
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
@@ -412,7 +412,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val userWidow = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Username("blackwidow"), normalizedUsername = "bar", primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
           user
         }

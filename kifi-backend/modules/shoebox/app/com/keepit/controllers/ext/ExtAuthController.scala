@@ -150,7 +150,7 @@ class ExtAuthController @Inject() (
     }
     val result = NoContent.discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session))
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session) - KifiSession.FORTYTWO_USER_ID)
       case None => result
     }
   }

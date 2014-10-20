@@ -6,6 +6,7 @@ angular.module('kifi')
             'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
   function (tagService, $scope, $window, manageTagService, libraryService,
               routeService, $http, $location, modalService, $timeout, $rootScope) {
+    $scope.librariesEnabled = false;
     $scope.libraries = [];
     $scope.selected = {};
 
@@ -64,10 +65,9 @@ angular.module('kifi')
       });
     }
 
+    //
     // Watchers & Listeners
-    $scope.librariesEnabled = false;
-    $scope.libraries = [];
-
+    //
     $scope.$watch(function () {
       return libraryService.isAllowed();
     }, function (newVal) {
@@ -77,8 +77,8 @@ angular.module('kifi')
           $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
-          $scope.selection = $scope.selection || {};
-          $scope.selection.library = _.find($scope.libraries, { 'kind': 'system_main' });
+          $scope.librarySelection = {};
+          $scope.libSelectTopOffset = false;  // This overrides the scope.libSelectTopOffset set by MainCtrl.js
         });
       }
     });
@@ -93,12 +93,12 @@ angular.module('kifi')
 
     $scope.clickAction = function () {
       var tagName = encodeURIComponent($scope.selectedTag.name);
-      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {
+      libraryService.copyKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
         modalService.open({
           template: 'tagManage/tagToLibModal.tpl.html',
-          modalData: { library : $scope.selection.library }
+          modalData: { library : $scope.librarySelection.library }
         });
-        libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
+        libraryService.addToLibraryCount($scope.librarySelection.library.id, $scope.selectedTag.keeps);
       })['catch'](function () {
         modalService.open({
           template: 'common/modal/genericErrorModal.tpl.html'

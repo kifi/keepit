@@ -12,7 +12,7 @@ import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommande
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.User
+import com.keepit.model.{ Username, User }
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
@@ -54,17 +54,17 @@ class MessagingTest extends Specification with ElizaTestInjector {
     shoebox.saveUsers(User(
       id = Some(user1),
       firstName = "Some",
-      lastName = "User42"
+      lastName = "User42", username = Username("test"), normalizedUsername = "test"
     ))
     shoebox.saveUsers(User(
       id = Some(user2),
       firstName = "Some",
-      lastName = "User43"
+      lastName = "User43", username = Username("test"), normalizedUsername = "test"
     ))
     shoebox.saveUsers(User(
       id = Some(user3),
       firstName = "Some",
-      lastName = "User44"
+      lastName = "User44", username = Username("test"), normalizedUsername = "test"
     ))
 
     (user1, user2, user3, user2n3Seq, shoebox)

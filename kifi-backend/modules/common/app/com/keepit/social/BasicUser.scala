@@ -39,7 +39,7 @@ case class BasicUser(
     firstName: String,
     lastName: String,
     pictureName: String,
-    username: Option[Username]) extends BasicUserLikeEntity {
+    username: Username) extends BasicUserLikeEntity {
 
   override def asBasicUser = Some(this)
 }
@@ -54,7 +54,7 @@ object BasicUser {
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
     (__ \ 'pictureName).format[String] and
-    (__ \ 'username).formatNullable[Username]
+    (__ \ 'username).format[Username]
   )(BasicUser.apply, unlift(BasicUser.unapply))
 
   implicit val mapUserIdToInt = mapOfIdToObjectFormat[User, Int]
@@ -73,7 +73,7 @@ object BasicUser {
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 8
+  override val version = 9
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

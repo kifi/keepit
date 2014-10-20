@@ -124,9 +124,6 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
-
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
@@ -157,8 +154,11 @@ class SearchCommanderImpl @Inject() (
       ).future
     }
 
+    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
+
     val mergedResult = {
 
+      val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
       val resultMerger = new ResultMerger(enableTailCutting, config, true)
 
       val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
@@ -271,13 +271,11 @@ class SearchCommanderImpl @Inject() (
 
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
-      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, Lang("en"), KifiShardResult.empty, Set(), None))
+      val searchFilter = SearchFilter(filter, libraryContext, context)
+      return Future.successful(KifiPlainResult(query, searchFilter, Lang("en"), KifiShardResult.empty, Set(), None))
     }
 
     val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
-
-    val searchFilter = SearchFilter(filter, libraryContext, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
@@ -296,8 +294,10 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
     }
+    val searchFilter = SearchFilter(filter, libraryContext, context)
 
     Future.sequence(resultFutures).map { results =>
+      val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
       val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
@@ -307,7 +307,7 @@ class SearchCommanderImpl @Inject() (
       timing.done
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-      val plainResult = KifiPlainResult(query, firstLang, mergedResult, idFilter, searchExperimentId)
+      val plainResult = KifiPlainResult(query, searchFilter, firstLang, mergedResult, idFilter, searchExperimentId)
 
       SafeFuture {
         // stash timing information

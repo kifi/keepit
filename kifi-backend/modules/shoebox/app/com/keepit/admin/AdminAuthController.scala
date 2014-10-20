@@ -30,7 +30,7 @@ class AdminAuthController @Inject() (
     log.info(s"impersonating user $user")
     systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = s"${request.user.firstName} impersonating user $user",
-      htmlBody = s"we know that ${request.user.firstName} ${request.user.lastName} is a good guy, won't abuse it",
+      htmlBody = s"we know that ${request.user.firstName} ${request.user.lastName} is a good person, won't abuse it",
       category = NotificationCategory.System.ADMIN))
     Ok(Json.obj("userId" -> id.toString)).withCookies(impersonateCookie.encodeAsCookie(Some(user.externalId)))
   }

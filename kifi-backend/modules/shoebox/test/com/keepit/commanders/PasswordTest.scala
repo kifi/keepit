@@ -65,7 +65,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
   def setUp() = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
+      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
       val email1a = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr1))
       val email1b = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr2))
       val hasher = Registry.hashers.get("bcrypt").get

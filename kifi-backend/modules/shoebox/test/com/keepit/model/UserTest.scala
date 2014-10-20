@@ -32,7 +32,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
         val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-          userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
         }
         val updatedUser = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
@@ -56,7 +56,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
 
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Martin", lastName = "Raison"))
+          userRepo.save(User(firstName = "Martin", lastName = "Raison", username = Username("test"), normalizedUsername = "test"))
         }
 
         db.readOnlyMaster { implicit session =>
@@ -88,7 +88,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         externalId = ExternalId[User]("11ac839c-509e-400e-9111-3760433488ea"),
         updatedAt = new DateTime(2013, 3, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
         createdAt = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
-        firstName = "Andrew", lastName = "Conner")
+        firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test")
       val json = Json.toJson(user)
       json.as[User] === user
       json === Json.parse("""
@@ -100,7 +100,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
           "firstName":"Andrew",
           "lastName":"Conner",
           "state":"active",
-          "seq":0}
+          "seq":0,"username":"test","normalizedUsername":"test"}
         """)
     }
   }

@@ -3,22 +3,21 @@
 angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
-  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout',
+  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
   'keyIndices', 'libraryService', 'util',
-  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout,
+  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
     keyIndices, libraryService, util) {
     return {
       restrict: 'A',
       /*
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
-       *  selection - an object whose 'library' property will be the selected library.
+       *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   clickAction() - a function that can be called once a library is selected
+       *   clickAction() - a function that can be called once a library is selected;
+       *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
-       *
-       *  // todo (yiping): Try to turn this into isolated scope
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -80,7 +79,7 @@ angular.module('kifi')
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
             if (_.isFunction(scope.clickAction)) {
-              scope.clickAction();
+              scope.clickAction(element);
             }
             return;
           }
@@ -136,9 +135,27 @@ angular.module('kifi')
           $compile(widget)(scope);
 
           // Set position.
-          var top = element.offset().top - (scope.libSelectTopOffset || 0);
-          var left = element.offset().left;
-          widget.css({top: top + 'px', left: left + 'px'});
+          // By default, if there is enough room at the bottom, drop the widget down.
+          // If there isn't enough room, scoot up just enough to fit the widget.
+          // If scope.libSelectTopOffset is set, that overrides the default position.
+          widget.hide();
+          var scrollTop = angular.element($window).scrollTop();
+          var elementOffset = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffset + scrollTop;
+
+          // Wait for Angular to render the widget so we can grab its height.
+          $timeout(function () {
+            var widgetHeight = widget.height();
+
+            // If there is enough room at the bottom, drop the widget down.
+            // Otherwise, scoot up just enough to fit the widget.
+            var widgetOffset = (distanceFromBottom - widgetHeight > 0) ? 0 : widgetHeight - distanceFromBottom;
+
+            var top = element.offset().top - (scope.libSelectTopOffset || widgetOffset);
+            var left = element.offset().left;
+            widget.css({top: top + 'px', left: left + 'px'});
+            widget.show();
+          }, 0);
 
           // Set event handlers.
           $document.on('mousedown', onClick);
@@ -163,7 +180,7 @@ angular.module('kifi')
           } else {
             clearSelection();
             library.selected = true;
-            scope.selection.library = library;
+            scope.librarySelection.library = library;
             selectedIndex = _.indexOf(scope.libraries, library);
           }
         };
@@ -205,9 +222,9 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              scope.selection.library = scope.libraries[selectedIndex];
+              scope.librarySelection.library = scope.libraries[selectedIndex];
               if (_.isFunction(scope.clickAction)) {
-                scope.clickAction();
+                scope.clickAction(element);
               }
               removeWidget();
               break;
@@ -247,9 +264,9 @@ angular.module('kifi')
               $rootScope.$emit('librarySummariesChanged');
 
               scope.$evalAsync(function () {
-                scope.selection.library = _.find(scope.libraries, { 'name': library.name });
+                scope.librarySelection.library = _.find(scope.libraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction();
+                  scope.clickAction(element);
                 }
                 removeWidget();
               });
@@ -258,6 +275,13 @@ angular.module('kifi')
             submitting = false;
           });
         };
+
+
+        //
+        // On link.
+        //
+        scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+
 
         //
         // Clean up.

@@ -6,7 +6,7 @@ import java.io.File
 
 import org.specs2.mutable._
 
-import com.keepit.model.{ SocialUserInfoRepo, User, UserRepo, SocialUserInfo }
+import com.keepit.model.{ Username, SocialUserInfoRepo, User, UserRepo, SocialUserInfo }
 import com.keepit.test.{ ShoeboxTestInjector }
 
 import play.api.libs.json.Json
@@ -29,7 +29,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
           ("facebook_graph_shawn.json", 82)
         )
         val socialUser = inject[Database].readWrite { implicit s =>
-          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("7110335121"),
