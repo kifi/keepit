@@ -14,7 +14,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
+import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialId

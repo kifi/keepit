@@ -5,7 +5,7 @@ import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
-import com.keepit.model.{Username, ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment}
+import com.keepit.model.{ Username, ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.google.inject.Injector
 import com.keepit.common.usersegment.UserSegment

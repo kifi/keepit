@@ -186,7 +186,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user1.id.get, Username("bob.z"), false) === Right(Username("bob.z"))
 
         // changes user model
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === None)
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.value === "test2")
         userCommander.setUsername(user2.id.get, Username("obama"), false) === Right(Username("obama"))
         db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === Username("obama"))
 

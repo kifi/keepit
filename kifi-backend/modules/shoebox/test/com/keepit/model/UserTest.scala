@@ -100,7 +100,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
           "firstName":"Andrew",
           "lastName":"Conner",
           "state":"active",
-          "seq":0}
+          "seq":0,"username":"test","normalizedUsername":"test"}
         """)
     }
   }

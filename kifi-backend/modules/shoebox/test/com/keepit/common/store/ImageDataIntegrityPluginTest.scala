@@ -5,7 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.net.{ DirectUrl, FakeClientResponse, FakeHttpClientModule }
 import com.keepit.inject._
-import com.keepit.model.{ User, UserPicture, UserPictureSources }
+import com.keepit.model.{ Username, User, UserPicture, UserPictureSources }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 

@@ -151,7 +151,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
               "others":1,
-              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
+              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
               "collections":[],
               "tags":[],
               "summary":{},
@@ -302,7 +302,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
@@ -375,7 +375,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "collections":[],
                       "tags":[],
                       "summary":{},
@@ -703,7 +703,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "reorder tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
-          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test"), normalizedUsername = "test"))
+          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
           val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))

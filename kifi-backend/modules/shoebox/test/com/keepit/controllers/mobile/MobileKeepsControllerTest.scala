@@ -125,7 +125,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test2"), normalizedUsername = "test2"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
 
         uriRepo.count === 0
@@ -194,7 +194,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, collections) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test3"), normalizedUsername = "test3"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         uriRepo.count === 0
 
@@ -250,7 +250,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test1"), normalizedUsername = "test1"))
         val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         libCommander.internSystemGeneratedLibraries(user2.id.get)
@@ -313,7 +313,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
             "others":1,
-            "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
+            "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg","username":"test"}],
             "collections":[],
             "tags":[],
             "summary":{},
@@ -383,7 +383,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
@@ -455,7 +455,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "collections":[],
                       "tags":[],
                       "summary":{},
@@ -483,7 +483,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test1"), normalizedUsername = "test1"))
         val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
 
         libCommander.internSystemGeneratedLibraries(user1.id.get)

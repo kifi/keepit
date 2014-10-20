@@ -86,7 +86,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     "handle imports to library" in {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user, lib)
