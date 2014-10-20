@@ -41,8 +41,23 @@
     }
 }
 
+@invitationSummary(invitationInfo: Option[com.keepit.controllers.admin.InvitationInfo]) = {
+    @invitationInfo match {
+    case Some(info) => {
+        <h4>Invitation stats in the last 24 hours</h4>
+        <ul>
+            <li> Sent: @info.active
+            <li> Accepted: @info.accepted
+        </ul>
+      }
+    case None => {}
+    }
+}
+
 @admin(userData.userCount + " " + userSetDescription + " " + newUsersInfo(userData.newUsers)) {
   <h2> Showing @userData.users.length (page @(userData.page + 1)) </h2>
+
+  @invitationSummary(userData.invitationInfo)
 
   @adminHelper.pagination(userData.page, userData.userCount, userData.pageSize, otherPagesRoute _) {
       <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.searchUsers()" method="POST">

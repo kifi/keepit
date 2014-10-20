@@ -13,6 +13,7 @@ import scala.collection.mutable
 import scala.slick.jdbc.{ StaticQuery => Q }
 import scala.slick.util.CloseableIterator
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] with SeqNumberFunction[Invitation] {
@@ -30,6 +31,8 @@ trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] wi
   def getBySenderIdIter(senderId: Id[User], max: Int)(implicit session: RSession): CloseableIterator[Invitation]
   def getSocialInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation]
   def getEmailInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation]
+  def getRecentAccepted(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Int
+  def getRecentSent(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Int
 }
 
 @Singleton
@@ -161,6 +164,14 @@ class InvitationRepoImpl @Inject() (
 
   def getEmailInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
     (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress.isNotNull) yield b).list
+  }
+
+  def getRecentAccepted(since: DateTime)(implicit session: RSession): Int = {
+    (for (b <- rows if b.state === InvitationStates.ACCEPTED && b.createdAt > since && b.lastSentAt.isNotNull) yield b).length.run
+  }
+
+  def getRecentSent(since: DateTime)(implicit session: RSession): Int = {
+    (for (b <- rows if b.state === InvitationStates.ACTIVE && b.createdAt > since && b.lastSentAt.isNotNull) yield b).length.run
   }
 }
 
