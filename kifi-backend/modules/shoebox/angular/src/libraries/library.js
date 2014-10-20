@@ -155,8 +155,7 @@ angular.module('kifi')
 
     $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
 
-    init();
-
+    init(true);
 
     $scope.submitPassPhrase = function () {
       libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {
