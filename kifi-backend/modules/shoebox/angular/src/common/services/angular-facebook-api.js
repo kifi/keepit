@@ -185,8 +185,23 @@ angular.module('jun.facebook', [])
 
 	this.getLoginStatus = function (callback) {
 		// https://developers.facebook.com/docs/reference/javascript/FB.getLoginStatus
-		return that.init().then(function (FB) {
+		var init = that.init();
+		return init.then(function (FB) {
 			var deferred = $q.defer();
+			var resolved = false;
+
+			deferred.promise.then(function () {
+				resolved = true;
+			});
+			$timeout(function () {
+				if (!resolved) {
+					that.loading = false;
+					that.failedToLoad = true;
+					document.getElementById('facebook-jssdk').remove();
+					FBPromise = null;
+					deferred.reject({'error': 'no_FB_on_page'});
+				}
+			}, 1500);
 
 			FB.getLoginStatus(angular.bind(deferred, handleResponse));
 
@@ -242,20 +257,22 @@ angular.module('jun.facebook', [])
 			var deferred = $q.defer();
 
 			if (typeof callback !== 'function') {
-				callback = null;
 				opts = callback;
+				callback = null;
 			}
 
 			function getOpt(name) {
 				var val = opts && opts[name];
-				return val === void 0 ? options[name] : val;
+				return val || options[name];
 			}
-
-			FB.login(angular.bind(deferred, handleResponse), {
+			var sendOpts = {
 				scope: getOpt('scope'),
 				'enable_profile_selector': getOpt('enable_profile_selector'),
-				'profile_selector_ids': getOpt('profile_selector_ids')
-			});
+				'profile_selector_ids': getOpt('profile_selector_ids'),
+				'return_scopes': getOpt('return_scopes')
+			};
+
+			FB.login(angular.bind(deferred, handleResponse), sendOpts);
 
 			return addCallbackToPromise(deferred, callback);
 		});
