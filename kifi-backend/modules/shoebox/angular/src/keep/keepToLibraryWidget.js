@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
-  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout',
+  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
   'keyIndices', 'libraryService', 'util',
-  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout,
+  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
     keyIndices, libraryService, util) {
     return {
       restrict: 'A',
@@ -135,9 +135,27 @@ angular.module('kifi')
           $compile(widget)(scope);
 
           // Set position.
-          var top = element.offset().top - (scope.libSelectTopOffset || 0);
-          var left = element.offset().left;
-          widget.css({top: top + 'px', left: left + 'px'});
+          // By default, if there is enough room at the bottom, drop the widget down.
+          // If there isn't enough room, scoot up just enough to fit the widget.
+          // If scope.libSelectTopOffset is set, that overrides the default position.
+          widget.hide();
+          var scrollTop = angular.element($window).scrollTop();
+          var elementOffset = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffset + scrollTop;
+
+          // Wait for Angular to render the widget so we can grab its height.
+          $timeout(function () {
+            var widgetHeight = widget.height();
+
+            // If there is enough room at the bottom, drop the widget down.
+            // Otherwise, scoot up just enough to fit the widget.
+            var widgetOffset = (distanceFromBottom - widgetHeight > 0) ? 0 : widgetHeight - distanceFromBottom;
+
+            var top = element.offset().top - (scope.libSelectTopOffset || widgetOffset);
+            var left = element.offset().left;
+            widget.css({top: top + 'px', left: left + 'px'});
+            widget.show();
+          }, 0);
 
           // Set event handlers.
           $document.on('mousedown', onClick);
