@@ -83,7 +83,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
                 "id":"${myBookmarkExternalId}",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg","username":"test1"}]
             }
           """),
           Json.parse(s"""
@@ -99,7 +99,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
                 "url":"http://www.keepit.com/article1",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg","username":"test1"}]
             }
           """)
         )

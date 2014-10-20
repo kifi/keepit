@@ -1,7 +1,7 @@
 package com.keepit.search.user
 
 import org.specs2.mutable.Specification
-import com.keepit.model.User
+import com.keepit.model.{ Username, User }
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -16,7 +16,7 @@ class UserSearchFilterTest extends Specification with CommonTestInjector {
       User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"),
       User(firstName = "alpha", lastName = "one", username = Username("test"), normalizedUsername = "test"),
       User(firstName = "alpha", lastName = "two", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "three, username = Username("test"), normalizedUsername = "test"")
+      User(firstName = "alpha", lastName = "three", username = Username("test"), normalizedUsername = "test")
     )
     val ids = users.map { _.id.get }
     val conn = Map(ids(0) -> Set(ids(1), ids(3)))
