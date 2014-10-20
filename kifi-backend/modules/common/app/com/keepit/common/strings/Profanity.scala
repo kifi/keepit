@@ -2,6 +2,7 @@ package com.keepit.common.strings
 
 object Profanity {
 
+  // This list was compiled by Luis von Ahn's Research Group at CMU: http://www.cs.cmu.edu/~biglou/resources/
   val all = Set(
     "abbo",
     "abo",
