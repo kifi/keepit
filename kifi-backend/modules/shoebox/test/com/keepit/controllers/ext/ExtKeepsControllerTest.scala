@@ -69,7 +69,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, k1, collections) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           libCommander.internSystemGeneratedLibraries(user1.id.get)
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -143,7 +143,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, collections) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           libCommander.internSystemGeneratedLibraries(user1.id.get)
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -216,7 +216,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           libCommander.internSystemGeneratedLibraries(user1.id.get)
 
           uriRepo.count === 0
@@ -290,7 +290,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, collections) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           libCommander.internSystemGeneratedLibraries(user1.id.get)
 
           uriRepo.count === 0

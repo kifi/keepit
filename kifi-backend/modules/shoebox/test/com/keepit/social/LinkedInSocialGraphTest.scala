@@ -4,9 +4,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{ FakeClientResponse, FakeHttpClientModule, HttpUri }
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.SocialUserInfoRepo
-import com.keepit.model.User
+import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, User }
 import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.test._
 
@@ -43,7 +41,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
           None, None, AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
-          userRepo.save(User(firstName = "Greg", lastName = "Methvin"))
+          userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test"))
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Greg Methvin", socialId = SocialId("rFOBMp35vZ"),
           networkType = SocialNetworks.LINKEDIN, credentials = Some(socialUser))

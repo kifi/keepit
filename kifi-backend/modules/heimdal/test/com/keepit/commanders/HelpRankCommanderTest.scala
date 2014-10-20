@@ -53,10 +53,10 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
     "track discoveries & rekeeps" in {
       withDb(modules: _*) { implicit injector =>
         val ts = currentDateTime
-        val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith")
-        val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar")
-        val u3 = User(id = Some(Id[User](3)), createdAt = ts, updatedAt = ts, firstName = "Ping", lastName = "Pong")
-        val u4 = User(id = Some(Id[User](4)), createdAt = ts, updatedAt = ts, firstName = "Ro", lastName = "Bot")
+        val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")
+        val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test")
+        val u3 = User(id = Some(Id[User](3)), createdAt = ts, updatedAt = ts, firstName = "Ping", lastName = "Pong", username = Username("test"), normalizedUsername = "test")
+        val u4 = User(id = Some(Id[User](4)), createdAt = ts, updatedAt = ts, firstName = "Ro", lastName = "Bot", username = Username("test"), normalizedUsername = "test")
 
         val uri42 = mkURI("http://42go.com")
         val uriKifi = mkURI("http://kifi.com")

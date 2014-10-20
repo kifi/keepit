@@ -51,7 +51,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
+          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
@@ -72,6 +72,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "firstName":"Shanee",
               "lastName":"Smith",
               "pictureName":"0.jpg",
+              "username":"test",
               "emails":[],
               "notAuthed":[],
               "experiments":["admin"],
@@ -90,7 +91,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "update username" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+          val user = inject[UserRepo].save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
@@ -114,7 +115,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "update user info" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
         }
         val userController = inject[UserController]
         val pathName = com.keepit.controllers.website.routes.UserController.updateName().url
@@ -155,7 +156,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "handling emails" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "foo"))
         }
         val userController = inject[UserController]
         val userValueRepo = inject[UserValueRepo]
@@ -226,7 +227,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
 
           val user = inject[Database].readWrite { implicit rw =>
-            inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump"))
+            inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump", username = Username("test"), normalizedUsername = "test"))
           }
 
           inject[FakeUserActionsHelper].setUser(user)

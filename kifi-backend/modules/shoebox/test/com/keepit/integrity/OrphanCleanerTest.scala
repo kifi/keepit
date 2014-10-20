@@ -30,7 +30,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, lib1)
@@ -138,8 +138,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val cleaner = inject[OrphanCleaner]
 
         val (user, other, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val other = userRepo.save(User(firstName = "foo", lastName = "bar"))
+          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+          val other = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, other, lib1)
@@ -355,7 +355,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, lib1)

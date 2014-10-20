@@ -24,7 +24,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
 
-      val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+      val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
 
       // Users that need to be processed
       socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED, socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
