@@ -10,11 +10,9 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
 import com.keepit.search.graph.collection._
-import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.inject._
-import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory, DefaultAnalyzer }
+import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test.SearchTestInjector
 import play.api.test.Helpers._
@@ -125,11 +123,6 @@ trait GraphTestHelper extends SearchTestInjector {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveBookmarksToCollection(collection.id.get, bookmarks: _*)
     fakeShoeboxServiceClient.getCollection(collection.id.get)
-  }
-
-  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectory(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(bookmarkStoreDir, inject[AirbrakeNotifier])
-    new StandaloneURIGraphIndexer(uriGraphDir, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): CollectionIndexer = {

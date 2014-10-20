@@ -22,10 +22,12 @@ class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     val show = results.exists(_.show)
 
     val cutPoint = {
-      hits.headOption.map { head =>
-        val threshold = head.score * tailCutting
-        hits.iterator.count(_.score > threshold)
-      }.getOrElse(0)
+      if (!show) 0 else {
+        hits.headOption.map { head =>
+          val threshold = head.score * tailCutting
+          hits.iterator.count(_.score > threshold)
+        }.getOrElse(0)
+      }
     }
 
     KifiShardResult(

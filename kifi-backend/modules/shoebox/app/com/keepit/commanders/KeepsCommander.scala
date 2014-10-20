@@ -699,7 +699,7 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
       case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (keptAnalytics.createdTag(_, context))
     }
   }

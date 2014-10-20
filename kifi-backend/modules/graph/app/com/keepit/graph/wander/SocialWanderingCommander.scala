@@ -27,13 +27,22 @@ class SocialWanderingCommander @Inject() (
 
   def refresh(id: Id[User]): Future[SociallyRelatedEntities] = consolidate(id) { userId =>
     lock.withLockFuture {
-      getIrrelevantVertices(userId).map { irrelevantVertices =>
-        val journal = wander(userId, irrelevantVertices)
-        val sociallyRelatedPeople = getSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
-        invalidateCache(sociallyRelatedPeople)
-        sociallyRelatedPeople
+      if (graphHasUserVertex(userId)) {
+        getIrrelevantVertices(userId).map { irrelevantVertices =>
+          val journal = wander(userId, irrelevantVertices)
+          val sociallyRelatedPeople = getSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
+          invalidateCache(sociallyRelatedPeople)
+          sociallyRelatedPeople
+        }
+      } else {
+        Future.successful(SociallyRelatedEntities.empty(userId)) // not cached
       }
     }
+  }
+
+  private def graphHasUserVertex(userId: Id[User]): Boolean = {
+    val vid = VertexId(UserReader)(userId.id)
+    graph.readOnly { reader => reader.getNewVertexReader().hasVertex(vid) }
   }
 
   private def getSociallyRelatedPeople(userId: Id[User], journal: TeleportationJournal, limit: Int) = {

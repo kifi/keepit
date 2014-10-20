@@ -17,7 +17,7 @@ angular.module('kifi')
     });
 
     function updateLoginState(meObj) {
-      $rootElement.find('html').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
+      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
       $rootScope.userLoggedIn = userLoggedIn = !!meObj;
       $rootScope.$broadcast('userLoggedInStateChange', meObj);
     }

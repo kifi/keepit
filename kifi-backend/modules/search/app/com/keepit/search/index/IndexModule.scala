@@ -12,7 +12,6 @@ import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
 import com.keepit.search.article._
 import com.keepit.search.graph.collection._
-import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.search.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
 import com.keepit.search.phrasedetector.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
@@ -115,25 +114,6 @@ trait IndexModule extends ScalaModule with Logging {
 
     val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
     new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedURIGraphIndexer = {
-    val version = IndexerVersionProviders.URIGraph.getVersionByStatus(serviceDisovery)
-    def bookmarkStore(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.bookmarkStore.directory", shard, version, backup, conf, IndexerVersionProviders.URIGraph.getVersionsForCleanup())
-      log.info(s"storing BookmarkStore${indexNameSuffix(shard, version)} in $dir")
-      new BookmarkStore(dir, airbrake)
-    }
-    def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
-      val dir = getIndexDirectory("index.urigraph.directory", shard, version, backup, conf, IndexerVersionProviders.URIGraph.getVersionsForCleanup())
-      log.info(s"storing URIGraphIndex${indexNameSuffix(shard, version)} in $dir")
-      new URIGraphIndexer(dir, store, airbrake)
-    }
-
-    val indexShards = activeShards.local.map { shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
-    new ShardedURIGraphIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
   @Singleton

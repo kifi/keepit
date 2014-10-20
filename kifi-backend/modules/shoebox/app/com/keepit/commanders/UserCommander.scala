@@ -23,10 +23,12 @@ import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.util.{ Left, Right, Try }
 
@@ -540,20 +542,35 @@ class UserCommander @Inject() (
   }
 
   def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val name = s"${UsernameOps.lettersOnly(user.firstName)}-${UsernameOps.lettersOnly(user.lastName)}".toLowerCase
+    val firstName = UsernameOps.lettersOnly(user.firstName.trim).take(15).toLowerCase
+    val lastName = UsernameOps.lettersOnly(user.lastName.trim).take(15).toLowerCase
+    val name = if (firstName.isEmpty || lastName.isEmpty) {
+      if (firstName.isEmpty) lastName else firstName
+    } else {
+      s"$firstName-$lastName"
+    }
     val seed = if (name.length < 4) {
       val filler = Seq.fill(4 - name.length)(0)
       s"$name-$filler"
     } else name
     def randomNumber = scala.util.Random.nextInt(999)
-    val candidates = seed :: (1 to 30).map(n => s"$seed-$randomNumber").toList
-    candidates.map { username =>
-      if (!UsernameOps.isValid(username)) throw new Exception(s"username $username is invalid for user $user")
-    }
+    val censorList = UsernameOps.censorList.mkString("|")
+    val preCandidates = ArrayBuffer[String]()
+    preCandidates += seed
+    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
+    preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
+    val candidates = preCandidates.map { name =>
+      log.info(s"validating username $name for user $user")
+      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
+      log.info(s"username $name is valid")
+      valid
+    }.filter(UsernameOps.isValid)
+    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
-    while (keepTrying && i < 30) {
+    log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
+    while (keepTrying && i < candidates.size) {
       val candidate = Username(candidates(i))
       setUsername(user.id.get, candidate, readOnly = readOnly) match {
         case Right(username) =>
@@ -623,22 +640,59 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUsersWithNoUserName(readOnly: Boolean): Int = {
+  def updateUsersWithNoUserName(readOnly: Boolean, max: Int): Int = {
     var counter = 0
     val batchSize = 50
-    var batch = db.readOnlyMaster { implicit s =>
-      userRepo.getUsersWithNoUsername(batchSize)
+    var page = 0
+    var batch: Seq[User] = db.readOnlyMaster { implicit s =>
+      val batch = userRepo.getUsersWithNoUsername(page, batchSize)
+      page += 1
+      batch
     }
-    while (batch.nonEmpty) {
+    while (batch.nonEmpty && counter < max) {
       batch foreach { user =>
         if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
         val username = autoSetUsername(user, readOnly)
         if (username.isEmpty) throw new Exception(s"could not set a username for $user")
-        log.info(s"[readOnly = $readOnly] [$counter] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
+        log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
         counter += 1
+        if (counter >= max) return counter
       }
       batch = db.readOnlyMaster { implicit s =>
-        userRepo.getUsersWithNoUsername(batchSize)
+        val batch = userRepo.getUsersWithNoUsername(page, batchSize)
+        page += 1
+        batch
+      }
+    }
+    counter
+  }
+
+  def reNormalizedUsername(readOnly: Boolean, max: Int): Int = {
+    var counter = 0
+    val batchSize = 50
+    var page = 0
+    var batch: Seq[User] = db.readOnlyMaster { implicit s =>
+      val batch = userRepo.page(page, batchSize)
+      page += 1
+      batch
+    }
+    while (batch.nonEmpty && counter < max) {
+      batch.map { user =>
+        val orig = user.normalizedUsername.get
+        val candidate = UsernameOps.normalize(user.username.get.value)
+        if (orig != candidate) {
+          log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
+          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = Some(candidate))) }
+          counter += 1
+          if (counter >= max) return counter
+        } else {
+          log.info(s"username normalization did not change: $orig")
+        }
+      }
+      batch = db.readOnlyMaster { implicit s =>
+        val batch = userRepo.page(page, batchSize)
+        page += 1
+        batch
       }
     }
     counter

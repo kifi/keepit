@@ -39,7 +39,7 @@ angular.module('kifi', [
     $FBProvider
       .appId(dev ? '530357056981814' : '104629159695560')
       // https://developers.facebook.com/docs/facebook-login/permissions
-      .scope('email')
+      .scope('public_profile,user_friends,email')
       .cookie(true)
       .logging(false);
   }
@@ -121,15 +121,20 @@ angular.module('kifi', [
   '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
   function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
-    $timeout(function () {
-      profileService.fetchMe().then(function () {
-        if ($rootScope.userLoggedIn) {
-          profileService.fetchPrefs();
-          friendService.getRequests();
-        }
+
+    function start() {
+      $timeout(function () {
+        profileService.fetchMe().then(function () {
+          if ($rootScope.userLoggedIn) {
+            profileService.fetchPrefs();
+            friendService.getRequests();
+          }
+        });
       });
-      // TODO: add a link for triggering a bookmark import
-      // $window.postMessage('get_bookmark_count_if_should_import', '*'); // may get {bookmarkCount: N} reply message
-    });
+    }
+
+    start();
+
+    $rootScope.$on('appStart', start);
   }
 ]);

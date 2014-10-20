@@ -46,12 +46,18 @@ angular.module('kifi')
               if (result === 'already_joined') {
                 $window.alert('You are already following this library!');
                 return;
+              } else {
+                lib.membership = 'read_only';
+                lib.numFollowers = lib.numFollowers + 1;
               }
             });
           }
 
           function unfollowLibrary() {
-            libraryService.leaveLibrary(scope.libraryId);
+            libraryService.leaveLibrary(scope.libraryId).then( function () {
+              lib.membership = 'none';
+              lib.numFollowers = lib.numFollowers - 1;
+            });
           }
 
           scope.toggleFollow = function () {
@@ -68,7 +74,7 @@ angular.module('kifi')
           };
 
           scope.view = function () {
-            $location.path('/' + lib.library.owner.username + '/' + lib.library.slug);
+            $location.path(lib.library.url);
           };
 
 

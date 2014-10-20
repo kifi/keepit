@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.commanders.UsernameOps
+
 import scala.util.Try
 
 import play.api.libs.json.{ Json, JsValue }
@@ -13,6 +15,16 @@ import com.keepit.common.db._
 import com.keepit.test._
 
 class UserTest extends Specification with ShoeboxTestInjector {
+
+  "UsernameOps" should {
+    "valid" in {
+      UsernameOps.isValid("eishay-kifi") === false
+      UsernameOps.isValid("nada-boutros") === false
+      //the following line takes more then a minute to run!
+      //UsernameOps.isValid("eishaytestwithaveryveryveryveryveryveryveryverylongmailgocom-") === false
+      UsernameOps.isValid("eishaytestwitha-") === false
+    }
+  }
 
   "UserRepo" should {
     "Use the cache" in {
