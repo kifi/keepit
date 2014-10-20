@@ -20,7 +20,7 @@ import scala.util.Random
 case class LibraryInvite(
     id: Option[Id[LibraryInvite]] = None,
     libraryId: Id[Library],
-    ownerId: Id[User],
+    inviterId: Id[User],
     userId: Option[Id[User]] = None,
     emailAddress: Option[EmailAddress] = None,
     access: LibraryAccess,
@@ -35,7 +35,7 @@ case class LibraryInvite(
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
   def withState(newState: State[LibraryInvite]): LibraryInvite = this.copy(state = newState)
 
-  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$ownerId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
+  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 }
 
 object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
@@ -46,7 +46,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and
     (__ \ 'libraryId).format[Id[Library]] and
-    (__ \ 'ownerId).format[Id[User]] and
+    (__ \ 'inviterId).format[Id[User]] and
     (__ \ 'userId).format[Option[Id[User]]] and
     (__ \ 'emailAddress).format[Option[EmailAddress]] and
     (__ \ 'access).format[LibraryAccess] and
@@ -98,6 +98,7 @@ object HashedPassPhrase {
 // Not sure we need this cache?
 case class LibraryInviteIdKey(id: Id[LibraryInvite]) extends Key[LibraryInvite] {
   val namespace = "library_invite_by_id"
+  override val version: Int = 2
   def toKey(): String = id.id.toString
 }
 class LibraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
