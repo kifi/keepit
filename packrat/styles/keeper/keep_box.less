@@ -228,7 +228,11 @@
   font-size: @lib-font-size;
   font-weight: @lib-font-weight;
   padding-left: @lib-pad-left;
+  padding-right: 10px;
   color: @lib-color !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   .kifi-keep-box-view-keep>& {
     border-bottom-color: #ccc;
   }
@@ -242,6 +246,9 @@
     &:active {
       background-color: #e3e3e3;
     }
+  }
+  &.kifi-kept {
+    padding-right: 85px;
   }
 }
 .kifi-keep-box-with-lib-icon {
@@ -263,13 +270,6 @@
     @url: %(@svgLibCardPlusDataUrl, #fff, #7dadef, #fff, #7dadef, #7dadef, #7dadef);
     background-image: url(@url) !important;
   }
-}
-.kifi-keep-box-lib-unkeep {
-  position: absolute;
-  top: 7px;
-  right: 9px;
-  line-height: 28px;
-  font-size: 11px;
 }
 .kifi-keep-box-button {
   padding: 0 15px;
@@ -293,6 +293,18 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   user-select: none;
+}
+.kifi-keep-box-lib-unkeep {
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 70px;
+  text-align: center;
+  line-height: 28px;
+  font-size: 11px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 0;
 }
 
 .kifi-keep-box-new-lib-name {
