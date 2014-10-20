@@ -793,7 +793,11 @@ class KeepsCommander @Inject() (
     searchClient.augmentation(request).map { response =>
       val (thisKeep, moreKeeps) = response.infos(item).keeps.toSet.partition(_.keptIn == Some(libraryId))
       val existingTags = thisKeep.flatMap(_.tags)
-      val suggestedTags = (moreKeeps.flatMap(_.tags) -- existingTags).toSeq.sortBy(-response.scores.byTag(_))
+      val validTags = moreKeeps.flatMap {
+        case myKeep if myKeep.keptBy == Some(userId) => myKeep.tags
+        case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+      }
+      val suggestedTags = (validTags -- existingTags).toSeq.sortBy(-response.scores.byTag(_))
       limit.map(suggestedTags.take(_)) getOrElse suggestedTags
     }
   }

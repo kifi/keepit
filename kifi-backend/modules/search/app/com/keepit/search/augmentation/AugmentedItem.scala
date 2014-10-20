@@ -1,9 +1,8 @@
 package com.keepit.search.augmentation
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Hashtag, NormalizedURI, Library, User }
+import com.keepit.model.{ NormalizedURI, Library, User }
 import com.keepit.search.{ Searcher }
-import java.text.Normalizer
 import com.keepit.search.graph.library.LibraryIndexable
 import play.api.libs.json.{ JsBoolean, Json, JsObject }
 import scala.collection.mutable.{ ListBuffer }
@@ -38,7 +37,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
   private lazy val myTags = myKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
   private lazy val moreTags = moreKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_))).toSeq
 
-  def tags = Collection.dedupBy(myTags ++ primaryTags ++ moreTags)(AugmentedItem.normalizeTag)
+  def tags = Collection.dedupBy(myTags ++ primaryTags.filterNot(_.isSensitive) ++ moreTags.filterNot(_.isSensitive))(_.normalized)
 }
 
 object AugmentedItem {
@@ -62,9 +61,6 @@ object AugmentedItem {
     val moreKeeps = keepsFromMyLibraries ++ keepsFromMyFriends ++ otherKeeps
     (myKeeps.toList, moreKeeps.toList)
   }
-
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 
   def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) = {
     new AugmentedItem(userId, allFriends, allLibraries, scores)(item, info)
