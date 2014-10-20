@@ -273,11 +273,7 @@ var keepBox = keepBox || (function () {
     })
     .on('click', '.kifi-keep-box-lib-unkeep', function (e) {
       if (e.which === 1) {
-        var libraryId = $(this).prev().data('id');
-        var library = $box.data('libraries').find(idIs(libraryId));
-        log('[unkeep]', libraryId, document.URL);
-        api.port.emit('unkeep', {libraryId: libraryId, keepId: library.keep.id});
-        hide(e, 'action');
+        unkeep($(this));
       }
     });
   }
@@ -397,6 +393,41 @@ var keepBox = keepBox || (function () {
       }
     });
     return deferred.promise;
+  }
+
+  function unkeep($btn) {
+    var $lib = $btn.prev();
+    var libraryId = $lib.data('id');
+    log('[unkeep]', libraryId, document.URL);
+    var library = $box.data('libraries').find(idIs(libraryId));
+    var deferred = Q.defer();
+    api.port.emit('unkeep', {libraryId: libraryId, keepId: library.keep.id}, function (success) {
+      if (success) {
+        delete library.keep;
+        deferred.resolve();
+      } else {
+        $btn.fadeIn(160);
+        deferred.reject();
+      }
+    });
+    $btn.fadeOut(160);
+    var $kept = $btn.parent();
+    progress($kept, deferred.promise).done(function () {
+      var $fromHead = $kept.next().hasClass('kifi-keep-box-lib-head') ? $kept.prev('.kifi-keep-box-lib-head') : $();
+      var $from = $('<div class="kifi-keep-box-lib-unkept-from"/>').insertAfter($kept);
+      $kept.addClass('kifi-unkeeping');
+      var $toHead = $kept.nextAll('.kifi-keep-box-lib-head').first();
+      var $to = $('<div class="kifi-keep-box-lib-unkept-to"/>').insertAfter($toHead);
+      var dy = $to[0].getBoundingClientRect().bottom - $from[0].getBoundingClientRect().bottom;
+      $kept.on('transitionend', function (e) {
+        if (e.target === this) {
+          $to.replaceWith($lib);
+          $from.remove();
+          $kept.remove();
+        }
+      }).css('transform', 'translate(0,' + dy + 'px)');
+      $fromHead.add($from).add($to).addClass('kifi-unkeeping');
+    });
   }
 
   function showKeep(library, justKept) {

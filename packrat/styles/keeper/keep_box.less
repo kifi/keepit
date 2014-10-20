@@ -188,16 +188,20 @@
     min-height: 240px;
     overflow: hidden !important;
     overflow-y: auto !important;
+    position: relative;
     &:not(:last-child) {
       margin-bottom: -1px;  // avoids double border when scrolled to bottom
     }
+  }
+  &>.kifi-scrollbar {
+    z-index: 1;
   }
 }
 
 .kifi-keep-box-lib-head,
 .kifi-keep-box-new-lib-head {
   background-color: #f3f3f3;
-  line-height: 26px;
+  line-height: @lib-head-height;
   font-size: 12px;
   font-weight: bold;
   color: #777;
@@ -210,16 +214,53 @@
     border: none;
     background-color: #73c785;
     color: #fff;
+    &.kifi-unkeeping {
+      margin-top: -@lib-head-height;
+      transition: margin-top @unkeep-duration;
+    }
   }
 }
 
+@lib-head-height: 26px;
 @lib-height: 44px;
 @lib-bg-height: 31px;
 @lib-pad-left: 52px;
 @lib-font-size: 13px;
 @lib-font-weight: 300;
 @lib-color: #333;
+@unkeep-duration: .2s;
 
+.kifi-keep-box-lib-kept {
+  position: relative;
+  background-color: #fff;
+  transition: -webkit-transform @unkeep-duration;
+  transition: transform @unkeep-duration;
+  &.kifi-unkeeping {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: @lib-height + 1px; // bottom border
+    z-index: 1;
+    &>.kifi-keep-box-progress {
+      transition: opacity @unkeep-duration;
+      opacity: 0;
+    }
+  }
+}
+.kifi-unkeeping+.kifi-keep-box-lib-unkept-from {
+  height: @lib-height + 1px; // bottom border
+  transition: height @unkeep-duration;
+  &.kifi-unkeeping {
+    height: 0;
+  }
+}
+.kifi-keep-box-lib-unkept-to {
+  height: 0;
+  transition: height @unkeep-duration;
+  &.kifi-unkeeping {
+    height: @lib-height + 1px; // bottom border
+  }
+}
 .kifi-keep-box-lib {
   display: block;
   border-bottom: 1px solid @lib-border-color;
@@ -247,7 +288,7 @@
       background-color: #e3e3e3;
     }
   }
-  &.kifi-kept {
+  .kifi-keep-box-lib-kept>& {
     padding-right: 85px;
   }
 }
