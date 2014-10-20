@@ -51,12 +51,8 @@ class URISummaryCommander @Inject() (
   }
 
   def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
-    import TransactionalCaching.Implicits.directCacheAccess
-
-    uriSummaryCache.getOrElseFuture(URISummaryKey(uri.id.get)) {
-      val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
-      getURISummaryForRequest(uriSummaryRequest, uri)
-    }
+    val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+    getURISummaryForRequest(uriSummaryRequest, uri)
   }
 
   /**
@@ -95,16 +91,35 @@ class URISummaryCommander @Inject() (
   }
 
   def getURISummaryForRequest(request: URISummaryRequest, nUri: NormalizedURI): Future[URISummary] = {
-    val summary = timing(s"getStoredSummaryForRequest ${nUri.id} -> ${nUri.url}") {
-      getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
-    }
-    if (!isCompleteSummary(summary, request)) {
-      log.info(s"could not find complete summary for ${nUri.id} -> ${nUri.url}")
-      if (!request.silent) {
-        val fetchedSummary = fetchSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
-        if (request.waiting) fetchedSummary else Future.successful(summary)
+
+    def getFuture(): Future[URISummary] = {
+      val summary = timing(s"getStoredSummaryForRequest ${nUri.id} -> ${nUri.url}") {
+        getStoredSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
+      }
+      if (!isCompleteSummary(summary, request)) {
+        log.info(s"could not find complete summary for ${nUri.id} -> ${nUri.url}")
+        if (!request.silent) {
+          val fetchFuture = fetchSummaryForRequest(nUri, request.imageType, request.minSize, request.withDescription)
+          if (request.waiting) {
+            fetchFuture
+          } else {
+            // return whatever we have without waiting, and update the cache asynchronously if cacheable.
+            if (request.isCacheable) {
+              import TransactionalCaching.Implicits.directCacheAccess
+              fetchFuture.map(uriSummaryCache.set(URISummaryKey(nUri.id.get), _))
+            }
+            Future.successful(summary)
+          }
+        } else Future.successful(summary)
       } else Future.successful(summary)
-    } else Future.successful(summary)
+    }
+
+    if (request.isCacheable) {
+      import TransactionalCaching.Implicits.directCacheAccess
+      uriSummaryCache.getOrElseFuture(URISummaryKey(nUri.id.get)) { getFuture() }
+    } else {
+      getFuture()
+    }
   }
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
