@@ -883,4 +883,64 @@ angular.module('kifi')
   }
 ])
 
+.directive('kfKeepMasterButton', [
+  function () {
+    return {
+      restrict: 'A',
+      scope: {
+        keep: '&'
+      },
+      replace: false,
+      templateUrl: 'keep/keepMasterButton.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        var keep = scope.keep();
+
+
+        // TODO(josH) do not commit these lines, you idiot!
+        scope.isKeptPrivate = false; //keep.isMyBookmark && keep.isPrivate;
+        scope.isKeptPublic = false; // keep.isMyBookmark && !keep.isPrivate;
+        scope.isNotKept = true; //!keep.isMyBookmark;
+
+        scope.keepAction = function () {
+          // TODO(josh)
+        };
+      }
+    };
+  }
+])
+
+.directive('kfKeepShareButton', [
+  function () {
+    return {
+      restrict: 'A',
+      scope: {
+        keep: '&',
+        showInstallExtensionModal: '&'
+      },
+      replace: false,
+      templateUrl: 'keep/keepShareButton.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        // TODO(josh)
+      }
+    };
+  }
+])
+
+.directive('kfKeepTagButton', [
+  function () {
+    return {
+      restrict: 'A',
+      scope: {
+        keep: '&'
+      },
+      replace: false,
+      templateUrl: 'keep/keepTagButton.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        var keep = scope.keep();
+        // TODO(josh)
+      }
+    };
+  }
+])
+
 ;

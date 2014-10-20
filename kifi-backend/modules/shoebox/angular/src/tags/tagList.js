@@ -11,7 +11,8 @@ angular.module('kifi')
       scope: {
         'getSelectedKeeps': '&',
         'addingTag': '=',
-        'isShown': '&'
+        'isShown': '&',
+        'deprecated': '='
       },
       replace: true,
       restrict: 'A',

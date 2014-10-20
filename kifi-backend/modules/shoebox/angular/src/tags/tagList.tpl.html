@@ -1,10 +1,11 @@
-<div class="kf-keep-tags">
+<div>
+<div class="kf-keep-tags" ng-if="deprecated">
   <ul class="kf-tag-list">
     <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in getCommonTags()">
       <div class="kf-keep-tag-link"><a href="/tag/{{tag.id}}">{{tag.name}}</a></div>
       <div class="kf-keep-tag-x" ng-click="removeTag(tag)">×</div>
     </li>
-    <li class="kf-keep-tag-new">
+    <li class="kf-keep-tag">
       <span class="kf-keep-add-tag-button sprite sprite-add-a-tag-button" ng-click="showAddTagDropdown()" ng-if="!addingTag.enabled"></span>
       <span kf-tag-suggestions ng-if="addingTag.enabled">
         <input focus-when="shouldGiveFocus" class="kf-keep-tag-input" type="text" placeholder="Tag name…" ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="hideAddTagDropdown()">
@@ -18,4 +19,14 @@
       </span>
     </li>
   </ul>
+</div>
+
+<div class="kf-keep-tags-new clearfix" ng-if="!deprecated">
+  <ul class="kf-tag-list-new">
+    <li class="kf-keep-tag-new" ng-repeat="tag in getCommonTags()">
+      <span class="kf-keep-tag-new-link" ng-click="removeTag(tag)">{{tag.name}}</span>
+    </li>
+  </ul>
+  <span href="" class="kf-add-tag-link svg-add-tag-icon" ng-click=""></span>
+</div>
 </div>

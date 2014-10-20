@@ -3,16 +3,21 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoText', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'libraryService',
+  function (profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoText.tpl.html',
       scope: {
-        keep: '='
+        keep: '=',
+        deprecated: '='
       },
       link: function (scope) {
+        var keep = scope.keep;
+        
+        scope.librariesEnabled = libraryService.isAllowed();
+        scope.useDeprecated = typeof deprecated === 'boolean' && deprecated;
 
         scope.me = profileService.me;
 
@@ -23,26 +28,42 @@ angular.module('kifi')
           scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
         });
 
-        scope.hasKeepers = function (keep) {
+        scope.hasKeepers = function () {
           return keep.keepers && (keep.keepers.length > 0);
         };
 
-        scope.hasOthers = function (keep) {
+        scope.hasOthers = function () {
           return keep.others > 0;
         };
 
-        scope.getFriendText = function (keep) {
+        scope.hasLibraries = function () {
+          return scope.librariesEnabled && 1 > 0; // TODO(josh) how to get the libraries a keep is in?
+        }
+
+        scope.getFriendText = function () {
           var num = keep.keepers ? keep.keepers.length : 0;
           var text = (num === 1) ? '1 friend' : num + ' friends';
-          return (!keep.isMyBookmark) ? text : 'and ' + text;
+          if (scope.useDeprecated && keep.isMyBookmark) {
+            return 'and ' + text;
+          }
+          return text;
         };
 
-        scope.getOthersText = function (keep) {
+        scope.getOthersText = function () {
           var num = keep.others ? keep.others : 0;
           var text = (num === 1) ? '1 other' : num + ' others';
-          return (keep.isMyBookmark || keep.keepers.length > 0) ? 'and ' + text : text;
+          if (scope.useDeprecated && scope.hasKeepers()) {
+            return 'and ' + text;
+          }
+          return text;
         };
+
+        scope.getLibrariesText = function () {
+          return "1 library"; // TODO(josh)
+        }
       }
     };
   }
-]);
+])
+
+;
