@@ -288,7 +288,7 @@ class LibraryCommander @Inject() (
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
-            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue)
+            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)
           }
           if (keeps.nonEmpty) {
             db.readWriteBatch(keeps) { (s, k) =>
@@ -597,30 +597,27 @@ class LibraryCommander @Inject() (
     library: Library,
     keeps: Seq[Keep],
     excludeFromAccess: Set[LibraryAccess],
-    saveKeep: (Keep, RWSession) => Unit): Seq[(Keep, LibraryError)] = {
+    saveKeep: (Keep, RWSession) => Either[LibraryError, Unit]): Seq[(Keep, LibraryError)] = {
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
-      // todo: make more performant
-      val existingURIs = keepRepo.getByLibrary(library.id.get, 0, 10000).map(_.uriId).toSet // note only contains ACTIVE keeps
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
             case None =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
-              Seq[Keep]()
+              Seq.empty[Keep]
             case Some(memFrom) if excludeFromAccess.contains(memFrom.access) =>
               badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
-              Seq[Keep]()
+              Seq.empty[Keep]
             case Some(_) =>
               keeps
           }
       }.flatten.foreach { keep =>
-        if (!existingURIs.contains(keep.uriId)) {
-          saveKeep(keep, s)
-        } else {
-          badKeeps += keep -> LibraryError.AlreadyExistsInDest
+        saveKeep(keep, s) match {
+          case Left(error) => badKeeps += keep -> error
+          case Right() =>
         }
       }
       if (badKeeps.size != keeps.size)
@@ -646,22 +643,29 @@ class LibraryCommander @Inject() (
       case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
       case (_, Some(tag)) =>
-        def saveKeep(k: Keep, s: RWSession): Unit = {
+        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
           keepRepo.getPrimaryByUriAndLibrary(k.uriId, libraryId) match {
-            case Some(k) if k.state == KeepStates.INACTIVE =>
-              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
-              keepToCollectionRepo.getOpt(k.id.get, tag.id.get) match {
-                case Some(ktc) =>
-                  keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-                case None =>
-                  keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = tag.id.get))
-              }
+
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
                 userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId), inDisjointLib = library.isDisjoint))
               keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-            case _ => // if active keep already exists in library (do nothing)
+              Right()
+
+            case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
+              keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getOpt(existingKeep.id.get, tag.id.get) match {
+                case None =>
+                  keepToCollectionRepo.save(KeepToCollection(keepId = existingKeep.id.get, collectionId = tag.id.get))
+                case Some(k2c) if k2c.state == KeepToCollectionStates.INACTIVE =>
+                  keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
+                case _ =>
+              }
+              Right()
+
+            case _ =>
+              Left(LibraryError.AlreadyExistsInDest)
           }
         }
         val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
@@ -679,26 +683,33 @@ class LibraryCommander @Inject() (
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         keeps.map(_ -> LibraryError.DestPermissionDenied)
       case Some(_) =>
-        def saveKeep(k: Keep, s: RWSession): Unit = {
+        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
           keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
-            case Some(k) if k.state == KeepStates.INACTIVE =>
-              keepRepo.save(k.copy(state = KeepStates.ACTIVE))
-              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
-                keepToCollectionRepo.save(KeepToCollection(keepId = k.id.get, collectionId = k2c.collectionId))
-              }
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
               keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
                 keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
               }
-            case _ => // if active keep already exists in library (do nothing)
+              Right()
+            case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
+              keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
+              keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
+                keepToCollectionRepo.getOpt(existingKeep.id.get, k2c.collectionId) match {
+                  case None =>
+                    keepToCollectionRepo.save(KeepToCollection(keepId = existingKeep.id.get, collectionId = k2c.collectionId))
+                  case Some(keepTag) if keepTag.state == KeepToCollectionStates.INACTIVE =>
+                    keepToCollectionRepo.save(keepTag.copy(state = KeepToCollectionStates.ACTIVE))
+                  case _ =>
+                }
+              }
+              Right()
+            case _ =>
+              Left(LibraryError.AlreadyExistsInDest)
           }
         }
-
-        val badKeeps = applyToKeeps(userId, toLibrary, keeps, Set(), saveKeep)
-        badKeeps
+        applyToKeeps(userId, toLibrary, keeps, Set(), saveKeep)
     }
   }
 
@@ -712,14 +723,22 @@ class LibraryCommander @Inject() (
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         keeps.map(_ -> LibraryError.DestPermissionDenied)
       case Some(_) =>
-
-        def saveKeep(k: Keep, s: RWSession): Unit = {
+        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
-          keepRepo.save(k.copy(libraryId = Some(toLibraryId)))
+          keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
+            case None =>
+              keepRepo.save(k.copy(libraryId = Some(toLibraryId)))
+              Right()
+            case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
+              keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
+              keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+              // what about tags?
+              Right() // would this be right?
+            case _ =>
+              Left(LibraryError.AlreadyExistsInDest)
+          }
         }
-
-        val badKeeps = applyToKeeps(userId, library, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
-        badKeeps
+        applyToKeeps(userId, library, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
     }
   }
 
