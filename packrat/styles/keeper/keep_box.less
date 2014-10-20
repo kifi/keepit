@@ -583,7 +583,7 @@
   margin: 0 0 3px 3px !important;
   padding: 3px 0 3px 5px !important;
   border-radius: 3px !important;
-  background-color: #6fa6ef;
+  background-color: #1990ea;
   color: #fff;
   cursor: default;
   float: left;
@@ -593,7 +593,7 @@
   user-select: none;
 }
 .kifi-keep-box-tags-token-selected {
-  background-color: #4c8ffb;
+  background-color: #349cf8;
 }
 .kifi-keep-box-tags-token-x {
   margin-left: 3px;
@@ -602,10 +602,13 @@
   bottom: 1px;
   cursor: pointer;
   &:hover {
-    background-color: #4c8ffb;
-    .kifi-keep-box-tags-selected>& {
-      background-color: #6fa6ef;
-    }
+    background-color: #349cf8;
+  }
+  .kifi-keep-box-tags-token-selected>&:hover {
+    background-color: #1990ea;
+  }
+  &:active:hover {
+    background-color: #0088e1;
   }
 }
 .kifi-keep-box-tags-dropdown {
