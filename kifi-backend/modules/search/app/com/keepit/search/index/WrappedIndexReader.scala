@@ -13,7 +13,6 @@ import org.apache.lucene.index.SortedSetDocValues
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.SlowCompositeReaderWrapper
-import org.apache.lucene.util.Bits
 
 object WrappedIndexReader {
 
@@ -89,52 +88,6 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
   }
 
   lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
-
-  def outerjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
-    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
-    val splitReaders = indexReader.split(remappers)
-    var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
-    wrappedSubReaders.foreach { r =>
-      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
-    }
-    splitReaders.get("").foreach { subReader =>
-      newSubReaders += new WrappedSubReader("", subReader, idMapper)
-    }
-
-    new WrappedIndexReader(inner, newSubReaders.toArray)
-  }
-
-  def leftjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
-    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
-    val splitReaders = indexReader.split(remappers)
-    var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
-    wrappedSubReaders.foreach { r =>
-      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
-    }
-
-    new WrappedIndexReader(inner, newSubReaders.toArray)
-  }
-
-  def rightjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
-    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
-    val splitReaders = indexReader.split(remappers)
-    var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
-    wrappedSubReaders.foreach { r =>
-      val reader = splitReaders(r.name)
-      if (reader.index.isEmpty) {
-        // include this segment reader to compute docFreq correctly even when there is no match
-        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, new Bits.MatchNoBits(r.maxDoc)), r.getIdMapper, skip = true)
-      } else {
-        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, reader.getLiveDocs), r.getIdMapper, skip = false)
-      }
-    }
-    splitReaders.get("").foreach { subReader =>
-      newSubReaders += new WrappedSubReader("", subReader, idMapper)
-    }
-
-    new WrappedIndexReader(inner, newSubReaders.toArray)
-  }
-
 }
 
 class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper, val skip: Boolean = false) extends AtomicReader {

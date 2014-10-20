@@ -9,6 +9,7 @@ import com.keepit.model._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
+import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.query.parser._
 import com.keepit.test._
 import org.specs2.mutable._
@@ -27,7 +28,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
   private[this] val analyzer = DefaultAnalyzer.getAnalyzer(en)
   private[this] val stemmingAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(en)
 
-  private class TstQueryParser extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
+  private class TstQueryParser extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
     val lang: Lang = en
     val altAnalyzer: Option[Analyzer] = None
     val altStemmingAnalyzer: Option[Analyzer] = None

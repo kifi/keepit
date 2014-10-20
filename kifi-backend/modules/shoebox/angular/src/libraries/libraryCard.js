@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService', 'signupService',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService, signupService) {
     return {
       restrict: 'A',
       replace: true,
@@ -149,6 +149,8 @@ angular.module('kifi')
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore($location.absUrl());
             return;
+          } else if ($rootScope.userLoggedIn === false) {
+            return signupService.register({libraryId: scope.library.id});
           }
 
           libraryService.joinLibrary(library.id).then(function (result) {

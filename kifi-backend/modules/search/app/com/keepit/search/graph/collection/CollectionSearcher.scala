@@ -6,12 +6,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.model.{ Hashtag, NormalizedURI, User, Collection }
 import com.keepit.search.Searcher
-import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
-import org.apache.lucene.index.AtomicReader
-import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.DocIdSetEdgeSet
@@ -26,8 +22,8 @@ import com.keepit.search.graph.LuceneBackedBookmarkInfoAccessor
 object CollectionSearcher {
   def apply(collectionIndexer: CollectionIndexer): CollectionSearcher = new CollectionSearcher(collectionIndexer.getSearcher)
   def apply(userId: Id[User], collectionIndexer: CollectionIndexer): CollectionSearcherWithUser = {
-    val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
-    new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, userId)
+    val collectionIndexSearcher = collectionIndexer.getSearcher
+    new CollectionSearcherWithUser(collectionIndexSearcher, userId)
   }
 }
 
@@ -68,7 +64,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   }
 }
 
-class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNameIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
+class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
   lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
 
   private[this] var collectionIdCache: Map[Long, Option[ExternalId[Collection]]] = Map()
@@ -79,37 +75,6 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
       collectionIdCache += (id -> extId)
       extId
     })
-  }
-
-  def detectCollectionNames(stems: IndexedSeq[Term]): Set[(Int, Int, Long)] = {
-    collectionNameIndexSearcher.findDocIdAndAtomicReaderContext(userId.id) match {
-      case Some((doc, context)) =>
-        val reader = context.reader
-        val collectionIdList: CollectionIdList = {
-          val binaryDocValues = reader.getBinaryDocValues(CollectionNameFields.collectionIdListField)
-          if (binaryDocValues != null) {
-            val bytesRef = new BytesRef
-            binaryDocValues.get(doc, bytesRef)
-            CollectionIdList(bytesRef.bytes, bytesRef.offset, bytesRef.length)
-          } else {
-            null
-          }
-        }
-        if (collectionIdList != null && collectionIdList.size > 0) {
-          detectCollectionNames(stems, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
-        } else {
-          Set.empty[(Int, Int, Long)]
-        }
-      case _ =>
-        Set.empty[(Int, Int, Long)]
-    }
-  }
-
-  private[this] def detectCollectionNames(stems: IndexedSeq[Term], field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
-    val terms = stems.map { t => new Term(field, t.text()) }
-    val r = LineIndexReader(reader, doc, terms.toSet, collectionIdList.length, None)
-    val detector = new CollectionNameDetector(r, collectionIdList)
-    detector.detectAll(terms)
   }
 }
 

@@ -15,9 +15,14 @@ import com.keepit.common.json.TupleFormat
 import com.keepit.serializer.{ BinaryFormat }
 import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
+import java.text.Normalizer
+import com.keepit.common.strings.Profanity
 
 case class Hashtag(tag: String) extends AnyVal {
   override def toString = tag
+
+  def normalized: String = Hashtag.normalizeTag(this)
+  def isSensitive: Boolean = { normalized.split("\\s+").exists(Profanity.all.contains) }
 }
 
 object Hashtag {
@@ -29,6 +34,9 @@ object Hashtag {
       def writes(itemMap: Map[Hashtag, T]) = Json.toJson(itemMap.toSeq)
     }
   }
+
+  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
+  @inline private[Hashtag] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
 }
 
 case class Collection(

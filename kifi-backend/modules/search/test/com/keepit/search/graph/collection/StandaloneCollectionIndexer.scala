@@ -11,9 +11,8 @@ import com.keepit.model.Collection
 
 class StandaloneCollectionIndexer(
     indexDirectory: IndexDirectory,
-    collectionNameIndexer: CollectionNameIndexer,
     airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends CollectionIndexer(indexDirectory, collectionNameIndexer, airbrake) {
+    shoeboxClient: ShoeboxServiceClient) extends CollectionIndexer(indexDirectory, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
