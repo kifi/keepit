@@ -37,7 +37,7 @@ class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike
     "verify all pictures" in {
       withDb(modules: _*) { implicit injector =>
         db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin",
+          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test",
             externalId = ExternalId("59eba923-54cb-4257-9bb6-7c81d602bd76")))
           userPictureRepo.save(UserPicture(userId = user.id.get, name = "0", origin = UserPictureSources.FACEBOOK, attributes = None))
         }

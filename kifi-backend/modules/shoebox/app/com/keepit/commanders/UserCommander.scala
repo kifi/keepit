@@ -244,8 +244,14 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
+    val candidates = createUsernameCandidates(firstName, lastName)
+    val username: Username = db.readOnlyReplica { implicit session =>
+      candidates.find { candidate => userRepo.getByUsername(candidate).isEmpty }
+    } getOrElse (throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!"))
     val newUser = db.readWrite { implicit session =>
-      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None))
+      userRepo.save(
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state,
+          username = username, normalizedUsername = UsernameOps.normalize(username.value)))
     }
     SafeFuture {
       db.readWrite { implicit session =>
@@ -270,7 +276,7 @@ class UserCommander @Inject() (
 
         // get users who have this user's email in their contacts
         abookServiceClient.getUsersWithContact(email) flatMap {
-          case contacts if contacts.size > 0 => {
+          case contacts if contacts.nonEmpty => {
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
             }
@@ -347,8 +353,8 @@ class UserCommander @Inject() (
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.ENG,
         to = Seq(SystemEmailAddress.SUPPORT),
-        subject = s"Close Account for ${userId}",
-        htmlBody = s"User ${userId} requested to close account.<br/>---<br/>${safeComment}",
+        subject = s"Close Account for $userId",
+        htmlBody = s"User $userId requested to close account.<br/>---<br/>$safeComment",
         category = NotificationCategory.System.ADMIN
       ))
     }
@@ -528,7 +534,7 @@ class UserCommander @Inject() (
           Left("username_exists")
         } else {
           if (!readOnly) {
-            userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
+            userRepo.save(userRepo.get(userId).copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))
           } else {
             log.info(s"[dry run] user $userId set with username $username")
           }
@@ -541,9 +547,9 @@ class UserCommander @Inject() (
     }
   }
 
-  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val firstName = UsernameOps.lettersOnly(user.firstName.trim).take(15).toLowerCase
-    val lastName = UsernameOps.lettersOnly(user.lastName.trim).take(15).toLowerCase
+  private def createUsernameCandidates(rawFirstName: String, rawLastName: String): Seq[Username] = {
+    val firstName = UsernameOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
+    val lastName = UsernameOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
     val name = if (firstName.isEmpty || lastName.isEmpty) {
       if (firstName.isEmpty) lastName else firstName
     } else {
@@ -560,18 +566,23 @@ class UserCommander @Inject() (
     preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
     preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
     val candidates = preCandidates.map { name =>
-      log.info(s"validating username $name for user $user")
+      log.info(s"validating username $name for user $firstName $lastName")
       val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
       log.info(s"username $name is valid")
       valid
     }.filter(UsernameOps.isValid)
-    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $user")
+    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $firstName $lastName")
+    candidates map { c => Username(c) }
+  }
+
+  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
+    val candidates = createUsernameCandidates(user.firstName, user.lastName)
     var keepTrying = true
     var selectedUsername: Option[Username] = None
     var i = 0
     log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
     while (keepTrying && i < candidates.size) {
-      val candidate = Username(candidates(i))
+      val candidate = candidates(i)
       setUsername(user.id.get, candidate, readOnly = readOnly) match {
         case Right(username) =>
           keepTrying = false
@@ -585,13 +596,6 @@ class UserCommander @Inject() (
       log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
     }
     selectedUsername
-  }
-
-  def removeUsername(userId: Id[User]) = {
-    db.readWrite { implicit session =>
-      val user = userRepo.get(userId)
-      userRepo.save(user.copy(username = None, normalizedUsername = None))
-    }
   }
 
   def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
@@ -640,33 +644,6 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUsersWithNoUserName(readOnly: Boolean, max: Int): Int = {
-    var counter = 0
-    val batchSize = 50
-    var page = 0
-    var batch: Seq[User] = db.readOnlyMaster { implicit s =>
-      val batch = userRepo.getUsersWithNoUsername(page, batchSize)
-      page += 1
-      batch
-    }
-    while (batch.nonEmpty && counter < max) {
-      batch foreach { user =>
-        if (user.username.isDefined) throw new Exception(s"user already has a user name: $user")
-        val username = autoSetUsername(user, readOnly)
-        if (username.isEmpty) throw new Exception(s"could not set a username for $user")
-        log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username ${username.get}")
-        counter += 1
-        if (counter >= max) return counter
-      }
-      batch = db.readOnlyMaster { implicit s =>
-        val batch = userRepo.getUsersWithNoUsername(page, batchSize)
-        page += 1
-        batch
-      }
-    }
-    counter
-  }
-
   def reNormalizedUsername(readOnly: Boolean, max: Int): Int = {
     var counter = 0
     val batchSize = 50
@@ -678,11 +655,11 @@ class UserCommander @Inject() (
     }
     while (batch.nonEmpty && counter < max) {
       batch.map { user =>
-        val orig = user.normalizedUsername.get
-        val candidate = UsernameOps.normalize(user.username.get.value)
+        val orig = user.normalizedUsername
+        val candidate = UsernameOps.normalize(user.username.value)
         if (orig != candidate) {
           log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
-          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = Some(candidate))) }
+          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = candidate)) }
           counter += 1
           if (counter >= max) return counter
         } else {

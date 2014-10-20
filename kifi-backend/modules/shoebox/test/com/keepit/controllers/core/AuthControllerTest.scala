@@ -52,7 +52,7 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
     "reset password with valid email" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit rw =>
-          val user = inject[UserRepo].save(User(firstName = "Elaine", lastName = "Benes"))
+          val user = inject[UserRepo].save(User(firstName = "Elaine", lastName = "Benes", username = Username("test"), normalizedUsername = "test"))
           inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
             address = EmailAddress("elaine@gmail.com")))
           inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,

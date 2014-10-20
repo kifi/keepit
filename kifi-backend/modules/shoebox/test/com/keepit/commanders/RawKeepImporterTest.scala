@@ -60,7 +60,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     "properly handle imports" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]

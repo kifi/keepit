@@ -57,7 +57,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
       val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
-        userRepo.save(User(firstName = "Andrew", lastName = "C"))
+        userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
       }
 
       val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerIPhoneVersion().toString

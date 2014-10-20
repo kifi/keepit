@@ -42,7 +42,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int)(implicit injector: Injector) = {
-    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "") }.toList
+    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "", username = Username("test" + n), normalizedUsername = "test" + n) }.toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
         normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)

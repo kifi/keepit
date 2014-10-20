@@ -152,7 +152,7 @@ class FixedResultSearchCommander extends SearchCommander {
             0.5f, // recencyScore
             false // usefulPage
           )
-        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Some(Username("vorname")))))))
+        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Username("vorname"))))))
       ),
       1, // myTotal
       12, // friendsTotal

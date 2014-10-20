@@ -62,8 +62,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val googleUrl = "http://www.google.com"
         val (user1, uri) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672")))
-          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673")))
+          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
@@ -130,8 +130,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val googleUrl = "http://www.google.com"
         val (user1, uri) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672")))
-          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673")))
+          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
@@ -157,8 +157,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = coll2.id.get))
 
-          val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
-          val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674")))
+          val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
+          val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test"), normalizedUsername = "test"))
           val friends = List(user1933, user1935)
 
           friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1.id.get, user2 = friend.id.get)) }

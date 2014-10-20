@@ -17,9 +17,9 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
         val userInteractionCommander = inject[UserInteractionCommander]
         val userValueRepo = inject[UserValueRepo]
         val (user1, user2, user3, user4) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "George", lastName = "Washington", username = Some(Username("GDubs"))))
-          val user2 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("VampireXSlayer"))))
-          val user3 = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Some(Username("Benji"))))
+          val user1 = userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GDubs"), normalizedUsername = "a"))
+          val user2 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("VampireXSlayer"), normalizedUsername = "b"))
+          val user3 = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Username("Benji"), normalizedUsername = "c"))
           val user4 = EmailAddress("unclesam@usa.gov")
 
           userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].length === 0

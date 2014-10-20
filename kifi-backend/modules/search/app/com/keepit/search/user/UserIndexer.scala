@@ -40,7 +40,7 @@ object BasicUserSerializer {
     oos.writeString(basicUser.firstName)
     oos.writeString(basicUser.lastName)
     oos.writeString(basicUser.pictureName)
-    oos.writeString(basicUser.username.map(_.value).getOrElse(""))
+    oos.writeString(basicUser.username.value)
     oos.close()
     bos.close()
     bos.toByteArray()

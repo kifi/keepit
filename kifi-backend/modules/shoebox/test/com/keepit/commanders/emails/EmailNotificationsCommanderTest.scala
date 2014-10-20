@@ -21,14 +21,14 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
         val userRepo = inject[UserRepo]
         val deepLinkRepo = inject[DeepLinkRepo]
         val (link, william, abraham, george) = inject[Database].readWrite { implicit session =>
-          val william = userRepo.save(User(firstName = "William", lastName = "Shakespeare"))
-          val george = userRepo.save(User(firstName = "George", lastName = "Washington"))
+          val william = userRepo.save(User(firstName = "William", lastName = "Shakespeare", normalizedUsername = "test1"))
+          val george = userRepo.save(User(firstName = "George", lastName = "Washington", normalizedUsername = "test2"))
           inject[UserEmailAddressRepo].save(UserEmailAddress(userId = george.id.get, address = EmailAddress("joe@gmail.com")))
           val link = DeepLink(initiatorUserId = william.id, recipientUserId = george.id,
             uriId = None, deepLocator = DeepLocator("/foo/bar"))
           (deepLinkRepo.save(link),
             william,
-            userRepo.save(User(firstName = "Abraham", lastName = "Lincoln")),
+            userRepo.save(User(firstName = "Abraham", lastName = "Lincoln"), normalizedUsername = "test3"),
             george)
         }
 

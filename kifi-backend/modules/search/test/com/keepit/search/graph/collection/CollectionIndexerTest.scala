@@ -241,7 +241,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
 
     "dump Lucene Document" in {
       withInjector(helperModules: _*) { implicit injector =>
-        val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
+        val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test"))
         val uris = saveURIs(
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED)

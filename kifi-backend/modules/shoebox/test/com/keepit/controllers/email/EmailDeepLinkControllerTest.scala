@@ -26,8 +26,8 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
 
         val (heinlein, niven, uri, deepLink) = db.readWrite { implicit s =>
           deepLinkRepo.count === 0
-          val heinlein = userRepo.save(User(firstName = "Robert", lastName = "Heinlein"))
-          val niven = userRepo.save(User(firstName = "Larry", lastName = "Niven"))
+          val heinlein = userRepo.save(User(firstName = "Robert", lastName = "Heinlein", username = Username("test"), normalizedUsername = "test"))
+          val niven = userRepo.save(User(firstName = "Larry", lastName = "Niven", username = Username("test2"), normalizedUsername = "test2"))
           val uri = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/").get, Some("Google")))
           val deepLink = deepLinkRepo.save(DeepLink(
             initiatorUserId = heinlein.id,

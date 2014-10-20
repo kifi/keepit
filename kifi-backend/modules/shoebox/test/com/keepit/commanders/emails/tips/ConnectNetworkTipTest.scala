@@ -43,7 +43,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
 
   "ConnectNetworkTip" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit rw =>
-      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner"))
+      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test"))
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),

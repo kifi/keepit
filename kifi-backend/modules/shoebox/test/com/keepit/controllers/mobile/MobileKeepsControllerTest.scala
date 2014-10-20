@@ -58,7 +58,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
         val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -125,7 +125,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
 
         uriRepo.count === 0
@@ -194,7 +194,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, collections) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         uriRepo.count === 0
 
@@ -250,8 +250,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         libCommander.internSystemGeneratedLibraries(user2.id.get)
 
@@ -483,8 +483,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       val libCommander = inject[LibraryCommander]
 
       val (user, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
 
         libCommander.internSystemGeneratedLibraries(user1.id.get)
         libCommander.internSystemGeneratedLibraries(user2.id.get)
@@ -562,7 +562,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   "saveCollection create mode" in {
     withDb(controllerTestModules: _*) { implicit injector =>
       val user = db.readWrite { implicit session =>
-        userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+        userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
       }
 
       inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
@@ -594,7 +594,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     "allCollections" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
@@ -634,7 +634,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     "keepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -681,7 +681,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     "addKeeps" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -725,7 +725,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     "unkeepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[FakeUserActionsHelper].setUser(user)
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
@@ -783,7 +783,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     "unkeepBatch" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -850,7 +850,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val user = db.readWrite { implicit session =>
           keepRepo.count === 0
           collectionRepo.all.size === 0
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
 
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)

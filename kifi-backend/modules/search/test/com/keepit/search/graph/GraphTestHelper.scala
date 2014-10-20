@@ -26,12 +26,12 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def initData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "Agrajag", lastName = ""),
-      User(firstName = "Barmen", lastName = ""),
-      User(firstName = "Colin", lastName = ""),
-      User(firstName = "Dan", lastName = ""),
-      User(firstName = "Eccentrica", lastName = ""),
-      User(firstName = "Hactar", lastName = "")
+      User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Barmen", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Colin", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Dan", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Eccentrica", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Hactar", lastName = ", username = Username("test"), normalizedUsername = "test"")
     )
     val uris = saveURIs(
       NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
@@ -46,8 +46,8 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def superBigData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "rich", lastName = ""),
-      User(firstName = "poor", lastName = "")
+      User(firstName = "rich", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "poor", lastName = ", username = Username("test"), normalizedUsername = "test"")
     )
 
     val uris = saveURIs(
