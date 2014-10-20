@@ -149,7 +149,7 @@ angular.module('kifi')
       });
     };
 
-    init();
+    init(true);
 
 
     $scope.submitPassPhrase = function () {

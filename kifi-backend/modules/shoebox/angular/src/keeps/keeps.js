@@ -119,7 +119,7 @@ angular.module('kifi')
           var selectedKeeps = scope.selection.getSelected(scope.keeps);
           var selectedLibrary = scope.librarySelection.library;
 
-          keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), selectedLibrary.id).then(function () {
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
             libraryService.fetchLibrarySummaries(true).then(function () {
