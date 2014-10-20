@@ -30,6 +30,10 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
 
+    $scope.userIsOwner = function () {
+      return $scope.library && $scope.library.owner.id === profileService.me.id;
+    };
+
 
     //
     // Scope methods.
