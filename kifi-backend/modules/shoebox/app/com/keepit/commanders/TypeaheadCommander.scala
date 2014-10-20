@@ -5,28 +5,26 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.db.{ ExternalId, SequenceNumber, State, Id }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import com.keepit.common.Collection.dedupBy
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ Promise, Future }
+import scala.concurrent.Future
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -351,36 +349,44 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
-    val q = query.trim
-    if (q.length == 0) {
-      val contacts = interactionCommander.getRecentInteractions(userId)
-        .take(limit.getOrElse(Int.MaxValue))
-        .sortBy(_.recipient.isInstanceOf[EmailRecipient])
-        .map { interaction =>
-          interaction.recipient match {
-            case UserRecipient(id) =>
-              val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
-              UserContactResult(name = user.fullName, id = user.externalId, pictureName = user.pictureName.map(_ + ".jpg"))
-            case EmailRecipient(email) => // TODO: include contact name if address is in user's address book
-              EmailContactResult(name = None, email = email)
-          }
-        }
-      Future.successful(contacts)
-    } else {
-      aggregate(userId, q, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) map { top =>
-        top flatMap {
-          case (snType, hit) => hit.info match {
-            case e: RichContact =>
-              Some(EmailContactResult(name = e.name, email = e.email))
-            case u: User =>
-              Some(UserContactResult(name = u.fullName, id = u.externalId, pictureName = u.pictureName.map(_ + ".jpg")))
-            case _ =>
-              airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
-              None
-          }
-        }
+  def suggestFriendsAndContacts(userId: Id[User], limit: Option[Int]): (Seq[(Id[User], BasicUser)], Seq[BasicContact]) = {
+    val allRecentInteractions = interactionCommander.getRecentInteractions(userId)
+    val relevantInteractions = limit.map(allRecentInteractions.take(_)) getOrElse allRecentInteractions
+    val (userIds, emailAddresses) = relevantInteractions.foldLeft((Seq.empty[Id[User]], Seq.empty[EmailAddress])) {
+      case ((userIds, emailAddresses), InteractionInfo(UserRecipient(userId), _)) => (userIds :+ userId, emailAddresses)
+      case ((userIds, emailAddresses), InteractionInfo(EmailRecipient(emailAddress), _)) => (userIds, emailAddresses :+ emailAddress)
+    }
+
+    val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
+    val users = userIds.map(id => id -> usersById(id))
+    val contacts = emailAddresses.map(BasicContact(_)) // TODO(Aaron): include contact name if address is in user's address book
+    (users, contacts)
+  }
+
+  def searchFriendsAndContacts(userId: Id[User], query: String, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
+    aggregate(userId, query, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
+      val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
+        case ((users, contacts), nextContact: RichContact) => (users, contacts :+ nextContact)
+        case ((users, contacts), nextUser: User) => (users :+ nextUser, contacts)
+        case ((users, contacts), nextHit) =>
+          airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
+          (users, contacts)
       }
+      (users.map(user => user.id.get -> BasicUser.fromUser(user)), contacts.map(BasicContact.fromRichContact))
+    }
+  }
+
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
+    val futureFriendsAndContacts = query.trim match {
+      case q if q.isEmpty => Future.successful(suggestFriendsAndContacts(userId, limit))
+      case q => searchFriendsAndContacts(userId, q, limit)
+    }
+
+    futureFriendsAndContacts.map {
+      case (users, contacts) =>
+        val userResults = users.map { case (userId, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
+        val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
+        userResults ++ emailResults
     }
   }
 
