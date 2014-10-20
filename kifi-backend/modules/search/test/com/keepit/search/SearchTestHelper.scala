@@ -64,8 +64,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
 
     val collectionIndexers = activeShards.local.map { shard =>
-      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
-      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
+      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
     }
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])

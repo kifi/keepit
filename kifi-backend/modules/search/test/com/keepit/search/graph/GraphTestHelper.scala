@@ -126,8 +126,7 @@ trait GraphTestHelper extends SearchTestInjector {
   }
 
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): CollectionIndexer = {
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
-    new StandaloneCollectionIndexer(collectionDir, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new StandaloneCollectionIndexer(collectionDir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkUserGraphsSearcherFactory()(implicit injector: Injector) = {
