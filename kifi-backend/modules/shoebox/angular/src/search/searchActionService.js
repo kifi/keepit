@@ -46,7 +46,8 @@ angular.module('kifi')
           decompressedLibraries.push({
             id: lib.id,
             name: lib.name,
-            keeperPic: friendService.getPictureUrlForUser(user)
+            keeperPic: friendService.getPictureUrlForUser(user),
+            path: lib.path
           });
           libUsers[idxUser] = true;
         }
