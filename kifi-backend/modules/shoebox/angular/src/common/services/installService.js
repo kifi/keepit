@@ -17,6 +17,11 @@ angular.module('kifi')
       other.parentNode.insertBefore(elem, other);
     }
 
+    var detectIfIsInstalled = function () {
+      var kifiAttr = $window.document.children[0].attributes['data-kifi-ext'];
+      return !!(kifiAttr && kifiAttr.value);
+    };
+
     function installedVersion() {
       return angular.element(document.documentElement).attr('data-kifi-ext');
     }
@@ -53,6 +58,7 @@ angular.module('kifi')
       canInstall: supported,
       installInProgress: false,
       installed: false,
+      detectIfIsInstalled: detectIfIsInstalled,
       error: false,
       installedVersion: installedVersion,
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
@@ -73,7 +79,9 @@ angular.module('kifi')
           }
         }
         return false;
-      }
+      },
+      isValidChrome: isChrome && supported,
+      isValidFirefox: isFirefox && supported
     };
 
     return api;

@@ -120,6 +120,15 @@ angular.module('kifi')
       },
 
       ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
+
+      ////////////////////////////
       // Libraries              //
       ////////////////////////////
       getLibrarySummaries: route('/libraries'),

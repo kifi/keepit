@@ -140,14 +140,20 @@ angular.module('kifi')
         $scope.page = 'library';
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
-          if (resp.data.error && authToken) {
-            $scope.page = 'login';
-          } else {
-            $scope.page = 'permission_denied';
+          $scope.loading = false;
+          $scope.page = 'permission_denied';
+          if (resp.data.error) {
+            if (resp.data.error === 'no_library_found') {
+              $scope.page = 'not_found';
+            } else if (authToken) {
+              $scope.page = 'login';
+            }
           }
         }
       });
     };
+
+    $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
 
     init();
 
