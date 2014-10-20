@@ -238,5 +238,12 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
       }
     }
+
+    "detect sensitive terms in tags" in {
+      Hashtag("fuck you").isSensitive === true
+      Hashtag("Fuck you").isSensitive === true
+      Hashtag("you suck").isSensitive === true
+      Hashtag("how nice of you").isSensitive === false
+    }
   }
 }
