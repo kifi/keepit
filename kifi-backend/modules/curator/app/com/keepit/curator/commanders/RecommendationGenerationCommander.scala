@@ -50,7 +50,7 @@ class RecommendationGenerationCommander @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(8)
+  val recommendationGenerationLock = new ReactiveLock(4)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
