@@ -188,57 +188,6 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
       }
     }
 
-    "detect collection names (partial match)" in {
-      withInjector(helperModules: _*) { implicit injector =>
-        val (users, uris) = initData
-
-        val collectionIndexer = mkCollectionIndexer()
-
-        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
-        saveBookmarksByURI(expectedUriToUsers)
-
-        val user = users.head
-        val bookmarks = getBookmarksByUser(user.id.get)
-        val collNames = Seq("Design", "Flat Design", "Web Search", "Spider Web", "Web")
-        val collections = (collNames zip bookmarks).map {
-          case (name, bookmark) =>
-            saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
-        }
-        collectionIndexer.update()
-        collectionIndexer.numDocs === collections.size
-
-        val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
-        val searcher = new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, user.id.get)
-
-        def getCollectionId(name: String): Long = {
-          collections.find(_.name.tag == name).get.id.get.id
-        }
-        def detect(text: String) = {
-          val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
-          val stemmedTermSeq = it.toIndexedSeq
-          it.close()
-          searcher.detectCollectionNames(stemmedTermSeq)
-        }
-        detect("design") === Set(
-          (0, 1, getCollectionId("Design")),
-          (0, 1, getCollectionId("Flat Design"))
-        )
-
-        detect("designs") === Set(
-          (0, 1, getCollectionId("Design")),
-          (0, 1, getCollectionId("Flat Design"))
-        )
-
-        detect("flat") === Set((0, 1, getCollectionId("Flat Design")))
-
-        detect("flat design") === Set((1, 1, getCollectionId("Design")), (0, 1, getCollectionId("Flat Design")), (1, 1, getCollectionId("Flat Design")))
-
-        detect("web design") === Set((0, 1, getCollectionId("Web")), (0, 1, getCollectionId("Web Search")), (0, 1, getCollectionId("Spider Web")), (1, 1, getCollectionId("Design")), (1, 1, getCollectionId("Flat Design")))
-
-        detect("boring flat design movement") === Set((2, 1, getCollectionId("Design")), (1, 1, getCollectionId("Flat Design")), (2, 1, getCollectionId("Flat Design")))
-      }
-    }
-
     "dump Lucene Document" in {
       withInjector(helperModules: _*) { implicit injector =>
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))

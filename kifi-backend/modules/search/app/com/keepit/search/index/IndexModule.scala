@@ -120,18 +120,13 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedCollectionIndexer = {
     val version = IndexerVersionProviders.Collection.getVersionByStatus(serviceDisovery)
-    def collectionNameIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.collectionName.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
-      log.info(s"storing CollectionNameIndex${indexNameSuffix(shard, version)} in $dir")
-      new CollectionNameIndexer(dir, airbrake)
-    }
-    def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
+    def collectionIndexer(shard: Shard[NormalizedURI]): CollectionIndexer = {
       val dir = getIndexDirectory("index.collection.directory", shard, version, backup, conf, IndexerVersionProviders.Collection.getVersionsForCleanup())
       log.info(s"storing CollectionIndex${indexNameSuffix(shard, version)} in $dir")
-      new CollectionIndexer(dir, collectionNameIndexer, airbrake)
+      new CollectionIndexer(dir, airbrake)
     }
 
-    val indexShards = activeShards.local.map { shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
+    val indexShards = activeShards.local.map { shard => (shard, collectionIndexer(shard)) }
     new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
