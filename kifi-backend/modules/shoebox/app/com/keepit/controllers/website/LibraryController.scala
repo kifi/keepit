@@ -81,17 +81,6 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
-    val hashtag = Hashtag(tag)
-    val id = Library.decodePublicId(libraryId).get
-    SafeFuture {
-      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-        case Right(success) => Ok(JsString("success"))
-      }
-    }
-  }
-
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
     libraryCommander.getLibraryById(request.userIdOpt, id) map {
@@ -254,6 +243,17 @@ class LibraryController @Inject() (
         val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
         Ok(Json.obj("members" -> maybeMembers))
+    }
+  }
+
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
+    val hashtag = Hashtag(tag)
+    val id = Library.decodePublicId(libraryId).get
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
     }
   }
 
