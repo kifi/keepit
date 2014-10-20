@@ -17,6 +17,7 @@ import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
 import Q.interpolation
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User] {
@@ -35,6 +36,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
+  def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -218,4 +220,7 @@ class UserRepoImpl @Inject() (
     for (f <- rows if f.normalizedUsername is normalizedUsername) yield f
   }
 
+  def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {
+    sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
+  }
 }
