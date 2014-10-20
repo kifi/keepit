@@ -58,7 +58,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
@@ -89,7 +89,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
               firstName = "Joe",
               lastName = "Smith",
               pictureName = "asdf",
-              username = Some(Username("joe")))),
+              username = Username("joe"))),
             others = 12,
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),
@@ -122,7 +122,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topPublicRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
@@ -153,7 +153,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
               firstName = "Joe",
               lastName = "Smith",
               pictureName = "asdf",
-              username = Some(Username("joe")))),
+              username = Username("joe"))),
             others = 12,
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),

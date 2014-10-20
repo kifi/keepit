@@ -36,7 +36,6 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
-  def getUsersWithNoUsername(page: Int, batchSize: Int)(implicit session: RSession): Seq[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
 
@@ -66,9 +65,9 @@ class UserRepoImpl @Inject() (
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def username = column[Username]("username", O.Nullable)
-    def normalizedUsername = column[String]("normalized_username", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?, normalizedUsername.?) <> ((User.apply _).tupled, User.unapply)
+    def username = column[Username]("username", O.NotNull)
+    def normalizedUsername = column[String]("normalized_username", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username, normalizedUsername) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -193,11 +192,6 @@ class UserRepoImpl @Inject() (
 
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]] = {
     (for (f <- rows if f.state === UserStates.ACTIVE) yield f.id).list
-  }
-
-  // using this only for migration period, will delete afterwards
-  def getUsersWithNoUsername(page: Int, size: Int)(implicit session: RSession): Seq[User] = {
-    (for (f <- rows if f.username isNull) yield f).drop(page * size).take(size).list
   }
 
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User] = super.getBySequenceNumber(seq, fetchSize)

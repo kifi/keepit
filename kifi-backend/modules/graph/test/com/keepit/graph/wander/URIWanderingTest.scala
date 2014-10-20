@@ -51,7 +51,7 @@ trait URIWanderingTestHelper {
     SparseLDAGraphUpdate(ModelVersion[DenseLDA](1), UriSparseLDAFeatures(uriId = Id[NormalizedURI](uriId), uriSeq = SequenceNumber[NormalizedURI](uriId), feat))
   }
 
-  def genUserGraphUpdate(i: Int, firstName: String, lastName: String) = UserGraphUpdate(User(id = Some(Id[User](i)), firstName = firstName, lastName = lastName, seq = SequenceNumber(i)))
+  def genUserGraphUpdate(i: Int, firstName: String, lastName: String) = UserGraphUpdate(User(id = Some(Id[User](i)), firstName = firstName, lastName = lastName, seq = SequenceNumber(i), username = Username("test"), normalizedUsername = "test"))
   def genKeepUpdate(userId: Int, keepId: Int) = KeepGraphUpdate(Keep(id = Some(Id[Keep](keepId)), uriId = Id[NormalizedURI](keepId), urlId = Id[URL](keepId), url = "url" + keepId,
     userId = Id[User](userId), source = KeepSource("site"), seq = SequenceNumber(keepId), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](keepId)), inDisjointLib = true)) // libId == keepId (?)
 

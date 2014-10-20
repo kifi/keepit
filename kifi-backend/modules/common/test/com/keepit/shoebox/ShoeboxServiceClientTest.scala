@@ -16,8 +16,8 @@ import com.keepit.common.cache.FakeCacheModule
 
 class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
 
-  val user1965 = User(firstName = "Richard", lastName = "Feynman", username = Some(Username("dickyfey"))).withId(Id[User](1965))
-  val user1933 = User(firstName = "Paul", lastName = "Dirac", username = Some(Username("cyberpaul1992"))).withId(Id[User](1933))
+  val user1965 = User(firstName = "Richard", lastName = "Feynman", username = Username("dickyfey"), normalizedUsername = "dickyfey").withId(Id[User](1965))
+  val user1933 = User(firstName = "Paul", lastName = "Dirac", username = Username("cyberpaul1992"), normalizedUsername = "cyberpaul1992").withId(Id[User](1933))
   val users = Seq(user1965, user1933)
   val phrases = Seq(
     Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique"),

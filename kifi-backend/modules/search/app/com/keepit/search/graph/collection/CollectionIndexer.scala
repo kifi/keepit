@@ -1,8 +1,5 @@
 package com.keepit.search.graph.collection
 
-import org.apache.lucene.document.BinaryDocValuesField
-import org.apache.lucene.index.Term
-import org.apache.lucene.util.BytesRef
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.strings._
@@ -11,12 +8,10 @@ import com.keepit.model.CollectionStates._
 import com.keepit.search.index._
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.{ Indexable, Indexer }
-import com.keepit.search.Searcher
 import com.keepit.search.graph.URIList
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Await }
-import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
 
@@ -35,35 +30,18 @@ object CollectionFields {
 }
 
 class CollectionIndexer(
-  indexDirectory: IndexDirectory,
-  collectionNameIndexer: CollectionNameIndexer,
-  override val airbrake: AirbrakeNotifier)
-    extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
+    indexDirectory: IndexDirectory,
+    override val airbrake: AirbrakeNotifier) extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
 
-  import CollectionFields._
   import CollectionIndexer.CollectionIndexable
 
   override val commitBatchSize = 100
   private val fetchSize = 100
 
-  private[this] var searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
-
-  def getSearchers: (Searcher, Searcher) = searchers
-
   override def onFailure(indexable: Indexable[Collection, Collection], e: Throwable): Unit = {
     val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
     airbrake.notify(msg)
     super.onFailure(indexable, e)
-  }
-
-  override def close(): Unit = {
-    collectionNameIndexer.close()
-    super.close()
-  }
-
-  override def backup(): Unit = {
-    collectionNameIndexer.backup()
-    super.backup()
   }
 
   def update(): Int = throw new UnsupportedOperationException()
@@ -75,9 +53,6 @@ class CollectionIndexer(
           buildIndexable(collection, bookmarks.filter(b => shard.contains(b.uriId)))
       }
     }
-    collectionNameIndexer.update(name, data.map(_._1), new CollectionSearcher(getSearcher))
-    // update searchers together to get a consistent view of indexes
-    searchers = (this.getSearcher, collectionNameIndexer.getSearcher)
     cnt
   }
 
@@ -91,7 +66,7 @@ class CollectionIndexer(
   }
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("CollectionIndex" + name) ++ collectionNameIndexer.indexInfos("CollectionNameIndex" + name)
+    super.indexInfos("CollectionIndex" + name)
   }
 }
 

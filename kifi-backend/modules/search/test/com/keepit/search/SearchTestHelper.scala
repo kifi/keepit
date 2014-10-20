@@ -41,7 +41,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int)(implicit injector: Injector) = {
-    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "") }.toList
+    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "", username = Username("test" + n), normalizedUsername = "test" + n) }.toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
         normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)
@@ -64,8 +64,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val shardedKeepIndexer = new ShardedKeepIndexer(keepIndexers.toMap, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
 
     val collectionIndexers = activeShards.local.map { shard =>
-      val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
-      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
+      val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
     }
     val shardedCollectionIndexer = new ShardedCollectionIndexer(collectionIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])

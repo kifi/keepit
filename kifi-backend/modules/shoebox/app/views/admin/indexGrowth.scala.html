@@ -68,7 +68,7 @@
 
     if (chart == "articleIndex") {
       options.title = "Article Index"
-      options.target = ["substr(stats.gauges.search.index.article_*.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.article_v1_*.size,4,5)"]
       options.logBase = 2
     }
 
@@ -79,20 +79,14 @@
     }
 
     if (chart == "libraryIndex") {
-      options.title = "Collection Index"
-      options.target = ["substr(stats.gauges.search.index.library.size,4,5)"]
-      options.logBase = 2
-    }
-
-    if (chart == "bookmarkIndex") {
-      options.title = "Bookmark Index"
-      options.target = ["substr(stats.gauges.search.index.bookmarkStore_*.size,4,5)", "substr(stats.gauges.search.index.urigraph_*.size,4,5)"]
+      options.title = "Library Index"
+      options.target = ["substr(stats.gauges.search.index.library_v1.size,4,5)"]
       options.logBase = 2
     }
 
     if (chart == "collectionIndex") {
       options.title = "Collection Index"
-      options.target = ["substr(stats.gauges.search.index.collectionName_*.size,4,5)", "substr(stats.gauges.search.index.collection_*.size,4,5)"]
+      options.target = ["substr(stats.gauges.search.index.collection_*.size,4,5)"]
       options.logBase = 2
     }
 
@@ -110,7 +104,6 @@
     renderChart("articleIndex")
     renderChart("keepIndex")
     renderChart("libraryIndex")
-    renderChart("bookmarkIndex")
     renderChart("collectionIndex")
     renderChart("otherIndex")
   }

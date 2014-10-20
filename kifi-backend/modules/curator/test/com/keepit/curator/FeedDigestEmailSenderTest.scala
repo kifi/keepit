@@ -17,7 +17,7 @@ import com.keepit.curator.queue.{ FakeFeedDigestEmailQueue, FakeFeedDigestEmailQ
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ UserExperiment, ExperimentType, LibraryVisibility, Library, URL, NormalizedURI, Keep, KeepSource, SocialUserInfo, User }
+import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -89,17 +89,17 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       shoebox.socialUserInfosByUserId(user1.id.get) = List()
       shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
-      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache",
+      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mustache"))
-      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
+      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
+      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
+      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
+      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley",
+      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("0"))
 
       val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]

@@ -173,6 +173,56 @@ angular.module('kifi')
       });
     }
 
+    function copyToLibrary(keepIds, libraryId) {
+      $analytics.eventTrack('user_clicked_page', {
+        // TODO(yiping): should we have a different action
+        // for keeping to library?
+        'action': 'keep',
+        'path': $location.path()
+      });
+
+      var data = {
+        to: libraryId,
+        keeps: keepIds
+      };
+
+      $log.log('keepActionService.copyToLibrary()', data);
+
+      var url = routeService.copyKeepsToLibrary();
+      return $http.post(url, data, {}).then(function (res) {
+        _.uniq(res.data.keeps, function (keep) {
+          return keep.url;
+        });
+
+        return res.data;
+      });
+    }
+
+    function moveToLibrary(keepIds, libraryId) {
+      $analytics.eventTrack('user_clicked_page', {
+        // TODO(yiping): should we have a different action
+        // for keeping to library?
+        'action': 'keep',
+        'path': $location.path()
+      });
+
+      var data = {
+        to: libraryId,
+        keeps: keepIds
+      };
+
+      $log.log('keepActionService.moveToLibrary()', data);
+
+      var url = routeService.moveKeepsToLibrary();
+      return $http.post(url, data, {}).then(function (res) {
+        _.uniq(res.data.keeps, function (keep) {
+          return keep.url;
+        });
+
+        return res.data;
+      });
+    }
+
     // When a url is added as a keep, the returned keep does not have the full
     // keep information we need to display it. This function fetches that
     // information.
@@ -253,6 +303,8 @@ angular.module('kifi')
       keepMany: keepMany,
       keepUrl: keepUrl,
       keepToLibrary: keepToLibrary,
+      copyToLibrary: copyToLibrary,
+      moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,

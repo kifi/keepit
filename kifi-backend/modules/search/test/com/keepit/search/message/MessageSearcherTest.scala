@@ -23,9 +23,9 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
 
   def setupIndexer()(implicit injector: Injector) = {
 
-    val user1 = BasicUser(ExternalId(), "Mr", "Spock", "0.jpg", Some(Username("spockizle")))
-    val user2 = BasicUser(ExternalId(), "James", "Kirk", "0.jpg", Some(Username("lilkirk")))
-    val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg", Some(Username("picboyy")))
+    val user1 = BasicUser(ExternalId(), "Mr", "Spock", "0.jpg", Username("spockizle"))
+    val user2 = BasicUser(ExternalId(), "James", "Kirk", "0.jpg", Username("lilkirk"))
+    val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg", Username("picboyy"))
 
     val thread1 = ThreadContent(
       mode = FULL,

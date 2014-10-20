@@ -55,7 +55,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     shoebox.saveUsers(User(
       id = Some(Id[User](num)),
       firstName = "Some",
-      lastName = "User" + num,
+      lastName = "User" + num, username = Username("test"), normalizedUsername = "test",
       primaryEmail = Some(EmailAddress(s"user$num@kifi.com"))))(0)
 
   def makeNormalizedUri(id: Int, url: String) =

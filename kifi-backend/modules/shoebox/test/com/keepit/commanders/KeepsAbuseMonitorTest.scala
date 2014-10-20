@@ -24,7 +24,7 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 200, absoluteError = 500, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         monitor.inspect(user.id.get, 20)
         1 === 1
@@ -40,8 +40,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 2, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -77,8 +77,8 @@ class KeepsAbuseMonitorTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val monitor = new KeepsAbuseMonitor(absoluteWarn = 1, absoluteError = 30, keepRepo = keepRepo, db = db, airbrake = inject[AirbrakeNotifier])
         val user = db.readWrite { implicit s =>
-          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith"))
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
+          inject[UserRepo].save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
