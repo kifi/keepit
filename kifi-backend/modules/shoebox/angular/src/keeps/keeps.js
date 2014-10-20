@@ -287,7 +287,6 @@ angular.module('kifi')
                 });
 
                 scope.librarySelection = {};
-                scope.libSelectTopOffset = 300;  // This needs to be dynamic.
                 scope.clickAction = function (widgetElement) {
                   if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();
