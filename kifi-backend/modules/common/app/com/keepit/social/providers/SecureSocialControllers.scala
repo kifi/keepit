@@ -1,5 +1,6 @@
 package com.keepit.social.providers
 
+import com.keepit.common.controller.KifiSession
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._
@@ -167,7 +168,8 @@ object LoginPage extends Controller {
     }
     val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session))
+      case Some(u) =>
+        result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session) - KifiSession.FORTYTWO_USER_ID)
       case None => result
     }
   }
