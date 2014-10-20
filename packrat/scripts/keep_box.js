@@ -284,7 +284,7 @@ var keepBox = keepBox || (function () {
 
   function addKeepBindings($view) {
     var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
-    var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 3000);
+    var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 2400);
     $view
     .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, null, $view))
     .on('blur', '.kifi-keep-box-keep-title', function () {
@@ -440,8 +440,8 @@ var keepBox = keepBox || (function () {
       formatToken: formatTagToken,
       formatResult: formatTagResult,
       showResults: showTagSuggestions,
-      onAdd: $.proxy(onAddTag, null, library.id),
-      onDelete: $.proxy(onDeleteTag, null, library.id)
+      onAdd: $.proxy(onAddTag, null, $view, library.id),
+      onDelete: $.proxy(onDeleteTag, null, $view, library.id)
     });
     $view.data({
       library: library,
@@ -544,6 +544,7 @@ var keepBox = keepBox || (function () {
     var data = $view.data();
     var i = data.imageIdx;
     if (i !== data['imageIdx' in data.saving ? 'saving' : 'saved'].imageIdx) {
+      var deferred = Q.defer();
       data.saving.imageIdx = i;
       api.port.emit('save_keep_image', {
         libraryId: data.library.id,
@@ -554,8 +555,12 @@ var keepBox = keepBox || (function () {
         }
         if (success) {
           data.saved.imageIdx = i;
+          deferred.resolve();
+        } else {
+          deferred.reject();
         }
       });
+      showSaveKeepProgress($view, deferred.promise);
     }
   }
 
@@ -565,6 +570,7 @@ var keepBox = keepBox || (function () {
     var data = $view.data();
     var val = input.value.trim();
     if (val && val !== data['title' in data.saving ? 'saving' : 'saved'].title) {
+      var deferred = Q.defer();
       data.saving.title = val;
       api.port.emit('save_keep_title', {libraryId: data.library.id, title: val}, function (success) {
         if (data.saving.title === val) {
@@ -572,9 +578,20 @@ var keepBox = keepBox || (function () {
         }
         if (success) {
           data.saved.title = val;
+          deferred.resolve();
+        } else {
+          deferred.reject();
         }
       });
+      showSaveKeepProgress($view, deferred.promise);
     }
+  }
+
+  function showSaveKeepProgress($view, promise) {
+    var $pp = $view.find('.kifi-keep-box-progress-parent').empty();
+    progress($pp, promise).fin(function () {
+      $pp.children().delay(300).fadeOut(300);
+    });
   }
 
   // Takes a promise for a task's outcome. Returns a promise that relays
@@ -630,17 +647,28 @@ var keepBox = keepBox || (function () {
     done();
   }
 
-  function onAddTag(libraryId, tag) {
+  function onAddTag($view, libraryId, tag) {
+    var deferred = Q.defer();
     var $tags = $(this);
     api.port.emit('tag', {libraryId: libraryId, tag: tag.tag}, function (name) {
-      if (name && name !== tag.tag) {
-        $tags.tokenInput('replace', tag, {tag: name});
+      if (name) {
+        if (name !== tag.tag) {
+          $tags.tokenInput('replace', tag, {tag: name});
+        }
+        deferred.resolve();
+      } else {
+        deferred.reject();
       }
     });
+    showSaveKeepProgress($view, deferred.promise);
   }
 
-  function onDeleteTag(libraryId, tag) {
-    api.port.emit('untag', {libraryId: libraryId, tag: tag.tag}, api.noop);
+  function onDeleteTag($view, libraryId, tag) {
+    var deferred = Q.defer();
+    api.port.emit('untag', {libraryId: libraryId, tag: tag.tag}, function (success) {
+      deferred[success ? 'resolve' : 'reject']();
+    });
+    showSaveKeepProgress($view, deferred.promise);
   }
 
   function createLibrary($view, $btn) {
