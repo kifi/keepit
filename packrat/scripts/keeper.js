@@ -127,7 +127,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        showKeepBox();
+        if (window.keepBox && keepBox.showing()) {
+          keepBox.hide();
+        } else {
+          showKeepBox();
+        }
       }
     }, 400, true))
     .hoverfu('.kifi-keep-btn', function (configureHover) {
