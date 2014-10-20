@@ -81,8 +81,8 @@ angular.module('kifi')
           visible = true;
           $timeout(function (){
             el.css({ //WARNING HACK (causing the element to be layed out so I can get the size correctly in the next event. Better ideas appreciated.)
-              top: '42px',
-              left: '42px'
+              top: '-542px',
+              left: '-542px'
             });
             $timeout(ensureCorrectPositioning);
           });
