@@ -126,6 +126,7 @@ angular.module('kifi')
           recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
           $scope.loading = false;
+          console.log(recos)
         } else {
           // If the user has no recommendations, show some popular
           // keeps/libraries as recommendations.
