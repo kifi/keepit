@@ -55,10 +55,6 @@ class KBooleanQuery() extends BooleanQuery(false) {
 
       override def getValueForNormalization(): Float = normalizationValue
 
-      override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-        throw new UnsupportedOperationException()
-      }
-
       def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
         out ++= weightList
       }
@@ -95,5 +91,3 @@ class KBooleanQuery() extends BooleanQuery(false) {
     }
   }
 }
-
-class KBooleanQueryException(msg: String) extends Exception(msg)

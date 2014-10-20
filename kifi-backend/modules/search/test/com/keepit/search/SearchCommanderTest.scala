@@ -25,8 +25,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, shardedCollectionIndexer, indexer, userGraphIndexer, _, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
-        graph.update()
+        val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
         indexer.update() === uris.size
         Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate()), Duration(60, SECONDS))
 

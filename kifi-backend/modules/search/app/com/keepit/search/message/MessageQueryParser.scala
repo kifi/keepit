@@ -1,6 +1,6 @@
 package com.keepit.search.message
 
-import com.keepit.search.query.parser.{ QueryParser, DefaultSyntax, PercentMatch, QueryParserException }
+import com.keepit.search.query.parser.{ QueryParser, DefaultSyntax, QueryParserException }
 import com.keepit.search.query.QueryUtil.copy
 
 import org.apache.lucene.search.{ Query, TermQuery, PhraseQuery, DisjunctionMaxQuery }
@@ -8,7 +8,7 @@ import org.apache.lucene.analysis.Analyzer
 
 class MessageQueryParser(
     analyzer: Analyzer,
-    stemmingAnalyzer: Analyzer) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch {
+    stemmingAnalyzer: Analyzer) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax {
 
   def copyFieldQuery(query: Query, field: String) = {
     query match {
