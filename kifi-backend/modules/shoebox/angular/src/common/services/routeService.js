@@ -112,6 +112,12 @@ angular.module('kifi')
       addKeepsToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps');
       },
+      copyKeepsToLibrary: function () {
+        return route('/libraries/copy');
+      },
+      moveKeepsToLibrary: function () {
+        return route('/libraries/move');
+      },
       removeKeepFromLibrary: function (libraryId, keepId) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId);
       },

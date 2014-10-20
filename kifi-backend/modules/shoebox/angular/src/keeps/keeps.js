@@ -61,12 +61,13 @@ angular.module('kifi')
 ])
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'selectionService', 'tagService', 'undoService',
-  function ($window, $timeout, keepActionService, libraryService, selectionService, tagService, undoService) {
+  '$rootScope', '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'tagService', 'undoService',
+  function ($rootScope, $window, $timeout, keepActionService, libraryService, modalService, selectionService, tagService, undoService) {
 
     return {
       restrict: 'A',
       scope: {
+        library: '=',
         keeps: '=',
         keepsLoading: '=',
         keepsHasMore: '=',
@@ -113,6 +114,34 @@ angular.module('kifi')
           }
         }
 
+        function copyToLibrary () {
+          // Copies the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('librarySummariesChanged');
+            });
+          });
+        }
+
+        function moveToLibrary () {
+          // Moves the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true).then(function () {
+              $rootScope.$emit('librarySummariesChanged');
+            });
+          });
+        }
+
 
         //
         // Scope data.
@@ -123,9 +152,6 @@ angular.module('kifi')
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
-
-        // Not used in template right now but will be when we hide bulk privacy changes.
-        scope.librariesEnabled = libraryService.isAllowed();
 
 
         //
@@ -247,6 +273,34 @@ angular.module('kifi')
         // Watches and listeners.
         //
         scope.$watch(function () {
+          return libraryService.isAllowed();
+        }, function (newVal) {
+          scope.librariesEnabled = newVal;
+        });
+
+        scope.$watch('keepsLoading', function (newVal) {
+          if (!newVal) {
+            if (scope.librariesEnabled) {
+              libraryService.fetchLibrarySummaries().then(function () {
+                scope.libraries = _.filter(libraryService.librarySummaries, function (library) {
+                  return (library.access !== 'read_only') && (library.id !== scope.library.id);
+                });
+
+                scope.librarySelection = {};
+                scope.libSelectTopOffset = 300;  // This needs to be dynamic.
+                scope.clickAction = function (widgetElement) {
+                  if (widgetElement.closest('.copy-to-library').length) {
+                    copyToLibrary();
+                  } else if (widgetElement.closest('.move-to-library').length) {
+                    moveToLibrary();
+                  }
+                };
+              });
+            }
+          }
+        });
+
+        scope.$watch(function () {
           return scope.selection.getSelected(scope.keeps).length;
         }, function (numSelected) {
           scope.disableEditTags();
@@ -258,6 +312,14 @@ angular.module('kifi')
         }, function(enabled) {
           if (!enabled) {
             scope.selection.unselectAll();
+          }
+        });
+
+        $rootScope.$on('librarySummariesChanged', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+              return lib.access !== 'read_only';
+            });
           }
         });
 
