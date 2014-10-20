@@ -1,7 +1,7 @@
 <div class="kf-keep library-card">
   <div class="kf-keep-body">
-    <div class="kf-keep-lib-header">
-      <div ng-switch="library.kind" class="kf-keep-lib-icon-container">
+    <div class="kf-keep-lib-header" ng-class="{ 'loggedOutUser': isUserLoggedOut }">
+      <div ng-if="!isUserLoggedOut" ng-switch="library.kind" class="kf-keep-lib-icon-container">
         <div ng-switch-when="system_main" class="kf-keep-lib-icon svg-main-library-big"></div>
         <div ng-switch-when="system_secret" class="kf-keep-lib-icon svg-secret-library-big"></div>
         <div ng-switch-default ng-switch="library.visibility">
