@@ -46,14 +46,7 @@ class MobileDiscoveryController @Inject() (
         val sharingInfosFuture = searchClient.sharingUserInfo(userId, safeUris.map(_.id.get))
         val pageInfosFuture = Future.sequence(safeUris.map { uri =>
           if (withPageInfo) {
-            val request = URISummaryRequest(
-              url = uri.url,
-              imageType = ImageType.ANY,
-              withDescription = true,
-              waiting = false,
-              silent = false
-            )
-            uriSummaryCommander.getURISummaryForRequest(request).map(Some(_))
+            uriSummaryCommander.getDefaultURISummary(uri, false).map(Some(_))
           } else {
             Future.successful(None)
           }
