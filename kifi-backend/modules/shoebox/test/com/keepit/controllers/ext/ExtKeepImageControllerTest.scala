@@ -50,8 +50,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     "support image uploads" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
-          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
@@ -100,8 +100,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
     "check status of upload" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
-          val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+          val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
@@ -161,8 +161,8 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
   //  "change keep image" in {
   //    withDb(controllerTestModules: _*) { implicit injector =>
   //      val (user1, user2, lib, mem1, mem2) = db.readWrite { implicit s =>
-  //        val user1 = userRepo.save(User(firstName = "U", lastName = "1"))
-  //        val user2 = userRepo.save(User(firstName = "U", lastName = "2"))
+  //        val user1 = userRepo.save(User(firstName = "U", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+  //        val user2 = userRepo.save(User(firstName = "U", lastName = "2", username = Username("test"), normalizedUsername = "test"))
   //        val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
   //        val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
   //        val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))

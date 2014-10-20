@@ -449,7 +449,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = None
+        username = Username("adams"),
+        normalizedUsername = "adams"
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
@@ -463,7 +464,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = None
+        username = Username("adams"),
+        normalizedUsername = "adams"
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)

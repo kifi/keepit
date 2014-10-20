@@ -78,6 +78,7 @@ angular.module('kifi')
             return lib.access !== 'read_only';
           });
           $scope.librarySelection = {};
+          $scope.libSelectTopOffset = false;  // This overrides the scope.libSelectTopOffset set by MainCtrl.js
         });
       }
     });

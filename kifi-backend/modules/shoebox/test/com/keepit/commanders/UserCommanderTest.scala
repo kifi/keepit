@@ -34,15 +34,15 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit session =>
       var user1 = userRepo.save(User(
         firstName = "Homer",
-        lastName = "Simpson"
+        lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
       ))
       var user2 = userRepo.save(User(
         firstName = "Peter",
-        lastName = "Griffin"
+        lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
       ))
       var user3 = userRepo.save(User(
         firstName = "Clark",
-        lastName = "Kent"
+        lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
       ))
 
       val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
@@ -110,19 +110,19 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
           implicit session =>
             var user1 = userRepo.save(User(
               firstName = "Homer",
-              lastName = "Simpson"
+              lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
             ))
             var user2 = userRepo.save(User(
               firstName = "Peter",
-              lastName = "Griffin"
+              lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
             ))
             var user3 = userRepo.save(User(
               firstName = "Clark",
-              lastName = "Kent"
+              lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
             ))
             var user4 = userRepo.save(User(
               firstName = "Clark",
-              lastName = "Simpson"
+              lastName = "Simpson", username = Username("test4"), normalizedUsername = "test4"
             ))
 
             connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get, user4.id.get))
@@ -186,9 +186,9 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user1.id.get, Username("bob.z"), false) === Right(Username("bob.z"))
 
         // changes user model
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === None)
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.value === "test2")
         userCommander.setUsername(user2.id.get, Username("obama"), false) === Right(Username("obama"))
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.get === Username("obama"))
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === Username("obama"))
 
         // filter out invalid names
         userCommander.setUsername(user3.id.get, Username("a.-bc"), false) === Left("invalid_username")
@@ -210,7 +210,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userCommander = inject[UserCommander]
         val userValueRepo = inject[UserValueRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "test"))
         }
 
         val email1 = EmailAddress("vampireXslayer@gmail.com")
@@ -260,7 +260,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com"))))
+          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("test"), normalizedUsername = "test"))
         }
 
         // set service client response

@@ -28,10 +28,10 @@ trait HelpRankTestHelper { self: TestInjector =>
     val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
 
     val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
-      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
+      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery", username = Username("test"), normalizedUsername = "test"))
+      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot", username = Username("test"), normalizedUsername = "test"))
       (u1, u2, u3, u4)
     }
 

@@ -31,8 +31,8 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
   private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
     val users = (0 until 4).map { i =>
-      User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
-    } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
+      User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test")
+    } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test")
 
     val usersWithId = client.saveUsers(users: _*)
 
@@ -95,7 +95,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                       "id":"4e5f7b8c-951b-4497-8661-123456789004",
                       "firstName":"Woody",
                       "lastName":"Allen",
-                      "pictureName":"face.jpg"
+                      "pictureName":"face.jpg","username":"test"
                     },
                   "isFriend":false
                 }
@@ -131,7 +131,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789001",
                 "firstName":"firstName1",
                 "lastName":"lastName1",
-                "pictureName":"picName1.jpg"
+                "pictureName":"picName1.jpg","username":"test"
               },
               "status":"requested"
             },
@@ -141,7 +141,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789002",
                 "firstName":"firstName2",
                 "lastName":"lastName2",
-                "pictureName":"picName2.jpg"
+                "pictureName":"picName2.jpg","username":"test"
               },
               "status":"friend"
             },
@@ -150,7 +150,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789003",
                 "firstName":"firstName3",
                 "lastName":"lastName3",
-                "pictureName":"picName3.jpg"
+                "pictureName":"picName3.jpg","username":"test"
               },
               "status":""
             }
@@ -184,7 +184,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                 "id":"4e5f7b8c-951b-4497-8661-123456789004",
                 "firstName":"Woody",
                 "lastName":"Allen",
-                "pictureName":"face.jpg"
+                "pictureName":"face.jpg","username":"test"
               },
               "status":""
             }

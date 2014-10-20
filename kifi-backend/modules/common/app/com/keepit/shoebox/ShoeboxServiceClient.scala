@@ -662,7 +662,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }
