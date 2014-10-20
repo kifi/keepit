@@ -579,4 +579,5 @@ class UserController @Inject() (
     }
     Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
   }
+
 }

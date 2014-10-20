@@ -1,6 +1,6 @@
 <div>
   <!-- Library page -->
-  <div class="kf-main-library-keeps">
+  <div class="kf-main-library-keeps" ng-if="page === 'library'">
     <div class="kf-library-card-header" ng-show="!loading">
       <div kf-library-card
         library="library"
@@ -27,8 +27,8 @@
 
 
   <!-- Permission Denied -->
-  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied'">
-    Permission denied.
+  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied' || page === 'not_found'">
+    <div kf-error-not-found></div>
   </div>
 
 

@@ -234,7 +234,7 @@ class SearchServiceClientImpl(
 
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
     val url = Search.internal.indexInfoList()
-    serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map {
+    serviceCluster.allMembers.map(new ServiceUri(_, protocol, port, url.url)).map {
       case u: ServiceUri =>
         callUrl(url, u, JsNull).map { r => (u.serviceInstance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }

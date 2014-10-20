@@ -81,6 +81,7 @@ angular.module('kifi')
         return route('/user/' + id + '/hide');
       },
       search: searchRoute('/site/search'),
+      search2: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -117,6 +118,15 @@ angular.module('kifi')
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+
+      ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
 
       ////////////////////////////
       // Libraries              //
