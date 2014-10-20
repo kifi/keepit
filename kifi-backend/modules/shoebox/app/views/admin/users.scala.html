@@ -41,16 +41,35 @@
     }
 }
 
+@invitesBreakdown(invites: Seq[Invitation]) = {
+    @if(invites.size > 0) {
+        @defining(invites.partition(_.recipientSocialUserId.isDefined)) { case (social, email) =>
+            <table width="40%" border="1">
+                @if(social.size > 0) {
+                  <tr><th>Social</th><td>@social.size</td></tr>
+                }
+                @if(email.size > 0) {
+                  <tr><th>Email</th><td>@email.size</td></tr>
+                }
+            </table>
+        }
+    } else {}
+}
+
 @invitationSummary(invitationInfo: Option[com.keepit.controllers.admin.InvitationInfo]) = {
     @invitationInfo match {
-    case Some(info) => {
+      case Some(info) => {
         <h4>Invitation stats in the last 24 hours</h4>
         <ul>
-            <li> Sent: @info.active
-            <li> Accepted: @info.accepted
+            <li> # Sent: @info.activeInvites.size
+              @invitesBreakdown(info.activeInvites)
+            </li>
+            <li> # Accepted: @info.acceptedInvites.size
+              @invitesBreakdown(info.acceptedInvites)
+            </li>
         </ul>
       }
-    case None => {}
+      case None => {}
     }
 }
 

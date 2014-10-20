@@ -47,7 +47,7 @@ case class UserStatistics(
   experiments: Set[ExperimentType],
   kifiInstallations: Seq[KifiInstallation])
 
-case class InvitationInfo(active: Int, accepted: Int)
+case class InvitationInfo(activeInvites: Seq[Invitation], acceptedInvites: Seq[Invitation])
 
 case class UserStatisticsPage(
     userViewType: UserViewType,
@@ -341,7 +341,9 @@ class AdminUserController @Inject() (
     val (newUsers, inviteInfo) = userViewType match {
       case RegisteredUsersViewType =>
         db.readOnlyReplica { implicit s =>
-          (Some(userRepo.countNewUsers), Some(InvitationInfo(invitationRepo.getRecentSent(), invitationRepo.getRecentAccepted())))
+          val invites = invitationRepo.getRecentInvites()
+          val (accepted, sent) = invites.partition(_.state == InvitationStates.ACCEPTED)
+          (Some(userRepo.countNewUsers), Some(InvitationInfo(accepted, sent)))
         }
       case _ =>
         (None, None)
