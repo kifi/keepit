@@ -412,6 +412,13 @@ class LibraryController @Inject() (
     }
   }
 
+  def suggestMembers(pubId: PublicId[Library], query: String, limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+      case Success(libraryId) => libraryCommander.suggestMembers(request.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+    }
+  }
 }
 
 private object ImplicitHelper {

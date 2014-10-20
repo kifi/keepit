@@ -42,6 +42,7 @@ class LibraryCommander @Inject() (
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     keepsCommanderProvider: Provider[KeepsCommander],
+    typeaheadCommander: TypeaheadCommander,
     collectionRepo: CollectionRepo,
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
@@ -196,7 +197,7 @@ class LibraryCommander @Inject() (
 
     val actualMembers = (collaborators ++ followers).map { membership =>
       val member = Left(usersById(membership.userId))
-      MaybeLibraryMember(member, membership.access, None)
+      MaybeLibraryMember(member, Some(membership.access), None)
     }
 
     val invitedMembers = inviteesWithInvites.map {
@@ -204,10 +205,64 @@ class LibraryCommander @Inject() (
         val member = invitee.left.map(usersById(_))
         val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
         val access = invites.map(_.access).maxBy(_.priority)
-        MaybeLibraryMember(member, access, Some(lastInvitedAt))
+        MaybeLibraryMember(member, Some(access), Some(lastInvitedAt))
     }
 
     actualMembers ++ invitedMembers
+  }
+
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+    val futureFriendsAndContacts = query.trim match {
+      case q if q.isEmpty => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
+      case q => typeaheadCommander.searchFriendsAndContacts(userId, q, limit)
+    }
+
+    val activeInvites = db.readOnlyMaster { implicit session =>
+      libraryInviteRepo.getByLibraryIdAndInviterId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
+    }
+
+    val invitedUsers = activeInvites.groupBy(_.userId).collect {
+      case (Some(userId), invites) =>
+        val access = invites.map(_.access).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        userId -> (access, lastInvitedAt)
+    }
+
+    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
+      case (Some(emailAddress), invites) =>
+        val access = invites.map(_.access).maxBy(_.priority)
+        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
+        emailAddress -> (access, lastInvitedAt)
+    }
+
+    futureFriendsAndContacts.map {
+      case (users, contacts) =>
+        val existingMembers = {
+          val userIds = users.map(_._1).toSet
+          val memberships = db.readOnlyMaster { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserIds(libraryId, userIds) }
+          memberships.mapValues(_.access)
+        }
+        val suggestedUsers = users.map {
+          case (userId, basicUser) =>
+            val (access, lastInvitedAt) = existingMembers.get(userId) match {
+              case Some(access) => (Some(access), None)
+              case None => invitedUsers.get(userId) match {
+                case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
+                case None => (None, None)
+              }
+            }
+            MaybeLibraryMember(Left(basicUser), access, lastInvitedAt)
+        }
+
+        val suggestedEmailAddresses = contacts.map { contact =>
+          val (access, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
+            case Some((access, lastInvitedAt)) => (Some(access), Some(lastInvitedAt))
+            case None => (None, None)
+          }
+          MaybeLibraryMember(Right(contact.email), access, lastInvitedAt)
+        }
+        suggestedUsers ++ suggestedEmailAddresses
+    }
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -897,7 +952,7 @@ private object KeepsHolder {
   )(KeepsHolder.apply, unlift(KeepsHolder.unapply))
 }
 
-case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: LibraryAccess, lastInvitedAt: Option[DateTime])
+case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
   implicit val writes = Writes[MaybeLibraryMember] { member =>
