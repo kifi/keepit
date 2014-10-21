@@ -7,6 +7,7 @@ angular.module('kifi')
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
 
     var me = {
+      picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
       seqNum: 0
     };
     var prefs = {};

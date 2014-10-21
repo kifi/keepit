@@ -282,8 +282,8 @@ angular.module('kifi')
           if (!newVal) {
             if (scope.librariesEnabled) {
               libraryService.fetchLibrarySummaries().then(function () {
-                scope.libraries = _.filter(libraryService.librarySummaries, function (library) {
-                  return scope.library && library.access !== 'read_only' && library.id !== scope.library.id;
+                scope.libraries = !scope.library ? [] : _.filter(libraryService.librarySummaries, function (library) {
+                  return library.access !== 'read_only' && library.id !== scope.library.id;
                 });
 
                 scope.librarySelection = {};
