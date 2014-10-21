@@ -321,7 +321,7 @@ class AuthCommander @Inject() (
           error => throw error,
           authenticator =>
             Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userId.get.toString))
               .withCookies(authenticator.toCookie)
         )
     } getOrElse {
