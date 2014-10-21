@@ -204,10 +204,9 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
-        scope.$watch(function () {
-          return scope.library.name;
-        }, function (newVal, oldVal) {
+        scope.$watch('library.name', function (newVal, oldVal) {
           if (newVal !== oldVal) {
+            // Clear the error popover when the user changes the name field.
             scope.$error.name = null;
 
             // Update the slug to reflect the library's name only if we're not modifying an
