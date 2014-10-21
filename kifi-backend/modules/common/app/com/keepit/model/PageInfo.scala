@@ -193,12 +193,16 @@ object ImageInfo {
 }
 
 case class URISummaryRequest(
-  url: String,
-  imageType: ImageType,
-  minSize: ImageSize = ImageSize(0, 0),
-  withDescription: Boolean,
-  waiting: Boolean,
-  silent: Boolean)
+    url: String,
+    imageType: ImageType,
+    minSize: ImageSize = ImageSize(0, 0),
+    withDescription: Boolean,
+    waiting: Boolean,
+    silent: Boolean) {
+
+  def isCacheable: Boolean = (imageType == ImageType.ANY && minSize == ImageSize(0, 0) && withDescription == true)
+}
+
 object URISummaryRequest {
   implicit val format = (
     (__ \ 'url).format[String] and

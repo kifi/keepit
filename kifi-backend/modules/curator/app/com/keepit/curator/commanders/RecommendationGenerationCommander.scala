@@ -52,6 +52,7 @@ class RecommendationGenerationCommander @Inject() (
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
+  val candidateURILock = new ReactiveLock(4)
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
@@ -140,7 +141,7 @@ class RecommendationGenerationCommander @Inject() (
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
     val result = for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      candidateURIs <- shoebox.getCandidateURIs(seeds.map(_.uriId))
+      candidateURIs <- candidateURILock.withLockFuture(shoebox.getCandidateURIs(seeds.map(_.uriId)))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>

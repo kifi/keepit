@@ -143,7 +143,7 @@ class LibraryInviteRepoImpl @Inject() (
   }
 
   private def getByLibraryIdAndInviterIdCompiled(libraryId: Column[Id[Library]], inviterId: Column[Id[User]], includeStates: Set[State[LibraryInvite]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.ownerId === inviterId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt)
+    (for (b <- rows if b.libraryId === libraryId && b.inviterId === inviterId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt)
   }
 
   def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite] = {

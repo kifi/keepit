@@ -14,10 +14,7 @@ class NormalizedURICommander @Inject() (
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      val unrestrictedURIs = normalizedURIRepo.checkUnrestrictedURIs(uris)
-      val scrapedUris = normalizedURIRepo.checkScrapedURIs(uris)
-      (unrestrictedURIs zip scrapedUris).map(p => p._1 && p._2)
+      normalizedURIRepo.checkRecommendable(uris)
     }
   }
-
 }

@@ -5,7 +5,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.{ FakeSlickSessionProvider, ExternalId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ User, SocialUserInfo, UserSession }
+import com.keepit.model.{ Username, User, SocialUserInfo, UserSession }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 
 import play.api.Play.current
@@ -73,7 +73,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin"))
+          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test"))
           socialUserInfoRepo.save(SocialUserInfo(
             userId = user.id, socialId = socialId, fullName = "Greg Methvin", networkType = provider))
           user

@@ -2,13 +2,11 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.controller._
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import play.api.mvc.Results._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
@@ -146,8 +144,8 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
       val userOpt = userRepo.getByUsername(Username(path.primary))
 
       userOpt.flatMap { user =>
-        if (user.username.isDefined && user.username.get.value != path.primary) {
-          val redir = "/" + (user.username.get.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+        if (user.username.value != path.primary) {
+          val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
           Some(RedirectRoute(redir))
         } else if (path.split.length == 1) { // user profile page
           Some(Angular()) // great place to preload request data since we have `user` available

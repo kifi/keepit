@@ -43,7 +43,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
@@ -155,7 +155,7 @@ class FixedResultSearchCommander extends SearchCommander {
             0.5f, // recencyScore
             false // usefulPage
           )
-        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Some(Username("vorname")))))))
+        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Username("vorname"))))))
       ),
       1, // myTotal
       12, // friendsTotal

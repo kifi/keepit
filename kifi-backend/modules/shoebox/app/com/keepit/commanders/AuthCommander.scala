@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.controller.KifiSession
 
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
@@ -320,7 +321,7 @@ class AuthCommander @Inject() (
           error => throw error,
           authenticator =>
             Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
               .withCookies(authenticator.toCookie)
         )
     } getOrElse {

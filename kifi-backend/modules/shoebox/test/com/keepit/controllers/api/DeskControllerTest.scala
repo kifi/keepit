@@ -16,7 +16,7 @@ class DeskControllerTest extends Specification with ShoeboxTestInjector {
     "is logged in" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         val path = com.keepit.controllers.api.routes.DeskController.isLoggedIn.toString
         path === "/api/desk/isLoggedIn"
