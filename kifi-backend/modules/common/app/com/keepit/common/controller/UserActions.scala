@@ -191,16 +191,18 @@ trait UserActions extends Logging { self: Controller =>
   }
 
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
-    userActionsHelper.getUserIdFromSession match {
-      case Success(userIdOpt) =>
-        userIdOpt match {
-          case Some(id) if id == userId => res
-          case _ => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
-        }
-      case Failure(t) =>
-        log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
-        res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
-    }
+    Play.maybeApplication.map { app =>
+      userActionsHelper.getUserIdFromSession match {
+        case Success(userIdOpt) =>
+          userIdOpt match {
+            case Some(id) if id == userId => res
+            case _ => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+          }
+        case Failure(t) =>
+          log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
+          res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+      }
+    } getOrElse res
   }
 
   private def impersonate[A](adminUserId: Id[User], impersonateExtId: ExternalId[User])(implicit request: Request[A]): Future[UserRequest[A]] = {
