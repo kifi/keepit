@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService', 'signupService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService, signupService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  'profileService', 'platformService', 'signupService', '$twitter',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService,
+    profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
       replace: true,
@@ -21,7 +23,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.facebookAppId = $FB.appId();
+        scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
@@ -99,6 +101,16 @@ angular.module('kifi')
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
           $rootScope.$emit('libraryUrl', scope.library);
         }
+
+        function preloadSocial () {
+          if (!$FB.failedToLoad && !$FB.loaded) {
+            $FB.init();
+          }
+          if (!$twitter.failedToLoad && !$twitter.loaded) {
+            $twitter.load();
+          }
+        }
+        scope.$evalAsync(preloadSocial);
 
 
         //

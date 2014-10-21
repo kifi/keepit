@@ -99,12 +99,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val t1 = new DateTime(2014, 8, 1, 2, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       // Everybody loves Murica! Follow Captain America's library
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
 
       // Ironman invites the Hulk to contribute to 'Science & Stuff'
-      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
 
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
@@ -233,7 +233,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val allInvites = libraryInviteRepo.all
           allInvites.length === 4
-          val invitePairs = for (i <- allInvites) yield (i.ownerId, i.userId.get)
+          val invitePairs = for (i <- allInvites) yield (i.inviterId, i.userId.get)
 
           invitePairs === (userCaptain.id.get, userIron.id.get) ::
             (userCaptain.id.get, userAgent.id.get) ::
@@ -427,7 +427,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
 
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
             authToken = "token", passPhrase = "blarg bob fred"))
         }
         // test can view if user has invite
@@ -573,8 +573,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
         }
 
         db.readOnlyMaster { implicit s =>

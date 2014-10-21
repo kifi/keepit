@@ -16,7 +16,7 @@ import scala.concurrent.Future
 
 @Singleton
 class RemoteUserActionsHelper @Inject() (
-    airbrake: AirbrakeNotifier,
+    val airbrake: AirbrakeNotifier,
     shoebox: ShoeboxServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander,
     val impersonateCookie: ImpersonateCookie,

@@ -335,7 +335,7 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
 
     val sql = sql"""select source, count(*) from bookmark b
-      where b.state = '#${KeepStates.ACTIVE}' and updated_at between ${from} and ${to}
+      where b.state = '#${KeepStates.ACTIVE}' and created_at between ${from} and ${to}
       group by b.source;"""
     sql.as[(KeepSource, Int)].list
   }

@@ -327,6 +327,7 @@ POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Option[Int], count: Int ?= 10)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: String, n: Int ?= 5)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)

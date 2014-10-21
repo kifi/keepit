@@ -133,7 +133,7 @@ class LibraryController @Inject() (
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.inviterId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, inviteOwner, numKeeps)
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
@@ -412,6 +412,13 @@ class LibraryController @Inject() (
     }
   }
 
+  def suggestMembers(pubId: PublicId[Library], query: String, limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+      case Success(libraryId) => libraryCommander.suggestMembers(request.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+    }
+  }
 }
 
 private object ImplicitHelper {

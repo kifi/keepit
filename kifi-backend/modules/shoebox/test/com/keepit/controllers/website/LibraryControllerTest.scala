@@ -247,7 +247,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
           user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
@@ -382,13 +382,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
           val library3 = libraryRepo.save(Library(name = "Library3", ownerId = user2.id.get, slug = LibrarySlug("lib3"), memberCount = 2, visibility = LibraryVisibility.DISCOVERABLE))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library3.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY, state = LibraryInviteStates.ACCEPTED))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library3.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY, state = LibraryInviteStates.ACCEPTED))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
 
           // send invites to same library with different access levels (only want highest access level)
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE))
           (user1, user2, library1, library2, library3)
         }
 
@@ -559,8 +559,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           // user B invites A to both libraries
-          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, ownerId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
-          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, ownerId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
           (userA, userB, libraryB1, libraryB2, inv1, inv2)
         }
 
@@ -829,8 +829,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true, createdAt = t1))
           libraryMembershipRepo.save(LibraryMembership(userId = u2.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true, createdAt = t1.plusHours(1)))
           libraryMembershipRepo.save(LibraryMembership(userId = u3.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true, createdAt = t1.plusHours(2)))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = u1.id.get, userId = Some(u4.id.get), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = u1.id.get, emailAddress = Some(EmailAddress("sonic@sega.co.jp")), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, userId = Some(u4.id.get), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, emailAddress = Some(EmailAddress("sonic@sega.co.jp")), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
           (u1, u2, u3, u4, lib)
         }
 

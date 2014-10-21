@@ -44,15 +44,21 @@ class GraphCommander @Inject() (
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     val wanderLust = Wanderlust.discovery(userId).copy(steps = 50000)
-    wanderingCommander.wander(wanderLust).map { journal =>
-      updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
+    wanderingCommander.wander(wanderLust).map { journalOpt =>
+      journalOpt match {
+        case Some(journal) => updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
+        case None => Seq()
+      }
     }
   }
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     val wanderLust = Wanderlust.discovery(userId).copy(steps = 50000)
-    wanderingCommander.wander(wanderLust).map { journal =>
-      updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
+    wanderingCommander.wander(wanderLust).map { journalOpt =>
+      journalOpt match {
+        case Some(journal) => updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
+        case None => Seq()
+      }
     }
   }
 

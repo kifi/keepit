@@ -32,8 +32,8 @@ class GraphController @Inject() (
 
   def wander() = Action.async(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]
-    wanderingCommander.wander(wanderlust).map { journal =>
-      val collisions = getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_)))
+    wanderingCommander.wander(wanderlust).map { journalOpt =>
+      val collisions = journalOpt.map { journal => getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_))) } getOrElse (Collisions.empty)
       val json = Json.toJson(collisions)
       Ok(json)
     }

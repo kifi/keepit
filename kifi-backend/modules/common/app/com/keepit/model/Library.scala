@@ -68,7 +68,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime]
   )(Library.apply, unlift(Library.unapply))
 
-  val maxNameLength = 50
+  val maxNameLength = 200
   def isValidName(name: String): Boolean = {
     (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
   }

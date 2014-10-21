@@ -128,37 +128,51 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-        scope.moreFollowers = true;
-        scope.followerList = [];
-        scope.followerScrollDistance = '100%';
+        //
+        // Smart Scroll
+        //
+        scope.moreMembers = true;
+        scope.memberList = [];
+        scope.memberScrollDistance = '100%';
 
-        scope.isFollowerScrollDisabled = function () {
-          return !(scope.moreFollowers);
+        scope.isMemberScrollDisabled = function () {
+          return !(scope.moreMembers);
         };
-        scope.followerScrollNext = function () {
-          pageFollowers();
+        scope.memberScrollNext = function () {
+          pageMembers();
         };
 
         var pageSize = 10;
         scope.offset = 0;
         var loading = false;
-        function pageFollowers() {
+        function pageMembers() {
           if (loading) { return; }
           loading = true;
-          libraryService.getMoreFollowers(scope.library.id, pageSize, scope.offset).then(function (resp) {
-            var followers = resp.followers;
+          libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
+            var members = resp.members;
             loading = false;
-            if (followers.length === 0) {
-              scope.moreFollowers = false;
+            if (members.length === 0) {
+              scope.moreMembers = false;
             } else {
-              scope.moreFollowers = true;
+              scope.moreMembers = true;
               scope.offset += 1;
-              followers.forEach(function (follower) {
-                follower.picUrl = friendService.getPictureUrlForUser(follower);
+              members.forEach(function (member) {
+                member.picUrl = friendService.getPictureUrlForUser(member);
+                member.status = setMemberStatus(member);
               });
-              scope.followerList.push.apply(scope.followerList, followers);
+              scope.memberList.push.apply(scope.memberList, members);
             }
           });
+        }
+
+        function setMemberStatus (member) {
+          if (member.lastInvitedAt) {
+            return 'Inivation Pending';
+          } else if (member.membership === 'read_only') {
+            return 'Following';
+          } else {
+            return 'Collaborating';
+          }
         }
 
         //
@@ -179,7 +193,10 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
-          scope.followerList.push.apply(scope.followerList, scope.library.followers);
+          scope.library.followers.forEach(function (follower) {
+            follower.status = 'Following';
+          });
+          scope.memberList.push.apply(scope.memberList, scope.library.followers);
           scope.offset = 1;
           returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
