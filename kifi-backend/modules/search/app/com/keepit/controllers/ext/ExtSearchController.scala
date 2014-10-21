@@ -76,29 +76,28 @@ class ExtSearchController @Inject() (
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
-      augment(augmentationCommander, userId, kifiPlainResult).flatMap { augmentedItems =>
-        val librarySearcher = libraryIndexer.getSearcher
+      val librarySearcher = libraryIndexer.getSearcher
+      augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
+        case (allSecondaryFields, userIds, libraryIds) =>
 
-        val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+          val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
 
-        val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
-
-        val futureUsers = {
-          val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
-          shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
-        }
-
-        val hitsJson = allSecondaryFields.map(json.minify)
-
-        futureUsers.map { usersById =>
-          val users = userIds.map(usersById(_))
-          val libraries = libraryIds.map { libId =>
-            val (libraryRecord, isSecret) = libraryRecordById(libId)
-            val owner = usersById(libraryRecord.owner)
-            BasicLibrary(libraryRecord, isSecret, owner)
+          val futureUsers = {
+            val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
+            shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
           }
-          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
-        }
+
+          val hitsJson = allSecondaryFields.map(json.minify)
+
+          futureUsers.map { usersById =>
+            val users = userIds.map(usersById(_))
+            val libraries = libraryIds.map { libId =>
+              val (libraryRecord, isSecret) = libraryRecordById(libId)
+              val owner = usersById(libraryRecord.owner)
+              BasicLibrary(libraryRecord, isSecret, owner)
+            }
+            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
+          }
       }
     }
 

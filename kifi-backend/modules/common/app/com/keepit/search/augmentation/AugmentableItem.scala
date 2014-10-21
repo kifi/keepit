@@ -81,3 +81,21 @@ object ItemAugmentationResponse {
   implicit val format = Json.format[ItemAugmentationResponse]
   val empty = ItemAugmentationResponse(Map.empty, AugmentationScores.empty)
 }
+
+case class LimitedAugmentationInfo(
+  secret: Option[Boolean],
+  keepers: Seq[Id[User]],
+  keepersOmitted: Int,
+  keepersTotal: Int,
+  libraries: Seq[(Id[Library], Id[User])],
+  librariesOmitted: Int,
+  librariesTotal: Int,
+  tags: Seq[Hashtag],
+  tagsOmitted: Int)
+
+object LimitedAugmentationInfo {
+  implicit val format = {
+    implicit val libraryFormat = TupleFormat.tuple2Format[Id[Library], Id[User]]
+    Json.format[LimitedAugmentationInfo]
+  }
+}

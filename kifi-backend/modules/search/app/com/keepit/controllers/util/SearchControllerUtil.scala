@@ -13,6 +13,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.RequestHeader
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import com.keepit.search._
@@ -100,12 +101,55 @@ trait SearchControllerUtil {
       Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
+  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, kifiPlainResult: KifiPlainResult): Future[(Seq[JsObject], Seq[Id[User]], Seq[Id[Library]])] = {
+    getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).map { augmentedItems =>
+      writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+    }
+  }
+
+  private def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
+    augmentationCommander.getAugmentedItems(augmentationRequest).imap { augmentedItems => items.map(augmentedItems(_)) }
+  }
+
+  private def writesAugmentationFields(
+    librarySearcher: Searcher,
+    userId: Id[User],
+    maxKeepersShown: Int,
+    maxLibrariesShown: Int,
+    maxTagsShown: Int,
+    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Seq[Id[User]], Seq[Id[Library]]) = {
+
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(librarySearcher, maxKeepersShown, maxLibrariesShown, maxTagsShown))
+    val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
+    val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
+
+    val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
+    val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
+
+    val libraryIds = allLibrariesShown.flatMap(_.map(_._1)).distinct
+    val libraryIndexById = libraryIds.zipWithIndex.toMap
+
+    val augmentationFields = limitedAugmentationInfos.map { limitedInfo =>
+
+      val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
+      val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
+
+      Json.obj(
+        "secret" -> limitedInfo.secret,
+        "keepers" -> keepersIndices,
+        "keepersOmitted" -> limitedInfo.keepersOmitted,
+        "keepersTotal" -> limitedInfo.keepersTotal,
+        "libraries" -> librariesIndices,
+        "librariesOmitted" -> limitedInfo.librariesOmitted,
+        "tags" -> limitedInfo.tags,
+        "tagsOmitted" -> limitedInfo.tagsOmitted
+      )
+    }
+    (augmentationFields, userIds, libraryIds)
   }
 
   def getLibraryRecordsWithSecrecy(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, Boolean)] = {

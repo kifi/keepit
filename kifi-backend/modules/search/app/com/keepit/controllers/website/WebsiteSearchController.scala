@@ -84,10 +84,9 @@ class WebsiteSearchController @Inject() (
           shoeboxClient.getUriSummaries(uriIds)
         }
 
-        augment(augmentationCommander, userId, kifiPlainResult).flatMap {
-          case augmentedItems => {
-            val librarySearcher = libraryIndexer.getSearcher
-            val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val librarySearcher = libraryIndexer.getSearcher
+        augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
+          case (allSecondaryFields, userIds, libraryIds) => {
 
             val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
 
