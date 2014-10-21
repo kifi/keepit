@@ -159,12 +159,15 @@ angular.module('kifi')
         };
 
         scope.blurFilter = function () {
-          scope.isFilterFocused = false;
+          if (scope.filter.name === '') {
+            scope.isFilterFocused = false;
+          }
         };
 
         scope.clearFilter = function () {
           scope.filter.name = '';
           scope.onFilterChange();
+          scope.blurFilter();
         };
 
         scope.onFilterChange = function () {
