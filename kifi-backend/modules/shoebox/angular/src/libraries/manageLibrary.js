@@ -29,6 +29,30 @@ angular.module('kifi')
 
 
         //
+        // Internal methods.
+        //
+        function getLibraryNameError(name) {
+          function hasInvalidCharacters (myString, invalidChars) {
+            return _.some(invalidChars, function (invalidChar) {
+              return myString.indexOf(invalidChar) !== -1;
+            });
+          }
+
+          if (!name.length) {
+            return 'Please enter a name for your library';
+          } else if (scope.library.name.length < 3) {
+            return 'Please try a longer name';
+          } else if (scope.library.name.length > 50) {
+            return 'Please try a shorter name';
+          } else if (hasInvalidCharacters(scope.library.name, ['/', '\\', '"', '\''])) {
+            return 'Please no slashes or quotes in your library name';
+          }
+
+          return null;
+        }
+
+
+        //
         // Scope methods.
         //
         scope.close = function () {
@@ -46,8 +70,8 @@ angular.module('kifi')
             return;
           }
 
-          if (scope.library.name.length < 3) {
-            scope.$error.name = 'Try a longer name';
+          scope.$error.name = getLibraryNameError(scope.library.name);
+          if (scope.$error.name) {
             return;
           }
 
@@ -184,6 +208,8 @@ angular.module('kifi')
           return scope.library.name;
         }, function (newVal, oldVal) {
           if (newVal !== oldVal) {
+            scope.$error.name = null;
+
             // Update the slug to reflect the library's name only if we're not modifying an
             // existing library and the user has not edited the slug yet.
             if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {

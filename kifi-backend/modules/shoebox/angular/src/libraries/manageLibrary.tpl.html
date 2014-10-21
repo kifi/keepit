@@ -25,16 +25,16 @@
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-input-title">
               <span class="manage-lib-heading">Name</span>
-              <span class="manage-lib-error manage-lib-name-error" ng-if="$error.name">{{$error.name}}</span>
             </div>
             <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
+            <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
             <span class="manage-lib-slug">kifi.com/{{username}}/
               <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
             </span>
           </div>
 
           <div class="manage-lib-input-wrapper">
-            <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></span><!-- for removing space between inline-block --><textarea
+            <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description</span><!-- for removing space between inline-block --><textarea
             class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
           </div>
 
