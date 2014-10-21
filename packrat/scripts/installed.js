@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/.*$/
+// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/(?!r\/).*$/
 // @require scripts/api.js
 // @asap
 
@@ -40,6 +40,9 @@
         break;
       case 'import_bookmarks_public':  // deprecated
         api.port.emit('import_bookmarks', 'main');
+        break;
+      case 'open_deep_link':
+        api.port.emit('open_deep_link', {nUri: data.url, locator: data.locator});
         break;
       case 'close_tab':
         api.port.emit('close_tab');

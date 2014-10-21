@@ -44,6 +44,9 @@
         "*://www.kifi.com/*",
         "*://dev.ezkeep.com/*"
       ],
+      "exclude_matches": [
+        "*://*/r/*"
+      ],
       "run_at": "document_start"
     },
     {

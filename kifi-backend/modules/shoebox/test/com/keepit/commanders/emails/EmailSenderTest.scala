@@ -343,7 +343,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-        val invite = LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
+        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
 
         (user1, user2, lib1, invite)
       }

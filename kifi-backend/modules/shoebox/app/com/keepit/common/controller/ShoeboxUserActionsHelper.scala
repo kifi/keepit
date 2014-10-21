@@ -17,7 +17,7 @@ import scala.concurrent.Future
 @Singleton
 class ShoeboxUserActionsHelper @Inject() (
     db: Database,
-    airbrake: AirbrakeNotifier,
+    val airbrake: AirbrakeNotifier,
     userRepo: UserRepo,
     suiRepo: SocialUserInfoRepo,
     userExperimentCommander: LocalUserExperimentCommander,
