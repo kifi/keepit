@@ -17,10 +17,6 @@ describe('kifi angular sanity suite', function () {
       expect(browser.getTitle()).toEqual('Kifi • Your Keeps');
     });
 
-    it('should display the upper-left kifi logo', function () {
-      expect(element(by.css('.kf-header-logo')).getAttribute('src')).toMatch(/kifi-logo\.[a-z0-9]{7}\.png/);
-    });
-
     it('should display the friends module', function () {
       expect(element(by.css('.kf-rightcol-friends')).isPresent()).toBe(true);
     });
@@ -31,7 +27,7 @@ describe('kifi angular sanity suite', function () {
 
     it('should display user profile when the upper-right settings icon is clicked', function () {
       // Find and click on settings (gear) icon.
-      var settingsIcon = element(by.css('a.sprite-settings'));
+      var settingsIcon = element(by.css('.kf-header-profile-picture'));
       settingsIcon.click();
 
       // Check that the user profile is displayed.
