@@ -141,6 +141,10 @@ angular.module('kifi')
                   scope.isMyLibrary(library));
         };
 
+        scope.isPublic = function (library) {
+          return library.visibility === 'published';
+        };
+
         scope.shareFB = function () {
           $FB.ui({
             method: 'share',
