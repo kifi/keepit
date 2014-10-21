@@ -53,25 +53,25 @@ class ServiceDiscoveryImpl(
   servicesToListenOn: Set[ServiceType])
     extends ServiceDiscovery with Logging {
 
-  @volatile private var lastStatusChangeTime = System.currentTimeMillis
+  @volatile private[this] var lastStatusChangeTime = System.currentTimeMillis
 
   private[this] val registrationLock = new AnyRef
   @volatile private[this] var registered = false
   @volatile private[this] var unregistered = false
 
   private lazy val myAmazonInstanceInfo = amazonInstanceInfo
-  @volatile private var myInstance: Option[ServiceInstance] = None
-  @volatile private var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
+  @volatile private[this] var myInstance: Option[ServiceInstance] = None
+  @volatile private[this] var myServiceStatus: ServiceStatus = ServiceStatus.STARTING // keeping track of the status
 
-  private var selfCheckIsRunning: Boolean = false
-  private var selfCheckFutureOpt: Option[Future[Boolean]] = None
+  @volatile private[this] var selfCheckIsRunning: Boolean = false
+  @volatile private[this] var selfCheckFutureOpt: Option[Future[Boolean]] = None
 
   private def getThisRemoteService = RemoteService(myAmazonInstanceInfo, myServiceStatus, services.currentService)
 
   def thisInstance: Option[ServiceInstance] = myInstance
   def thisService: ServiceType = services.currentService
 
-  private val clusters: TrieMap[ServiceType, ServiceCluster] = {
+  private[this] val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
     val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler, () => { forceUpdate() })
     clustersToInit(services.currentService) = myCluster
@@ -84,7 +84,7 @@ class ServiceDiscoveryImpl(
     clustersToInit
   }
 
-  private val myCluster = clusters(services.currentService)
+  private[this] val myCluster = clusters(services.currentService)
 
   def serviceCluster(serviceType: ServiceType): ServiceCluster =
     clusters.getOrElse(serviceType, throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType."))
@@ -92,7 +92,7 @@ class ServiceDiscoveryImpl(
   /**
    * We don't want to be too chatty on the logs, it may grow very fast since the method is very hot
    */
-  private var lastLeaderLogTime = 0L
+  private[this] var lastLeaderLogTime = 0L
 
   def isLeader(): Boolean = if (isCanary) false else zkClient.session { zk =>
     if (!stillRegistered()) {
@@ -146,17 +146,20 @@ class ServiceDiscoveryImpl(
     })
   }
 
-  @volatile private var forceUpdateInProgress = false
+  @volatile private[this] var forceUpdateInProgress = false
   def forceUpdate(): Unit = if (!forceUpdateInProgress) synchronized {
     if (!forceUpdateInProgress) {
       forceUpdateInProgress = true
-      zkClient.session { zk =>
-        for (cluster <- clusters.values) {
-          val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
-          cluster.update(zk, children)
+      try {
+        zkClient.session { zk =>
+          for (cluster <- clusters.values) {
+            val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
+            cluster.update(zk, children)
+          }
         }
+      } finally {
+        forceUpdateInProgress = false
       }
-      forceUpdateInProgress = false
     }
   }
 
