@@ -15,5 +15,5 @@ case class FakeFortyTwoModule() extends FortyTwoModule {
 
   @Provides
   @Singleton
-  def fortytwoConfig: FortyTwoConfig = FortyTwoConfig("http://dev.ezkeep.com:9000", "TEST_MODE")
+  def fortytwoConfig: FortyTwoConfig = FortyTwoConfig("TEST_MODE", "http://dev.ezkeep.com:9000")
 }

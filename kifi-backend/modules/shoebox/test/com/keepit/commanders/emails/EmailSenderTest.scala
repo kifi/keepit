@@ -288,12 +288,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val html = email.htmlBody.value
         html must contain("Hi Billy,")
-        html must contain(s"TEST_MODE/password/$token")
+        html must contain(s"http://dev.ezkeep.com:9000/password/$token")
         html must contain("utm_campaign=passwordReset")
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
-        text must contain(s"TEST_MODE/password/$token")
+        text must contain(s"http://dev.ezkeep.com:9000/password/$token")
       }
     }
 
@@ -354,7 +354,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       html must contain("Tom invited you to")
       html must contain("Tom Brady")
       html must contain("Lorem ipsum")
-      html must contain("TEST_MODE/tom/football")
+      html must contain("http://dev.ezkeep.com:9000/tom/football")
       html must contain("check this out!")
     }
 

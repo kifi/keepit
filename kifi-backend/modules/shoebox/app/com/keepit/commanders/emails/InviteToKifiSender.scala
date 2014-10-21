@@ -32,7 +32,7 @@ class InviteToKifiSender @Inject() (
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def apply(toAddress: EmailAddress, fromUserId: Id[User], inviteId: ExternalId[Invitation]): Future[ElectronicMail] = {
-    val acceptUrl: Html = htmlUrl(baseUrl.body + routes.InviteController.acceptInvite(inviteId).url + "?", "acceptInviteBtn")
+    val acceptUrl: Html = htmlUrl(baseUrl.body + routes.InviteController.acceptInvite(inviteId).url + "?", "acceptInviteBtn", openInAppIfMobile = true)
 
     // NOTE changes to the email that are to be used for AB-testing should set a different
     // abCode and/or add additional auxiliaryData to EmailToSend
