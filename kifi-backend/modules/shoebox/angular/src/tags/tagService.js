@@ -214,6 +214,7 @@ angular.module('kifi')
             api.refreshList();
           }
           $rootScope.$emit('tags.unremove', tag.id);
+          $rootScope.$emit('undoRemoveTag');
           persistTagOrdering(tag.id, index);
           return tag;
         });

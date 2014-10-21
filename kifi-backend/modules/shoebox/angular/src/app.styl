@@ -11,7 +11,7 @@ body
   padding: 0
   margin: 62px 0 0;
   background: appBackgroundColor
-  font-family: Helvetica, Arial, sans-serif
+  font-family: Lato, Helvetica, Arial, sans-serif
   min-width: 800px
 
   &.modal-open
@@ -93,6 +93,7 @@ a[href]
   background: appBackgroundColor
   margin-top: 15px
   box-sizing: border-box
+  z-index: 1
 
 .kf-col-inner
   height: 100%
@@ -104,17 +105,27 @@ a[href]
   border-bottom: separatorBorder
   margin: 10px 0
 
+.kf-logged-out
+  .public-body
+    position: relative
+
+  .body-upper-white-background
+    position: absolute
+    width: 100%
+    height: 245px
+    background: #fff
+
 .ng-cloak
   display: none !important
 
 @font-face
-  font-family: 'Merriweather'
+  font-family: 'Lato'
   font-style: normal
   font-weight: 400
-  src: local('Merriweather'), url(https://djty7jcqog9qu.cloudfront.net/fonts/mw400-2.woff) format('woff')
+  src: local('Lato Regular'), local('Lato-Regular'), url(https://djty7jcqog9qu.cloudfront.net/fonts/la400.woff) format('woff')
 
 @font-face
-  font-family: 'Merriweather'
-  font-style: normal
-  font-weight: 700
-  src: local('Merriweather Bold'), local('Merriweather-Bold'), url(https://djty7jcqog9qu.cloudfront.net/fonts/mw700-2.woff) format('woff')
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Lato Bold'), local('Lato-Bold'), url(https://djty7jcqog9qu.cloudfront.net/fonts/la700.woff) format('woff');

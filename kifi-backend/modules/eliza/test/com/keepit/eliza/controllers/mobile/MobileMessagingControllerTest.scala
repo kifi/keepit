@@ -1,32 +1,29 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.test.{ ElizaTestInjector }
-import org.specs2.mutable._
-import com.keepit.common.db.slick._
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
-import com.keepit.common.time._
-import com.keepit.model.User
-import com.keepit.heimdal.HeimdalContext
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.eliza.model._
-import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import play.api.libs.json.Json
-import akka.actor.ActorSystem
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.common.cache.ElizaCacheModule
-import play.api.libs.json.JsArray
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
+import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.common.time._
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.model._
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.{ Username, User }
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.common.actor.{ FakeActorSystemModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.ElizaTestInjector
+import org.specs2.mutable._
+import play.api.libs.json.{ JsArray, Json }
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
 
@@ -34,6 +31,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
   def modules = {
     Seq(
+      FakeExecutionContextModule(),
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
@@ -42,7 +40,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      FakeActionAuthenticatorModule(),
+      FakeSecureSocialClientIdModule(),
       FakeUserActionsModule(),
       FakeHttpClientModule(),
       FakeCryptoModule(),
@@ -51,14 +49,133 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     )
   }
 
-  "ExtMessaging Controller" should {
+  "Mobile Messaging Controller" should {
+
+    "getUnreadNotificationsCount" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].all.isEmpty === true
+          inject[NonUserThreadRepo].all.isEmpty === true
+        }
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getUnreadNotificationsCount().toString
+        path === s"/m/1/eliza/messages/unreadNotificationsCount"
+
+        val result = inject[MobileMessagingController].getUnreadNotificationsCount()(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("text/plain")
+        contentAsString(result) === "0"
+      }
+    }
+
+    "addParticipantsToThread" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].all.isEmpty === true
+          inject[NonUserThreadRepo].all.isEmpty === true
+        }
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test2"), normalizedUsername = "test2")
+        val eishay = User(id = Some(Id[User](44)), firstName = "Eishay", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61483"), username = Username("test3"), normalizedUsername = "test3")
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(eishay)
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+        val controller = inject[MobileMessagingController]
+        val sendMessageAction = controller.sendMessageAction()
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
+        }
+
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
+        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+
+        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("text/plain")
+        val runners = inject[WatchableExecutionContext].drain()
+        runners > 2
+
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set("joe@smith.com", "jack@smith.com")
+        }
+      }
+    }
+
+    "addParticipantsToThread with no email" in {
+      withDb(modules: _*) { implicit injector =>
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].all.isEmpty === true
+          inject[NonUserThreadRepo].all.isEmpty === true
+        }
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test2"), normalizedUsername = "test2")
+        val eishay = User(id = Some(Id[User](44)), firstName = "Eishay", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61483"), username = Username("test3"), normalizedUsername = "test3")
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(eishay)
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+        val controller = inject[MobileMessagingController]
+        val sendMessageAction = controller.sendMessageAction()
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
+        }
+
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "").toString
+        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
+
+        inject[FakeUserActionsHelper].setUser(shanee)
+
+        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("text/plain")
+        val runners = inject[WatchableExecutionContext].drain()
+        runners > 2
+
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[UserThreadRepo].getByThread(thread.id.get).map(_.user).toSet === Set(shanee.id.get, shachaf.id.get, eishay.id.get)
+          inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set()
+        }
+      }
+    }
 
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString
@@ -98,12 +215,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
                   "firstName":"Shanee",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg"
+                  "pictureName":"0.jpg","username":"test"
                 },{
                   "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                   "firstName":"Shachaf",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg"
+                  "pictureName":"0.jpg","username":"test"
                 }
               ],
               "digest": "test me out",
@@ -127,12 +244,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "url": "https://admin.kifi.com/admin/searchExperiments",
                 "nUrl": "https://admin.kifi.com/admin/searchExperiments",
                 "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"
+                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"
                 },
                 "participants":
                   [
-                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"},
-                    {"id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484","firstName":"Shachaf","lastName":"Smith","pictureName":"0.jpg"}
+                    {"id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
+                    {"id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484","firstName":"Shachaf","lastName":"Smith","pictureName":"0.jpg","username":"test"}
                   ]
               }]
           }
@@ -146,8 +263,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         val fakeClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         fakeClient.saveUsers(shanee)
         fakeClient.saveUsers(shachaf)
@@ -194,12 +311,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "id": "${shanee.externalId.id}",
                 "firstName": "Shanee",
                 "lastName": "Smith",
-                "pictureName": "0.jpg"
+                "pictureName": "0.jpg","username":"test"
               },{
                 "id": "${shachaf.externalId.id}",
                 "firstName": "Shachaf",
                 "lastName": "Smith",
-                "pictureName": "0.jpg"
+                "pictureName": "0.jpg","username":"test"
               }
             ],
             "messages": [
@@ -235,8 +352,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val controller = inject[MobileMessagingController]
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         val fakeClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         fakeClient.saveUsers(shanee)
         fakeClient.saveUsers(shachaf)
@@ -292,12 +409,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 }
               ],
               "messages": $expectedMessages
@@ -343,12 +460,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 }
               ],
               "messages": $expectedMessages2
@@ -381,12 +498,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                   "id": "${shanee.externalId.id}",
                   "firstName": "Shanee",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 },{
                   "id": "${shachaf.externalId.id}",
                   "firstName": "Shachaf",
                   "lastName": "Smith",
-                  "pictureName": "0.jpg"
+                  "pictureName": "0.jpg","username":"test"
                 }
               ],
               "messages": $expectedMessages3
@@ -404,8 +521,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 
@@ -483,12 +600,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
                 "id": "${shanee.externalId.id}",
                 "firstName": "Shanee",
                 "lastName": "Smith",
-                "pictureName": "0.jpg"
+                "pictureName": "0.jpg","username":"test"
               },{
                 "id": "${shachaf.externalId.id}",
                 "firstName": "Shachaf",
                 "lastName": "Smith",
-                "pictureName": "0.jpg"
+                "pictureName": "0.jpg","username":"test"
               }
             ],
             "messages": [

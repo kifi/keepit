@@ -10,11 +10,9 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
 import com.keepit.search.graph.collection._
-import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.inject._
-import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory, DefaultAnalyzer }
+import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test.SearchTestInjector
 import play.api.test.Helpers._
@@ -26,12 +24,12 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def initData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "Agrajag", lastName = ""),
-      User(firstName = "Barmen", lastName = ""),
-      User(firstName = "Colin", lastName = ""),
-      User(firstName = "Dan", lastName = ""),
-      User(firstName = "Eccentrica", lastName = ""),
-      User(firstName = "Hactar", lastName = "")
+      User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Barmen", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Colin", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Dan", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Eccentrica", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "Hactar", lastName = "", username = Username("test"), normalizedUsername = "test")
     )
     val uris = saveURIs(
       NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
@@ -46,8 +44,8 @@ trait GraphTestHelper extends SearchTestInjector {
 
   def superBigData()(implicit injector: Injector) = {
     val users = saveUsers(
-      User(firstName = "rich", lastName = ""),
-      User(firstName = "poor", lastName = "")
+      User(firstName = "rich", lastName = "", username = Username("test"), normalizedUsername = "test"),
+      User(firstName = "poor", lastName = "", username = Username("test"), normalizedUsername = "test")
     )
 
     val uris = saveURIs(
@@ -127,14 +125,8 @@ trait GraphTestHelper extends SearchTestInjector {
     fakeShoeboxServiceClient.getCollection(collection.id.get)
   }
 
-  def mkURIGraphIndexer(uriGraphDir: IndexDirectory = new VolatileIndexDirectory(), bookmarkStoreDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(bookmarkStoreDir, inject[AirbrakeNotifier])
-    new StandaloneURIGraphIndexer(uriGraphDir, bookmarkStore, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
-  }
-
   def mkCollectionIndexer(collectionDir: IndexDirectory = new VolatileIndexDirectory())(implicit injector: Injector): CollectionIndexer = {
-    val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
-    new StandaloneCollectionIndexer(collectionDir, collectionNameIndexer, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    new StandaloneCollectionIndexer(collectionDir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
   }
 
   def mkUserGraphsSearcherFactory()(implicit injector: Injector) = {

@@ -88,7 +88,13 @@ class WebsiteSearchController @Inject() (
           case augmentedItems => {
             val librarySearcher = libraryIndexer.getSearcher
             val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
-            val futureUsers = shoeboxClient.getBasicUsers(userIds)
+
+            val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+
+            val futureUsers = {
+              val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
+              shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+            }
 
             val futureJsHits = futureUriSummaries.map { summaries =>
               (kifiPlainResult.hits zip allSecondaryFields).map {
@@ -103,16 +109,17 @@ class WebsiteSearchController @Inject() (
                 }
               }
             }
-
-            val libraries = {
-              val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
-              libraryIds.map(libraryById(_))
-            }
-
             for {
-              users <- futureUsers
+              usersById <- futureUsers
               jsHits <- futureJsHits
-            } yield (jsHits, users, libraries)
+            } yield {
+              val libraries = libraryIds.map { libId =>
+                val (libraryRecord, isSecret) = libraryRecordById(libId)
+                val owner = usersById(libraryRecord.owner)
+                BasicLibrary(libraryRecord, isSecret, owner)
+              }
+              (jsHits, userIds.map(usersById(_)), libraries)
+            }
           }
         }
       }
@@ -122,6 +129,11 @@ class WebsiteSearchController @Inject() (
           val result = Json.obj(
             "uuid" -> kifiPlainResult.uuid,
             "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter),
+            "experimentId" -> kifiPlainResult.searchExperimentId,
+            "mayHaveMore" -> kifiPlainResult.mayHaveMoreHits,
+            "myTotal" -> kifiPlainResult.myTotal,
+            "friendsTotal" -> kifiPlainResult.friendsTotal,
+            "othersTotal" -> kifiPlainResult.othersTotal,
             "hits" -> hits,
             "libraries" -> libraries,
             "users" -> users

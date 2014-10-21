@@ -80,7 +80,7 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      search: searchRoute('/site/search'),
+      search: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -111,12 +111,27 @@ angular.module('kifi')
       addKeepsToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps');
       },
+      copyKeepsToLibrary: function () {
+        return route('/libraries/copy');
+      },
+      moveKeepsToLibrary: function () {
+        return route('/libraries/move');
+      },
       removeKeepFromLibrary: function (libraryId, keepId) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId);
       },
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+
+      ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
 
       ////////////////////////////
       // Libraries              //
@@ -127,6 +142,9 @@ angular.module('kifi')
       },
       getLibraryById: function (libraryId) {
         return route('/libraries/' + libraryId);
+      },
+      getLibrarySummaryById: function (libraryId) {
+        return route('/libraries/' + libraryId + '/summary');
       },
       getKeepsInLibrary: function (libraryId, count, offset, authToken) {
         return route('/libraries/' + libraryId + '/keeps?count=' + count + '&offset=' + offset + (authToken ? '&authToken=' + authToken : ''));
@@ -152,6 +170,9 @@ angular.module('kifi')
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
+      getMoreLibraryFollowers: function(libraryId, pageSize, offset) {
+        return route('/libraries/' + libraryId + '/collabs?count=' + pageSize + '&offset=' + (offset * pageSize));
       }
     };
   }

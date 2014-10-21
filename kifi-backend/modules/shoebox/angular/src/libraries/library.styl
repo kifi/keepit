@@ -3,6 +3,25 @@
   padding: 0 25px 0 30px
   margin-bottom: 10px
 
+.delighted-visible ~ div .kf-library-card-header
+  margin-top: 10px
+
+// For library cards that are displayed when there
+// is no logged in user.
+.library-card.loggedOutUser
+  border: none
+  box-shadow: none
+
+  .kf-keep-lib-name-container
+    width: 100%
+
+  .kf-keep-lib-name
+    text-align: center
+
+  .kf-keep-lib-info
+    margin-top: 20px
+
+
 .library-card
   .kf-keep-lib-header
     padding-top: 20px
@@ -63,8 +82,12 @@
   .kf-keep-lib-description-container
     padding-bottom: 5px
 
+    .kf-desc-more
+      font-size: 11px
+
   .kf-keep-lib-description
     margin: 10px 0
+    line-height: 23px
 
   .kf-keep-lib-stats-and-followers
     border-top: 1px solid #dadae2
@@ -150,7 +173,7 @@
   border-radius: 5px
   padding: 8px 15px 8px 40px
   background: linear-gradient(to top, #f3f3f3, #fff)
-  font-family: Helvetica, Arial, sans-serif
+  font-family: Lato, Helvetica, Arial, sans-serif
   font-size: 13px
   color: #666
 

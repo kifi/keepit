@@ -36,6 +36,8 @@ object SociallyRelatedEntities {
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]]
   )(SociallyRelatedEntities.apply _, unlift(SociallyRelatedEntities.unapply))
+
+  def empty(userId: Id[User]): SociallyRelatedEntities = SociallyRelatedEntities(RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
 }
 
 case class SociallyRelatedEntitiesCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities] {

@@ -1,12 +1,12 @@
 package com.keepit.shoebox
 
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 
-import scala.concurrent.Future
-import scala.concurrent.Promise
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future, Promise }
 import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
@@ -20,7 +20,6 @@ import com.keepit.common.zookeeper._
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.social._
 import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
@@ -148,7 +147,8 @@ class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
-  cacheProvider: ShoeboxCacheProvider)
+  cacheProvider: ShoeboxCacheProvider,
+  implicit val executionContext: ScalaExecutionContext)
     extends ShoeboxServiceClient with Logging {
 
   val MaxUrlLength = 3000
@@ -662,7 +662,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }

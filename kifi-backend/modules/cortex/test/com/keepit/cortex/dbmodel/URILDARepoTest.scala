@@ -1,5 +1,6 @@
 package com.keepit.cortex.dbmodel
 
+import com.keepit.common.concurrent.WatchableExecutionContext
 import org.specs2.mutable.Specification
 import com.keepit.test.DbInjectionHelper
 import com.keepit.cortex.CortexTestInjector
@@ -53,6 +54,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
           uriTopicRepo.getFeature(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)) === None
           uriTopicRepo.getUpdateTimeAndState(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)).get._2 === URILDATopicStates.NOT_APPLICABLE
+          inject[WatchableExecutionContext].drain()
           uriTopicRepo.getByURI(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)).get.state === URILDATopicStates.NOT_APPLICABLE
 
           val topic2 = uriTopicRepo.get(Id[URILDATopic](2))

@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
-import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
+import com.keepit.common.controller.KifiSession.FORTYTWO_USER_ID
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database

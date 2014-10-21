@@ -2,6 +2,7 @@ package com.keepit.search.engine
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.logging.Logging
+import com.keepit.search.engine.explain.{ TargetedScorer, DirectExplainContext }
 import com.keepit.search.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
 import com.keepit.search.article.ArticleVisibility
@@ -20,6 +21,7 @@ import scala.concurrent.Future
 trait ScoreVectorSource {
   def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit
   def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit
+  def explain(targetId: Long, coreSize: Int, dataBuffer: DataBuffer, directExplainContext: DirectExplainContext): Unit
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
@@ -50,6 +52,40 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
         }
         writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directScoreContext)
       }
+    }
+  }
+
+  def explain(targetId: Long, coreSize: Int, dataBuffer: DataBuffer, directExplainContext: DirectExplainContext): Unit = {
+    if (weights.nonEmpty) {
+      val scorers = new Array[Scorer](weights.size)
+      indexReaderContexts.foreach { readerContext =>
+        var i = 0
+        while (i < scorers.length) {
+          scorers(i) = TargetedScorer(readerContext, weights(i)._1, targetId, idResolver(readerContext))
+          i += 1
+        }
+        writeScoreVectors(readerContext, scorers, coreSize, dataBuffer, directExplainContext)
+      }
+    }
+  }
+
+  protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
+    idMapperBasedIdResolver(readerContext)
+  }
+
+  protected def idMapperBasedIdResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
+    val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idMapper = reader.getIdMapper
+    new TargetedScorer.Resolver {
+      def apply(docId: Int) = idMapper.getId(docId)
+    }
+  }
+
+  protected def docValueBasedIdResolver(readerContext: AtomicReaderContext, idField: String): TargetedScorer.Resolver = {
+    val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idDocValues = reader.getNumericDocValues(idField)
+    new TargetedScorer.Resolver {
+      def apply(docId: Int) = idDocValues.get(docId)
     }
   }
 
@@ -139,6 +175,10 @@ class UriFromKeepsScoreVectorSource(
   private[this] var memberLibraryKeepCount = 0
   private[this] var authorizedLibraryKeepCount = 0
   private[this] var discoverableKeepCount = 0
+
+  override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
+    docValueBasedIdResolver(readerContext, KeepFields.uriIdField)
+  }
 
   override def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     super.execute(coreSize, dataBuffer, directScoreContext)
@@ -338,6 +378,10 @@ class LibraryFromKeepsScoreVectorSource(
     filter: SearchFilter,
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
+
+  override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
+    docValueBasedIdResolver(readerContext, KeepFields.libraryIdField)
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]

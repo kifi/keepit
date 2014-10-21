@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -33,15 +34,15 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit session =>
       var user1 = userRepo.save(User(
         firstName = "Homer",
-        lastName = "Simpson"
+        lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
       ))
       var user2 = userRepo.save(User(
         firstName = "Peter",
-        lastName = "Griffin"
+        lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
       ))
       var user3 = userRepo.save(User(
         firstName = "Clark",
-        lastName = "Kent"
+        lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
       ))
 
       val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
@@ -58,6 +59,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
@@ -108,39 +110,39 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
           implicit session =>
             var user1 = userRepo.save(User(
               firstName = "Homer",
-              lastName = "Simpson"
+              lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
             ))
             var user2 = userRepo.save(User(
               firstName = "Peter",
-              lastName = "Griffin"
+              lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
             ))
             var user3 = userRepo.save(User(
               firstName = "Clark",
-              lastName = "Kent"
+              lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
             ))
             var user4 = userRepo.save(User(
               firstName = "Clark",
-              lastName = "Simpson"
+              lastName = "Simpson", username = Username("test4"), normalizedUsername = "test4"
             ))
 
             connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get, user4.id.get))
             connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
             (user1, user2, user3, user4)
         }
-        val (connections1, total1) = inject[UserCommander].getConnectionsPage(user1.id.get, 0, 1000)
+        val (connections1, total1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 0, 1000)
         connections1.size === 3
         total1 === 3
 
-        val (connections2, total2) = inject[UserCommander].getConnectionsPage(user2.id.get, 0, 1000)
+        val (connections2, total2) = inject[UserConnectionsCommander].getConnectionsPage(user2.id.get, 0, 1000)
         connections2.size === 2
         total2 === 2
 
-        val (connections1p1, total1p1) = inject[UserCommander].getConnectionsPage(user1.id.get, 1, 2)
+        val (connections1p1, total1p1) = inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 1, 2)
         connections1p1.size === 1
         connections1p1.head.userId === user4.id.get
         total1p1 === 3
 
-        inject[UserCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
+        inject[UserConnectionsCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
       }
     }
 
@@ -169,6 +171,8 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       UsernameOps.normalize("andrew.conner2") === "andrewconner2"
       UsernameOps.normalize("康弘康弘") === "康弘康弘"
       UsernameOps.normalize("ân_dréw-c.ön.nér") === "andrewconner"
+      UsernameOps.normalize("bob1234") === "bob1234"
+      UsernameOps.normalize("123bob1234") === "123bob1234"
     }
 
     "allow change of username" in {
@@ -182,9 +186,9 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user1.id.get, Username("bob.z"), false) === Right(Username("bob.z"))
 
         // changes user model
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === None)
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.value === "test2")
         userCommander.setUsername(user2.id.get, Username("obama"), false) === Right(Username("obama"))
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.get === Username("obama"))
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === Username("obama"))
 
         // filter out invalid names
         userCommander.setUsername(user3.id.get, Username("a.-bc"), false) === Left("invalid_username")
@@ -206,7 +210,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userCommander = inject[UserCommander]
         val userValueRepo = inject[UserValueRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "test"))
         }
 
         val email1 = EmailAddress("vampireXslayer@gmail.com")
@@ -256,7 +260,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com"))))
+          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("test"), normalizedUsername = "test"))
         }
 
         // set service client response

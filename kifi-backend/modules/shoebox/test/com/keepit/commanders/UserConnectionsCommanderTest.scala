@@ -2,7 +2,9 @@ package com.keepit.commanders
 
 import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientImpl, ABookServiceClient }
 import com.keepit.common.db.Id
-import com.keepit.model.{ UserRepo, User, UserConnectionRepo, UserConnection }
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.model.{ Username, UserRepo, User, UserConnectionRepo, UserConnection }
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -12,7 +14,9 @@ import concurrent.duration.Duration
 class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
-    FakeABookServiceClientModule()
+    FakeABookServiceClientModule(),
+    FakeScrapeSchedulerModule(),
+    FakeSocialGraphModule()
   )
 
   "PeopleRecommendationCommander" should {
@@ -23,7 +27,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
           abook.addFriendRecommendationsExpectations(users(0).id.get, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
-          val friendRecoDataF = inject[UserConnectionsCommander].getFriendRecommendations(users(0).id.get, 2, 25)
+          val friendRecoDataF = inject[UserCommander].getFriendRecommendations(users(0).id.get, 2, 25)
           val friendRecoData = Await.result(friendRecoDataF, Duration(5, "seconds")).get
 
           friendRecoData.basicUsers === Map(
@@ -47,8 +51,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
         withDb(modules: _*) { implicit injector =>
           val (user1: User, user2: User) = db.readWrite { implicit rw =>
             val saveUser = inject[UserRepo].save _
-            (saveUser(User(firstName = s"first1", lastName = s"last1")),
-              saveUser(User(firstName = s"first1", lastName = s"last2")))
+            (saveUser(User(firstName = s"first1", lastName = s"last1", username = Username("test"), normalizedUsername = "test")),
+              saveUser(User(firstName = s"first1", lastName = s"last2", username = Username("test"), normalizedUsername = "test")))
           }
 
           val actual = inject[UserConnectionsCommander].getMutualFriends(user1.id.get, user2.id.get)
@@ -60,7 +64,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
         withDb(modules: _*) { implicit injector =>
           val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
             val saveUser = inject[UserRepo].save _
-            val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i"))
+            val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username("test"), normalizedUsername = "test"))
 
             val thisUserId = users(0).id.get
             val thatUserId = users(1).id.get

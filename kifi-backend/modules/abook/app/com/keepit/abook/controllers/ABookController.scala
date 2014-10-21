@@ -2,7 +2,7 @@ package com.keepit.abook.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.controller.{ WebsiteController, ABookServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ABookServiceController, UserActions, UserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.mvc.Action

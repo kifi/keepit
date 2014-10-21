@@ -2,14 +2,18 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.shoebox.controllers.LibraryAccessActions
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -18,10 +22,11 @@ import play.api.mvc.Result
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.json
 
 class ExtLibraryController @Inject() (
   db: Database,
-  libraryCommander: LibraryCommander,
+  val libraryCommander: LibraryCommander,
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
@@ -31,8 +36,11 @@ class ExtLibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   keepRepo: KeepRepo,
   collectionRepo: CollectionRepo,
+  airbrake: AirbrakeNotifier,
+  keepInterner: KeepInterner,
+  rawKeepFactory: RawKeepFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends UserActions with ShoeboxServiceController {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
@@ -94,44 +102,37 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit s =>
         libraryMembershipRepo.getOpt(request.userId, libraryId)
       } match {
-        case Some(mem) if mem.access != LibraryAccess.READ_ONLY =>
-          val info = request.body.as[JsObject]
+        case Some(mem) if mem.canWrite => // TODO: also allow keep if mem.canInsert and keep is not already in library
+          val body = request.body
           val source = KeepSource.keeper
           val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-          if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
+          if ((body \ "guided").asOpt[Boolean].getOrElse(false)) {
             hcb += ("guided", true)
           }
           implicit val context = hcb.build
 
-          val rawBookmark = info.as[RawBookmarkRepresentation]
-          val keepInfo = keepsCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
-
-          // Determine image choice.
-          val imageStatus = (info \ "image") match {
-            case JsNull => // user purposely wants no image
-              Json.obj()
-            case JsString(imageUrl) if imageUrl.startsWith("http") =>
-              val (keep, keepImageRequest) = db.readWrite { implicit session =>
-                val keep = keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-                val keepImageRequest = keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = KeepImageSource.UserPicked))
-                (keep, keepImageRequest)
-              }
-              keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, KeepImageSource.UserPicked, Some(keepImageRequest.id.get))
-              Json.obj("imageStatusPath" -> routes.ExtKeepImageController.checkImageStatus(libraryPubId, keep.externalId, keepImageRequest.token).url)
-            case _ =>
-              val keep = db.readOnlyMaster { implicit session =>
-                keepRepo.getOpt(keepInfo.id.get).get // Weird pattern, but this should always exist.
-              }
-              keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = false, overwriteExistingChoice = false)
-              Json.obj()
+          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
+          val (tags, image) = if (isNewKeep) {
+            (Seq.empty, None) // optimizing the common case
+          } else {
+            val tags = db.readOnlyReplica { implicit s =>
+              collectionRepo.getTagsByKeepId(keep.id.get)
+            }
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize)
+            (tags, image)
           }
 
-          Ok(Json.toJson(KeepData(
-            keepInfo.id.get,
-            mine = true, // TODO: stop assuming keep is mine and removable
-            removable = true,
-            secret = keepInfo.isPrivate,
-            libraryId = Library.publicId(libraryId))).as[JsObject] ++ imageStatus)
+          val keepData = KeepData(
+            keep.externalId,
+            mine = keep.userId == request.userId,
+            removable = mem.canWrite,
+            secret = keep.visibility == LibraryVisibility.SECRET,
+            libraryId = libraryPubId)
+          val moarKeepData = MoarKeepData(
+            title = keep.title,
+            image = image.map(keepImageCommander.getUrl),
+            tags = tags.map(_.tag).toSeq)
+          Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
           Forbidden(Json.obj("error" -> "invalid_access"))
       }
@@ -182,7 +183,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
@@ -203,7 +204,7 @@ class ExtLibraryController @Inject() (
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .hasWriteAccess
+        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
           keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
             case Right(keep) =>
               db.readOnlyReplica { implicit s =>
@@ -222,15 +223,27 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def searchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = UserAction.async { request =>
+  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, None, query, limit)
+
+  def suggestTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, Some(keepId), query, limit)
+
+  private def doSuggestTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        keepsCommander.searchTags(request.userId, query, limit) map { hits =>
-          implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-          val result = JsArray(hits.map { hit => Json.obj("tag" -> hit.tag, "matches" -> hit.matches) })
-          Ok(result)
+        if (query.trim.isEmpty && keepId.isDefined) {
+          val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
+          keepsCommander.suggestTags(request.userId, libraryId, keep.uriId, limit).map { suggestedTags =>
+            val result = JsArray(suggestedTags.map { tag => Json.obj("tag" -> tag) })
+            Ok(result)
+          }
+        } else {
+          keepsCommander.searchTags(request.userId, query, limit) map { hits =>
+            implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+            val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
+            Ok(result)
+          }
         }
       } getOrElse {
         Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))
@@ -238,6 +251,22 @@ class ExtLibraryController @Inject() (
     } getOrElse {
       Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
     }
+  }
+
+  private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
+  def importBrowserBookmarks(id: PublicId[Library]) = (UserAction andThen LibraryWriteAction(id))(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
+    val userId = request.userId
+    val installationId = request.kifiInstallationId
+    val json = request.body
+
+    SafeFuture {
+      log.debug(s"adding bookmarks import of user $userId")
+
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.bookmarkImport).build
+      val libraryId = Library.decodePublicId(id).get
+      keepInterner.persistRawKeeps(rawKeepFactory.toRawKeep(userId, KeepSource.bookmarkImport, json, installationId = installationId, libraryId = Some(libraryId)))
+    }
+    Status(ACCEPTED)(JsNumber(0))
   }
 
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {

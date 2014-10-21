@@ -1,0 +1,55 @@
+@(fromUserId: Id[User], acceptUrl: Html)
+@import com.keepit.common.mail.template.helpers._
+@email.tags.contentWrapper() {
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
+  @email.tags.trSpacer(24)
+
+  <tr><td align="center" style="text-align:center;">
+    <table border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
+      <tr><td align="center">
+        <img src="@avatarUrl(fromUserId)" alt="@fullName(fromUserId)" width="75" height="75" border="0" style="display:block;"/>
+      </td></tr>
+    </table>
+  </td></tr>
+  @email.tags.trSpacer(10)
+
+  <tr>
+    <td align="center" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;line-height:26px;color:#535762;mso-line-height-rule:exactly;">
+      @fullName(fromUserId)
+    </td>
+  </tr>
+  @email.tags.trSpacer(20)
+  <tr>
+    <td align="center" style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:20px;line-height:24px;color:#535762;mso-line-height-rule:exactly;">
+      I would like to give you access to my<br/>best stuff on Kifi
+    </td>
+  </tr>
+  @email.tags.trSpacer(24)
+  <tr>
+    <td>
+      @email.tags.roundedContainer(220, 40, 5, "#41c381") {
+      <a href="@acceptUrl" target="_blank" style="font-family:Arial,sans-serif;font-size:16px;line-height:26px;color:#ffffff;font-weight:bold;text-decoration:none;display:block;">
+        Get access now
+      </a>
+      }
+    </td>
+  </tr>
+  @email.tags.trSpacer(24)
+  <tr>
+    <td align="center" style="font-family:Arial,sans-serif;font-size:16px;line-height:22px;color:#333333;mso-line-height-rule:exactly;">
+      @firstName(fromUserId) wants to share, discover, and collect the<br/>
+      things that really matter online with you on Kifi
+    </td>
+  </tr>
+  @email.tags.trSpacer(35)
+  @email.tags.trHorizontalLine()
+  @email.tags.trSpacer(35)
+  <tr>
+    <td align="left" style="font-family:Arial,sans-serif;font-size:16px;line-height:22px;color:#333333;mso-line-height-rule:exactly;padding-left:14px;">
+      Happy keeping!<br/>
+      The Kifi team
+    </td>
+  </tr>
+  @email.tags.trSpacer(38)
+</table>
+}

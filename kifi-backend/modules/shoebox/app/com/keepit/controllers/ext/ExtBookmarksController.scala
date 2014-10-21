@@ -4,7 +4,7 @@ import com.google.inject.Inject
 
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -175,7 +175,8 @@ class ExtBookmarksController @Inject() (
       }
     }
 
-    Ok(Json.toJson(bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)))
+    val (keep, _) = bookmarksCommander.keepOne(rawBookmark, request.userId, libraryId, request.kifiInstallationId, source)
+    Ok(Json.toJson(KeepInfo.fromKeep(keep)))
   }
 
   def unkeep(id: ExternalId[Keep]) = UserAction { request =>
@@ -211,6 +212,7 @@ class ExtBookmarksController @Inject() (
 
   private val MaxBookmarkJsonSize = 2 * 1024 * 1024 // = 2MB, about 14.5K bookmarks
 
+  // deprecated, remove after users are switched to libraries - Andrew (Oct 14 2014)
   def addBookmarks() = UserAction(parse.tolerantJson(maxLength = MaxBookmarkJsonSize)) { request =>
     val userId = request.userId
     val installationId = request.kifiInstallationId

@@ -3,6 +3,7 @@ package com.keepit.classify
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -18,6 +19,7 @@ import org.specs2.mutable.SpecificationLike
 class DomainClassifierTest extends TestKitSupport with SpecificationLike with CommonTestInjector with DbInjectionHelper {
 
   val domainClassifierTestModules = Seq(
+    FakeExecutionContextModule(),
     FakeMailModule(),
     FakeAnalyticsModule(),
     FakeShoeboxStoreModule(),

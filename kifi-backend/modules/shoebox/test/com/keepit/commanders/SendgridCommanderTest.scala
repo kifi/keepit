@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
@@ -29,7 +30,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     val emailRepo = inject[ElectronicMailRepo]
 
     db.readWrite { implicit rw =>
-      val user = userRepo.save(User(firstName = "John", lastName = "Doe"))
+      val user = userRepo.save(User(firstName = "John", lastName = "Doe", username = Username("test"), normalizedUsername = "test"))
       val emailAddr = emailAddrRepo.save(UserEmailAddress(address = EmailAddress("johndoe@gmail.com"), userId = user.id.get))
       val email = emailRepo.save(ElectronicMail(
         from = SystemEmailAddress.ENG,
@@ -58,6 +59,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     )
 
   var modules = Seq(
+    FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),

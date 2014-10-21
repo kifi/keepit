@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.{ KifiSearch, DebugOption, SearchFactory }
 import com.keepit.search.engine.result.{ KifiPlainResult, KifiShardResultMerger, KifiShardResult }
 import scala.concurrent.duration._
@@ -17,7 +18,6 @@ import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.sharding.{ Sharding, Shard, ActiveShards }
 import com.keepit.search.result._
-import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
 
@@ -81,9 +81,11 @@ trait SearchCommander {
     uriId: Id[NormalizedURI],
     lang: Option[String],
     experiments: Set[ExperimentType],
-    query: String): Future[Option[(Query, Explanation)]]
+    query: String): Future[Option[Explanation]]
 
   def warmUp(userId: Id[User]): Unit
+
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]]
 }
 
 @Singleton
@@ -91,7 +93,6 @@ class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
-    mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
     compatibilitySupport: SearchBackwardCompatibilitySupport,
     airbrake: AirbrakeNotifier,
@@ -123,9 +124,6 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
-
     // build distribution plan
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
@@ -156,8 +154,11 @@ class SearchCommanderImpl @Inject() (
       ).future
     }
 
+    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
+
     val mergedResult = {
 
+      val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
       val resultMerger = new ResultMerger(enableTailCutting, config, true)
 
       val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
@@ -218,43 +219,25 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
-    val configFuture = searchFactory.getConfigFuture(userId, experiments, predefinedConfig)
-    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+    val future = distSearch2(
+      localShards,
+      userId,
+      firstLang,
+      secondLang,
+      experiments,
+      query,
+      filter,
+      LibraryContext.None,
+      maxHits,
+      context,
+      predefinedConfig,
+      debug)
+    val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
 
-    if (config.asBoolean("newEngine") == true) {
-      val friendIdsFuture = searchFactory.getFriendIdsFuture(userId)
-      val future = distSearch2(
-        localShards,
-        userId,
-        firstLang,
-        secondLang,
-        experiments,
-        query,
-        filter,
-        LibraryContext.None,
-        maxHits,
-        context,
-        predefinedConfig,
-        debug)
+    val result = monitoredAwait.result(future, 3 seconds, "getting result")
+    val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
 
-      val friendIds = monitoredAwait.result(friendIdsFuture, 3 seconds, "getting friend ids")
-      val result = monitoredAwait.result(future, 3 seconds, "getting friend ids")
-      return compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
-    }
-
-    val searchFilter = SearchFilter(filter, LibraryContext.None, context)
-
-    val searchers = mainSearcherFactory(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-
-    val future = Future.traverse(searchers) { searcher =>
-      if (debug.isDefined) searcher.debug(debug.get)
-
-      SafeFuture { searcher.search() }
-    }
-    val results = monitoredAwait.result(future, 10 seconds, "slow search")
-
-    val resultMerger = new ResultMerger(false, config, false)
-    resultMerger.merge(results, maxHits)
+    compatibilitySupport.toPartialSearchResult(localShards, userId, friendIds, result)
   }
 
   def search2(
@@ -288,13 +271,11 @@ class SearchCommanderImpl @Inject() (
 
     if (libraryContext == LibraryContext.Invalid) {
       // return an empty result for an invalid library public id
-      return Future.successful(new KifiPlainResult(ExternalId[ArticleSearchResult](), query, Lang("en"), KifiShardResult.empty, Set(), None))
+      val searchFilter = SearchFilter(filter, libraryContext, context)
+      return Future.successful(KifiPlainResult(query, searchFilter, Lang("en"), KifiShardResult.empty, Set(), None))
     }
 
     val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, libraryContext)
-
-    val searchFilter = SearchFilter(filter, libraryContext, context)
-    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
@@ -313,8 +294,10 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
     }
+    val searchFilter = SearchFilter(filter, libraryContext, context)
 
     Future.sequence(resultFutures).map { results =>
+      val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
       val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
       val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
       val mergedResult = resultMerger.merge(results, maxHits, withFinalScores = true)
@@ -324,7 +307,7 @@ class SearchCommanderImpl @Inject() (
       timing.done
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
-      val plainResult = KifiPlainResult(query, firstLang, mergedResult, idFilter, searchExperimentId)
+      val plainResult = KifiPlainResult(query, searchFilter, firstLang, mergedResult, idFilter, searchExperimentId)
 
       SafeFuture {
         // stash timing information
@@ -410,17 +393,31 @@ class SearchCommanderImpl @Inject() (
   //external (from the extension/website)
   def warmUp(userId: Id[User]): Unit = searchFactory.warmUp(userId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = {
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
+
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = {
+    val langs = lang match {
+      case Some(str) => str.split(",").toSeq.map(Lang(_))
+      case None => Seq(DefaultAnalyzer.defaultLang)
+    }
+    val firstLang = langs(0)
+    val secondLang = langs.lift(1)
+
     searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>
-        val langs = lang match {
-          case Some(str) => str.split(",").toSeq.map(Lang(_))
-          case None => Seq(DefaultAnalyzer.defaultLang)
-        }
-
-        shards.find(uriId).flatMap { shard =>
-          val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
-          searcher.explain(uriId)
+        findShard(uriId).flatMap { shard =>
+          val searchOpt = if (userId.id < 0) {
+            try {
+              searchFactory.getKifiNonUserSearch(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+            } catch {
+              case e: Exception =>
+                log.error("unable to create KifiNonUserSearch", e)
+                None
+            }
+          } else {
+            searchFactory.getKifiSearch(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+          }
+          searchOpt.map(_.explain(uriId))
         }
     }
   }
@@ -441,10 +438,10 @@ class SearchCommanderImpl @Inject() (
     var _postsearch = 0L
     var _endTime = 0L
 
-    def presearch: Unit = { _presearch = System.currentTimeMillis() }
-    def search: Unit = { _search = System.currentTimeMillis() }
-    def postsearch: Unit = { _postsearch = System.currentTimeMillis() }
-    def done: Unit = { _endTime = System.currentTimeMillis() }
+    def presearch(): Unit = { _presearch = System.currentTimeMillis() }
+    def search(): Unit = { _search = System.currentTimeMillis() }
+    def postsearch(): Unit = { _postsearch = System.currentTimeMillis() }
+    def done(): Unit = { _endTime = System.currentTimeMillis() }
 
     def elapsed(time: Long = System.currentTimeMillis()): Long = (time - _startTime)
 

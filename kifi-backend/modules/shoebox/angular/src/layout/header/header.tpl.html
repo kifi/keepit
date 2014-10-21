@@ -7,6 +7,23 @@
       <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
       <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
     </div>
+
+    <div class="kf-header-search-bar" ng-if="librariesEnabled">
+        <div class="kf-query-lib-container" ng-class="{empty: isEmpty()}">
+          <div class="kf-query-lib-icon" ng-class="{'focused': isFocused}"></div>
+
+          <img class="kf-search-bar-lib-owner-img" ng-show="search.showName" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+
+          <div class="kf-search-bar-lib-name" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }"> {{library.name}} </div>
+          <div class="kf-search-bar-lib-name-clear" ng-show="search.showName" ng-class="{ 'secret': library.visibility == 'secret', 'published': library.visibility == 'published', 'discoverable': library.visibility == 'discoverable' }" ng-click="clearLibraryName()">&times;</div>
+
+          <div class="kf-query-lib" ng-class="{'extend': !search.showName}">
+            <input type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="focusInput()" ng-blur="blurInput()" ng-change="changeSearchInput()" ng-keydown="onKeydown($event)">
+          </div>
+          <div class="kf-search-bar-clear" ng-show="search.text" ng-click="clearInput()">Clear</div>
+      </div>
+    </div>
+
     <div class="kf-header-right">
       <div class="sprite sprite-add-link" ng-click="addKeeps()">Add a link</div>
       <a href="/tags/manage" class="kf-header-manage-tags sprite svg-tag-black" ng-class="{'svg-tag-hover': hover}" ng-if="librariesEnabled" ng-mouseenter="hover = true" ng-mouseleave="hover = false">Manage your tags</a>

@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -9,9 +10,7 @@ import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetwor
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.model.ExperimentType.ADMIN
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.User
-import com.keepit.model.UserExperiment
+import com.keepit.model.{ Username, SocialUserInfo, User, UserExperiment }
 import com.keepit.test._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.mail.FakeMailModule
@@ -32,6 +31,7 @@ import scala.concurrent.Future
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
+    ExecutionContextModule(),
     FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
@@ -61,9 +61,9 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
         val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val u1 = db.readWrite { implicit s =>
-          val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
-          val u2 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "B", lastName = "2"))
-          val u3 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "C", lastName = "3"))
+          val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val u2 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "B", lastName = "2", username = Username("test2"), normalizedUsername = "test2"))
+          val u3 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "C", lastName = "3", username = Username("test3"), normalizedUsername = "test3"))
           val sui = socialUserInfoRepo.save(SocialUserInfo(
             userId = u1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
             credentials = Some(su)))

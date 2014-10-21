@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.{ InviteCommander, UserConnectionsCommander }
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, WebsiteController }
+import com.keepit.commanders.{ UserCommander, InviteCommander, UserConnectionsCommander }
+import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.model._
@@ -21,7 +21,7 @@ class PeopleRecommendationController @Inject() (
     basicUserRepo: BasicUserRepo,
     userRepo: UserRepo,
     db: Database,
-    peopleRecoCommander: UserConnectionsCommander,
+    peopleRecoCommander: UserCommander,
     socialUserRepo: SocialUserInfoRepo,
     inviteCommander: InviteCommander) extends UserActions with ShoeboxServiceController {
 

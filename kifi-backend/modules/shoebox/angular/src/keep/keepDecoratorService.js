@@ -12,7 +12,7 @@ angular.module('kifi')
       _.assign(this, item);
       this.itemType = itemType;
 
-      // For recommendations, the id field in the recommended page coming from the backend is 
+      // For recommendations, the id field in the recommended page coming from the backend is
       // actually the url id of the page. To disambiguate from a page's keep id,
       // use 'urlId' as the property name for the url id.
       // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
@@ -55,7 +55,7 @@ angular.module('kifi')
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
       this.readTime = getKeepReadTime(this.summary);
-      this.showSocial = this.others || (this.keepers && this.keepers.length > 0);
+      this.showSocial = this.others || (this.keepers && this.keepers.length > 0) || (this.libraries &&  this.libraries.length > 0);
     }
 
     // Add properties that are specific to a really kept Keep.
@@ -63,7 +63,7 @@ angular.module('kifi')
       this.id = keptItem.id;
       this.libraryId = keptItem.libraryId;
       this.isPrivate = keptItem.isPrivate;
-      
+
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
       this.tagList = this.tagList || [];
       this.collections = this.collections || [];

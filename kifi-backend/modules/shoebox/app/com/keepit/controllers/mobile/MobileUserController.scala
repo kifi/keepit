@@ -2,6 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
@@ -25,14 +26,18 @@ import com.keepit.common.http._
 class MobileUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userCommander: UserCommander,
+  userConnectionsCommander: UserConnectionsCommander,
   typeaheadCommander: TypeaheadCommander,
+  keepCountCache: KeepCountCache,
+  keepRepo: KeepRepo,
+  libraryRepo: LibraryRepo,
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
   db: Database)
     extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
-    val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
+    val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = connectionsPage.map {
       case ConnectionInfo(friend, _, unfriended, unsearched) =>
         Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
@@ -65,7 +70,8 @@ class MobileUserController @Inject() (
   }
 
   def currentUser = UserAction.async { implicit request =>
-    getUserInfo(request)
+    getUserInfo(request, true)
+
   }
 
   def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -95,8 +101,18 @@ class MobileUserController @Inject() (
     }
   }
 
-  private def getUserInfo[T](request: UserRequest[T]) = {
+  private def getProfileInfo(userId: Id[User])(implicit session: RSession): (Int, Int, Int, Int) = {
+    val friendCount = userConnectionRepo.getConnectionCount(userId)
+    val keepCount = keepCountCache.getOrElse(KeepCountKey(userId)) { keepRepo.getCountByUser(userId) } // getCountByUser goes directly to db
+    val libraries = libraryRepo.getAllByOwner(userId)
+    val libCount = libraries.size
+    val libFollowerCount = libraries.foldLeft(0) { (a, c) => a + c.memberCount } - libCount // memberCount includes owner
+    (friendCount, keepCount, libCount, libFollowerCount)
+  }
+
+  private def getUserInfo[T](request: UserRequest[T], profileInfo: Boolean = false) = {
     val user = userCommander.getUserInfo(request.user)
+    val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
     userCommander.getKeepAttributionInfo(request.userId) map { info =>
       Ok(toJson(user.basicUser).as[JsObject] ++
         toJson(user.info).as[JsObject] ++
@@ -105,7 +121,11 @@ class MobileUserController @Inject() (
           "experiments" -> request.experiments.map(_.value),
           "clickCount" -> info.clickCount,
           "rekeepCount" -> info.rekeepCount,
-          "rekeepTotalCount" -> info.rekeepTotalCount
+          "rekeepTotalCount" -> info.rekeepTotalCount,
+          "friendCount" -> friendCount,
+          "keepCount" -> keepCount,
+          "libCount" -> libCount,
+          "libFollowerCount" -> libFollowerCount
         )
       )
     }
@@ -132,13 +152,13 @@ class MobileUserController @Inject() (
   }
 
   def friend(externalId: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userCommander.friend(request.userId, externalId)
+    val (success, code) = userConnectionsCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
   def unfriend(externalId: ExternalId[User]) = UserAction { request =>
-    if (userCommander.unfriend(request.userId, externalId)) {
+    if (userConnectionsCommander.unfriend(request.userId, externalId)) {
       Ok(Json.obj("code" -> "removed"))
     } else {
       NotFound(Json.obj("code" -> "user_not_found"))
@@ -146,18 +166,18 @@ class MobileUserController @Inject() (
   }
 
   def ignoreFriendRequest(externalId: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
+    val (success, code) = userConnectionsCommander.ignoreFriendRequest(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }
 
   def incomingFriendRequests = UserAction { request =>
-    val users = userCommander.incomingFriendRequests(request.userId)
+    val users = userConnectionsCommander.incomingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
   def outgoingFriendRequests = UserAction { request =>
-    val users = userCommander.outgoingFriendRequests(request.userId)
+    val users = userConnectionsCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
   }
 
@@ -179,7 +199,7 @@ class MobileUserController @Inject() (
   }
 
   def disconnect(networkString: String) = UserAction { implicit request =>
-    val (suiOpt, code) = userCommander.disconnect(request.userId, networkString)
+    val (suiOpt, code) = userConnectionsCommander.disconnect(request.userId, networkString)
     suiOpt match {
       case None => BadRequest(Json.obj("code" -> code))
       case Some(newLoginUser) =>
@@ -188,7 +208,7 @@ class MobileUserController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_server_error")),
           authenticator => {
             Ok(Json.obj("code" -> code))
-              .withSession(request.session - SecureSocial.OriginalUrlKey + (ActionAuthenticator.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession(request.session - SecureSocial.OriginalUrlKey + (KifiSession.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
               .withCookies(authenticator.toCookie)
           }
         )
@@ -196,7 +216,7 @@ class MobileUserController @Inject() (
   }
 
   def excludeFriend(id: ExternalId[User]) = UserAction { request =>
-    userCommander.excludeFriend(request.userId, id) map { changed =>
+    userConnectionsCommander.excludeFriend(request.userId, id) map { changed =>
       val msg = if (changed) "changed" else "no_change"
       Ok(Json.obj("code" -> msg))
     } getOrElse {
@@ -205,7 +225,7 @@ class MobileUserController @Inject() (
   }
 
   def includeFriend(id: ExternalId[User]) = UserAction { request =>
-    userCommander.includeFriend(request.userId, id) map { changed =>
+    userConnectionsCommander.includeFriend(request.userId, id) map { changed =>
       val msg = if (changed) "changed" else "no_change"
       Ok(Json.obj("code" -> msg))
     } getOrElse {

@@ -19,6 +19,7 @@ class MobilePageController @Inject() (
   db: Database,
   keepRepo: KeepRepo,
   userCommander: UserCommander,
+  userConnectionsCommander: UserConnectionsCommander,
   collectionCommander: CollectionCommander,
   pageCommander: PageCommander)
     extends UserActions with ShoeboxServiceController {
@@ -49,7 +50,7 @@ class MobilePageController @Inject() (
     val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sortOrder, request.userId) }
     // friend connections
-    val friendsFuture = SafeFuture { userCommander.getConnectionsPage(request.userId, page, pageSize) }
+    val friendsFuture = SafeFuture { userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize) }
 
     for {
       pageInfo <- pageFutures

@@ -3,6 +3,7 @@ package com.keepit.commanders.emails.tips
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.commanders.emails.FriendRecommendationsEmailTip
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
@@ -12,7 +13,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NotificationCategory, User, UserRepo }
+import com.keepit.model.{ Username, NotificationCategory, User, UserRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -24,6 +25,7 @@ import scala.concurrent.{ Await, Future }
 
 class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
@@ -47,10 +49,10 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
 
         val friends = db.readWrite { implicit rw =>
           Seq(
-            userRepo.save(User(firstName = "Bob", lastName = "Marley", pictureName = Some("0"))),
-            userRepo.save(User(firstName = "Joe", lastName = "Mustache", pictureName = Some("mustache"))),
-            userRepo.save(User(firstName = "Mr", lastName = "T", pictureName = Some("mrt"))),
-            userRepo.save(User(firstName = "Dolly", lastName = "Parton", pictureName = Some("dolly")))
+            userRepo.save(User(firstName = "Bob", lastName = "Marley", pictureName = Some("0"), username = Username("test1"), normalizedUsername = "test1")),
+            userRepo.save(User(firstName = "Joe", lastName = "Mustache", pictureName = Some("mustache"), username = Username("test2"), normalizedUsername = "test2")),
+            userRepo.save(User(firstName = "Mr", lastName = "T", pictureName = Some("mrt"), username = Username("test3"), normalizedUsername = "test3")),
+            userRepo.save(User(firstName = "Dolly", lastName = "Parton", pictureName = Some("dolly"), username = Username("test4"), normalizedUsername = "test4"))
           )
         }
         val friendIds = friends.map(_.id.get)

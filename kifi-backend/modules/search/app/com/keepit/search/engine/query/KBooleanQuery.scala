@@ -9,19 +9,6 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
-object KBooleanQuery {
-  def apply(clauses: JList[BooleanClause]) = {
-    val query = new KBooleanQuery()
-    clauses.foreach { clause =>
-      if (!clause.getQuery.isInstanceOf[KTextQuery]) {
-        throw new KBooleanQueryException(s"wrong subquery class: ${clause.getQuery.getClass().getName()}")
-      }
-      query.add(clause)
-    }
-    query
-  }
-}
-
 class KBooleanQuery() extends BooleanQuery(false) {
 
   override def rewrite(reader: IndexReader): Query = {
@@ -68,10 +55,6 @@ class KBooleanQuery() extends BooleanQuery(false) {
 
       override def getValueForNormalization(): Float = normalizationValue
 
-      override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-        throw new UnsupportedOperationException()
-      }
-
       def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
         out ++= weightList
       }
@@ -108,5 +91,3 @@ class KBooleanQuery() extends BooleanQuery(false) {
     }
   }
 }
-
-class KBooleanQueryException(msg: String) extends Exception(msg)

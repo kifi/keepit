@@ -1,6 +1,40 @@
-@(query: String, userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[(org.apache.lucene.search.Query, org.apache.lucene.search.Explanation)])
+@(userId: Id[User], uriId: Id[NormalizedURI], explanation: Option[com.keepit.search.engine.explain.Explanation])
 
-<h3>Explaining [@query] for User:@userId, URI=@uriId</h3>
+<html>
 
-<h4>@explanation.map(_._1.toString).getOrElse("none")</h4>
-@Html(explanation.map(_._2.toHtml).getOrElse("<ul><li>none</li></ul>"))
+<head>
+<title>Explaining for User:@userId URI:@uriId</title>
+<style>
+ table, th, td {
+   border: 1px solid #ddd;
+   border-collapse: collapse;
+ }
+ th, td {
+   padding: 5px;
+   text-align: right;
+ }
+</style>
+</head>
+
+<body>
+
+<h2>Explaining for User:@userId URI:@uriId</h2>
+
+<h3>Query</h3>
+
+@explanation.map(_.query.toString).getOrElse("<ul><li>none</li></ul>")
+
+<h3>Boost Values</h3>
+
+@Html(explanation.map(_.boostValuesHtml).getOrElse("<ul><li>none</li></ul>"))
+
+<h3>Sharing</h3>
+
+@Html(explanation.map(_.sharingHtml).getOrElse("<ul><li>none</li></ul>"))
+
+<h3>Score Details</h3>
+
+@Html(explanation.map(_.detailsHtml).getOrElse("<ul><li>none</li></ul>"))
+
+</body>
+</html>

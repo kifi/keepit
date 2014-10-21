@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ Id }
 import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule, EmailAddress }
@@ -24,6 +25,7 @@ import scala.concurrent.duration.Duration
 class LibraryCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
@@ -44,10 +46,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Some(Username("ironman"))))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Some(Username("captainamerica"))))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Some(Username("agentfury"))))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Some(Username("incrediblehulk"))))
+      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Username("ironman"), normalizedUsername = "foo1"))
+      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Username("captainamerica"), normalizedUsername = "foo2"))
+      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Username("agentfury"), normalizedUsername = "foo3"))
+      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Username("incrediblehulk"), normalizedUsername = "foo4"))
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
@@ -297,7 +299,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "remove library, memberships & invites" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps()
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
@@ -308,6 +310,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
 
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val keeps = db.readOnlyMaster { implicit s => keepRepo.getKeepsFromLibrarySince(t1.minusYears(10), libMurica.id.get, 10000) }
+        keeps.size === 3
+
         libraryCommander.removeLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
@@ -315,6 +321,19 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allLibs.map(_.slug.value) === Seq("avengers", "science")
           libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
+        }
+
+        db.readWrite { implicit s =>
+          val deleted = libraryRepo.get(libMurica.id.get)
+          deleted.name !== libMurica.name
+          deleted.description === None
+          deleted.state === LibraryStates.INACTIVE
+          deleted.slug !== libMurica.slug
+
+          keeps foreach { keep =>
+            val deletedKeep = keepRepo.get(keep.id.get)
+            deletedKeep.title === None
+          }
         }
 
         libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)
@@ -393,7 +412,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val userWidow = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Username("blackwidow"), normalizedUsername = "bar", primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
           user
         }
@@ -640,7 +659,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -650,9 +669,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val keepsInIronMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // Ironman attempts to copy from IronMurica to Murica (but only has read_only access to Murica) (tests RW -> RO)
@@ -665,9 +684,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Freedom", "Reddit")
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Freedom", "Reddit")
         }
 
         // Ironman copies duplicates from Murica to Freedom
@@ -677,7 +696,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 9
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
         }
       }
     }
@@ -697,7 +716,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -709,8 +728,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // Ironman moves 2 keeps from IronMurica to Freedom (tests RW -> RW)
@@ -719,9 +738,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val keepsInFreedom = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom")
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20)
         }
 
         // Ironman attempts to move keeps from IronMurica to Murica (tests RW -> RO)
@@ -732,8 +751,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
         }
 
         // move duplicates (Reddit) IronMurica -> Freedom
@@ -743,8 +762,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
-          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
+          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
         }
       }
     }
@@ -817,7 +836,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res2.isRight === true
         res2.right.get.length === 1 // one failed keep, one keep activated and one keep added (Library "Murica" already has Reddit active Keep)
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
         }
@@ -826,7 +845,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         res3.isRight === true
         res3.right.get.length === 4 // all 4 should fail since library already has all 3 URIs
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libMurica.id.get, 10, 0).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
         }

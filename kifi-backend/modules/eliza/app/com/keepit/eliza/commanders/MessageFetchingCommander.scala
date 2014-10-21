@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.{ Json, JsArray, JsString, JsNumber, JsBoolean, JsValue }
-import com.keepit.model.User
+import com.keepit.model.{ Username, User }
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -121,7 +121,7 @@ class MessageFetchingCommander @Inject() (
           }
           auxModifiedFuture.map {
             case (text, aux) =>
-              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", None)))
+              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", Username("sssss"))))
           }
         case None =>
           Promise.successful(m).future

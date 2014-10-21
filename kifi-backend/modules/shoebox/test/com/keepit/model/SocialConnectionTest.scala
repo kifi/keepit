@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
@@ -20,6 +21,7 @@ import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   val socialConnectionTestModules = Seq(
+    ExecutionContextModule(),
     FakeHttpClientModule(),
     FakeShoeboxStoreModule(),
     FakeShoeboxServiceClientModule(),
@@ -50,7 +52,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
       withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
-          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
@@ -75,8 +77,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         val (eishaySocialUserInfo, andrewSocialUserInfo) = inject[Database].readWrite { implicit s =>
           (
-            socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith")))),
-            socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
+            socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test")))),
+            socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test2"), normalizedUsername = "test2"))))
           )
         }
 
@@ -90,9 +92,9 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           emailRepo.save(UserEmailAddress(userId = eishaySocialUserInfo.userId.get, address = EmailAddress("eishay@gmail.com")))
           emailRepo.save(UserEmailAddress(userId = andrewSocialUserInfo.userId.get, address = EmailAddress("andrew@gmail.com")))
 
-          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
-            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
-            userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang", username = Username("test2"), normalizedUsername = "test2")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran", username = Username("test3"), normalizedUsername = "test3")) :: Nil
 
           createEmailForUsers(users)
 
@@ -130,7 +132,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
       withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val (socialUser, andrewUser: User) = inject[Database].readWrite { implicit s =>
-          val u: User = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val u: User = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
@@ -151,11 +153,11 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         val userRepo = inject[UserRepo]
         val socialRepo = inject[SocialUserInfoRepo]
         val (eishaySocialUserInfo, eishayUser) = inject[Database].readWrite { implicit s =>
-          var user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          var user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           (socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(user)), user)
         }
         val (andrewSocialUserInfo, andrewUser2) = inject[Database].readWrite { implicit s =>
-          var user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
+          var user = userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
           (socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(user)), user)
         }
 
@@ -164,9 +166,9 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite { implicit s =>
-          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
-            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
-            userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang", username = Username("test"), normalizedUsername = "test")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran", username = Username("test"), normalizedUsername = "test")) :: Nil
 
           createEmailForUsers(andrewUser :: andrewUser2 :: eishayUser :: users)
 
@@ -209,7 +211,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
       withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val (socialUser, andrewUser) = inject[Database].readWrite { implicit s =>
-          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
@@ -233,7 +235,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         val userRepo = inject[UserRepo]
         val (eishaySocialUserInfo, eishayUser) = inject[Database].readWrite { implicit s =>
           val info = socialRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK))
-          var user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+          var user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           (socialRepo.save(info.withUser(user)), user)
         }
 
@@ -242,10 +244,10 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite { implicit s =>
-          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
-            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
-            userRepo.save(User(firstName = "John", lastName = "Cochran")) ::
-            userRepo.save(User(firstName = "Andrew", lastName = "Conner")) :: Nil
+          val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test")) ::
+            userRepo.save(User(firstName = "Kelvin", lastName = "Jiang", username = Username("test2"), normalizedUsername = "test2")) ::
+            userRepo.save(User(firstName = "John", lastName = "Cochran", username = Username("test3"), normalizedUsername = "test3")) ::
+            userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test4"), normalizedUsername = "test4")) :: Nil
 
           createEmailForUsers(andrewUser :: eishayUser :: users)
 

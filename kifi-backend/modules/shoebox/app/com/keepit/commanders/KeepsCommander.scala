@@ -38,6 +38,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
+import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -173,7 +174,7 @@ class KeepsCommander @Inject() (
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
-          if (info.name.startsWith("BookmarkStore")) {
+          if (info.name.startsWith("KeepIndex")) {
             countMap.get(info.name) match {
               case Some(count) if count >= info.numDocs =>
               case _ => countMap += (info.name -> info.numDocs)
@@ -406,22 +407,17 @@ class KeepsCommander @Inject() (
   }
 
   // TODO: if keep is already in library, return it and indicate whether userId is the user who originally kept it
-  // TODO: Can this return a Keep object?
-  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): KeepInfo = {
+  def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], installationId: Option[ExternalId[KifiInstallation]], source: KeepSource)(implicit context: HeimdalContext): (Keep, Boolean) = {
     log.info(s"[keep] $rawBookmark")
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId) match {
-      case Failure(e) =>
-        throw e
-      case Success(keep) =>
-        SafeFuture {
-          searchClient.updateKeepIndex()
-          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
-        }
-        KeepInfo.fromKeep(keep)
+    val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
+    SafeFuture {
+      searchClient.updateKeepIndex()
+      curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
     }
+    (keep, isNewKeep)
   }
 
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]], separateExisting: Boolean = false)(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String], Option[Seq[KeepInfo]]) = {
@@ -517,7 +513,7 @@ class KeepsCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
-      case Some(mem) if mem.hasWriteAccess =>
+      case Some(mem) if mem.canWrite =>
         var keepsToFinalize = Seq.empty[Keep]
         val (keeps, invalidKeepIds) = db.readWrite { implicit s =>
           val (keeps, invalidKeepIds) = keepIds.map { kId =>
@@ -605,7 +601,7 @@ class KeepsCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId)
     } match {
-      case Some(mem) if mem.hasWriteAccess =>
+      case Some(mem) if mem.canWrite =>
         val normTitle = title.map(_.trim).filter(_.nonEmpty)
         db.readWrite { implicit s =>
           keepRepo.getByExtIdandLibraryId(keepId, libId) match {
@@ -703,7 +699,7 @@ class KeepsCommander @Inject() (
     }
     collection match {
       case Some(t) if t.isActive => t
-      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
+      case Some(t) => db.readWrite { implicit s => collectionRepo.save(t.copy(state = CollectionStates.ACTIVE, name = normalizedName, createdAt = clock.now())) } tap (keptAnalytics.createdTag(_, context))
       case None => db.readWrite { implicit s => collectionRepo.save(Collection(userId = userId, name = normalizedName)) } tap (keptAnalytics.createdTag(_, context))
     }
   }
@@ -760,7 +756,7 @@ class KeepsCommander @Inject() (
     }
     val keepsWithTags = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
       case Failure(e) => Left(e.getMessage)
-      case Success(keep) =>
+      case Success((keep, _)) =>
         val tags = db.readWrite { implicit s =>
           val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
           val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
@@ -789,6 +785,21 @@ class KeepsCommander @Inject() (
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     implicit val hitOrdering = TypeaheadHit.defaultOrdering[(Hashtag, Int)]
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
+  }
+
+  def suggestTags(userId: Id[User], libraryId: Id[Library], uriId: Id[NormalizedURI], limit: Option[Int]): Future[Seq[Hashtag]] = {
+    val item = AugmentableItem(uriId, Some(libraryId))
+    val request = ItemAugmentationRequest.uniform(userId, item)
+    searchClient.augmentation(request).map { response =>
+      val (thisKeep, moreKeeps) = response.infos(item).keeps.toSet.partition(_.keptIn == Some(libraryId))
+      val existingTags = thisKeep.flatMap(_.tags)
+      val validTags = moreKeeps.flatMap {
+        case myKeep if myKeep.keptBy == Some(userId) => myKeep.tags
+        case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
+      }
+      val suggestedTags = (validTags -- existingTags).toSeq.sortBy(-response.scores.byTag(_))
+      limit.map(suggestedTags.take(_)) getOrElse suggestedTags
+    }
   }
 
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {

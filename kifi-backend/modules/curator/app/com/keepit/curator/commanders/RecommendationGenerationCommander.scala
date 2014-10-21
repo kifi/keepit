@@ -52,6 +52,7 @@ class RecommendationGenerationCommander @Inject() (
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
+  val candidateURILock = new ReactiveLock(4)
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
@@ -59,14 +60,15 @@ class RecommendationGenerationCommander @Inject() (
 
   private def computeMasterScore(scores: UriScores): Float = {
     (4 * scores.socialScore +
-      6 * scores.overallInterestScore +
+      5 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
       1 * scores.popularityScore +
-      9 * scores.recentInterestScore +
+      7 * scores.recentInterestScore +
       6 * scores.rekeepScore +
       3 * scores.discoveryScore +
-      4 * scores.curationScore.getOrElse(0.0f)) *
+      4 * scores.curationScore.getOrElse(0.0f) +
+      4 * scores.libraryInducedScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -115,7 +117,7 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 6.5) {
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0 || scores.libraryInducedScore.isDefined) && computeMasterScore(scores) > 6) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
@@ -139,7 +141,7 @@ class RecommendationGenerationCommander @Inject() (
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
     val result = for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      candidateURIs <- shoebox.getCandidateURIs(seeds.map(_.uriId))
+      candidateURIs <- candidateURILock.withLockFuture(shoebox.getCandidateURIs(seeds.map(_.uriId)))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>

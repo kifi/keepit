@@ -166,7 +166,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
   val allProbabilisticExperimentGenerators = MutableMap[Name[ProbabilisticExperimentGenerator], ProbabilisticExperimentGenerator]()
-  val allUserBookmarks = MutableMap[Id[User], Set[Id[Keep]]]()
+  val allUserBookmarks = MutableMap[Id[User], Set[Id[Keep]]]().withDefaultValue(Set.empty)
   val allBookmarks = MutableMap[Id[Keep], Keep]()
   val allNormalizedURIs = MutableMap[Id[NormalizedURI], NormalizedURI]()
   val uriToUrl = MutableMap[Id[NormalizedURI], URL]()
@@ -449,7 +449,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = None
+        username = Username("adams"),
+        normalizedUsername = "adams"
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
@@ -463,7 +464,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = None
+        username = Username("adams"),
+        normalizedUsername = "adams"
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)

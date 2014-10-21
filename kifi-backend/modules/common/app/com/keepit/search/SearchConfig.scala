@@ -29,7 +29,6 @@ object SearchConfig {
       "sharingBoostInNetwork" -> "0.5",
       "sharingBoostOutOfNetwork" -> "0.01",
       "percentMatch" -> "75",
-      "percentMatchForHotDocs" -> "60",
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "newContentBoost" -> "1.0",
@@ -43,8 +42,7 @@ object SearchConfig {
       "proximityPowerFactor" -> "1.0",
       "messageHalfLifeHours" -> "24",
       "minMyLibraries" -> "0",
-      "myLibraryBoost" -> "1.5",
-      "newEngine" -> "true"
+      "myLibraryBoost" -> "1.5"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -59,7 +57,6 @@ object SearchConfig {
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
-      "percentMatchForHotDocs" -> "the minimum percentage of search terms have to match (weighted by IDF) for hot docs (useful pages)",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
@@ -71,8 +68,7 @@ object SearchConfig {
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
-      "messageHalfLifeHours" -> "exponential time decay constant used in message search",
-      "newEngine" -> "use new engine"
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
     )
 
   val empty = new SearchConfig(Map.empty)

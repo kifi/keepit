@@ -31,6 +31,8 @@ case class Keep(
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
+  def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
@@ -177,6 +179,15 @@ case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Ke
 
 class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
+  override val version = 0
+  val namespace = "count_by_lib"
+  def toKey(): String = id.toString
+}
+
+class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
   override val version = 6

@@ -3,6 +3,7 @@ package com.keepit.commanders.emails.tips
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
@@ -13,7 +14,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
+import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialId
@@ -27,6 +28,7 @@ import scala.concurrent.duration.Duration
 
 class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
@@ -41,7 +43,7 @@ class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
 
   "ConnectNetworkTip" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit rw =>
-      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner"))
+      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test"))
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),

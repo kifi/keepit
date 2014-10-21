@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.mobile.ImplicitHelper._
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,6 +23,7 @@ class MobileLibraryController @Inject() (
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -87,7 +89,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-
+        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) =>
@@ -123,18 +125,17 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
-      case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+  def getKeeps(pubId: PublicId[Library], offset: Int, limitOpt: Option[Int], deprecatedCount: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    val limit = limitOpt getOrElse deprecatedCount
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val take = Math.min(count, 30)
-        val (keeps, numKeeps) = libraryCommander.getKeeps(libraryId, take, offset)
-        val keepInfosF = keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
-
-        keepInfosF.map { keepInfos =>
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+        for {
+          keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
+          keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
+        } yield {
+          Ok(Json.obj("keeps" -> keepInfos))
         }
     }
   }

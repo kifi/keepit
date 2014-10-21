@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -25,6 +26,7 @@ import play.api.test.Helpers._
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
+    FakeExecutionContextModule() ::
     FakeShoeboxStoreModule() ::
     FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
@@ -48,8 +50,8 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit s =>
 
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1))
-          val user2 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
+          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))

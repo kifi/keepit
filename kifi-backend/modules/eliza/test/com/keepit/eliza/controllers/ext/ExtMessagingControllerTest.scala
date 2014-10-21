@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers.ext
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ ExternalId, Id }
@@ -12,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.User
+import com.keepit.model.{ Username, User }
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -28,6 +29,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeSearchServiceClientModule(),
     ElizaCacheModule(),
     FakeShoeboxServiceModule(),
@@ -48,8 +50,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageAction().toString
@@ -92,13 +94,15 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                   "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
                   "firstName":"Shanee",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg"
+                  "pictureName":"0.jpg",
+                  "username": "test"
                 },
                 {
                   "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                   "firstName":"Shachaf",
                   "lastName":"Smith",
-                  "pictureName":"0.jpg"
+                  "pictureName":"0.jpg",
+                  "username": "test"
                 }
               ],
               "digest": "test me out",
@@ -122,7 +126,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                 "url": "https://admin.kifi.com/admin/searchExperiments",
                 "nUrl": "https://admin.kifi.com/admin/searchExperiments",
                 "user":{
-                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg"
+                  "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username": "test"
                 },
                 "participants":
                 [
@@ -130,13 +134,15 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
                     "id":"a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
                     "firstName":"Shanee",
                     "lastName":"Smith",
-                    "pictureName":"0.jpg"
+                    "pictureName":"0.jpg",
+                    "username": "test"
                   },
                   {
                     "id":"2be9e0e7-212e-4081-a2b0-bfcaf3e61484",
                     "firstName":"Shachaf",
                     "lastName":"Smith",
-                    "pictureName":"0.jpg"
+                    "pictureName":"0.jpg",
+                    "username": "test"
                   }
                 ]
               }]
@@ -150,8 +156,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "sendMessageReplyAction" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
+        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
+        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 

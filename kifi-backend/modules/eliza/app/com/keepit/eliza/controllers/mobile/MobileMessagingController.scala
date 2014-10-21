@@ -1,29 +1,22 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.social.BasicUserLikeEntity._
-import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ MessageSource, Message, MessageThread }
-import com.keepit.common.controller.{ ElizaServiceController, MobileController, UserActions, UserActionsHelper }
-import com.keepit.common.time._
-import com.keepit.heimdal._
-import play.api.mvc.Action
-
-import play.modules.statsd.api.Statsd
-
-import com.keepit.common.db.{ Id, ExternalId }
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
-
-import scala.concurrent.Future
-
 import com.google.inject.Inject
-import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import scala.Some
-import play.api.libs.json.JsObject
+import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.db.ExternalId
+import com.keepit.common.mail.BasicContact
+import com.keepit.common.net.UserAgent
+import com.keepit.common.time._
+import com.keepit.eliza.commanders._
+import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
+import com.keepit.heimdal._
+import com.keepit.model.User
+import com.keepit.social.BasicUserLikeEntity._
+import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
+
+import scala.concurrent.ExecutionContext
+
+//import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 
 class MobileMessagingController @Inject() (
     messagingCommander: MessagingCommander,
@@ -31,7 +24,8 @@ class MobileMessagingController @Inject() (
     notificationCommander: NotificationCommander,
     val userActionsHelper: UserActionsHelper,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    messageSearchCommander: MessageSearchCommander) extends UserActions with ElizaServiceController {
+    messageSearchCommander: MessageSearchCommander,
+    implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
@@ -217,5 +211,27 @@ class MobileMessagingController @Inject() (
   def clearMessageSearchHistory() = UserAction { request =>
     messageSearchCommander.clearHistory(request.userId)
     Ok("")
+  }
+
+  def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
+    val source = UserAgent(request) match {
+      case agent if agent.isAndroid => MessageSource.ANDROID
+      case agent if agent.isIphone => MessageSource.IPHONE
+      case agent => throw new IllegalArgumentException(s"user agent not supported: $agent")
+    }
+    if (users.nonEmpty || emailContacts.nonEmpty) {
+      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      contextBuilder += ("source", "mobile")
+      //assuming the client does the proper checks!
+      val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
+      val validUserIds = users.split(",").map(_.trim).filterNot(_.isEmpty).map { id => ExternalId[User](id) }
+      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, Some(source))(contextBuilder.build)
+    }
+    Ok("")
+  }
+
+  def getUnreadNotificationsCount = UserAction { request =>
+    val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+    Ok(numUnreadUnmuted.toString)
   }
 }

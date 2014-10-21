@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -36,6 +37,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
@@ -63,7 +65,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
   def setUp() = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
+      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
       val email1a = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr1))
       val email1b = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = emailAddr2))
       val hasher = Registry.hashers.get("bcrypt").get

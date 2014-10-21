@@ -97,7 +97,7 @@ trait KQueryExpansion extends QueryParser {
       }
     }
 
-    val textQuery = new KTextQuery
+    val textQuery = new KTextQuery(queryText)
     textQueries += textQuery
 
     super.getFieldQuery("t", queryText, quoted).foreach { q =>
@@ -163,11 +163,18 @@ trait KQueryExpansion extends QueryParser {
     val clauses = ArrayBuffer.empty[BooleanClause]
     val queries = ArrayBuffer.empty[(QuerySpec, KTextQuery)]
 
-    querySpecList.foreach { spec =>
+    // truncate query if there are too many (>100) terms
+    querySpecList.take(100).foreach { spec =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
       query match {
         case Some(query) =>
-          clauses += new BooleanClause(query, spec.occur)
+          query match {
+            case filterQuery: KFilterQuery =>
+              val occur = if (spec.occur == SHOULD) MUST else spec.occur
+              clauses += new BooleanClause(filterQuery, occur)
+            case _ =>
+              clauses += new BooleanClause(query, spec.occur)
+          }
           query match {
             case textQuery: KTextQuery => queries += ((spec, textQuery))
             case _ => queries += ((spec, null))
@@ -246,7 +253,7 @@ object KConcatQueryAdder {
   // side effect
   def addConcatQueries(queries: ArrayBuffer[(QuerySpec, KTextQuery)], concatBoost: Float) {
 
-    val emptyQuery = new KTextQuery
+    val emptyQuery = new KTextQuery("")
     var prevTextQuery: KTextQuery = null
     queries.foreach {
       case (spec, currTextQuery) =>

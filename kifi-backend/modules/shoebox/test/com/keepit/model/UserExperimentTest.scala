@@ -17,8 +17,8 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
+          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
+            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
         }
 
         inject[Database].readWrite { implicit session =>
@@ -40,9 +40,9 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, shachaf, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
-            userRepo.save(User(firstName = "Shachaf", lastName = "Smith")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
+          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
+            userRepo.save(User(firstName = "Shachaf", lastName = "Smith", username = Username("test3"), normalizedUsername = "test3")),
+            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
         }
 
         inject[Database].readWrite { implicit session =>

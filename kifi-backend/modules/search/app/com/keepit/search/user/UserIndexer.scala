@@ -40,7 +40,7 @@ object BasicUserSerializer {
     oos.writeString(basicUser.firstName)
     oos.writeString(basicUser.lastName)
     oos.writeString(basicUser.pictureName)
-    oos.writeString(basicUser.username.map(_.value).getOrElse(""))
+    oos.writeString(basicUser.username.value)
     oos.close()
     bos.close()
     bos.toByteArray()
@@ -58,7 +58,7 @@ object BasicUserSerializer {
           firstName = in.readString,
           lastName = in.readString,
           pictureName = in.readString,
-          username = None
+          username = Username("")
         )
       case 2 => // with username
         BasicUser(
@@ -68,7 +68,7 @@ object BasicUserSerializer {
           pictureName = in.readString,
           username = {
             val u = in.readString
-            if (u.length == 0) None else Some(Username(u))
+            Username(u)
           }
         )
       case _ =>

@@ -7,8 +7,7 @@ long-text()
   text-overflow: ellipsis
 
 title-text()
-  font-family: "Georgia", Arial, sans-serif
-  font-style: italic
+  font-family: Lato, Arial, sans-serif
   font-smoothing: antialiased
   color: textDarkColor
 
@@ -29,3 +28,30 @@ placeholder(color)
 //
 [contenteditable]:empty::before
   content: attr(placeholder)
+
+
+@keyframes jump-spin
+  0%
+    transform: translate(-50%, -50%) rotate(0deg)
+  12.5%
+    transform: translate(-50%, -50%) rotate(10deg)
+  25%
+    transform: translate(-50%, -50%) rotate(90deg)
+  37.5%
+    transform: translate(-50%, -50%) rotate(100deg)
+  50%
+    transform: translate(-50%, -50%) rotate(180deg)
+  62.5%
+    transform: translate(-50%, -50%) rotate(190deg)
+  75%
+    transform: translate(-50%, -50%) rotate(270deg)
+  87.5%
+    transform: translate(-50%, -50%) rotate(280deg)
+  100%
+    transform: translate(-50%, -50%) rotate(360deg)
+
+@keyframes fade-in
+  from
+    opacity: 0
+  to
+    opacity: 1

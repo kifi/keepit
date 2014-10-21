@@ -29,27 +29,28 @@ class EmailTemplateSenderImpl @Inject() (
     userValueRepo: UserValueRepo,
     config: FortyTwoConfig) extends EmailTemplateSender with Logging {
 
-  def send(mailToSend: EmailToSend) = {
-    htmlPreProcessor.process(mailToSend) map { result =>
-      val toAddresses = Seq(mailToSend.to match {
+  def send(emailToSend: EmailToSend) = {
+    htmlPreProcessor.process(emailToSend) map { result =>
+      val toAddresses = Seq(emailToSend.to match {
         case Left(userId) => db.readOnlyReplica { implicit sess => emailAddrRepo.getByUser(userId) }
         case Right(address) => address
       })
 
       val email = ElectronicMail(
-        from = mailToSend.from,
+        from = emailToSend.from,
         to = toAddresses,
-        cc = mailToSend.cc,
+        cc = emailToSend.cc,
         subject = result.subject,
         htmlBody = result.htmlBody,
         textBody = result.textBody,
         fromName = result.fromName,
-        category = mailToSend.category
+        category = emailToSend.category,
+        extraHeaders = emailToSend.extraHeaders
       )
 
       db.readWrite(attempts = 3) { implicit rw =>
         result.toUser foreach { userId =>
-          trackUserEvent(userId, result, email)
+          trackUserEvent(userId, result, email, emailToSend)
           result.includedTip foreach { tip => recordSentTip(tip, userId) }
         }
 
@@ -58,11 +59,14 @@ class EmailTemplateSenderImpl @Inject() (
     }
   }
 
-  private def trackUserEvent(userId: Id[User], processedResult: ProcessedEmailResult, email: ElectronicMail) = {
-    // todo(josh) track the optional variableComponents and auxiliaryData parameters
+  private def trackUserEvent(userId: Id[User], processedResult: ProcessedEmailResult, email: ElectronicMail, emailToSend: EmailToSend) = {
+    // todo(josh) track the optional variableComponents
     val param = EmailTrackingParam(tip = processedResult.includedTip)
     val context = {
       val ctxBuilder = new HeimdalContextBuilder
+      emailToSend.auxiliaryData.foreach { ctx =>
+        ctxBuilder.data ++= ctx.data
+      }
       ctxBuilder += ("action", "prepared")
       ctxBuilder.addEmailInfo(email)
       ctxBuilder.addDetailedEmailInfo(param)

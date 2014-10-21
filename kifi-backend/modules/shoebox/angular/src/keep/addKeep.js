@@ -110,7 +110,7 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([url], scope.selection.library.id).then(function (result) {
+            return keepActionService.keepToLibrary([url], scope.librarySelection.library.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
@@ -126,10 +126,10 @@ angular.module('kifi')
                   keep.makeKept();
 
                   libraryService.fetchLibrarySummaries(true);
-                  libraryService.addToLibraryCount(scope.selection.library.id, 1);
+                  libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
                   tagService.addToKeepCount(1);
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.selection.library.id), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
                   scope.resetAndHide();
                 });
               }
@@ -141,11 +141,10 @@ angular.module('kifi')
 
         scope.librariesEnabled = libraryService.isAllowed();
         if (scope.librariesEnabled) {
-          scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+          scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
-          scope.selection = scope.selection || {};
-          scope.selection.library = _.find(scope.libraries, { 'name': 'Main Library' });
+          scope.librarySelection = {};
           scope.libSelectTopOffset = 110;
         }
 
@@ -158,9 +157,9 @@ angular.module('kifi')
         $document.on('keydown', processKey);
         safeFocus();
 
-        $rootScope.$on('changedLibrary', function () {
+        $rootScope.$on('librarySummariesChanged', function () {
           if (scope.librariesEnabled) {
-            scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
               return lib.access !== 'read_only';
             });
           }

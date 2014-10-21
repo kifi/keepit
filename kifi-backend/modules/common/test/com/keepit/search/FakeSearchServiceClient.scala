@@ -19,10 +19,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def updateLibraryIndex(): Unit = {}
 
-  override def updateURIGraph(): Unit = {}
-
-  override def reindexURIGraph(): Unit = {}
-
   override def index(): Unit = {}
 
   override def reindex(): Unit = {}
@@ -60,10 +56,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = Future.successful(Seq.empty)
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
-
-  override def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = ???
-
-  override def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = ???
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 

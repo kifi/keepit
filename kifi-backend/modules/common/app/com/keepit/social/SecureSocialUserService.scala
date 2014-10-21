@@ -3,7 +3,7 @@ package com.keepit.social
 import net.codingwell.scalaguice.InjectorExtensions._
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.KifiSession
 import com.keepit.common.db.ExternalId
 
 import play.api.Application
@@ -38,7 +38,7 @@ private class SecureSocialEventListener extends securesocial.core.EventListener 
   def onEvent(event: Event, request: RequestHeader, session: Session): Option[Session] = event match {
     case LogoutEvent(identity) =>
       // Remove our user ID info when the user logs out
-      Some(session - ActionAuthenticator.FORTYTWO_USER_ID)
+      Some(session - KifiSession.FORTYTWO_USER_ID)
     case _ =>
       None
   }

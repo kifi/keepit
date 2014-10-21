@@ -1,6 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.search.engine.explain.Explanation
 import com.keepit.search.engine.result.KifiShardResult
 import com.keepit.test.SearchTestInjector
 import org.specs2.mutable._
@@ -8,7 +9,7 @@ import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeUserActionsHelper, FakeUserActionsModule }
+import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
@@ -18,7 +19,6 @@ import com.keepit.social.BasicUser
 import com.keepit.search.sharding.Shard
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
-import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.common.util.Configuration
 import com.keepit.common.util.PlayAppConfigurationModule
 
@@ -29,7 +29,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
   def modules = {
     Seq(
       FakeActorSystemModule(),
-      FakeActionAuthenticatorModule(),
+      FakeSecureSocialClientIdModule(),
       FakeUserActionsModule(),
       FixedResultIndexModule(),
       PlayAppConfigurationModule(),
@@ -43,7 +43,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val path = routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).url
         path === "/search?q=test&maxHits=7"
 
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
@@ -155,7 +155,7 @@ class FixedResultSearchCommander extends SearchCommander {
             0.5f, // recencyScore
             false // usefulPage
           )
-        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Some(Username("vorname")))))))
+        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Username("vorname"))))))
       ),
       1, // myTotal
       12, // friendsTotal
@@ -224,6 +224,7 @@ class FixedResultSearchCommander extends SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): Future[KifiShardResult] = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[(Query, Explanation)]] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String): Future[Option[Explanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}
+  def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

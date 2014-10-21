@@ -2,7 +2,6 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.controller._
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
@@ -11,7 +10,7 @@ import com.keepit.model._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
-import java.net.URLDecoder
+import java.net.{ URLEncoder, URLDecoder }
 
 import scala.concurrent.Future
 
@@ -43,7 +42,7 @@ class KifiSiteRouter @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   val redirects = Map[String, String](
-    "recommendation" -> "recommendations" //can be removed after Sept. 10th 2014 -Stephen
+    "recommendation" -> "/recommendations" //can be removed after Sept. 10th 2014 -Stephen
   )
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
@@ -61,12 +60,12 @@ class KifiSiteRouter @Inject() (
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
-          NotFound("I'm sorry, I couldn't find what you're looking for. :(") // better 404 please!
+          NotFound(views.html.error.notFound(request.path))
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
           AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
         case (r: MaybeUserRequest[T], route: RedirectRoute) =>
-          Redirect("/" + route.url)
+          Redirect(route.url)
         case (r: NonUserRequest[T], _) if r.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
@@ -140,22 +139,24 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
   //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[AngularRoute] = {
+  private def userOrLibrary(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
     if (path.split.length == 1 || path.split.length == 2) {
       val userOpt = userRepo.getByUsername(Username(path.primary))
-      if (userOpt.isDefined) {
-        if (path.split.length == 1) { // user profile page
-          Some(AngularLoggedIn()) // great place to preload request data since we have `user` available
+
+      userOpt.flatMap { user =>
+        if (user.username.value != path.primary) {
+          val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+          Some(RedirectRoute(redir))
+        } else if (path.split.length == 1) { // user profile page
+          Some(Angular()) // great place to preload request data since we have `user` available
         } else {
-          val libOpt = libraryRepo.getBySlugAndUserId(userOpt.get.id.get, LibrarySlug(path.secondary.get))
+          val libOpt = libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get))
           if (libOpt.isDefined) {
             Some(Angular()) // great place to preload request data since we have `lib` available
           } else {
             None
           }
         }
-      } else {
-        None
       }
     } else {
       None

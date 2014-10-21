@@ -35,6 +35,11 @@ class DataBufferReader {
 
   def hasMore(): Boolean = _current < _offset + _size
 
+  def rewind(): DataBufferReader = {
+    _current = _offset // rewind to the beginning of the record data
+    this
+  }
+
   // Long
   def nextLong(): Long = {
     var ret = _page(_current) & 0xffffL

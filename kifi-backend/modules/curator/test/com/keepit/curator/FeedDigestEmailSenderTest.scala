@@ -3,6 +3,7 @@ package com.keepit.curator
 import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -16,7 +17,7 @@ import com.keepit.curator.queue.{ FakeFeedDigestEmailQueue, FakeFeedDigestEmailQ
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ UserExperiment, ExperimentType, LibraryVisibility, Library, URL, NormalizedURI, Keep, KeepSource, SocialUserInfo, User }
+import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -29,6 +30,7 @@ import scala.concurrent.duration.Duration
 
 class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeHealthcheckModule(),
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
@@ -39,8 +41,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeFeedDigestEmailQueueModule(),
-    FakeSearchServiceClientModule())
+    FakeFeedDigestEmailQueueModule())
 
   implicit def userToIdInt(user: User): Int = user.id.get.id.toInt
 
@@ -88,17 +89,17 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
       shoebox.socialUserInfosByUserId(user1.id.get) = List()
       shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
-      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache",
+      val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mustache"))
-      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
+      val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
+      val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
+      val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
+      val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("mrt"))
-      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley",
+      val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley", username = Username("test"), normalizedUsername = "test",
         pictureName = Some("0"))
 
       val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -182,7 +183,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val mail42body = mail42.htmlBody.value
         val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
-        mail42body must contain(">www.kifi.com<")
+        mail42body must contain(">www.kifi&#8203;.com<")
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
@@ -323,7 +324,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         html must contain("into a library you follow: " + libraryName(Id[Library](1)))
         html must contain("into a library you follow: " + libraryName(Id[Library](2)))
         html must contain("into a library you follow: " + libraryName(Id[Library](4)))
-        html must contain("whitehouse.gov")
+        html must contain("whitehouse&#8203;.gov")
         html must contain("craigslist")
         html must contain("The Verge")
       }
