@@ -21,6 +21,7 @@ import play.api.libs.json.JsNumber
 import play.api.mvc.Call
 import securesocial.core.OAuth2Info
 import securesocial.core.AuthenticationException
+import KifiSession._
 
 /**
  * An identity provider which returns UserIdentity instances. This allows us to know the currently logged in user when
@@ -33,7 +34,7 @@ trait UserIdentityProvider extends IdentityProvider with Logging {
   abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
     log.info(s"UserIdentityProvider got request: $request")
     log.info(s"session data: ${request.session.data}")
-    val userIdOpt = request.session.get(KifiSession.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
+    val userIdOpt = request.session.getUserId
     doAuth()(request) match {
       case Right(socialUser) =>
         val filledSocialUser = fillProfile(socialUser)

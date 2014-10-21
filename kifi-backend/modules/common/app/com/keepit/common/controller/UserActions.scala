@@ -115,11 +115,13 @@ trait SecureSocialHelper extends Logging {
   }
 }
 
+import KifiSession._
+
 trait UserActionsHelper extends UserActionsRequirements with Logging {
 
   def getUserIdFromSession(implicit request: Request[_]): Try[Option[Id[User]]] =
     Try {
-      Play.maybeApplication.flatMap { _ => request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) }
+      Play.maybeApplication.flatMap { _ => request.session.getUserId }
     }
 
   def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = {
@@ -194,10 +196,10 @@ trait UserActions extends Logging { self: Controller =>
     Play.maybeApplication.map { app =>
       userActionsHelper.getUserIdFromSession match {
         case Success(Some(id)) if id == userId => res
-        case Success(_) => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+        case Success(_) => res.withSession(request.session.setUserId(userId))
         case Failure(t) =>
           log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
-          res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+          res.withSession(request.session.setUserId(userId))
       }
     } getOrElse res
   }
@@ -279,7 +281,15 @@ trait AdminUserActions extends UserActions with ShoeboxServiceController {
 }
 
 object KifiSession {
+
   val FORTYTWO_USER_ID = "fortytwo_user_id"
+
+  implicit class HttpSessionWrapper(val underlying: Session) extends AnyVal {
+    def setUserId(userId: Id[User]): Session = underlying + (FORTYTWO_USER_ID -> userId.toString)
+    def getUserId(): Option[Id[User]] = underlying.get(FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
+    def deleteUserId(): Session = underlying - FORTYTWO_USER_ID
+  }
+
 }
 
 case class ReportedException(id: ExternalId[AirbrakeError], cause: Throwable) extends Exception(id.toString, cause)

@@ -109,11 +109,11 @@ class AuthHelper @Inject() (
               }
               if (finalized) {
                 Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String])) // todo(ray): uri not relevant for mobile
-                  .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
                   .withCookies(authenticator.toCookie)
               } else {
                 Ok(Json.obj("success" -> true))
-                  .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withSession(session.setUserId(sui.userId.get))
                   .withCookies(authenticator.toCookie)
               }
             }
@@ -130,7 +130,7 @@ class AuthHelper @Inject() (
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator =>
           Ok(Json.obj("success" -> true))
-            .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
+            .withSession(session.setUserId(userId))
             .withCookies(authenticator.toCookie)
       )
     }
@@ -197,7 +197,7 @@ class AuthHelper @Inject() (
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => Ok(Json.obj("uri" -> uri))
         .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
-        .withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> user.id.get.toString))
+        .withSession(request.session.setUserId(user.id.get))
     )
   }
 

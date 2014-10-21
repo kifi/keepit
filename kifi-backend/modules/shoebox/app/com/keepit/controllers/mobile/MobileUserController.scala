@@ -22,6 +22,7 @@ import com.keepit.commanders.ConnectionInfo
 import scala.util.Success
 import play.api.libs.json.JsObject
 import com.keepit.common.http._
+import KifiSession._
 
 class MobileUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -208,7 +209,7 @@ class MobileUserController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)(Json.obj("code" -> "internal_server_error")),
           authenticator => {
             Ok(Json.obj("code" -> code))
-              .withSession(request.session - SecureSocial.OriginalUrlKey + (KifiSession.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession((request.session - SecureSocial.OriginalUrlKey).setUserId(newLoginUser.userId.get))
               .withCookies(authenticator.toCookie)
           }
         )
