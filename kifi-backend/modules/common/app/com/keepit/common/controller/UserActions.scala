@@ -112,14 +112,19 @@ trait SecureSocialHelper extends Logging {
   }
 }
 
-trait UserActionsHelper extends UserActionsRequirements {
+trait UserActionsHelper extends UserActionsRequirements with Logging {
 
   protected def getUserIdFromRequest(implicit request: Request[_]): Option[Id[User]] = {
     request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
   }
 
   def getUserIdOpt(implicit request: Request[_]): Future[Option[Id[User]]] = {
-    getUserIdFromRequest match {
+    val kifiIdOpt = try { getUserIdFromRequest } catch {
+      case t: Throwable =>
+        log.error(s"[getUserIdFromRequest] Caught exception $t while retrieving userId from request; cause=${t.getCause}", t)
+        None
+    }
+    kifiIdOpt match {
       case Some(userId) =>
         Future.successful(Some(userId))
       case None =>
