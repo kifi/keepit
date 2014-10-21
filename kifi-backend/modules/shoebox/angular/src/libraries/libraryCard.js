@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService', 'signupService', '$twitter',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService, signupService, $twitter) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  'profileService', 'platformService', 'signupService', '$twitter',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService,
+    profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
       replace: true,
