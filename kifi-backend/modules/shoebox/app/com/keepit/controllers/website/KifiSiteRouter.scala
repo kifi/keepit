@@ -61,7 +61,7 @@ class KifiSiteRouter @Inject() (
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
     } else if (userAgentOpt.exists(_.isMobile) &&
-               request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
+      request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))
     } else {
       (request, route(request)) match {
