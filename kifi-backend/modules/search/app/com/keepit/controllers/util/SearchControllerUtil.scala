@@ -27,17 +27,6 @@ import com.keepit.common.json
 import com.keepit.search.augmentation._
 import com.keepit.social.BasicUser
 
-case class BasicLibrary(id: PublicId[Library], name: String, path: String, isSecret: Boolean)
-object BasicLibrary {
-  def apply(library: LibraryRecord, isSecret: Boolean, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    BasicLibrary(Library.publicId(library.id), library.name, path, isSecret)
-  }
-  implicit val writes = Writes[BasicLibrary] { library =>
-    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
-  }
-}
-
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
 }
@@ -152,12 +141,15 @@ trait SearchControllerUtil {
     (augmentationFields, userIds, libraryIds)
   }
 
-  def getLibraryRecordsWithSecrecy(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, Boolean)] = {
+  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
     libraryIds.map { libId =>
-      val record = LibraryIndexable.getRecord(librarySearcher, libId).get
-      val secrecy = LibraryIndexable.isSecret(librarySearcher, libId)
-      libId -> (record, secrecy)
+      libId -> LibraryIndexable.getBasicLibrary(librarySearcher, libId).get
     }.toMap
+  }
+
+  def writesLibrary(library: BasicLibrary, owner: BasicUser): JsObject = {
+    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+    json.minify(Json.obj("id" -> Library.publicId(library.id), "name" -> library.name, "path" -> path, "secret" -> library.isSecret))
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {

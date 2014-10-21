@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.util.{ BasicLibrary, SearchControllerUtil }
+import com.keepit.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
@@ -14,7 +14,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
 
 object ExtSearchController {
@@ -80,10 +80,10 @@ class ExtSearchController @Inject() (
       augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
         case (allSecondaryFields, userIds, libraryIds) =>
 
-          val libraryRecordById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+          val librariesById = getBasicLibraries(librarySearcher, libraryIds.toSet)
 
           val futureUsers = {
-            val libraryOwnerIds = libraryRecordById.values.map(_._1.owner)
+            val libraryOwnerIds = librariesById.values.map(_.ownerId)
             shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
           }
 
@@ -92,9 +92,9 @@ class ExtSearchController @Inject() (
           futureUsers.map { usersById =>
             val users = userIds.map(usersById(_))
             val libraries = libraryIds.map { libId =>
-              val (libraryRecord, isSecret) = libraryRecordById(libId)
-              val owner = usersById(libraryRecord.owner)
-              BasicLibrary(libraryRecord, isSecret, owner)
+              val library = librariesById(libId)
+              val owner = usersById(library.ownerId)
+              writesLibrary(library, owner)
             }
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
           }

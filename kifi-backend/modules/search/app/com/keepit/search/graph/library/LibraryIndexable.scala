@@ -2,7 +2,7 @@ package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
-import com.keepit.model.{ LibraryVisibility, User, LibraryMembership, Library }
+import com.keepit.model.{ LibraryVisibility, User, Library, BasicLibrary }
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.{ Searcher, LangDetector }
 
@@ -39,6 +39,10 @@ object LibraryIndexable {
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
+  }
+
+  def getBasicLibrary(librarySearcher: Searcher, libraryId: Id[Library]): Option[BasicLibrary] = {
+    getRecord(librarySearcher, libraryId).map { record => BasicLibrary(record.id, record.owner, record.name, record.description, record.slug, isSecret(librarySearcher, libraryId)) }
   }
 }
 
