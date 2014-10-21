@@ -27,7 +27,7 @@ describe('kifi angular sanity suite', function () {
 
     it('should display user profile when the upper-right settings icon is clicked', function () {
       // Find and click on settings (gear) icon.
-      var settingsIcon = element(by.css('a.kf-header-logo'));
+      var settingsIcon = element(by.css('.kf-header-profile-picture'));
       settingsIcon.click();
 
       // Check that the user profile is displayed.
