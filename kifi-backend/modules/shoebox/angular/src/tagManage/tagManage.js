@@ -164,6 +164,7 @@ angular.module('kifi')
     //
     $scope.showRemoveTagModal = function (tag) {
       $scope.changeSelection(tag);
+      $scope.numKeepsInTag = tag.keeps;
       modalService.open({
         template: 'tagManage/deleteTagModal.tpl.html',
         scope: $scope

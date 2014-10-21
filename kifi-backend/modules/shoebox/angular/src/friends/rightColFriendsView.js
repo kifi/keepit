@@ -45,22 +45,6 @@ angular.module('kifi')
   };
 }])
 
-.directive('kfRightColConnectView', ['friendService', 'socialService', function (friendService, socialService) {
-  return {
-    replace: true,
-    restrict: 'A',
-    templateUrl: 'friends/rightColConnectView.tpl.html',
-    link: function (scope/*, element, attrs*/) {
-      socialService.refresh();
-      scope.$watch(function () {
-        return (friendService.totalFriends() < 20) && scope.network;
-      }, function (newVal) {
-        scope.connectSocial = newVal;
-      });
-    }
-  };
-}])
-
 .directive('kfPeopleYouMayKnowView',
   ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'wtiService',
   function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, wtiService) {

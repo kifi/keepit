@@ -4,8 +4,7 @@
       <div class="kf-header-toggle-menu closed sprite sprite-burger" ng-click="toggleMenu()"></div>
       <div class="kf-header-toggle-menu open sprite sprite-burger-open" ng-click="toggleMenu()"></div>
       <div class="kf-header-left-separator"></div>
-      <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
-      <a href="/"><img class="kf-header-logo" src="/img/kifi-logo.png"></a>
+      <a href="/"><span class="svg-kifi-clover-white-text kf-header-logo"></span></a>
     </div>
 
     <div class="kf-header-search-bar" ng-if="librariesEnabled">
@@ -34,7 +33,8 @@
           <a class="kf-dropdown-menu-item" ng-class="{'active': isActive('/invite')}" href="javascript:" ng-click="navigateToInvite()">Invite a friend to Kifi</a>
         </menu>
       </div>
-      <a href="/profile" class="sprite sprite-settings">Settings</a>
+      <a href="/profile"><div class="kf-header-profile-picture" ng-style="{'background-image': 'url(' + me.picUrl + ')'}"></div></a>
+
     </div>
   </div>
 </div>

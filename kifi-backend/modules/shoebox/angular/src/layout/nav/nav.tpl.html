@@ -22,13 +22,13 @@
     </a>
   </div>
 
-  <div ng-show="mainLib.numKeeps >= 0">
+  <div>
     <ul class="kf-nav-lib-system">
       <li class="kf-nav-lib-item" ng-class="{ active: isActive('mainLib.url') }">
         <a class="kf-nav-link" ng-href="{{mainLib.url}}">
           <div class="library-icon svg-main-library-icon"></div>
           <div class="kf-nav-lib-info">
-            <div class="kf-nav-lib-name">{{mainLib.name}}</div>
+            <div class="kf-nav-lib-name">My Main Library</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">
               <ng-pluralize count="mainLib.numKeeps"
                       when="{'0': '',
@@ -43,7 +43,7 @@
         <a class="kf-nav-link" ng-href="{{secretLib.url}}">
           <div class="library-icon svg-secret-library-icon"></div>
           <div class="kf-nav-lib-info">
-            <div class="kf-nav-lib-name">{{secretLib.name}}</div>
+            <div class="kf-nav-lib-name">My Private Library</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">
               <ng-pluralize count="secretLib.numKeeps"
                       when="{'0': '',
