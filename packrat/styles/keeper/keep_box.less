@@ -434,10 +434,11 @@
   background-repeat: no-repeat !important;
   padding-left: 36px;
 }
+@footer-color: #f3f3f3;
 .kifi-keep-box-footer {
   height: @lib-height;
   border-top: 1px solid @lib-border-color;
-  background-color: #f3f3f3;
+  background-color: @footer-color;
   text-align: center;
 }
 .kifi-keep-box-new-lib-create,
@@ -680,6 +681,75 @@
   white-space: nowrap;
   &.kifi-keep-box-tags-dropdown-item-selected {
     background-color: #f4f4f4;
+  }
+}
+.kifi-keep-box-timer {
+  @duration: 3s;
+  @text-color: #777;
+  @border-color: #aaa;
+  @border-width: 1px;
+  @radius: 10px;
+  position: absolute;
+  left: 72px;
+  bottom: 12px;
+  width: @radius * 2;
+  height: @radius * 2;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: @border-width solid @border-color;
+  border-radius: 50%;
+  transition: border-color 0s @duration;
+  &.kifi-going {
+    border-color: transparent;
+  }
+  &::before {
+    content: '';
+    position: absolute;
+    top: -(@border-width + 1px);
+    right: -(@border-width + 1px);
+    width: (@radius + 1px);
+    height: (@radius + 1px) * 2;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    background: @footer-color;
+    -webkit-transform-origin: left center;
+    transform-origin: left center;
+    transition: -webkit-transform @duration linear;
+    transition: transform @duration linear;
+  }
+  &.kifi-going::before {
+    -webkit-transform: rotate(-360deg);
+    transform: rotate(-360deg);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    top: -@border-width;
+    left: -@border-width;
+    width: @radius * 2;
+    height: @radius * 2;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    border: inherit;
+    border-radius: inherit;
+    background: @footer-color;
+    clip: rect(0, @radius * 2, @radius * 2, @radius);
+    transition: 0s (@duration / 2);
+  }
+  &.kifi-going::after {
+    top: -(@border-width + 1px);
+    left: -(@border-width + 1px);
+    width: (@radius + 1px);
+    height: (@radius + 1px) * 2;
+    border-width: 0;
+    border-radius: 0;
+    clip: rect(0, @radius + 1px, (@radius + 1px) * 2, 0);
+  }
+  &>.kifi-keep-box-timer-text {
+    position: relative;
+    z-index: 1;
+    line-height: (@radius - @border-width) * 2;
+    color: @text-color;
   }
 }
 .kifi-keep-box-done {

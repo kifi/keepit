@@ -106,9 +106,9 @@ var keepBox = keepBox || (function () {
     }
   }
 
-  var hideTimeout;
+  var hideInterval;
   function hide(e, trigger) {
-    clearTimeout(hideTimeout), hideTimeout = null;
+    clearInterval(hideInterval), hideInterval = null;
     log('[keepBox:hide]');
     $(document).data('esc').remove(hide);
     $box.find('.kifi-keep-box-view').triggerHandler('kifi-hide');
@@ -119,11 +119,6 @@ var keepBox = keepBox || (function () {
     $box = null;
     if (e) e.preventDefault();
     keepBox.onHide.dispatch();
-  }
-
-  function hideAfter(ms) {
-    clearTimeout(hideTimeout);
-    hideTimeout = setTimeout(hide.bind(null, null, 'action'), ms);
   }
 
   function onHidden(trigger, e) {
@@ -161,9 +156,9 @@ var keepBox = keepBox || (function () {
         $old.remove();
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
-        $new.find('input[type=text]:visible').last().focus().select();
-
         $vp.css('height', '');
+        $new.find('input[type=text]:visible').last().focus().select();
+        $new.triggerHandler('kifi-show');
       }
     });
 
@@ -278,7 +273,7 @@ var keepBox = keepBox || (function () {
     });
   }
 
-  function addKeepBindings($view) {
+  function addKeepBindings($view, autoClose) {
     var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
     var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 2400);
     $view
@@ -299,6 +294,26 @@ var keepBox = keepBox || (function () {
     .on('click', '.kifi-keep-box-done', function (e) {
       if (e.which === 1) {
         hide(e, 'action');
+      }
+    })
+    .on('kifi-show', function () {
+      if (autoClose) {
+        var $timer = $view.find('.kifi-keep-box-timer').addClass('kifi-going');
+        var $text = $timer.find('.kifi-keep-box-timer-text');
+        var nSec = +$text.text();
+        if (nSec > 0) {
+          hideInterval = setInterval(function () {
+            $text.text(--nSec);
+            if (nSec === 0) {
+              hide(null, 'action');
+            }
+          }, 1000);
+        }
+        $view.on('mouseover keydown', function abortAutoClose() {
+          $view.off('mouseover keydown', abortAutoClose);
+          clearInterval(hideInterval), hideInterval = null;
+          $timer.remove();
+        });
       }
     })
     .on('kifi-hide', function () {
@@ -453,11 +468,13 @@ var keepBox = keepBox || (function () {
       imageIdx = images.length;
     }
 
+    var autoClose = justKept;
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
       title: title,
       site: document.location.hostname,
-      hasImages: images.length > 0
+      hasImages: images.length > 0,
+      autoClose: autoClose
     }, {
       keep_box_lib: 'keep_box_lib'
     }));
@@ -488,7 +505,7 @@ var keepBox = keepBox || (function () {
       },
       saving: {}
     });
-    addKeepBindings($view);
+    addKeepBindings($view, autoClose);
     swipeTo($view);
   }
 
