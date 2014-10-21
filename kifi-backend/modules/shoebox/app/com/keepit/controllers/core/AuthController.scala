@@ -131,8 +131,10 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
+  def loginSocial(provider: String) = MaybeUserAction.async { implicit request =>
+    ProviderController.authenticate(provider)(request)
+  }
+  def logInWithUserPass(link: String) = MaybeUserAction.async { implicit request =>
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
     authRes.map {
       case res: Result if res.header.status == 303 =>
