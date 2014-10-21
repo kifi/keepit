@@ -2,7 +2,7 @@ package com.keepit.common.controller
 
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.AirbrakeError
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
@@ -74,6 +74,8 @@ trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
 
 trait UserActionsRequirements {
 
+  def airbrake: AirbrakeNotifier
+
   def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request)
 
   def kifiInstallationCookie: KifiInstallationCookie
@@ -114,14 +116,12 @@ trait SecureSocialHelper extends Logging {
 
 trait UserActionsHelper extends UserActionsRequirements with Logging {
 
-  protected def getUserIdFromRequest(implicit request: Request[_]): Option[Id[User]] = {
-    request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
-  }
-
   def getUserIdOpt(implicit request: Request[_]): Future[Option[Id[User]]] = {
-    val kifiIdOpt = try { getUserIdFromRequest } catch {
+    val kifiIdOpt = try {
+      request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
+    } catch {
       case t: Throwable =>
-        log.error(s"[getUserIdFromRequest] Caught exception $t while retrieving userId from request; cause=${t.getCause}", t)
+        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}", t)
         None
     }
     kifiIdOpt match {

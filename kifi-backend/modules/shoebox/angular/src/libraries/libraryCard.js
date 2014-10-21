@@ -141,6 +141,10 @@ angular.module('kifi')
                   scope.isMyLibrary(library));
         };
 
+        scope.isPublic = function (library) {
+          return library.visibility === 'published';
+        };
+
         scope.shareFB = function () {
           $FB.ui({
             method: 'share',
@@ -167,9 +171,11 @@ angular.module('kifi')
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
-              // TODO(yiping): make a better error message. One idea is to update
-              // the current generic error modal to take in a message parameter.
-              $window.alert('You are already following this library!');
+              scope.genericErrorMessage = 'You are already following this library!';
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html',
+                scope: scope
+              });
               return;
             }
 
