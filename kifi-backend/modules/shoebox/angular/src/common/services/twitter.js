@@ -3,7 +3,6 @@
 angular.module('kifi')
 
 .provider('$twitter', function $twttrProvider() {
-  'use strict';
 
   /*
    * Options
@@ -60,7 +59,7 @@ angular.module('kifi')
       var window = $window,
         deferred = $q.defer();
 
-      var failedToLoadHander = function (e, b) {
+      var failedToLoadHander = function () {
         if (!that.twttr && that.loading && !that.loaded) {
           that.loading = false;
           that.failedToLoad = true;
