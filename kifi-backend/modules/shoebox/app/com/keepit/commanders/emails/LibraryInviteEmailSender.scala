@@ -41,9 +41,9 @@ class LibraryInviteEmailSender @Inject() (
       }
 
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
-      val fromUserId = invite.ownerId
+      val fromUserId = invite.inviterId
       val emailToSend = EmailToSend(
-        fromName = Some(Left(invite.ownerId)),
+        fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
         to = toUserRecipient,

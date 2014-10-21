@@ -36,6 +36,15 @@ class LanguageCommanderImpl @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer) extends LanguageCommander with Logging {
 
   private[this] val reqConsolidator = new RequestConsolidator[(Id[User], Long), ListBuffer[Map[Lang, Int]]](60 seconds)
+  private[this] val localConsolidator = new RequestConsolidator[(Id[User], Long), Map[Lang, Int]](60 seconds)
+
+  private def getLibraryId(libraryContext: LibraryContext) = {
+    libraryContext match {
+      case LibraryContext.Authorized(libId) => libId
+      case LibraryContext.NotAuthorized(libId) => libId
+      case _ => -1L
+    }
+  }
 
   def getLangs(
     localShards: Set[Shard[NormalizedURI]],
@@ -53,11 +62,7 @@ class LanguageCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val libId = libraryContext match {
-      case LibraryContext.Authorized(libId) => libId
-      case LibraryContext.NotAuthorized(libId) => libId
-      case _ => -1L
-    }
+    val libId = getLibraryId(libraryContext)
 
     val future = reqConsolidator((userId, libId)) { key =>
       val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
@@ -135,24 +140,28 @@ class LanguageCommanderImpl @Inject() (
   }
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryContext: LibraryContext): Future[Map[Lang, Int]] = {
-    searchFactory.getLibraryIdsFuture(userId, libraryContext).flatMap {
-      case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
-        Future.traverse(shards) { shard =>
-          SafeFuture {
-            val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-            val keepLangs = new KeepLangs(keepSearcher)
-            keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
-            keepLangs.processLibraries(trustedPublishedLibIds)
-            keepLangs.processLibraries(authorizedLibIds)
-            keepLangs.getFrequentLangs()
+    val libId = getLibraryId(libraryContext)
+
+    localConsolidator((userId, libId)) { key =>
+      searchFactory.getLibraryIdsFuture(userId, libraryContext).flatMap {
+        case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
+          Future.traverse(shards) { shard =>
+            SafeFuture {
+              val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+              val keepLangs = new KeepLangs(keepSearcher)
+              keepLangs.processLibraries(memberLibIds) // member libraries includes own libraries
+              keepLangs.processLibraries(trustedPublishedLibIds)
+              keepLangs.processLibraries(authorizedLibIds)
+              keepLangs.getFrequentLangs()
+            }
+          }.map { results =>
+            results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
+              case (m, (langName, count)) =>
+                val lang = Lang(langName)
+                m + (lang -> (count + m.getOrElse(lang, 0)))
+            }
           }
-        }.map { results =>
-          results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
-            case (m, (langName, count)) =>
-              val lang = Lang(langName)
-              m + (lang -> (count + m.getOrElse(lang, 0)))
-          }
-        }
+      }
     }
   }
 }

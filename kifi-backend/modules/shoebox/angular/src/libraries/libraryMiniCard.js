@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryMiniCard', ['libraryService', 'profileService', 'friendService', '$window', '$location',
-  function (libraryService, profileService, friendService, $window, $location) {
+.directive('kfLibraryMiniCard', ['libraryService', 'profileService', 'friendService', 'modalService', '$location',
+  function (libraryService, profileService, friendService, modalService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -44,7 +44,11 @@ angular.module('kifi')
           function followLibrary() {
             libraryService.joinLibrary(scope.libraryId).then(function (result) {
               if (result === 'already_joined') {
-                $window.alert('You are already following this library!');
+                scope.genericErrorMessage = 'You are already following this library!';
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html',
+                  scope: scope
+                });
                 return;
               } else {
                 lib.membership = 'read_only';
@@ -62,7 +66,11 @@ angular.module('kifi')
 
           scope.toggleFollow = function () {
             if (scope.isMine()) {
-              $window.alert('You cannot follow your own Libraries!');
+              scope.genericErrorMessage = 'You cannot follow your own libraries!';
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html',
+                scope: scope
+              });
               return;
             }
 
