@@ -14,10 +14,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 @Singleton
 class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
 
-  val consolidate = new RequestConsolidator[Wanderlust, TeleportationJournal](30 seconds)
+  val consolidate = new RequestConsolidator[Wanderlust, Option[TeleportationJournal]](30 seconds)
   val wanderingLock = new ReactiveLock(5)
 
-  def wander(theWanderlust: Wanderlust): Future[TeleportationJournal] = consolidate(theWanderlust) { wanderlust =>
+  // returns None iff vertex not in graph
+  def wander(theWanderlust: Wanderlust): Future[Option[TeleportationJournal]] = consolidate(theWanderlust) { wanderlust =>
     wanderingLock.withLock {
 
       log.info(s"Preparing to wander: $wanderlust")
@@ -52,13 +53,14 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
         val scoutingWanderer = new ScoutingWanderer(wanderer, scout)
         if (wanderer.hasVertex(startingVertexId)) {
           scoutingWanderer.wander(wanderlust.steps, teleporter, resolver, journal)
+          val end = clock.now()
+          log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
+          Some(journal)
         } else {
           log.error(s"trying to start a random walk from non-existing vertex: ${startingVertexKind}: ${wanderlust.startingVertexDataId}. Return empty journal now.")
+          None
         }
       }
-      val end = clock.now()
-      log.info(s"Wandered for ${wanderlust.steps} steps during ${end.getMillis - start.getMillis} ms.")
-      journal
     }
   }
 }

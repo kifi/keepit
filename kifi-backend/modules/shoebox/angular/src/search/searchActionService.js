@@ -46,7 +46,8 @@ angular.module('kifi')
           decompressedLibraries.push({
             id: lib.id,
             name: lib.name,
-            keeperPic: friendService.getPictureUrlForUser(user)
+            keeperPic: friendService.getPictureUrlForUser(user),
+            path: lib.path
           });
           libUsers[idxUser] = true;
         }
@@ -113,7 +114,7 @@ angular.module('kifi')
     // Exposed API methods.
     //
     function find(query, filter, context) {
-      var url = routeService.search2,
+      var url = routeService.search,
         reqData = {
           params: {
             q: query || void 0,

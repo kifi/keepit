@@ -289,6 +289,19 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "check recommendable of uris" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit s =>
+          createUri(title = "1", url = "http://www.keepit.com/inactive")
+          createUri(title = "2", url = "http://www.keepit.com/scraped", NormalizedURIStates.SCRAPED)
+          val uri = createUri(title = "3", url = "http://www.keepit.com/restricted", NormalizedURIStates.SCRAPED)
+          uriRepo.updateURIRestriction(uri.id.get, Some(Restriction.ADULT))
+          createUri(title = "4", url = "http://www.keepit.com/good", NormalizedURIStates.SCRAPED)
+          uriRepo.checkRecommendable(List(2, 3, 4, 1).map { Id[NormalizedURI](_) }) === List(true, false, true, false)
+        }
+      }
+    }
   }
 
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit session: RWSession, injector: Injector) = {

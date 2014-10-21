@@ -21,6 +21,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
