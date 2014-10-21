@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Provider, Inject, Singleton }
+import com.keepit.common.http._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -51,12 +52,16 @@ class KifiSiteRouter @Inject() (
   def home = app("home")
 
   // When we refactor the authenticator to stop requiring two functions, this can be simplified.
-  def routeRequest[T](request: MaybeUserRequest[T]) = {
+  def routeRequest[T](request: MaybeUserRequest[T]): Result = {
     // Short-circuit for landing pages
+    val userAgentOpt = request.userAgentOpt
     if (request.host.contains("42go")) {
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
+    } else if (userAgentOpt.exists(_.isMobile) && request.queryString.get("kma").exists(_.contains("1"))) {
+      val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
+      Ok(views.html.mobile.MobileRedirect(uriNoProto))
     } else {
       (request, route(request)) match {
         case (_, Error404) =>

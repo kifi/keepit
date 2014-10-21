@@ -140,10 +140,12 @@ class HomeController @Inject() (
     iPhoneAppStoreRedirectWithTracking
   }
   def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
-    val context = new HeimdalContextBuilder()
-    context.addRequestInfo(request)
-    context += ("type", "landing")
-    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+    SafeFuture {
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      context += ("type", "landing")
+      heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+    }
     val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
     Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
