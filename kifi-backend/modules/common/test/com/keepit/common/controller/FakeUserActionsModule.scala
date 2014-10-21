@@ -18,7 +18,7 @@ case class FakeUserActionsModule() extends UserActionsModule {
 
   @Singleton
   @Provides
-  def userActionsHelper(impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(impCookie, installCookie)
+  def userActionsHelper(airbrake: AirbrakeNotifier, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(airbrake, impCookie, installCookie)
 
 }
 
