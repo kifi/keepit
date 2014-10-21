@@ -4,6 +4,7 @@ import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import scala.util.{ Failure, Success, Try }
 import play.api.data.{ Forms, Mapping }
+import com.keepit.abook.model.RichContact
 
 case class EmailAddress(address: String) {
   override def toString = address
@@ -110,4 +111,6 @@ object BasicContact {
     fromString(contact).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage()) }.get
   })
   implicit val format: Format[BasicContact] = Format(Json.reads[BasicContact] orElse readsFromString, Json.writes[BasicContact])
+
+  def fromRichContact(richContact: RichContact): BasicContact = BasicContact(richContact.email, richContact.name, richContact.firstName, richContact.lastName)
 }

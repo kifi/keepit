@@ -1,6 +1,9 @@
 package com.keepit.social.providers
 
+import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession
+import com.keepit.common.logging.Logging
+import com.keepit.social.UserIdentity
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._
@@ -14,7 +17,7 @@ import securesocial.controllers.TemplatesPlugin
 /**
  * A controller to provide the authentication entry point
  */
-object ProviderController extends Controller {
+object ProviderController extends Controller with Logging {
 
   /**
    * The property that specifies the page the user is redirected to if there is no original URL saved in
@@ -92,20 +95,18 @@ object ProviderController extends Controller {
   }
 
   def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): Result = {
-    if (Logger.isDebugEnabled) {
-      Logger.debug("[securesocial] user logged in : [" + user + "]")
-    }
-    val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
+    log.info(s"[securesocial] user logged in : [${user.email}] class=${user.getClass}")
+    val sess = Events.fire(new LoginEvent(user)).getOrElse(session)
     Authenticator.create(user) match {
       case Right(authenticator) => {
-        Redirect(toUrl(withSession)).withSession(withSession -
+        Redirect(toUrl(sess)).withSession(sess -
           SecureSocial.OriginalUrlKey -
           IdentityProvider.SessionId -
           OAuth1Provider.CacheKey).withCookies(authenticator.toCookie)
       }
       case Left(error) => {
-        // improve this
-        throw new RuntimeException("Error creating authenticator")
+        log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
+        throw new RuntimeException("Error creating authenticator", error)
       }
     }
   }
@@ -120,7 +121,7 @@ import providers.utils.RoutesHelper
 /**
  * The Login page controller
  */
-object LoginPage extends Controller {
+object LoginPage extends Controller with Logging {
   import providers.UsernamePasswordProvider
   /**
    * The property that specifies the page the user is redirected to after logging out.
@@ -167,10 +168,12 @@ object LoginPage extends Controller {
       user
     }
     val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
+    log.info(s"[logout] user.email=${user.map(_.email)} user.class=${user.getClass}")
     user match {
       case Some(u) =>
         result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session) - KifiSession.FORTYTWO_USER_ID)
-      case None => result
+      case None =>
+        result.withSession(request.session - KifiSession.FORTYTWO_USER_ID)
     }
   }
 }

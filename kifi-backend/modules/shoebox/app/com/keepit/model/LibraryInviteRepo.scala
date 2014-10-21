@@ -20,6 +20,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getByEmailAddress(email: EmailAddress, excludeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]
+  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
 }
 
 @Singleton
@@ -37,14 +38,14 @@ class LibraryInviteRepoImpl @Inject() (
 
   class LibraryInviteTable(tag: Tag) extends RepoTable[LibraryInvite](db, tag, "library_invite") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def ownerId = column[Id[User]]("owner_id", O.NotNull)
+    def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[EmailAddress]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
     def passPhrase = column[String]("pass_phrase", O.NotNull)
     def message = column[String]("message", O.Nullable)
-    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passPhrase, message.?) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def * = (id.?, libraryId, inviterId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passPhrase, message.?) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
@@ -140,4 +141,13 @@ class LibraryInviteRepoImpl @Inject() (
 
     userIds.map(userId => Left(userId) -> invitesByUserId(userId)) ++ emailAddresses.map(emailAddress => Right(emailAddress) -> invitesByEmailAddress(emailAddress))
   }
+
+  private def getByLibraryIdAndInviterIdCompiled(libraryId: Column[Id[Library]], inviterId: Column[Id[User]], includeStates: Set[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.inviterId === inviterId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt)
+  }
+
+  def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite] = {
+    getByLibraryIdAndInviterIdCompiled(libraryId, inviterId, includeStates).list
+  }
+
 }

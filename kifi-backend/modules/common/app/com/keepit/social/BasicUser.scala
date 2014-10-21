@@ -42,6 +42,7 @@ case class BasicUser(
     username: Username) extends BasicUserLikeEntity {
 
   override def asBasicUser = Some(this)
+  def fullName = s"$firstName $lastName"
 }
 
 object BasicUser {

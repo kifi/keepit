@@ -55,24 +55,26 @@ class URIWanderingCommander @Inject() (
 
   private def preScore(user: Id[User], trials: Int): Future[PreScoreResult] = {
     val wanderLust = Wanderlust.discovery(user).copy(steps = trials)
-    wanderingCommander.wander(wanderLust).map { journal =>
+    wanderingCommander.wander(wanderLust).map { journalOpt =>
       val uriScores = new ListBuffer[(VertexDataId[UriReader], Int)]()
       val userScores = new ListBuffer[(VertexDataId[UserReader], Int)]()
       val topicScores = new ListBuffer[(VertexDataId[LDATopicReader], Int)]()
 
-      journal.getVisited().foreach {
-        case (id, score) if id.kind == UriReader.kind && score > 1 =>
-          val uriId = id.asId[UriReader]
-          uriScores += uriId -> score
-        case (id, score) if id.kind == UserReader.kind && score > 1 =>
-          val userId = id.asId[UserReader]
-          if (VertexDataId.toUserId(userId) != user) {
-            userScores += userId -> score
-          }
-        case (id, score) if id.kind == LDATopicReader.kind && score > 1 =>
-          val topicId = id.asId[LDATopicReader]
-          topicScores += topicId -> score
-        case _ =>
+      if (journalOpt.isDefined) {
+        journalOpt.get.getVisited().foreach {
+          case (id, score) if id.kind == UriReader.kind && score > 1 =>
+            val uriId = id.asId[UriReader]
+            uriScores += uriId -> score
+          case (id, score) if id.kind == UserReader.kind && score > 1 =>
+            val userId = id.asId[UserReader]
+            if (VertexDataId.toUserId(userId) != user) {
+              userScores += userId -> score
+            }
+          case (id, score) if id.kind == LDATopicReader.kind && score > 1 =>
+            val topicId = id.asId[LDATopicReader]
+            topicScores += topicId -> score
+          case _ =>
+        }
       }
 
       PreScoreResult(uriScores.toMap, userScores.toMap, topicScores.toMap)

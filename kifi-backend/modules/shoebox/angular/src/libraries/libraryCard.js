@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService', 'signupService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService, signupService) {
+  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  'profileService', 'platformService', 'signupService', '$twitter',
+  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService,
+    profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
       replace: true,
@@ -21,7 +23,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.facebookAppId = $FB.appId();
+        scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
@@ -100,6 +102,16 @@ angular.module('kifi')
           $rootScope.$emit('libraryUrl', scope.library);
         }
 
+        function preloadSocial () {
+          if (!$FB.failedToLoad && !$FB.loaded) {
+            $FB.init();
+          }
+          if (!$twitter.failedToLoad && !$twitter.loaded) {
+            $twitter.load();
+          }
+        }
+        scope.$evalAsync(preloadSocial);
+
 
         //
         // Scope methods.
@@ -129,6 +141,10 @@ angular.module('kifi')
                   scope.isMyLibrary(library));
         };
 
+        scope.isPublic = function (library) {
+          return library.visibility === 'published';
+        };
+
         scope.shareFB = function () {
           $FB.ui({
             method: 'share',
@@ -155,9 +171,11 @@ angular.module('kifi')
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
-              // TODO(yiping): make a better error message. One idea is to update
-              // the current generic error modal to take in a message parameter.
-              $window.alert('You are already following this library!');
+              scope.genericErrorMessage = 'You are already following this library!';
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html',
+                scope: scope
+              });
               return;
             }
 
