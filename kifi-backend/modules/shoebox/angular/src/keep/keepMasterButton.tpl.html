@@ -1,6 +1,6 @@
-<button class="kf-keep-lib-footer-button kf-keep-master-btn" ng-click="keepAction()"
-		ng-class="{'state-kept-private': isKeptPrivate, 'state-kept-public': isKeptPublic, 'state-not-kept': isNotKept}">
-	<span ng-show="isKeptPrivate" class="svg-small-lock">Keep Private</span>
-	<span ng-show="isKeptPublic" class="svg-button-keep-heart-green">kept</span>
-	<span ng-show="isNotKept" class="svg-button-keep-heart-gray">keep</span>
+<button class="kf-keep-lib-footer-button kf-keep-master-btn" kf-keep-to-library-widget ng-click="showWidget()"
+        ng-class="{'state-kept-private': isKeptPrivate, 'state-kept-public': isKeptPublic, 'state-not-kept': isNotKept}">
+  <span ng-show="isKeptPrivate" class="svg-small-lock">Keep Private</span>
+  <span ng-show="isKeptPublic" class="svg-button-keep-heart-green">kept</span>
+  <span ng-show="isNotKept" class="svg-button-keep-heart-gray">keep</span>
 </button>

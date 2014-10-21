@@ -42,6 +42,7 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
+        libraries: '=',
         editMode: '=',
         toggleSelect: '&',
         isSelected: '&',
@@ -884,13 +885,15 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', [
-  '$log',
-  function ($log) {
+.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
+  function (keepActionService, keepDecoratorService, libraryService, tagService) {
     return {
       restrict: 'A',
       scope: {
-        keep: '='
+        keep: '=',
+
+        // This is the libraries set on the scope of kfKeeps (see 'keeps.js').
+        libraries: '='
       },
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
@@ -900,11 +903,31 @@ angular.module('kifi')
         scope.isKeptPrivate = keep.isMyBookmark && keep.isPrivate;
         scope.isKeptPublic = keep.isMyBookmark && !keep.isPrivate;
         scope.isNotKept = !keep.isMyBookmark;
-        $log.info(keep);
 
-        scope.keepAction = function () {
-          // TODO(josh)
+        scope.librarySelection = {};
+        scope.clickAction = function () {
+          keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
+            if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+              return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                var keep = new keepDecoratorService.Keep(fullKeep);
+                libraryService.fetchLibrarySummaries(true);
+                libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
+                tagService.addToKeepCount(1);
+
+                // Frankly, this is not needed because library.js is always fetching with cache invalidation right now.
+                keep.buildKeep(keep);
+                keep.makeKept();
+                scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
+              });
+            }
+          });
         };
+
+        scope.$watch('libraries.length', function (newVal) {
+          if (newVal > 0) {
+            scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+          }
+        });
       }
     };
   }

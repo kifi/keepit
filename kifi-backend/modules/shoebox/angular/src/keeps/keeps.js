@@ -124,9 +124,6 @@ angular.module('kifi')
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
 
-        // Not used in template right now but will be when we hide bulk privacy changes.
-        scope.librariesEnabled = libraryService.isAllowed();
-
 
         //
         // Scope methods.
@@ -500,6 +497,7 @@ angular.module('kifi')
                 });
 
                 scope.librarySelection = {};
+                scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
                 scope.clickAction = function (widgetElement) {
                   if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();
