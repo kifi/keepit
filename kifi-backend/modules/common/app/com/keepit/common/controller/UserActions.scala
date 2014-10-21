@@ -118,7 +118,9 @@ trait SecureSocialHelper extends Logging {
 trait UserActionsHelper extends UserActionsRequirements with Logging {
 
   def getUserIdFromSession(implicit request: Request[_]): Try[Option[Id[User]]] =
-    Try(request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)))
+    Try {
+      Play.maybeApplication.flatMap { _ => request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) }
+    }
 
   def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = {
     val kifiIdOpt = getUserIdFromSession recover {
