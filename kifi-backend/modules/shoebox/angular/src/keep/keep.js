@@ -35,9 +35,9 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$document', '$rootScope', '$rootElement', 'installService', 'keepActionService', 'keepDecoratorService',
-  'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
+  'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util', '$log',
   function ($document, $rootScope, $rootElement, installService, keepActionService, keepDecoratorService,
-            libraryService, modalService, recoActionService, tagService, undoService, util) {
+            libraryService, modalService, recoActionService, tagService, undoService, util, $log) {
     return {
       restrict: 'A',
       scope: {
@@ -56,6 +56,7 @@ angular.module('kifi')
         if (!scope.keep) {
           return;
         }
+        $log.debug('kfKeepCard keep=', scope.keep);
 
         // test data:
         // scope.keep.libraries = [
@@ -884,22 +885,22 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepMasterButton', [
-  function () {
+  '$log',
+  function ($log) {
     return {
       restrict: 'A',
       scope: {
-        keep: '&'
+        keep: '='
       },
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        var keep = scope.keep();
+      link: function (scope/*, element, attrs*/) {
+        var keep = scope.keep;
 
-
-        // TODO(josH) do not commit these lines, you idiot!
-        scope.isKeptPrivate = false; //keep.isMyBookmark && keep.isPrivate;
-        scope.isKeptPublic = false; // keep.isMyBookmark && !keep.isPrivate;
-        scope.isNotKept = true; //!keep.isMyBookmark;
+        scope.isKeptPrivate = keep.isMyBookmark && keep.isPrivate;
+        scope.isKeptPublic = keep.isMyBookmark && !keep.isPrivate;
+        scope.isNotKept = !keep.isMyBookmark;
+        $log.info(keep);
 
         scope.keepAction = function () {
           // TODO(josh)
@@ -914,14 +915,11 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        keep: '&',
+        keep: '=',
         showInstallExtensionModal: '&'
       },
       replace: false,
-      templateUrl: 'keep/keepShareButton.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        // TODO(josh)
-      }
+      templateUrl: 'keep/keepShareButton.tpl.html'
     };
   }
 ])
@@ -931,14 +929,11 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        keep: '&'
+        keep: '=',
+        showAddTag: '&'
       },
       replace: false,
-      templateUrl: 'keep/keepTagButton.tpl.html',
-      link: function (scope, element/*, attrs*/) {
-        var keep = scope.keep();
-        // TODO(josh)
-      }
+      templateUrl: 'keep/keepTagButton.tpl.html'
     };
   }
 ])

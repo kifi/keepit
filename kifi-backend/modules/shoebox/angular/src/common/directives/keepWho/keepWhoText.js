@@ -15,9 +15,11 @@ angular.module('kifi')
       },
       link: function (scope) {
         var keep = scope.keep;
-        
+
         scope.librariesEnabled = libraryService.isAllowed();
-        scope.useDeprecated = typeof deprecated === 'boolean' && deprecated;
+
+        // TODO(josh) remove this after we remove the deprecated keep card
+        scope.useDeprecated = typeof scope.deprecated === 'boolean' && scope.deprecated;
 
         scope.me = profileService.me;
 
@@ -38,7 +40,7 @@ angular.module('kifi')
 
         scope.hasLibraries = function () {
           return scope.librariesEnabled && 1 > 0; // TODO(josh) how to get the libraries a keep is in?
-        }
+        };
 
         scope.getFriendText = function () {
           var num = keep.keepers ? keep.keepers.length : 0;
@@ -59,8 +61,8 @@ angular.module('kifi')
         };
 
         scope.getLibrariesText = function () {
-          return "1 library"; // TODO(josh)
-        }
+          return '1 library'; // TODO(josh)
+        };
       }
     };
   }

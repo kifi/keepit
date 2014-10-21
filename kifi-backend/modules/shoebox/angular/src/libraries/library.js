@@ -131,7 +131,6 @@ angular.module('kifi')
           var keep = new keepDecoratorService.Keep(rawKeep);
           keep.buildKeep(keep);
           keep.makeKept();
-
           $scope.keeps.push(keep);
         });
 

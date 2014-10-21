@@ -49,8 +49,8 @@
 
   <div class="kf-keep-footer kf-keep-footer-buttons-wrapper clearfix">
     <span kf-keep-master-button keep="keep" ng-if="keep" class="kf-keep-footer-button-wrapper"></span>
-    <span kf-keep-share-button keep="keep" show-install-extension-modal="showInstallExtensionModal" ng-if="keep" class="kf-keep-footer-button-wrapper"></span>
-    <span kf-keep-tag-button keep="keep" ng-if="keep && !hasTag(keep)" class="kf-keep-footer-button-wrapper"></span>
+    <span kf-keep-share-button keep="keep" show-install-extension-modal="showInstallExtensionModal()" ng-if="keep" class="kf-keep-footer-button-wrapper"></span>
+    <span kf-keep-tag-button keep="keep" ng-show="keep && !hasTag(keep)" class="kf-keep-footer-button-wrapper" show-add-tag="showAddTag()"></span>
   </div>
 
   <div class="kf-keep-drag-mask"></div>

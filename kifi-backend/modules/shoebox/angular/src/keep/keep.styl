@@ -1,4 +1,5 @@
 keepBorderRadius = 3px
+tagOutlineColor = #bdc4c9
 
 .kf-my-keeps
   .kf-keep
@@ -137,7 +138,7 @@ keepBorderRadius = 3px
   background-repeat: no-repeat
   background-position: 0 0
 
-.kf-keep-tag
+.kf-keep-tag-new
   margin-top: 3px
 
 .kf-keep-footer
@@ -152,7 +153,7 @@ keepBorderRadius = 3px
     color: #92add3
 
 .kf-keep-footer-buttons-wrapper
-  button
+  .kf-keep-lib-footer-button
     float: right
     box-sizing: border-box
     padding-left: 0
@@ -163,7 +164,7 @@ keepBorderRadius = 3px
   padding: 7px 5px
 
 .kf-keep-footer-button-wrapper
-  button
+  .kf-keep-lib-footer-button
     margin-right: 10px
     padding-left: 10px
     padding-right: 10px
@@ -177,6 +178,9 @@ keepBorderRadius = 3px
 
 .kf-keep-share-button
   margin-right: 10px
+  line-height: 16px
+  &, &:link, &:visited, &:hover
+    color: #666
   span
     background-size: 17px 14px
     background-repeat: no-repeat
@@ -203,13 +207,6 @@ keepBorderRadius = 3px
       background-size: 16px 14px
       background-repeat: no-repeat
       padding-left: 21px
-
-.kf-keep-tag-list
-  .kf-keep-tag
-    /* todo */
-
-.kf-keep-tags
-  padding: 7px 0
 
 .kf-keep-footer-link a
   cursor: pointer
@@ -367,13 +364,15 @@ keepBorderRadius = 3px
     color: #c6cbd3
 
 // tag
-.kf-keep-tags
+
+.kf-keep-tags-new
+  padding: 7px 0
 
   &:empty
     border-bottom-width: 0
 
 @-moz-document url-prefix()
-  .kf-keep-tags
+  .kf-keep-tags-new
     background-position: 0 1px
 
 .kf-tag-list-new > li
@@ -388,23 +387,12 @@ keepBorderRadius = 3px
   padding: 20px 0
   margin-top: 16px
 
-.kf-keep-tag-new
-  height: 23px
-
-.kf-keep-tag-new
-  border-radius: 4px
-  border: 1px solid #bdc4c9
-  margin-right: 5px
-  box-sizing: border-box
 
 .kf-keep-tag-link-new > a
   line-height: 21px
   padding: 0 7px
   color: #777
   font-size: 12px
-
-.kf-keep-add-tag-wrapper
-  /* ... */
 
 .kf-keep-add-tag-link
   background-size: 20px 20px
@@ -415,15 +403,15 @@ keepBorderRadius = 3px
   display: block
   cursor: pointer
 
-.kf-keep-tag
-input.kf-keep-tag-input
-  border: 1px solid blueColor
+.kf-keep-tag-new
+input.kf-keep-tag-input-new
+  border: 1px solid tagOutlineColor
   border-radius: 3px
   margin-right: 4px
   vertical-align: middle
 
-.kf-keep-tag
-input.kf-keep-tag-input
+.kf-keep-tag-new
+input.kf-keep-tag-input-new
 .kf-keep-tag-opt
 .kf-keep-tag-hidden
   max-width: 150px
@@ -431,34 +419,36 @@ input.kf-keep-tag-input
   font-smoothing: antialiased
   color: linkColor
 
-.kf-keep-tag
-input.kf-keep-tag-input
+.kf-keep-tag-add-tag-wrapper
+.kf-keep-tag-new
+input.kf-keep-tag-input-new
   padding: 2px 6px 1px
   margin-bottom: 3px
 
 .kf-keep-tag-opt
   padding: 3px 6px 3px
 
-input.kf-keep-tag-input
+input.kf-keep-tag-input-new
 .kf-keep-tag-opt
   long-text()
 
-input.kf-keep-tag-input
+input.kf-keep-tag-input-new
   width: 100%
   min-width: 141px
 
-.kf-keep-tag
+.kf-keep-tag-new
   display: inline-block
   position: relative
   overflow: hidden
   white-space: nowrap
+  float: left
 
   &.removed
     width: 0 !important
     transition: width .12s ease-in-out
 
-.kf-keep-tag-link
-  padding: 0 11px 0 0
+.kf-keep-tag-link-new
+  padding: 0
   font-smoothing: antialiased
   long-text()
 
@@ -466,10 +456,14 @@ input.kf-keep-tag-input
     color: clearBlueColor
 
 .kf-keep-tag-x
+  display: none
   position: absolute
-  right: 5px
-  top: 1px
+  right: 0px
+  top: 0px
   cursor: pointer
+
+.kf-keep-tag-new:hover .kf-keep-tag-x
+  display: block
 
 .kf-keep-tag-opts-container
   position: absolute
@@ -569,8 +563,17 @@ input.kf-keep-tag-input
 .kf-tag-list>li
   display: inline-block
 
-.kf-keep-add-tag-button
+.kf-keep-tag-add-tag-wrapper
+  float: left
+  padding-top: 2px
+  margin-top: 3px 
+
+.kf-keep-add-tag-button-new
+.kf-keep-add-tag-button-new
   cursor: pointer
+  width: 20px
+  height: 20px
+  display: inline-block
 
 .kf-keep-loader
   position: relative
