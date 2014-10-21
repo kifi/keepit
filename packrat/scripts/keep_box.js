@@ -383,6 +383,9 @@ var keepBox = keepBox || (function () {
     var deferred = Q.defer();
     api.port.emit('keep', withUrls(data), function (keep) {
       if (keep) {
+        if (library.system) {
+          $box.data('libraries').forEach(deleteKeepIfSystemLib);
+        }
         library.keep = keep;
         deferred.resolve(keep);
         $box.parent().find('.kifi-keep-btn')
@@ -794,6 +797,12 @@ var keepBox = keepBox || (function () {
 
   function removeThis() {
     $(this).remove();
+  }
+
+  function deleteKeepIfSystemLib(lib) {
+    if (lib.system && lib.keep) {
+      delete lib.keep;
+    }
   }
 
   function getSrc(img) {
