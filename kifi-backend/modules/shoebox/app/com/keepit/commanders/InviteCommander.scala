@@ -410,6 +410,7 @@ class InviteCommander @Inject() (
       contextBuilder += ("invitationNumber", invite.timesSent)
       contextBuilder += ("source", source)
       contextBuilder += ("category", "kifiInvitation")
+      contextBuilder += ("numNonUserInvited", 1)
       invite.recipientEmailAddress.foreach { emailAddress => contextBuilder += ("recipientEmailAddress", emailAddress.toString) }
       invite.recipientSocialUserId.foreach { socialUserId => contextBuilder += ("recipientSocialUserId", socialUserId.toString) }
       heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, invite.lastSentAt getOrElse invite.createdAt))
@@ -438,6 +439,7 @@ class InviteCommander @Inject() (
           // Credit the sender of the accepted invite
           contextBuilder += ("action", "accepted")
           contextBuilder += ("recipientId", receiverId.toString)
+          contextBuilder += ("category", "kifiInvitation")
           heimdal.trackEvent(UserEvent(senderId, contextBuilder.build, UserEventTypes.INVITED, acceptedAt))
 
           // Include "future" acceptance in past event
