@@ -24,9 +24,9 @@ object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
 }
 
-case class AugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, keepersTotal: Int = -1)
-object AugmentationInfo {
-  implicit val format = Json.format[AugmentationInfo]
+case class FullAugmentationInfo(keeps: Seq[RestrictedKeepInfo], otherPublishedKeeps: Int, otherDiscoverableKeeps: Int, keepersTotal: Int)
+object FullAugmentationInfo {
+  implicit val format = Json.format[FullAugmentationInfo]
 }
 
 case class AugmentationScores(
@@ -75,7 +75,7 @@ object ItemAugmentationRequest {
   }
 }
 
-case class ItemAugmentationResponse(infos: Map[AugmentableItem, AugmentationInfo], scores: AugmentationScores)
+case class ItemAugmentationResponse(infos: Map[AugmentableItem, FullAugmentationInfo], scores: AugmentationScores)
 
 object ItemAugmentationResponse {
   implicit val format = Json.format[ItemAugmentationResponse]

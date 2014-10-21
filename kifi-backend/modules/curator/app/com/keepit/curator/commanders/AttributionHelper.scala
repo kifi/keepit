@@ -8,7 +8,7 @@ import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, FullAugmentationInfo, AugmentableItem }
 
 class SeedAttributionHelper @Inject() (
     db: Database,
@@ -97,7 +97,7 @@ class SeedAttributionHelper @Inject() (
     }
   }
 
-  def toUserAttribution(info: AugmentationInfo): UserAttribution = {
+  def toUserAttribution(info: FullAugmentationInfo): UserAttribution = {
     val users = info.keeps.flatMap(_.keptBy).distinct
     val user2Lib = info.keeps.flatMap {
       case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
