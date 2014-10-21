@@ -217,7 +217,7 @@ var keepBox = keepBox || (function () {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
               (libs[0] || {}).highlighted = true;
-              showLibs($(render('html/keeper/keep_box_libs_list', {filtering: true, libs: libs.map(addNameHtml)}, {
+              showLibs($(render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
               })));
             }
@@ -386,7 +386,8 @@ var keepBox = keepBox || (function () {
         });
       }
     } else {
-      var $view = $(render('html/keeper/keep_box_new_lib'));
+      var name = (el.firstElementChild || {}).textContent;
+      var $view = $(render('html/keeper/keep_box_new_lib', {name: name}));
       addCreateLibraryBindings($view);
       swipeTo($view);
     }

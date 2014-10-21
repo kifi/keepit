@@ -265,6 +265,7 @@
   display: block;
   border-bottom: 1px solid @lib-border-color;
   background: 13px center / auto @lib-bg-height no-repeat;
+  height: @lib-height;
   line-height: @lib-height;
   font-size: @lib-font-size;
   font-weight: @lib-font-weight;
@@ -274,13 +275,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  .kifi-keep-box-view-keep>& {
-    border-bottom-color: #ccc;
+  .kifi-keep-box-lib-kept>& {
+    padding-right: 85px;
   }
-  &.kifi-create {
+  &.kifi-create&:not(.kifi-query) {
     background-color: #f3f3f3;
     border-bottom: none;
     border-top: 1px solid @lib-border-color;
+    .kifi-filtered+& {
+      display: none;
+    }
   }
   &.kifi-highlighted {
     background-color: #e8e8e8;
@@ -288,9 +292,17 @@
       background-color: #e3e3e3;
     }
   }
-  .kifi-keep-box-lib-kept>& {
-    padding-right: 85px;
-  }
+}
+.kifi-keep-box-lib-1 {
+  display: block;
+  padding-top: 5px;
+  line-height: 20px;
+  font-weight: bold;
+}
+.kifi-keep-box-lib-2 {
+  display: block;
+  line-height: 12px;
+  font-size: 11px;
 }
 .kifi-keep-box-with-lib-icon {
   @url: %(@svgLibCardWorldDataUrl, #fff, #b5bbc4, #73c885, #73c885, #fff);
