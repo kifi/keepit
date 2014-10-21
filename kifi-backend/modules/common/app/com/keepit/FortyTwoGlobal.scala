@@ -52,8 +52,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val conf = app.configuration
     val appName = conf.getString("application.name").get
     conf.getConfig("db") match {
-      case Some(dbs) => log.info(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
-      case None => log.info(s"starting app $appName without db")
+      case Some(dbs) => println(s"starting app $appName with dbs ${dbs.subKeys.mkString(",")}")
+      case None => println(s"starting app $appName without db")
     }
   }
 
@@ -65,17 +65,17 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       val request = new RegisterInstancesWithLoadBalancerRequest(loadBalancer, Seq(instance))
       try {
         elbClient.registerInstancesWithLoadBalancer(request)
-        log.info(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
+        println(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
         case t: Throwable =>
           //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
-          log.info(s"[${currentDateTime.toStandardTimeString}] Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
+          println(s"[${currentDateTime.toStandardTimeString}] Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           Play.stop()
           Thread.sleep(10000)
           System.exit(1)
       }
-    } getOrElse log.info(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
+    } getOrElse println(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance ${amazonInstanceInfo.instanceId}")
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -238,11 +238,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         try {
           val serviceDiscovery = injector.instance[ServiceDiscovery]
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-          log.info(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
+          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
           Thread.sleep(18000)
-          log.info(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
+          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
         } catch {
-          case t: Throwable => log.error(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")
+          case t: Throwable => println(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")
         }
       }
       try {
@@ -256,14 +256,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       } catch {
         case e: Throwable =>
           val errorMessage = "====================== error during onStop ==============================="
-          log.info(errorMessage)
+          println(errorMessage)
           e.printStackTrace()
           log.error(errorMessage, e)
       } finally {
         if (mode == Mode.Prod) {
-          log.info(s"[${currentDateTime.toStandardTimeString}] <<<<<< about to pause and let the system shut down")
+          println(s"[${currentDateTime.toStandardTimeString}] <<<<<< about to pause and let the system shut down")
           Thread.sleep(3000)
-          log.info(s"[${currentDateTime.toStandardTimeString}] <<<<<< done sleeping, continue with termination")
+          println(s"[${currentDateTime.toStandardTimeString}] <<<<<< done sleeping, continue with termination")
         }
       }
       announcedStopping = true
@@ -274,6 +274,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     announceStopping(app)
     val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this.getClass.getSimpleName
+    println(stopMessage)
     log.info(stopMessage)
     serviceDiscovery.unRegister()
   }
