@@ -685,8 +685,8 @@ api.port.on({
       }, respond.bind(null, false));
     }
   },
-  search_tags: function (data, respond) {
-    ajax('GET', '/ext/libraries/' + data.libraryId + '/tags/search', {q: data.q, n: data.n}, respond, respond.bind(null, []));
+  suggest_tags: function (data, respond) {
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
   },
   tag: function (data, respond, tab) {
     var d = pageData[tab.nUri];
