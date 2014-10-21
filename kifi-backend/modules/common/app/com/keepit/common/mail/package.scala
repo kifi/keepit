@@ -6,6 +6,12 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ Library, User }
 import play.twirl.api.Html
 
+object KifiMobileAppLinkFlag {
+  val key = "kma"
+  val value = "1"
+  val arg = s"&$key=$value"
+}
+
 package object template {
   object tags {
     val firstName = TagLabel("firstName")
@@ -70,7 +76,7 @@ package object template {
 
     def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
+    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?friend=${userExternalId(id)}&", content, openInAppIfMobile = true)
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -94,7 +100,7 @@ package object template {
       medium: String = "email", source: String = parentCategoryTagStr, openInAppIfMobile: Boolean): String = {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
-      val openInAppIfMobileDirective = if (openInAppIfMobile) "&kma=1" else ""
+      val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
       s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content" +
         s"&${EmailTrackingParam.paramName}=${trackingParam(content)}$openInAppIfMobileDirective"
     }

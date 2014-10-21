@@ -5,6 +5,7 @@ import com.keepit.common.http._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -59,9 +60,9 @@ class KifiSiteRouter @Inject() (
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
-    } else if (userAgentOpt.exists(_.isMobile) && request.queryString.get("kma").exists(_.contains("1"))) {
-      val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
-      Ok(views.html.mobile.MobileRedirect(uriNoProto))
+    } else if (userAgentOpt.exists(_.isMobile) &&
+               request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
+      Ok(views.html.mobile.MobileRedirect(request.uri))
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
