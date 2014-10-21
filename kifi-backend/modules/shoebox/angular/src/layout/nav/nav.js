@@ -258,14 +258,19 @@ angular.module('kifi')
         };
         scope.turnDropdownOn = function () {
           scope.sortingMenu.show = true;
-          $document.on('mousedown', onClick);
         };
         scope.turnDropdownOff = function () {
           scope.sortingMenu.show = false;
-          $document.off('mousedown', onClick);
         };
 
         function onClick(event) {
+          if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
+            scope.$apply( function() {
+              scope.toggleDropdown();
+            });
+            return;
+          }
+
           // click anywhere else that's not dropdown menu
           if (!angular.element(event.target).closest('.dropdown-menu-content').length) {
             scope.$apply( function() {
@@ -274,11 +279,13 @@ angular.module('kifi')
             return;
           }
         }
+        $document.on('mousedown', onClick);
 
         // Cleaner upper
         scope.$on('$destroy', function() {
           $document.off('mousedown', onClick);
         });
+
       }
     };
   }
