@@ -713,7 +713,7 @@ var keepBox = keepBox || (function () {
       var deferred = Q.defer();
       api.port.emit('create_library', {
         name: name,
-        visibility: $secret.prop('checked') ? 'secret' : 'discoverable'
+        visibility: $secret.prop('checked') ? 'secret' : 'published'
       }, function (library) {
         if (library) {
           $box.data('libraryCreated', library);
