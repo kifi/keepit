@@ -133,7 +133,7 @@ angular.module('kifi')
                     result.name = emphasizeMatchedNames(result.name, opt_query);
                   }
                   if (result.email) {
-                    result.email = emphasizeMatchedPrefix(result.email, opt_query);
+                    result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
                   }
                 }
               });
