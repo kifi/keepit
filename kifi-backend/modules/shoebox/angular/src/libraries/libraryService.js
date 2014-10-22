@@ -282,6 +282,12 @@ angular.module('kifi')
         });
       },
 
+      moveKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.moveKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
       getMoreMembers: function (libraryId, pageSize, offset) {
         return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
