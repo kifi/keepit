@@ -17,7 +17,9 @@ case class UserAgent(
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
   lazy val isAndroid: Boolean = operatingSystemFamily == "Android" || isKifiAndroidApp
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp || isKifiAndroidApp
-  lazy val screenCanFitWebApp: Boolean = !isMobile // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
+  lazy val isMobileWeb: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily)
+  lazy val isMobileApp: Boolean = isKifiIphoneApp || isKifiAndroidApp
+  lazy val screenCanFitWebApp: Boolean = !isMobileWeb // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
 }

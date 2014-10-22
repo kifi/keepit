@@ -29,6 +29,11 @@ angular.module('kifi')
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
 
+        var magicImages = {
+          'some public id': 'some image absolute path' //put actual images here
+        };
+        scope.magicImage = magicImages[scope.library.id];
+
 
         //
         // Internal methods.
@@ -99,7 +104,6 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
-          $rootScope.$emit('libraryUrl', scope.library);
         }
 
         function preloadSocial () {

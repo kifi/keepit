@@ -29,6 +29,9 @@
   font-weight: 400
   color: textDarkColor
 
+  .active &
+    font-weight: bold
+
 .kf-nav-lib-text
   padding: 0 0 0 9px
   font-size: 11px
@@ -123,6 +126,8 @@
     line-height: 18px
 
 .kf-lib-input-clear
+  position: relative
+  top: 2px
   float: right
   width: 20px
   box-sizing: border-box
@@ -139,12 +144,13 @@
 .kf-sort-img
   position: relative
   left: 6px
-  top: 3px
+  top: 2px
 
 .kf-sort-libs
   position: relative
 
 .kf-sort-libs-button
+  user-select: none
   width: 24px
   height: 25px
   float: right

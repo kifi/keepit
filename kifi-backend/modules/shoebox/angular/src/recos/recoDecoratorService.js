@@ -2,10 +2,11 @@
 
 angular.module('kifi')
 
-.factory('recoDecoratorService', ['keepDecoratorService', 'util',
-  function (keepDecoratorService, util) {
+.factory('recoDecoratorService', ['keepDecoratorService', 'util', 'friendService', 'profileService',
+  function (keepDecoratorService, util, friendService, profileService) {
 
     function Recommendation(rawReco, type) {
+      var librariesEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') > -1;
       this.recoData = {
         type: type,  // This is either 'recommended' or 'popular'.
         kind: rawReco.kind,  // This is either 'keep' or 'library'.
@@ -20,6 +21,18 @@ angular.module('kifi')
       });
 
       if (this.recoData.kind === 'keep') {
+        rawReco.itemInfo.libraries = librariesEnabled?(rawReco.itemInfo.libraries || []):[];
+        var libUsers = {};
+        rawReco.itemInfo.libraries.forEach( function (lib) {
+          lib.keeperPic = friendService.getPictureUrlForUser(lib.owner);
+          libUsers[lib.owner.id] = true;
+        });
+        //don't show a face only if there is also a library for that person
+        rawReco.itemInfo.keepers.forEach(function (keeper) {
+          if (libUsers[keeper.id] && librariesEnabled) {
+            keeper.hidden = true;
+          }
+        });
         this.recoKeep = new keepDecoratorService.Keep(rawReco.itemInfo, 'reco');
       } else {
         this.recoLib = rawReco.itemInfo;

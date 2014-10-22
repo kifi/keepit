@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util',
+  'modalService', 'profileService', 'util', '$window',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util) {
+            modalService, profileService, util, $window) {
     //
     // Internal data.
     //
@@ -99,6 +99,10 @@ angular.module('kifi')
       }
     });
 
+    var setTitle = function (lib) {
+      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+    };
+
 
     //
     // On LibraryCtrl initialization.
@@ -114,6 +118,7 @@ angular.module('kifi')
 
       if (lib) {
         $scope.page = 'library';
+        setTitle(lib);
         util.replaceObjectInPlace($scope.library, lib);
         prePopulated = true;
       }
@@ -130,6 +135,7 @@ angular.module('kifi')
         } else {
           util.replaceObjectInPlace($scope.library, library);
         }
+        $rootScope.$emit('libraryUrl', $scope.library);
 
         library.keeps.forEach(function (rawKeep) {
           var keep = new keepDecoratorService.Keep(rawKeep);
@@ -142,6 +148,7 @@ angular.module('kifi')
         $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
         $scope.loading = false;
         $scope.page = 'library';
+        setTitle(library);
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
           $scope.loading = false;
