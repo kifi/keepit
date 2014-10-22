@@ -624,7 +624,7 @@ class KeepsCommander @Inject() (
         case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
       }
-      collectionRepo.collectionChanged(collection.id.get)
+      collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
 
       val removedAt = currentDateTime
       removed.foreach { ktc =>
