@@ -207,6 +207,7 @@ object Search extends Service {
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
     def augmentation() = ServiceRoute(POST, "/internal/search/augmentation")
+    def augment() = ServiceRoute(POST, "/internal/search/augment")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
