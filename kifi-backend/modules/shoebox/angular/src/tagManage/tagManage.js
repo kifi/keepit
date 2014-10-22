@@ -169,32 +169,29 @@ angular.module('kifi')
     $scope.clickAction = function () {
       var tagName = encodeURIComponent($scope.selectedTag.name);
 
+      var tagActionResult;
       if ($scope.actionToLibrary === 'copy') {
-        libraryService.copyKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
+        tagActionResult = libraryService.copyKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
           modalService.open({
             template: 'tagManage/tagToLibModal.tpl.html',
             modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
           });
-          libraryService.addToLibraryCount($scope.librarySelection.library.id, $scope.selectedTag.keeps);
-        })['catch'](function () {
-          modalService.open({
-            template: 'common/modal/genericErrorModal.tpl.html'
-          });
+          // todo (aaron): call addToLibraryCount accordingly (make sure source libraries do NOT lose keep counts)
         });
       } else {
-        libraryService.moveKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
+        tagActionResult = libraryService.moveKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
           modalService.open({
             template: 'tagManage/tagToLibModal.tpl.html',
             modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
           });
-          libraryService.addToLibraryCount($scope.librarySelection.library.id, $scope.selectedTag.keeps);
-        })['catch'](function () {
-          modalService.open({
-            template: 'common/modal/genericErrorModal.tpl.html'
-          });
+          // todo (aaron): call addToLibraryCount accordingly (make sure source libraries lose keep counts)
         });
       }
-
+      tagActionResult['catch'](function () {
+        modalService.open({
+          template: 'common/modal/genericErrorModal.tpl.html'
+        });
+      });
     };
 
     $scope.showRemoveTagModal = function (tag) {
