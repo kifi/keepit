@@ -94,12 +94,14 @@ angular.module('kifi')
 
         container.on('mouseenter', onMouseEnter);
         container.on('mouseleave', onMouseLeave);
-        $w.on('scroll', trackScroll);
+
+        var debouncedScroll = _.debounce(trackScroll, 50);
+        $w.on('scroll', debouncedScroll);
 
         scope.$on('$destroy', function () {
           container.off('mouseenter', ensureCorrectPositioning);
           container.off('mouseleave', onMouseLeave);
-          $w.off('scroll', trackScroll);
+          $w.off('scroll', debouncedScroll);
         });
 
         scope.showing = function() {
