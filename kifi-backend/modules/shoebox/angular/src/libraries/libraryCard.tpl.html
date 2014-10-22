@@ -73,7 +73,7 @@
   </div>
   <img class="kf-keep-lib-image" ng-src="{{magicImage}}">
   <div class="kf-keep-footer clearfix">
-    <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right" ng-click="manageLibrary()">
+    <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right library-button-with-icon" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library
     </button>
     <button ng-if="isMyLibrary(library) && library.numKeeps > 0" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-edit-keeps-button" ng-click="toggleEditKeeps()">
@@ -83,13 +83,13 @@
     <button ng-if="alreadyFollowingLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right kf-keep-lib-footer-button-follow-unfollow kf-keep-lib-footer-button-unfollow" ng-click="unfollowLibrary(library)"></button>
 
     <div kf-library-share-search ng-if="canBeShared(library)" library="library"></div>
-    <button ng-if="isPublic(library)" class="kf-keep-lib-footer-button">
+    <button ng-if="isPublic(library)" class="kf-keep-lib-footer-button library-button-with-icon">
       <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
-      <a ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareUrl}}">Share</a>
+      <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareUrl}}">Share</a>
     </button>
-    <button ng-if="isPublic(library)" ng-click="shareFB()" class="kf-keep-lib-footer-button">
+    <button ng-if="isPublic(library)" ng-click="shareFB()" class="kf-keep-lib-footer-button library-button-with-icon">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>
-      <a href="javascript:">Share</a>
+      <a class="kf-keep-lib-footer-share-link" href="javascript:">Share</a>
     </button>
   </div>
 </div>

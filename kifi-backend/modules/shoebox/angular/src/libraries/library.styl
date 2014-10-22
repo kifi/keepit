@@ -36,6 +36,20 @@ invite-header-orange = #ff7c3c
 
 
 .library-card
+  // Do not display text on buttons when the card is very narrow
+  @media screen and (max-width: 1250px)
+    .library-button-with-icon
+      padding: 0
+      width: 41px
+      height: 32px
+      font-size: 0
+
+    .kf-keep-lib-footer-share-link
+      display: none
+
+    .library-share-menu
+      left: -44px
+
   .library-card-invite-header
     padding: 10px 32px
     background-color: invite-header-orange
@@ -98,7 +112,6 @@ invite-header-orange = #ff7c3c
     font-size: 26px
     font-weight: bold
     vertical-align: middle
-
 
   .kf-keep-lib-info
     margin: 0 25px 10px 80px
@@ -187,6 +200,9 @@ invite-header-orange = #ff7c3c
     padding: 15px 20px
     background-color: #fff
 
+  .kf-library-share-search
+    vertical-align: top
+
   .kf-keep-lib-footer-button-right
     float: right
     margin-right: 0
@@ -219,6 +235,7 @@ invite-header-orange = #ff7c3c
 .kf-keep-lib-footer-button
   display: inline-block
   position: relative
+  vertical-align: top
   margin-right: 15px
   border: 1px solid #bbb
   border-radius: 5px
@@ -233,8 +250,8 @@ invite-header-orange = #ff7c3c
 
 .kf-keep-lib-footer-button-icon
   position: absolute
-  top: 6px
-  left: 13px
+  top: 7px
+  left: 12px
   width: 18px
   height: 18px
   background-repeat: no-repeat
@@ -416,10 +433,11 @@ invite-header-orange = #ff7c3c
     display: inline-block
     position: absolute
     top: 5px
-    padding: 7px 10px 5px 30px
+    padding: 5px 10px 5px 30px
     font-size: 12px
 
     .kf-keep-lib-footer-button-icon
+      top: 5px
       left: 10px
       width: 15px
       height: 15px
