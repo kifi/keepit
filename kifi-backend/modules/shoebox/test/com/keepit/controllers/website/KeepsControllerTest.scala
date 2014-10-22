@@ -28,9 +28,6 @@ import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
@@ -127,13 +124,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = None).toString
         path === "/site/keeps/all"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(bookmark1.isPrivate), Seq(bookmark1.userId, user2.id.get), 3), (Some(bookmark2.isPrivate), Seq(bookmark2.userId), 1))
 
-        val controller = inject[KeepsController]
         inject[FakeUserActionsHelper].setUser(user1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest()
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -151,7 +145,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
               "others":1,
+              "secret":false,
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
+              "keepersOmitted": 0,
+              "keepersTotal": 3,
+              "libraries":[],
+              "librariesOmitted": 0,
+              "librariesTotal": 0,
               "collections":[],
               "tags":[],
               "hashtags":[],
@@ -164,8 +164,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "url":"http://www.google.com/",
               "isPrivate":false,
               "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
-              "others":-1,
+              "others":0,
+              "secret":false,
               "keepers":[],
+              "keepersOmitted": 0,
+              "keepersTotal": 1,
+              "libraries":[],
+              "librariesOmitted": 0,
+              "librariesTotal": 0,
               "collections":[],
               "tags":[],
               "hashtags":[],
@@ -228,8 +234,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
         inject[FakeUserActionsHelper].setUser(user1)
 
-        val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(bookmark1.isPrivate), Seq(bookmark1.userId), 1), (Some(bookmark2.isPrivate), Seq(bookmark2.userId), 1))
 
         val request = FakeRequest("GET", s"/site/keeps/all?after=${bookmark1.externalId.toString}")
         val result = inject[KeepsController].allKeeps(before = None, after = Some(bookmark1.externalId.toString), collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
@@ -248,8 +253,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "url":"http://www.amazon.com/",
                 "isPrivate":false,
                 "createdAt":"2013-02-16T23:59:00.000Z",
-                "others":-1,
+                "others":0,
+                "secret":false,
                 "keepers":[],
+                "keepersOmitted": 0,
+                "keepersTotal": 1,
+                "libraries":[],
+                "librariesOmitted": 0,
+                "librariesTotal": 0,
                 "collections":[],
                 "tags":[],
                 "hashtags":[],
@@ -282,13 +293,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).toString
         path === "/site/keeps/all?helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keeps1(1).isPrivate), Seq(keeps1(1).userId, u2.id.get), 3), (Some(keeps1(0).isPrivate), Seq(keeps1(0).userId), 1))
 
-        val controller = inject[KeepsController]
         inject[FakeUserActionsHelper].setUser(u1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -305,7 +313,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
+                      "secret":false,
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 3,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
@@ -321,8 +335,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
-                      "others":-1,
+                      "others":0,
+                      "secret":false,
                       "keepers":[],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 1,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "collections":[],
                       "tags":[],
                       "hashtags":[],
@@ -358,12 +378,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
         path === s"/site/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keeps1(1).isPrivate), Seq(keeps1(1).userId, u2.id.get), 3))
 
         inject[FakeUserActionsHelper].setUser(u1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -380,7 +398,13 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
+                      "secret":false,
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 3,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "collections":[],
                       "tags":[],
                       "hashtags":[],
