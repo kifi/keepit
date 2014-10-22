@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
@@ -383,7 +384,9 @@ class AuthHelper @Inject() (
             authenticateUser(address.userId,
               error => throw error,
               authenticator => {
-                val resp = if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+                  Ok(views.html.mobile.MobileRedirect("/email/verified"))
+                } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
                   // user has no installations
                   Redirect("/install")
                 } else {
