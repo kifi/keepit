@@ -7,6 +7,7 @@ import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 class WatchableExecutionContext extends ScalaExecutionContext {
   private[this] val internalContext: ScalaExecutionContext = scala.concurrent.ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(2))
   private[this] val lock = new Object()
+  private[this] var addedAnything = false
   private[this] var counter: Int = 0
   private[this] var maxExeutionCount: Int = 0
 
@@ -15,6 +16,7 @@ class WatchableExecutionContext extends ScalaExecutionContext {
   def execute(runnable: Runnable): Unit = lock.synchronized {
     counter += 1
     maxExeutionCount += 1
+    addedAnything = true
     val wrapper = new Runnable {
       override def run(): Unit = {
         runnable.run()
@@ -30,7 +32,7 @@ class WatchableExecutionContext extends ScalaExecutionContext {
 
   def drain(waitTime: Long = 1000): Int = {
     lock.synchronized {
-      while (counter > 0) {
+      if (!addedAnything || (addedAnything && counter > 0)) {
         lock.wait(waitTime)
       }
     }

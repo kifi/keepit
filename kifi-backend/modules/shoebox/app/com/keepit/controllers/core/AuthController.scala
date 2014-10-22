@@ -2,7 +2,6 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
-import com.keepit.common.controller.KifiSession.FORTYTWO_USER_ID
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -13,6 +12,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
 import com.kifi.macros.json
+import com.keepit.common.controller.KifiSession._
 
 import play.api.Play._
 import play.api.libs.json.{ JsValue, JsNumber, Json }
@@ -189,7 +189,7 @@ class AuthController @Inject() (
                   authenticator =>
                     Future.successful(
                       Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
-                        .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                        .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
                         .withCookies(authenticator.toCookie)
                     )
                 )
@@ -251,7 +251,7 @@ class AuthController @Inject() (
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        result.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+        result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
       }
     }
   }

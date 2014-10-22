@@ -36,6 +36,7 @@ import securesocial.core._
 import securesocial.core.providers.utils.GravatarHelper
 
 import scala.util.{ Failure, Success, Try }
+import KifiSession._
 
 case class EmailPassword(email: EmailAddress, password: Array[Char])
 object EmailPassword {
@@ -321,7 +322,7 @@ class AuthCommander @Inject() (
           error => throw error,
           authenticator =>
             Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userIdOpt.get.toString))
+              .withSession((newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey).setUserId(userIdOpt.get))
               .withCookies(authenticator.toCookie)
         )
     } getOrElse {

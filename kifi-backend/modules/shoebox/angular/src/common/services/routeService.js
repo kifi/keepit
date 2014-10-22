@@ -162,6 +162,9 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
       },
+      declineToJoinLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/decline');
+      },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
@@ -170,6 +173,9 @@ angular.module('kifi')
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
+      moveKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/moveTag?tag=' + tagName);
       },
       getMoreLibraryMembers: function(libraryId, pageSize, offset) {
         return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));

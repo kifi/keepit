@@ -22,6 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 import securesocial.core.{ Authenticator, Events, LogoutEvent, OAuth2Provider, Registry, SecureSocial, UserService }
+import KifiSession._
 
 class ExtAuthController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -150,7 +151,7 @@ class ExtAuthController @Inject() (
     }
     val result = NoContent.discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session) - KifiSession.FORTYTWO_USER_ID)
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session).deleteUserId)
       case None => result
     }
   }
