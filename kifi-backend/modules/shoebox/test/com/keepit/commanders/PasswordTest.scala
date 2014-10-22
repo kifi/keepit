@@ -103,7 +103,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
       status(result) === OK
       val sess = session(result)
       userIdOpt foreach { userId =>
-        sess.getUserId.get === userId.id
+        sess.getUserId.get === userId
       }
       contentAsString(result) === Json.obj("uri" -> "/login/after").toString()
     } else {
