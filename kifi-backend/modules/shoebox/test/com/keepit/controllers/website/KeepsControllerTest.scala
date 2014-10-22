@@ -24,7 +24,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, JsString, Json }
+import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
 
@@ -154,6 +154,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
               "collections":[],
               "tags":[],
+              "hashtags":[],
               "summary":{},
               "siteName":"Amazon",
               "libraryId":"lzmfsKLJyou6"},
@@ -167,6 +168,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "keepers":[],
               "collections":[],
               "tags":[],
+              "hashtags":[],
               "summary":{},
               "siteName":"Google",
               "libraryId":"lzmfsKLJyou6"}
@@ -250,6 +252,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "keepers":[],
                 "collections":[],
                 "tags":[],
+                "hashtags":[],
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"lzmfsKLJyou6"
@@ -306,6 +309,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"kifi.com",
                       "clickCount":1,
@@ -321,6 +325,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "keepers":[],
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
                       "clickCount":1,
@@ -378,6 +383,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
                       "clickCount":1,

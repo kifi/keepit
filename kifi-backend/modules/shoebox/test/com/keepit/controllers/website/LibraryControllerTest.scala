@@ -693,6 +693,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 ],
                 "collections": [],
                 "tags": [],
+                "hashtags":[],
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su"
@@ -714,6 +715,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 ],
                 "collections": [],
                 "tags": [],
+                "hashtags":[],
                 "summary": {},
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su"
