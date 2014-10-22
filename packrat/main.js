@@ -24,7 +24,7 @@ var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
 var urlPatterns;
-var guidePages;
+var guidePage;
 
 function clearDataCache() {
   log('[clearDataCache]');
@@ -42,7 +42,7 @@ function clearDataCache() {
   messageData = {};
   contactSearchCache = null;
   urlPatterns = null;
-  guidePages = null;
+  guidePage = null;
 }
 
 // ===== Error reporting
@@ -1159,7 +1159,7 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
-    if (guidePages && /^#guide\/\d\/\d/.test(link.locator)) {
+    if (guidePage && /^#guide\/\d/.test(link.locator)) {
       var step = +link.locator.substr(7, 1);
       switch (step) {
         case 1:
@@ -1167,33 +1167,29 @@ api.port.on({
           tabsByUrl[link.url] = tabsByUrl[link.url] || [];
           break;
         case 2:
-          var page = guidePages[+link.locator.substr(9, 1)];
-          var tagId = link.locator.substr(11);
+          var page = guidePage;
           var query = page.query.replace(/\+/g, ' ');
           var entry = searchPrefetchCache[query] = {
-            response: pimpSearchResponse({
+            response: pimpSearchResponse([{
+              context: 'guide',
               uuid: '00000000-0000-0000-0000-000000000000',
               query: query,
               hits: [{
-                bookmark: {
-                  title: page.title,
-                  url: page.url,
-                  tags: tagId ? [tagId] : [],
-                  matches: page.matches
-                },
-                users: [],
-                count: 1,
-                score: 0,
-                isMyBookmark: true,
-                isPrivate: false
+                keepId: '00000000-0000-0000-0000-000000000000',
+                title: page.title,
+                url: page.url,
+                matches: page.matches
               }],
-              myTotal: 1,
-              friendsTotal: 0,
-              othersTotal: 816,
-              mayHaveMore: false,
-              show: true,
-              context: 'guide'
-            })
+              cutPoint: 1
+            }, {
+              hits: [{
+                keepers: [-1],
+                keepersTotal: 816,
+                libraries: [0, -1]
+              }],
+              libraries: [{id: mySysLibIds[0]}],
+              users: []
+            }])
           };
           entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
           break;
@@ -1243,29 +1239,46 @@ api.port.on({
     }
   },
   start_guide: function (pages, _, tab) {
-    guidePages = pages;
-    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages, x: !experiments || experiments.indexOf('guide_forced') < 0});
+    for (var i = 0; i < pages.length; i++) {
+      var page = pages[i];
+      if (page.image) {
+        page.width = page.image[1] / 2;
+        page.height = page.image[2] / 2;
+        page.image = page.image[0];
+        guidePage = page;
+        break;
+      }
+    }
+    api.tabs.emit(tab, 'guide', {step: 0, page: guidePage, x: !experiments || experiments.indexOf('guide_forced') < 0});
     unsilence(false);
   },
   track_guide: function (stepParts) {
     tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
   },
-  track_guide_choice: function (pageIdx) {
-    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+  track_guide_choice: function () {
+    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePage.track});
   },
   resume_guide: function (step, _, tab) {
-    if (guidePages) {
-      api.tabs.emit(tab, 'guide', {
-        step: step,
-        pages: guidePages,
-        page: 0 // TODO: guess based on tab.url
-      });
-    }
+    api.tabs.emit(tab, 'guide', {
+      step: step,
+      page: guidePage || (guidePage = {
+        url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
+        name: ['Steve Jobs:','How to Live','Before You Die'],
+        image: '//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg',
+        noun: 'video',
+        query: 'steve+jobs',
+        title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
+        matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
+        track: 'steveJobsSpeech',
+        width: 240,
+        height: 212.5
+      })
+    });
   },
   end_guide: function (stepParts) {
     tracker.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
-      guidePages = null;
+      guidePage = null;
     }
   }
 });
@@ -1536,8 +1549,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         api.tabs.emit(tab, 'guide', {
           step: +loc.substr(7, 1),
-          pages: guidePages,
-          page: +loc.substr(9, 1),
+          page: guidePage,
           x: !experiments || experiments.indexOf('guide_forced') < 0
         }, {queue: 1});
       } else if (loc.indexOf('#compose') >= 0) {

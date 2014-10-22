@@ -11,9 +11,9 @@ guide.step4 = guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
-    {sel: '.kf-sidebar-nav,.kf-sidebar-tag-list', pad: [-5, -5, 30, 0], maxHeight: 246},
-    {sel: '.kf-query', pad: [6, 8], maxWidth: 320},
-    {sel: '.kf-header-right>*', pad: [-6, 24], anchor: 'tr'}
+    {sel: '.kf-nav-lib-system', pad: [0, -20, 56, 20]},
+    {sel: '.kf-query-lib-container', pad: [6, 8, 8]},
+    {sel: '.kf-header-right>*', pad: [-6, 6, -6, 12], anchor: 'tr'}
   ];
   var arcs = [
     {dx: -63, dy: -40, from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1]}},

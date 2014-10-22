@@ -62,13 +62,12 @@ guide.step3 = guide.step3 || function () {
     }
   };
 
-  function show($guide, page, pageIdx, allowEsc) {
+  function show($guide, page, allowEsc) {
     if (!step) {
       tile.style.display = '';
       step = guide.step(steps, {
         $guide: $guide,
         page: page,
-        pageIdx: pageIdx,
         index: 3,
         done: .2,
         anchor: 'br',
