@@ -35,7 +35,10 @@ abstract class JoinerManager(initialCapacity: Int) {
   private[this] var pool: Array[Joiner] = new Array[Joiner](16) // pool Joiners for reuse
   private[this] var activeCount: Int = 0
 
-  private[this] val table = new mutable.HashMap[JoinerKey, Joiner]()
+  private[this] val table = new mutable.HashMap[JoinerKey, Joiner]() {
+    // the default value is null when the key is missing (no exception is thrown)
+    override def default(key: JoinerKey): Joiner = null
+  }
   private[this] val searchKey = new JoinerKey(0) // this key instance will be reused over and over
 
   private def getOrCreateJoiner(): Joiner = {
@@ -56,12 +59,15 @@ abstract class JoinerManager(initialCapacity: Int) {
   protected def create(): Joiner
 
   def get(id: Long): Joiner = {
+    // look up the table. We don't use getOrElse to avoid overhead.
+    // getOrElse creates a closure on invocation and internally calls get which creates an Option instance.
     searchKey.value = id
-    table.getOrElse(searchKey, {
-      val joiner = getOrCreateJoiner().set(id)
+    var joiner = table(searchKey) // when not found, this returns null as the default value (see the definition above)
+    if (joiner == null) {
+      joiner = getOrCreateJoiner().set(id)
       table.put(joiner.key, joiner)
-      joiner
-    })
+    }
+    joiner
   }
 
   def flush(): Unit = {
