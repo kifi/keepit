@@ -821,6 +821,8 @@ POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/public/ng/img", file)
+GET     /marketing/*file           com.keepit.controllers.website.MarketingAssets.marketingSite(file)
+GET     /marketing/                com.keepit.controllers.website.MarketingAssets.marketingSite(file = "")
 
 ##########################################
 # Marketing site

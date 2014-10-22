@@ -106,6 +106,8 @@ object ApplicationBuild extends Build {
     libraryDependencies ++= shoeboxDependencies,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     unmanagedResourceDirectories in Assets += baseDirectory.value / "angular/play-refs",
+    unmanagedResourceDirectories in Assets += baseDirectory.value / "marketing/assets",
+    unmanagedResourceDirectories in Compile += baseDirectory.value / "marketing/html",
     javaOptions in Test += "-Dconfig.resource=application-shoebox.conf",
     // Only necessary for admin:
     includeFilter in (Assets, LessKeys.less) := "*.less"
