@@ -18,7 +18,6 @@ var timeouts = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
-var libraries;
 var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
@@ -37,7 +36,6 @@ function clearDataCache() {
     delete timeouts[tabId];
   }
 
-  libraries = null;
   pageData = {};
   threadLists = {};
   threadsById = {};
@@ -269,7 +267,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getUrlPatterns(getPrefs);
+  getUrlPatterns(getPrefs.bind(null, loadLibraries.bind(null, api.noop)));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -601,12 +599,11 @@ api.port.on({
   },
   keeps_and_libraries: function (_, respond, tab) {
     var d = pageData[tab.nUri];
-    ajax('GET', '/ext/libraries', function (o) {
-      libraries = o.libraries;
+    loadLibraries(function (libraries) {
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: o.libraries});
+      respond({keeps: keeps, libraries: libraries});
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
@@ -618,29 +615,32 @@ api.port.on({
   },
   filter_libraries: function (q, respond) {
     var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
-    respond(sf.filter(q, libraries, getName).map(function (lib) {
-      lib = clone(lib);
-      lib.nameParts = sf.splitOnMatches(q, lib.name);
-      return lib;
-    }));
+    loadLibraries(function (libraries) {
+      respond(sf.filter(q, libraries, getName).map(function (lib) {
+        lib = clone(lib);
+        lib.nameParts = sf.splitOnMatches(q, lib.name);
+        return lib;
+      }));
+    }, respond);
   },
   get_library: function (id, respond) {
     ajax('GET', '/ext/libraries/' + id, respond, respond.bind(null, null));
   },
   create_library: function (data, respond) {
     ajax('POST', '/ext/libraries', data, function (library) {
-      if (libraries) {
+      loadLibraries(function (libraries) {
         libraries.push(library);
-      }
+        storeLibraries(libraries);
+      });
       respond(library);
       notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
     }, respond.bind(null, null));
   },
   delete_library: function (libraryId, respond, tab) {
     ajax('DELETE', '/ext/libraries/' + libraryId, function () {
-      if (libraries) {
-        libraries = libraries.filter(idIsNot(libraryId));
-      }
+      loadLibraries(function (libraries) {
+        storeLibraries(libraries.filter(idIsNot(libraryId)));
+      });
       respond(true);
       for (var nUri in pageData) {
         var d = pageData[nUri];
@@ -2150,12 +2150,56 @@ function discardDraft(keys) {
   }
 }
 
-function loadRecentLibs() {
-  try {
-    return JSON.parse(stored('recent_libraries'));
-  } catch (e) {
-    return [];
+function loadLibraries(done, fail) {
+  var libraries = stored('user_id') === me.id && stored('libraries');
+  if (libraries) {
+    try {
+      libraries = JSON.parse(LZ.decompress(libraries));
+    } catch (e) {
+      log('#c00', '[loadLibraries]', e);
+      libraries = null;
+    }
   }
+  if (libraries) {
+    done(libraries);
+    if (!(+stored('libraries_loaded_at') > Date.now() - 2 * 60 * 60 * 1000)) {
+      ajaxLoadLibraries(done);
+    }
+  } else {
+    ajaxLoadLibraries(done, fail);
+  }
+}
+
+function ajaxLoadLibraries(done, fail) {
+  var loadedAt = Date.now();
+  ajax('GET', '/ext/libraries', function (o) {
+    storeLibraries(o.libraries, loadedAt);
+    done(o.libraries);
+  }, fail);
+}
+
+function storeLibraries(libraries, loadedAt) {
+  libraries = JSON.stringify(libraries);
+  if (libraries === '[]') {
+    unstore('libraries');
+    unstore('libraries_loaded_at');
+  } else if (me) {
+    api.storage[qualify('libraries')] = LZ.compress(libraries);
+    if (loadedAt) {
+      store('libraries_loaded_at', loadedAt);
+      store('user_id', me.id);
+    }
+  }
+}
+
+function loadRecentLibs() {
+  if (stored('user_id') === me.id) {
+    try {
+      return JSON.parse(stored('recent_libraries'));
+    } catch (e) {
+    }
+  }
+  return [];
 }
 
 function storeRecentLib(id) {
@@ -2430,7 +2474,10 @@ function authenticate(callback, retryMs) {
 
 function clearSession() {
   if (me) {
-    unstore('drafts-' + me.id);
+    storeDrafts({});
+    storeLibraries([]);
+    unstore('recent_libraries');
+    unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'me_change', null);
