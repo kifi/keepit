@@ -38,12 +38,18 @@ angular.module('kifi')
     }
 
     var goToAppOrStore = function (url) {
-      var safeUrl = url.replace(/https?:/, '');
-      if (!isRunning) {
+      var safeUrl;
+      if (!isRunning && isSupportedMobilePlatform()) {
         isRunning = true;
         lastInterval = +new Date();
         heartbeat = setInterval(intervalHeartbeat, 200);
-        $window.location = 'kifi:' + safeUrl;
+        if (isIPhone()) {
+          safeUrl = url.replace(/https?:/, '');
+          $window.location = 'kifi:' + safeUrl;
+        } else if (isAndroid()) {
+          safeUrl = url.replace(/https?:\/\/((www.)?kifi.com)?\/?/, '');
+          $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;launchFlags=268435456;end;';
+        }
         timer = setTimeout(goToMobileStore, 2000);
       }
     };
