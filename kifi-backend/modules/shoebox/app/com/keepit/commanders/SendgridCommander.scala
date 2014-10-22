@@ -12,7 +12,7 @@ import com.keepit.heimdal.{ HeimdalContextBuilder, NonUserEventTypes, NonUserEve
 import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
 
 class SendgridCommander @Inject() (
     db: Database,
@@ -24,6 +24,7 @@ class SendgridCommander @Inject() (
     recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     userExperimentCommander: RemoteUserExperimentCommander,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import SendgridEventTypes._
