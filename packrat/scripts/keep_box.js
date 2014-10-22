@@ -303,6 +303,15 @@ var keepBox = keepBox || (function () {
         hide(e, 'action');
       }
     })
+    .on('keydown', function (e) {
+      if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
+        hide(e, 'action');
+        e.preventDefault();
+      } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
+        navBack();
+        e.preventDefault();
+      }
+    })
     .on('kifi-show', function () {
       if (autoClose) {
         var $timer = $view.find('.kifi-keep-box-timer').addClass('kifi-going');
@@ -330,10 +339,14 @@ var keepBox = keepBox || (function () {
   }
 
   function addCreateLibraryBindings($view) {
-    var $name = $view.find('.kifi-keep-box-new-lib-name')
+    var $name = $view
     .on('keydown', function (e) {
-      if (e.keyCode === 13) {
+      if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
         createLibrary($view, $submit);
+        e.preventDefault();
+      } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
+        navBack();
+        e.preventDefault();
       }
     });
     $view
