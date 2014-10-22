@@ -71,6 +71,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
+  override def warmUpUser(userId: Id[User]): Unit = {}
+
   override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
     itemAugmentations.getOrElse(request,
       ItemAugmentationResponse(
