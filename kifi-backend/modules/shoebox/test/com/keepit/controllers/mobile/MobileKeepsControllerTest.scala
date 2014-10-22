@@ -78,7 +78,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollaction3"))) ::
           Nil
         keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
-        collectionRepo.collectionChanged(collections(0).id.get, true)
+        collectionRepo.collectionChanged(collections(0).id.get, true, false)
 
         (user1, bookmark1, bookmark2, collections)
       }
