@@ -12,7 +12,7 @@ import play.api.{Mode, Play}
 object MarketingAssets extends AssetsBuilder with Controller with Logging {
 
   private def fileLoad(path: String): String = {
-    val stream = Play.resourceAsStream(s"html/k/$path").get
+    val stream = Play.resourceAsStream(s"html/k/$path.html").get
     val writer = new StringWriter()
     val fileStr = try {
       IOUtils.copy(stream, writer, "UTF-8")
@@ -34,7 +34,12 @@ object MarketingAssets extends AssetsBuilder with Controller with Logging {
   }
 
   def marketingSite(path: String) = Action {
-    val file = if (path.isEmpty) "index.html" else path
-    Ok(maybeCachedIndex(file)).as(HTML)
+    val file = if (path.isEmpty) "index" else path
+    if (file.contains(".html")) {
+      NotFound(s"$path not found, try to remove the .html")
+    } else {
+      val content = maybeCachedIndex(file)
+      Ok(content).as(HTML)
+    }
   }
 }
