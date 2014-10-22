@@ -1,4 +1,8 @@
 // TODO(yiping): move library card styles to its own .styl file
+
+// Library card colors
+invite-header-orange = #ff7c3c
+
 .kf-library-card-header
   padding: 0 25px 0 30px
   margin-bottom: 10px
@@ -32,6 +36,31 @@
 
 
 .library-card
+  .library-card-invite-header
+    padding: 10px 32px
+    background-color: invite-header-orange
+
+  .library-card-invite-header-info
+    font-size: 13px
+    color: #fff
+    line-height: 25px
+
+  .library-card-invite-header-button
+    float: right
+    margin-left: 10px
+    border: 1px solid #fff
+    border-radius: 5px
+    padding: 5px 15px
+    font-size: 11px
+
+    &.library-card-invite-header-accept
+      background: #fff
+      color: invite-header-orange
+
+    &.library-card-invite-header-ignore
+      background: invite-header-orange
+      color: #fff
+
   .kf-keep-lib-header
     padding-top: 20px
 
@@ -44,6 +73,9 @@
     width: 58px
     height: 77px
     background-repeat: no-repeat
+
+    @media screen and (max-width: 800px)
+      display: none
 
   .kf-keep-lib-name-container
     display: inline-block
@@ -72,6 +104,9 @@
     margin: 0 25px 10px 80px
     color: kifiBlack
     vertical-align: top
+
+    @media screen and (max-width: 800px)
+      margin: 0 8px
 
   .kf-keep-lib-owner
     padding-bottom: 10px
@@ -176,6 +211,9 @@
   .kf-keep-lib-edit-keeps-button
     margin-right: 15px
     padding-left: 15px
+
+  .kf-keep-lib-image
+    width: 100%
 
 // This should be in common; it's so messy right now.
 .kf-keep-lib-footer-button

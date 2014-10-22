@@ -51,8 +51,12 @@ angular.module('kifi')
             var currentHeight = copyElement.height();
             var currentNumLines = currentHeight / heightPerLine;
             var maxIndex = scope.ngBind.length;
-
             var maxNumLines = attributes.maxNumLines || 1;
+
+            if (currentHeight === 0) {
+              element.html(scope.ngBind);
+              return;
+            }
             if (currentNumLines <= maxNumLines) { // entire name fits
               element.html(scope.ngBind);
               return;

@@ -19,7 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.{ SharingUserInfo, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -39,59 +39,39 @@ import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
+import com.keepit.common.json.TupleFormat
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
   title: Option[String],
   url: String,
-  isPrivate: Boolean,
+  isPrivate: Boolean, // deprecated
   createdAt: Option[DateTime] = None,
-  others: Option[Int] = None,
-  keepers: Option[Set[BasicUser]] = None,
-  collections: Option[Set[String]] = None,
-  tags: Option[Set[BasicCollection]] = None,
-  uriSummary: Option[URISummary] = None,
+  others: Option[Int] = None, // deprecated
+  secret: Option[Boolean] = None,
+  keepers: Option[Seq[BasicUser]] = None,
+  keepersOmitted: Option[Int] = None,
+  keepersTotal: Option[Int] = None,
+  libraries: Option[Seq[(LibraryChip, BasicUser)]] = None,
+  librariesOmitted: Option[Int] = None,
+  librariesTotal: Option[Int] = None,
+  collections: Option[Set[String]] = None, // deprecated
+  tags: Option[Set[BasicCollection]] = None, // deprecated
+  hashtags: Option[Set[Hashtag]] = None,
+  summary: Option[URISummary] = None,
   siteName: Option[String] = None,
-  clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None,
+  clickCount: Option[Int] = None, // deprecated
+  rekeepCount: Option[Int] = None, // deprecated
   libraryId: Option[PublicId[Library]] = None)
 
 object KeepInfo {
 
-  implicit val format = (
-    (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_)) and
-    (__ \ 'createdAt).formatNullable[DateTime] and
-    (__ \ 'others).formatNullable[Int] and
-    (__ \ 'keepers).formatNullable[Set[BasicUser]] and
-    (__ \ 'collections).formatNullable[Set[String]] and
-    (__ \ 'tags).formatNullable[Set[BasicCollection]] and
-    (__ \ 'summary).formatNullable[URISummary] and
-    (__ \ 'siteName).formatNullable[String] and
-    (__ \ 'clickCount).formatNullable[Int] and
-    (__ \ 'rekeepCount).formatNullable[Int] and
-    (__ \ 'libraryId).formatNullable(PublicId.format[Library])
-  )(KeepInfo.apply _, unlift(KeepInfo.unapply))
+  val maxKeepersShown = 20
+  val maxLibrariesShown = 10
 
-  def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
-    KeepInfo(
-      Some(info.bookmark.externalId),
-      info.bookmark.title,
-      if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url,
-      info.bookmark.isPrivate,
-      Some(info.bookmark.createdAt),
-      Some(info.others),
-      Some(info.users),
-      Some(info.collections.map(_.id)),
-      Some(info.tags),
-      info.uriSummary,
-      info.siteName,
-      info.clickCount,
-      info.rekeepCount,
-      info.libraryId
-    )
+  implicit val writes = {
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[LibraryChip, BasicUser]
+    Json.writes[KeepInfo]
   }
 
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?
@@ -100,18 +80,6 @@ object KeepInfo {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
   }
 }
-
-case class FullKeepInfo(
-  bookmark: Keep,
-  users: Set[BasicUser],
-  collections: Set[ExternalId[Collection]], //deprecated, will be removed in favor off tags once site transition is complete
-  tags: Set[BasicCollection],
-  others: Int,
-  siteName: Option[String] = None,
-  uriSummary: Option[URISummary] = None,
-  clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None,
-  libraryId: Option[PublicId[Library]] = None)
 
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
@@ -266,11 +234,9 @@ class KeepsCommander @Inject() (
   }
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
-    val sharingInfosFuture = perspectiveUserIdOpt match {
-      case Some(userId) =>
-        searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
-      case None =>
-        Future.successful(Seq.fill(keeps.length)(SharingUserInfo(Set.empty, 0)))
+    val augmentationFuture = {
+      val items = keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }
+      searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
@@ -283,15 +249,20 @@ class KeepsCommander @Inject() (
     }.map(collectionCommander.getBasicCollections)
 
     for {
-      sharingInfos <- sharingInfosFuture
+      (augmentationInfos, basicLibraries) <- augmentationFuture
       pageInfos <- pageInfosFuture
     } yield {
       val idToBasicUser = db.readOnlyMaster { implicit s =>
-        basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
+        val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+        val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
+        val libraryOwners = basicLibraries.map(_.ownerId)
+        basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners)
       }
-      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
-        case ((keep, collsForKeep), sharingInfoForKeep, pageInfoForKeep) =>
-          val others = sharingInfoForKeep.keepersEdgeSetSize - sharingInfoForKeep.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+      val idToLibraryChip = basicLibraries.map { library => library.id -> LibraryChip(library, idToBasicUser(library.ownerId)) }.toMap
+      val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
+        case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+          val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
+          val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
           KeepInfo(
             id = Some(keep.externalId),
             title = keep.title,
@@ -299,10 +270,17 @@ class KeepsCommander @Inject() (
             isPrivate = keep.isPrivate,
             createdAt = Some(keep.createdAt),
             others = Some(others),
-            keepers = Some(sharingInfoForKeep.sharingUserIds.map(idToBasicUser)),
+            secret = augmentationInfoForKeep.secret,
+            keepers = Some(keepers.map(idToBasicUser)),
+            keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
+            keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
+            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToLibraryChip(libraryId), idToBasicUser(contributorId)) }),
+            librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
+            librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
             tags = Some(collsForKeep.toSet),
-            uriSummary = Some(pageInfoForKeep),
+            hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
+            summary = Some(pageInfoForKeep),
             siteName = DomainToNameMapper.getNameFromUrl(keep.url),
             clickCount = None,
             rekeepCount = None,
@@ -348,31 +326,6 @@ class KeepsCommander @Inject() (
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
           }
         }
-    }
-  }
-
-  /**
-   * This function currently does not return help rank info (can be added if necessary)
-   * Waiting is enabled for URISummary fetching
-   */
-  def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
-    // might be called right after a keep is created (e.g. via Add a Keep on website)
-    db.readOnlyMaster { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
-      val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
-      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
-      for {
-        sharingInfo <- sharingInfoFuture
-        pageInfo <- pageInfoFuture
-      } yield {
-        val (idToBasicUser, colls) = db.readOnlyMaster { implicit s =>
-          val idToBasicUser = basicUserRepo.loadAll(sharingInfo.sharingUserIds)
-          val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-          val colls: Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
-          (idToBasicUser, colls)
-        }
-        val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, sharingInfo.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfo)
-      }
     }
   }
 

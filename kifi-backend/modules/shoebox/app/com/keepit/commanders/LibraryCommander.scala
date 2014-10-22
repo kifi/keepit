@@ -425,7 +425,7 @@ class LibraryCommander @Inject() (
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
-      val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
+      val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE, LibraryInviteStates.DECLINED))
       (myLibraries, myInvites)
     }
   }
@@ -943,24 +943,6 @@ object LibraryInfo {
   }
 }
 
-private case class GroupHolder(count: Int, users: Seq[BasicUser], isMore: Boolean)
-private object GroupHolder {
-  implicit val format = (
-    (__ \ 'count).format[Int] and
-    (__ \ 'users).format[Seq[BasicUser]] and
-    (__ \ 'isMore).format[Boolean]
-  )(GroupHolder.apply, unlift(GroupHolder.unapply))
-}
-
-private case class KeepsHolder(count: Int, keeps: Seq[KeepInfo], isMore: Boolean)
-private object KeepsHolder {
-  implicit val format = (
-    (__ \ 'count).format[Int] and
-    (__ \ 'keeps).format[Seq[KeepInfo]] and
-    (__ \ 'isMore).format[Boolean]
-  )(KeepsHolder.apply, unlift(KeepsHolder.unapply))
-}
-
 case class MaybeLibraryMember(member: Either[BasicUser, EmailAddress], access: Option[LibraryAccess], lastInvitedAt: Option[DateTime])
 
 object MaybeLibraryMember {
@@ -991,22 +973,7 @@ case class FullLibraryInfo(
   numFollowers: Int)
 
 object FullLibraryInfo {
-  implicit val formats = (
-    (__ \ 'id).format[PublicId[Library]] and
-    (__ \ 'name).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'description).formatNullable[String] and
-    (__ \ 'slug).format[LibrarySlug] and
-    (__ \ 'url).format[String] and
-    (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'owner).format[BasicUser] and
-    (__ \ 'followers).format[Seq[BasicUser]] and
-    (__ \ 'keeps).format[Seq[KeepInfo]] and
-    (__ \ 'numKeeps).format[Int] and
-    (__ \ 'numCollaborators).format[Int] and
-    (__ \ 'numFollowers).format[Int]
-  )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
+  implicit val writes = Json.writes[FullLibraryInfo]
 }
 
 case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {

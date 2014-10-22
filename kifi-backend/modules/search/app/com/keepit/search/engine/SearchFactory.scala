@@ -69,9 +69,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
-    )
+      phraseDetectionReqConsolidator)
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
@@ -171,9 +169,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
-    )
+      phraseDetectionReqConsolidator)
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
@@ -230,8 +226,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
+      phraseDetectionReqConsolidator
     )
 
     parser.parse(queryString) match {

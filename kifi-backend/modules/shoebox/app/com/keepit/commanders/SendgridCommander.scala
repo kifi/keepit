@@ -9,10 +9,10 @@ import com.keepit.common.mail.template.EmailTip.toContextData
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContextBuilder, NonUserEventTypes, NonUserEvent, UserEventTypes, UserEvent, HeimdalContextBuilderFactory, HeimdalServiceClient }
-import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates, ExperimentType }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
 
 class SendgridCommander @Inject() (
     db: Database,
@@ -23,6 +23,8 @@ class SendgridCommander @Inject() (
     emailOptOutRepo: EmailOptOutRepo,
     recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    userExperimentCommander: RemoteUserExperimentCommander,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import SendgridEventTypes._
@@ -90,7 +92,12 @@ class SendgridCommander @Inject() (
         } else event.timestamp
 
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
-        heimdalClient.trackEvent(UserEvent(userId, context, UserEventTypes.WAS_NOTIFIED, eventTime))
+        userExperimentCommander.getExperimentsByUser(userId).map { experiments =>
+          val builder = heimdalContextBuilder()
+          builder.addExistingContext(context)
+          builder += ("userStatus", ExperimentType.getUserStatus(experiments))
+          heimdalClient.trackEvent(UserEvent(userId, builder.build, UserEventTypes.WAS_NOTIFIED, eventTime))
+        }
       }
       else if (NotificationCategory.NonUser.all.contains(email.category)) {
         heimdalClient.trackEvent(NonUserEvent(address.address, NonUserKinds.email, context, NonUserEventTypes.WAS_NOTIFIED, eventTime))

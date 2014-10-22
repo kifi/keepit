@@ -165,6 +165,7 @@ POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.Mobil
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.addKeeps()
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
 POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepBatch()
 POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileKeepsController.unkeep(id: ExternalId[Keep])

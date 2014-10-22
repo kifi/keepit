@@ -1,4 +1,9 @@
 <div class="kf-keep library-card" ng-class="{ 'loggedOutUser': isUserLoggedOut }">
+  <div ng-show="library.invite && !library.invite.actedOn" class="library-card-invite-header">
+    <button class="library-card-invite-header-button library-card-invite-header-accept" ng-click="acceptInvitation(library)">Accept</button>
+    <button class="library-card-invite-header-button library-card-invite-header-ignore" ng-click="ignoreInvitation(library)">Ignore</button>
+    <span class="library-card-invite-header-info">{{library.invite.inviterName}} has invited you to follow this library</span>
+  </div>
   <div class="kf-keep-body">
     <div class="kf-keep-lib-header">
       <div ng-if="!isUserLoggedOut" ng-switch="library.kind" class="kf-keep-lib-icon-container">
@@ -64,9 +69,9 @@
         </div>
       </div>
 
-      <div class="kf-keep-lib-image"></div>
     </div>
   </div>
+  <img class="kf-keep-lib-image" ng-src="{{magicImage}}">
   <div class="kf-keep-footer clearfix">
     <button ng-if="isMyLibrary(library) && isUserLibrary(library)" class="kf-keep-lib-footer-button kf-keep-lib-footer-button-right" ng-click="manageLibrary()">
       <span class="kf-keep-lib-footer-button-icon svg-pen"></span>Manage Library

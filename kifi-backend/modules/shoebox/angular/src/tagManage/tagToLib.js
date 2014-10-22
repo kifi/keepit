@@ -20,6 +20,7 @@ angular.module('kifi')
           });
           kfModalCtrl.close();
         };
+        scope.action = (scope.modalData.action === 'copy') ? 'Copying' : 'Moving';
       }
     };
   }
