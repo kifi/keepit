@@ -258,6 +258,17 @@ class LibraryController @Inject() (
     }
   }
 
+  def moveKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
+    val hashtag = Hashtag(tag)
+    val id = Library.decodePublicId(libraryId).get
+    SafeFuture {
+      libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
+    }
+  }
+
   def copyKeeps = UserAction(parse.tolerantJson) { request =>
     val json = request.body
     val toPubId = (json \ "to").as[PublicId[Library]]
@@ -267,7 +278,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
-        val badKeeps = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
+        val badKeeps = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(

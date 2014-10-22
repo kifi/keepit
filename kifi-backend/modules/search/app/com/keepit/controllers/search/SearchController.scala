@@ -16,13 +16,15 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
-import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest, AugmentationCommander }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
 
 class SearchController @Inject() (
     searchCommander: SearchCommander,
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,
+    libraryIndexer: LibraryIndexer,
     userSearchCommander: UserSearchCommander,
     distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
@@ -184,6 +186,25 @@ class SearchController @Inject() (
     augmentationCommander.augmentation(request.body.as[ItemAugmentationRequest]).map { augmentationResponse =>
       val json = Json.toJson(augmentationResponse)
       Ok(json)
+    }
+  }
+
+  def augment() = Action.async(parse.json) { implicit request =>
+    // This should stay in sync with SearchServiceClient.augment
+    val userId = (request.body \ "userId").as[Id[User]]
+    val maxKeepersShown = (request.body \ "maxKeepersShown").as[Int]
+    val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
+    val maxTagsShown = (request.body \ "maxTagsShown").as[Int]
+    val items = (request.body \ "items").as[Seq[AugmentableItem]]
+
+    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId, items: _*)
+    augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
+      val librarySearcher = libraryIndexer.getSearcher
+      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(librarySearcher, maxKeepersShown, maxLibrariesShown, maxTagsShown))
+      val libraryIds = infos.flatMap(_.libraries.map(_._1)).toSet
+      val libraries = libraryIds.map(LibraryIndexable.getBasicLibrary(librarySearcher, _).get)
+      val result = Json.obj("infos" -> infos, "libraries" -> libraries)
+      Ok(result)
     }
   }
 }

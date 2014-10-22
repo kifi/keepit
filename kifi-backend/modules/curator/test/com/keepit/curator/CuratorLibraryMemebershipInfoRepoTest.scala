@@ -41,5 +41,15 @@ class CuratorLibraryMembershipInfoRepoTest extends Specification with CuratorTes
         }
       }
     }
+
+    "get users following a library correctly (query test only)" in {
+      withDb() { implicit injector =>
+        val repo = inject[CuratorLibraryMembershipInfoRepo]
+        db.readOnlyMaster { implicit s =>
+          repo.getUsersFollowingALibrary()
+        }
+        1 === 1
+      }
+    }
   }
 }

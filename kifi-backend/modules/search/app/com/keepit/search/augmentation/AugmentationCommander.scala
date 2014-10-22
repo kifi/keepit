@@ -104,20 +104,20 @@ class AugmentationCommanderImpl @Inject() (
     }
   }
 
-  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, AugmentationInfo]] = {
+  private def getAugmentationInfos(shards: Set[Shard[NormalizedURI]], libraryFilter: Set[Id[Library]], userFilter: Set[Id[User]], items: Set[AugmentableItem]): Future[Map[AugmentableItem, FullAugmentationInfo]] = {
     val userIdFilter = LongArraySet.fromSet(userFilter.map(_.id))
     val libraryIdFilter = LongArraySet.fromSet(libraryFilter.map(_.id))
-    val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, AugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
+    val futureAugmentationInfosByShard: Seq[Future[Map[AugmentableItem, FullAugmentationInfo]]] = items.groupBy(item => shards.find(_.contains(item.uri))).collect {
       case (Some(shard), itemsInShard) =>
         SafeFuture {
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           itemsInShard.map { item => item -> getAugmentationInfo(keepSearcher, userIdFilter, libraryIdFilter)(item) }.toMap
         }
     }.toSeq
-    Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, AugmentationInfo])(_ ++ _))
+    Future.sequence(futureAugmentationInfosByShard).map(_.foldLeft(Map.empty[AugmentableItem, FullAugmentationInfo])(_ ++ _))
   }
 
-  private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): AugmentationInfo = {
+  private def getAugmentationInfo(keepSearcher: Searcher, userIdFilter: LongArraySet, libraryIdFilter: LongArraySet)(item: AugmentableItem): FullAugmentationInfo = {
     val uriTerm = new Term(KeepFields.uriField, item.uri.id.toString)
     val keeps = new ListBuffer[RestrictedKeepInfo]()
     var otherPublishedKeeps = 0
@@ -176,10 +176,10 @@ class AugmentationCommanderImpl @Inject() (
         }
       }
     }
-    AugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueKeepers.size)
+    FullAugmentationInfo(keeps.toList, otherPublishedKeeps, otherDiscoverableKeeps, uniqueKeepers.size)
   }
 
-  private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(AugmentationInfo, Float)]): AugmentationScores = {
+  private def computeAugmentationScores(weigthedAugmentationInfos: Iterable[(FullAugmentationInfo, Float)]): AugmentationScores = {
     val libraryScores = MutableMap[Id[Library], Float]() withDefaultValue 0f
     val userScores = MutableMap[Id[User], Float]() withDefaultValue 0f
     val tagScores = MutableMap[Hashtag, Float]() withDefaultValue 0f

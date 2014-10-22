@@ -24,9 +24,9 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
 
   val fakeSearch = new FakeSearchServiceClient() {
 
-    private def genAugmentationInfo(uriId: Id[NormalizedURI]): AugmentationInfo = {
+    private def genAugmentationInfo(uriId: Id[NormalizedURI]): FullAugmentationInfo = {
       val n = uriId.id.toInt
-      if (n > 5) return AugmentationInfo(Seq(), 0, 0)
+      if (n > 5) return FullAugmentationInfo(Seq(), 0, 0, -1)
 
       val keepInfo = (1 to n) map { i =>
         val extId = ExternalId.apply[Keep]()
@@ -36,7 +36,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
       }
       val otherPublishedKeeps = n
       val otherDiscoverableKeeps = n
-      AugmentationInfo(keepInfo, otherPublishedKeeps, otherDiscoverableKeeps)
+      FullAugmentationInfo(keepInfo, otherPublishedKeeps, otherDiscoverableKeeps, -1)
     }
 
     override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {

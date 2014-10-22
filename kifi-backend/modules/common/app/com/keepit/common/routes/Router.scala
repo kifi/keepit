@@ -148,7 +148,6 @@ object Shoebox extends Service {
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def isSensitiveURI() = ServiceRoute(POST, "/internal/shoebox/database/isSensitiveURI")
     def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
-    def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
@@ -208,6 +207,7 @@ object Search extends Service {
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
     def augmentation() = ServiceRoute(POST, "/internal/search/augmentation")
+    def augment() = ServiceRoute(POST, "/internal/search/augment")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
