@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
   'profileService', 'platformService', 'signupService', '$twitter',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService,
+  function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
     profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
@@ -104,6 +104,26 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
+
+          // Figure out whether this library is a library that the user has been invited to.
+          // If so, display an invite header.
+          var promise = null;
+          if (libraryService.invitedSummaries) {
+            promise = $q.when(libraryService.invitedSummaries);
+          } else {
+            promise = libraryService.fetchLibrarySummaries(true).then(function () {
+              return libraryService.invitedSummaries;
+            });
+          }
+
+          promise.then(function (invitedSummaries) {
+            if (_.find(invitedSummaries, { 'id' : scope.library.id })) {
+              scope.library.invite = {
+                inviterName: scope.library.owner.firstName + ' ' + scope.library.owner.lastName,
+                actedOn: false
+              };
+            }
+          });
         }
 
         function preloadSocial () {
@@ -120,6 +140,20 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.acceptInvitation = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+            scope.followLibrary(library);
+          }
+        };
+
+        scope.ignoreInvitation = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+            libraryService.declineToJoinLibrary(library.id);
+          }
+        };
+
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
         };
