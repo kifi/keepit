@@ -21,7 +21,6 @@ angular.module('kifi')
     scope: {
       ngBind: '=',
       ellipsisAppend: '@',
-      ellipsisSymbol: '@',
       maxNumLines: '='
     },
     compile: function(/*elem, attr, linker*/) {
@@ -34,6 +33,9 @@ angular.module('kifi')
         copyElement.css('top', '-99999px');
         copyElement.css('left', '-99999px');
         copyElement.css('visibility', 'hidden');
+
+        var lastWindowHeight = 0;
+        var lastWindowWidth = 0;
 
         function buildEllipsis() {
           if (typeof(scope.ngBind) !== 'undefined') {
@@ -57,14 +59,10 @@ angular.module('kifi')
               return;
             }
 
-            var ellipsisSymbol =
-              (typeof(attributes.ellipsisSymbol) !== 'undefined') ?
-                attributes.ellipsisSymbol :
-                '&hellip;';
             var appendString =
               (typeof(scope.ellipsisAppend) !== 'undefined' && scope.ellipsisAppend !== '') ?
-                ellipsisSymbol + '<span>' + scope.ellipsisAppend + '</span>' :
-                ellipsisSymbol;
+                scope.ellipsisAppend :
+                '<span>&hellip;</span>';
 
             // binary search for correct maxIndex
             var hi = scope.ngBind.length;
@@ -90,15 +88,13 @@ angular.module('kifi')
         // font-changes will affect sizing, but ng-bind applies first!
         // todo (aaron): find something better than this hack
         var numIntervals = 0;
-        function interval() {
+        $timeout(function intervalRebuild() {
           buildEllipsis();
           numIntervals++;
           if (numIntervals < 3) {
-            $timeout(interval, 1000);
+            $timeout(intervalRebuild, 1000);
           }
-        }
-        $timeout(interval, 200);
-
+        }, 200);
 
         //
         // Watchers
@@ -110,7 +106,13 @@ angular.module('kifi')
         scope.$watch('ellipsisAppend', buildEllipsis);
 
         // When window width or height changes - re-init truncation
-        angular.element($window).bind('resize', buildEllipsis);
+        angular.element($window).bind('resize', _.debounce(function() {
+          if ($window.innerWidth !== lastWindowWidth || $window.innerHeight !== lastWindowHeight) {
+            buildEllipsis();
+          }
+          lastWindowWidth = $window.innerWidth;
+          lastWindowHeight = $window.innerHeight;
+        }, 200));
 
       };
     }
