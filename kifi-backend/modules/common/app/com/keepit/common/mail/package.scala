@@ -10,6 +10,7 @@ object KifiMobileAppLinkFlag {
   val key = "kma"
   val value = "1"
   val arg = s"&$key=$value"
+  def apply(url: String): String = if (url.contains(arg)) url else url + arg
 }
 
 package object template {
