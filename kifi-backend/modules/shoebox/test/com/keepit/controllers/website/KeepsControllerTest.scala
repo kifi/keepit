@@ -608,9 +608,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         status(keepRes) must equalTo(OK)
         contentType(keepRes) must beSome("application/json")
         val keepJsonRes = Json.parse(contentAsString(keepRes))
-        val savedKeeps = (keepJsonRes \ "keeps").as[Seq[KeepInfo]]
-        savedKeeps.length === withCollection.size
-        savedKeeps.forall(k => k.id.nonEmpty) === true
+        val keepIds = (keepJsonRes \ "keeps").as[Seq[JsObject]].map(k => (k \ "id").as[ExternalId[Keep]])
+        keepIds.length === withCollection.size
+        val expectedKeeps = Json.parse(s"""
+          [
+            {"id":"${keepIds(0)}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+            {"id":"${keepIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+            {"id":"${keepIds(2)}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
+          ]
+        """)
+        (keepJsonRes \ "keeps") === expectedKeeps
 
         sourceForTitle("title 11") === KeepSource.site
         sourceForTitle("title 21") === KeepSource.site
@@ -620,7 +627,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         path === "/site/keeps/delete" // remove already taken
 
         implicit val keepFormat = ExternalId.format[Keep]
-        val json = Json.obj("ids" -> JsArray(savedKeeps.take(2) map { k => Json.toJson(k.id.get) }))
+        val json = Json.obj("ids" -> keepIds.take(2))
         val request = FakeRequest("POST", path).withBody(json)
 
         val result = inject[KeepsController].unkeepBatch()(request)

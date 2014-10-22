@@ -50,7 +50,7 @@ case class KeepInfo(
   keepers: Option[Set[BasicUser]] = None,
   collections: Option[Set[String]] = None,
   tags: Option[Set[BasicCollection]] = None,
-  uriSummary: Option[URISummary] = None,
+  summary: Option[URISummary] = None,
   siteName: Option[String] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None,
@@ -58,22 +58,7 @@ case class KeepInfo(
 
 object KeepInfo {
 
-  implicit val format = (
-    (__ \ 'id).formatNullable(ExternalId.format[Keep]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse true, Some(_)) and
-    (__ \ 'createdAt).formatNullable[DateTime] and
-    (__ \ 'others).formatNullable[Int] and
-    (__ \ 'keepers).formatNullable[Set[BasicUser]] and
-    (__ \ 'collections).formatNullable[Set[String]] and
-    (__ \ 'tags).formatNullable[Set[BasicCollection]] and
-    (__ \ 'summary).formatNullable[URISummary] and
-    (__ \ 'siteName).formatNullable[String] and
-    (__ \ 'clickCount).formatNullable[Int] and
-    (__ \ 'rekeepCount).formatNullable[Int] and
-    (__ \ 'libraryId).formatNullable(PublicId.format[Library])
-  )(KeepInfo.apply _, unlift(KeepInfo.unapply))
+  implicit val writes = Json.writes[KeepInfo]
 
   def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
     KeepInfo(
@@ -302,7 +287,7 @@ class KeepsCommander @Inject() (
             keepers = Some(sharingInfoForKeep.sharingUserIds.map(idToBasicUser)),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
             tags = Some(collsForKeep.toSet),
-            uriSummary = Some(pageInfoForKeep),
+            summary = Some(pageInfoForKeep),
             siteName = DomainToNameMapper.getNameFromUrl(keep.url),
             clickCount = None,
             rekeepCount = None,

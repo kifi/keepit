@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ RawBookmarksWithCollection, RawBookmarkRepresentation, FullLibraryInfo, LibraryInfo, UsernameOps }
+import com.keepit.commanders.{ RawBookmarkRepresentation, LibraryInfo, UsernameOps }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -19,13 +19,10 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsString, JsArray, Json }
-import play.api.mvc.Result
+import play.api.libs.json.{ JsValue, JsArray, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.common.json._
-
-import scala.concurrent.Future
+import com.keepit.social.BasicUser
 
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
@@ -67,12 +64,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        val parse1 = Json.parse(contentAsString(result1)).as[FullLibraryInfo]
-        parse1.name === "Library1"
-        parse1.slug.value === "lib1"
-        parse1.visibility.value === "secret"
-        parse1.keeps.size === 0
-        parse1.owner.externalId === user.externalId
+        val parse1 = Json.parse(contentAsString(result1))
+        (parse1 \ "name").as[String] === "Library1"
+        (parse1 \ "slug").as[LibrarySlug].value === "lib1"
+        (parse1 \ "visibility").as[LibraryVisibility].value === "secret"
+        (parse1 \ "keeps").as[Seq[JsValue]].size === 0
+        (parse1 \ "owner").as[BasicUser].externalId === user.externalId
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
