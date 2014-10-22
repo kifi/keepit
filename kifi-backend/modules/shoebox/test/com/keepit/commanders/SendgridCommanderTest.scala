@@ -102,6 +102,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
             event = Some(SendgridEventTypes.CLICK))
 
           commander.processNewEvents(Seq(sgEvent))
+          Thread.sleep(500)
           heimdal.eventsRecorded === 1
 
           val actualEvent = heimdal.trackedEvents(0)
