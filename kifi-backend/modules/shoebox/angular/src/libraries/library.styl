@@ -1,4 +1,8 @@
 // TODO(yiping): move library card styles to its own .styl file
+
+// Library card colors
+invite-header-orange = #ff7c3c
+
 .kf-library-card-header
   padding: 0 25px 0 30px
   margin-bottom: 10px
@@ -32,6 +36,31 @@
 
 
 .library-card
+  .library-card-invite-header
+    padding: 10px 32px
+    background-color: invite-header-orange
+
+  .library-card-invite-header-info
+    font-size: 13px
+    color: #fff
+    line-height: 25px
+
+  .library-card-invite-header-button
+    float: right
+    margin-left: 10px
+    border: 1px solid #fff
+    border-radius: 5px
+    padding: 5px 15px
+    font-size: 11px
+
+    &.library-card-invite-header-accept
+      background: #fff
+      color: invite-header-orange
+
+    &.library-card-invite-header-ignore
+      background: invite-header-orange
+      color: #fff
+
   .kf-keep-lib-header
     padding-top: 20px
 
