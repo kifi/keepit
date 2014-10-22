@@ -45,15 +45,6 @@ object QueryUtil extends Logging {
     }
   }
 
-  def emptyScorer(weight: Weight) = new Scorer(weight) {
-    override def score(): Float = 0.0f
-    override def docID() = NO_MORE_DOCS
-    override def nextDoc(): Int = NO_MORE_DOCS
-    override def advance(target: Int): Int = NO_MORE_DOCS
-    override def freq() = 0
-    override def cost(): Long = 0L
-  }
-
   def copy(query: TermQuery, field: String): Query = {
     if (query == null) null
     else {
@@ -124,37 +115,6 @@ object QueryUtil extends Logging {
     return null
   }
 
-  def filteredTermPositionsEnum(tp: DocsAndPositionsEnum, docIdSet: DocIdSet): DocsAndPositionsEnum = {
-    if (docIdSet == null || tp == null) return null
-
-    val iter = docIdSet.iterator()
-    if (iter == null) return null
-
-    new DocsAndPositionsEnum {
-      override def docID() = tp.docID()
-      override def freq() = tp.freq()
-      override def nextDoc(): Int = {
-        iter.nextDoc()
-        join()
-      }
-      override def advance(did: Int): Int = {
-        iter.advance(did)
-        join()
-      }
-      private def join(): Int = {
-        while (iter.docID != tp.docID) {
-          if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
-        }
-        iter.docID
-      }
-      override def nextPosition(): Int = tp.nextPosition()
-      override def startOffset(): Int = tp.startOffset()
-      override def endOffset(): Int = tp.endOffset()
-      override def getPayload(): BytesRef = tp.getPayload()
-      override def cost(): Long = 0L
-    }
-  }
-
   object EmptyDocsAndPositionsEnum extends DocsAndPositionsEnum {
     override def docID() = NO_MORE_DOCS
     override def freq() = 0
@@ -170,20 +130,4 @@ object QueryUtil extends Logging {
   def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum
   def emptyDocsEnum: DocsEnum = EmptyDocsAndPositionsEnum
   def emptyDocsAndPositionsEnum: DocsAndPositionsEnum = EmptyDocsAndPositionsEnum
-
-  def getTermOffsets(analyzer: Analyzer, queryText: String) = {
-    val ts = analyzer.tokenStream("foo", new StringReader(queryText))
-    val offset = ts.addAttribute(classOf[OffsetAttribute])
-    val startOffsets = ListBuffer.empty[(Int, Int)]
-    try {
-      ts.reset()
-      while (ts.incrementToken()) {
-        startOffsets.append((offset.startOffset, offset.endOffset))
-      }
-      ts.end()
-    } finally {
-      ts.close()
-    }
-    startOffsets.toSeq
-  }
 }
