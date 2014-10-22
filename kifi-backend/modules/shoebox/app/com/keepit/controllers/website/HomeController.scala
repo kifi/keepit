@@ -24,6 +24,7 @@ import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
 
 import scala.concurrent.Future
+import KifiSession._
 
 class HomeController @Inject() (
   db: Database,
@@ -282,7 +283,7 @@ class HomeController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)("0"),
           authenticator => {
             Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
-              .withSession(request.session - SecureSocial.OriginalUrlKey + (KifiSession.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession((request.session - SecureSocial.OriginalUrlKey).setUserId(newLoginUser.userId.get))
               .withCookies(authenticator.toCookie)
           }
         )

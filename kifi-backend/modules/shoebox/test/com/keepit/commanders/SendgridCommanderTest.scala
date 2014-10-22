@@ -22,6 +22,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import com.keepit.common.concurrent.WatchableExecutionContext
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
   def setup(db: Database)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
@@ -102,6 +103,8 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
             event = Some(SendgridEventTypes.CLICK))
 
           commander.processNewEvents(Seq(sgEvent))
+          inject[WatchableExecutionContext].drain()
+
           heimdal.eventsRecorded === 1
 
           val actualEvent = heimdal.trackedEvents(0)

@@ -308,7 +308,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
-        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
+        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(

@@ -162,6 +162,9 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
       },
+      declineToJoinLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/decline');
+      },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
