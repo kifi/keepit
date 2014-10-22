@@ -334,7 +334,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     if (window.toaster && toaster.showing()) {
       toaster.hide();
     }
-    var $btn = $slider.find('.kifi-keep-btn');
+    $slider.find('.kifi-keep-btn').hoverfu('hide');
     beginStickyKeepBox();
 
     var deferreds = [Q.defer(), Q.defer(), Q.defer()];
@@ -352,8 +352,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (window.pane) {
         pane.shade();
       }
-      var howKept = $btn.hasClass('kifi-public') ? 'public' : $btn.hasClass('kifi-private') ? 'private' : null;
-      keepBox.show($slider, vals[2], howKept);
+      keepBox.show($slider, vals[2]);
       keepBox.onHide.add(onKeepBoxHide);
       keepBox.onHidden.add(onKeepBoxHidden);
     });

@@ -35,7 +35,7 @@ var keepBox = keepBox || (function () {
   var IMAGE_WIDTH = 300, IMAGE_HEIGHT = 240;  // size of kifi-keep-box-keep-image-picker
 
   return {
-    show: function ($parent, data, howKept) {
+    show: function ($parent, data) {
       log('[keepBox.show]');
       if ($box) {
         hide();
@@ -45,8 +45,9 @@ var keepBox = keepBox || (function () {
         if (keep) {
           lib.keep = keep;
         }
+        setShortcut(lib);
       });
-      show($parent, data.libraries, howKept);
+      show($parent, data.libraries);
     },
     hide: function () {
       if ($box) {
@@ -59,10 +60,15 @@ var keepBox = keepBox || (function () {
     onHidden: new Listeners(),
     showing: function () {
       return !!$box;
+    },
+    keep: function (priv) {
+      $box.find('.kifi-keep-box-lib.kifi-system' + (priv ? '.kifi-secret' : '.kifi-discoverable')).each(function () {
+        chooseLibrary(this);
+      });
     }
   };
 
-  function show($parent, libraries, howKept) {
+  function show($parent, libraries) {
     log('[keepBox:show]');
     $box = $(render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
@@ -216,6 +222,7 @@ var keepBox = keepBox || (function () {
         if (q) {
           api.port.emit('filter_libraries', q, function (libs) {
             if (data.q === q) {
+              libs.forEach(setShortcut);
               (libs[0] || {}).highlighted = true;
               showLibs($(render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
@@ -817,6 +824,12 @@ var keepBox = keepBox || (function () {
 
   function removeThis() {
     $(this).remove();
+  }
+
+  function setShortcut(lib) {
+    if (lib.system) {
+      lib.shortcut = CO_KEY + '-Shift-' + (lib.visibility === 'secret' ? 'Alt-' : '') + 'K';
+    }
   }
 
   function deleteKeepIfSystemLib(lib) {
