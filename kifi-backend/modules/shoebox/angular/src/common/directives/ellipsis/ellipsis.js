@@ -26,13 +26,15 @@ angular.module('kifi')
     compile: function(/*elem, attr, linker*/) {
 
       return function(scope, element, attributes) {
-        var copyElement = element.clone();
-        copyElement.appendTo(element.parent());
-        copyElement.css('display', 'block');
-        copyElement.css('position', 'absolute');
-        copyElement.css('top', '-99999px');
-        copyElement.css('left', '-99999px');
-        copyElement.css('visibility', 'hidden');
+        var copyElement = element.clone()
+          .css({
+            'display': 'block',
+            'position': 'absolute',
+            'top': '-99999px',
+            'left': '-99999px',
+            'visibility': 'hidden'
+          })
+          .appendTo(element.parent());
 
         var lastWindowHeight = 0;
         var lastWindowWidth = 0;
@@ -50,10 +52,7 @@ angular.module('kifi')
             var currentNumLines = currentHeight / heightPerLine;
             var maxIndex = scope.ngBind.length;
 
-            var maxNumLines =
-              (typeof(attributes.maxNumLines) !== 'undefined') ?
-                attributes.maxNumLines :
-                1;
+            var maxNumLines = attributes.maxNumLines || 1;
             if (currentNumLines <= maxNumLines) { // entire name fits
               element.html(scope.ngBind);
               return;
