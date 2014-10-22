@@ -270,6 +270,7 @@ class KeepsCommander @Inject() (
             isPrivate = keep.isPrivate,
             createdAt = Some(keep.createdAt),
             others = Some(others),
+            secret = augmentationInfoForKeep.secret,
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
