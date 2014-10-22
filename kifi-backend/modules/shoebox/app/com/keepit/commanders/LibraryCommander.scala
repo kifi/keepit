@@ -654,9 +654,10 @@ class LibraryCommander @Inject() (
     dstLibraryId: Id[Library],
     keeps: Seq[Keep],
     excludeFromAccess: Set[LibraryAccess],
-    saveKeep: (Keep, RWSession) => Either[LibraryError, Unit]): Seq[(Keep, LibraryError)] = {
+    saveKeep: (Keep, RWSession) => Either[LibraryError, Unit]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
+    val goodKeeps = collection.mutable.Set[Keep]()
     db.readWrite { implicit s =>
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
@@ -674,16 +675,16 @@ class LibraryCommander @Inject() (
       }.flatten.foreach { keep =>
         saveKeep(keep, s) match {
           case Left(error) => badKeeps += keep -> error
-          case _ => ()
+          case _ => goodKeeps += keep
         }
       }
       if (badKeeps.size != keeps.size)
         libraryRepo.updateLastKept(dstLibraryId)
     }
-    badKeeps.toSeq
+    (goodKeeps.toSeq, badKeeps.toSeq)
   }
 
-  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -697,7 +698,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, tagName)
     } match {
@@ -711,7 +712,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -719,7 +720,7 @@ class LibraryCommander @Inject() (
     }
     memTo match {
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        keeps.map(_ -> LibraryError.DestPermissionDenied)
+        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
@@ -742,7 +743,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -750,7 +751,7 @@ class LibraryCommander @Inject() (
     }
     memTo match {
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        keeps.map(_ -> LibraryError.DestPermissionDenied)
+        (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s

@@ -278,7 +278,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
-        val badKeeps = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
+        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
@@ -288,12 +288,12 @@ class LibraryController @Inject() (
         }
         if (errors.nonEmpty) {
           if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
+            Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete failure
           } else {
-            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
+            Ok(Json.obj("successes" -> goodKeeps.length, "failures" -> errors)) // partial failure
           }
         } else {
-          Ok(Json.obj("success" -> true))
+          Ok(Json.obj("successes" -> goodKeeps.length))
         }
     }
   }
@@ -307,7 +307,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
-        val badKeeps = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
+        val (goodKeeps, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
@@ -315,14 +315,20 @@ class LibraryController @Inject() (
               "error" -> error.message
             )
         }
+        val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+          case (libId, keeps) =>
+            val pubId = Library.publicId(libId.get)
+            val numKeepsMoved = keeps.length
+            Json.obj("library" -> pubId, "numMoved" -> numKeepsMoved)
+        }
         if (errors.nonEmpty) {
           if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
+            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete failure
           } else {
-            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
+            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // partial failure
           }
         } else {
-          Ok(Json.obj("success" -> true))
+          Ok(Json.obj("successes" -> mapLibrary))
         }
     }
   }
