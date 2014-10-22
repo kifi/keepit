@@ -32,8 +32,11 @@
                 </ng-pluralize>
               </span>
       				<span class="manage-tag-row-links-section">
-      					<span class="manage-tag-row-link-convert" kf-keep-to-library-widget ng-click="changeSelection(tag); showWidget()">
-      						Add to a library
+                <span class="manage-tag-row-link-convert manage-tag-copy" kf-keep-to-library-widget ng-click="changeSelection(tag, 'copy'); showWidget()" title="Copy tagged keeps to a library">
+                  {{copyToLibraryDisplay}}
+                </span>&middot;&nbsp;
+      					<span class="manage-tag-row-link-convert manage-tag-move" kf-keep-to-library-widget ng-click="changeSelection(tag, 'move'); showWidget()" title="Move tagged keeps to a library">
+      						{{moveToLibraryDisplay}}
       					</span>&middot;
       					<span class="manage-tag-row-link-delete" ng-click="showRemoveTagModal(tag)">
       						Delete

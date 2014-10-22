@@ -130,7 +130,6 @@ angular.module('kifi')
         } else {
           util.replaceObjectInPlace($scope.library, library);
         }
-        $rootScope.$emit('libraryUrl', $scope.library);
 
         library.keeps.forEach(function (rawKeep) {
           var keep = new keepDecoratorService.Keep(rawKeep);
@@ -161,6 +160,7 @@ angular.module('kifi')
     $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
 
     init(true);
+    $rootScope.$emit('libraryUrl', $scope.library);
 
     $scope.submitPassPhrase = function () {
       libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {
