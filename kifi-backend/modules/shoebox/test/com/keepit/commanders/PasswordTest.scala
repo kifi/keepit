@@ -31,6 +31,7 @@ import play.api.test._
 import securesocial.core._
 
 import scala.concurrent.Future
+import KifiSession._
 
 // todo(ray): figure out how to deal with SecureSocial's dependency on application
 class PasswordTest extends Specification with ShoeboxApplicationInjector {
@@ -102,7 +103,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
       status(result) === OK
       val sess = session(result)
       userIdOpt foreach { userId =>
-        sess(KifiSession.FORTYTWO_USER_ID).toLong === userId.id
+        sess.getUserId.get === userId.id
       }
       contentAsString(result) === Json.obj("uri" -> "/login/after").toString()
     } else {

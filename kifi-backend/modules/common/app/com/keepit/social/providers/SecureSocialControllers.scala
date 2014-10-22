@@ -117,6 +117,7 @@ import securesocial.core._
 import play.api.Play
 import Play.current
 import providers.utils.RoutesHelper
+import KifiSession._
 
 /**
  * The Login page controller
@@ -171,9 +172,9 @@ object LoginPage extends Controller with Logging {
     log.info(s"[logout] user.email=${user.map(_.email)} user.class=${user.getClass}")
     user match {
       case Some(u) =>
-        result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session) - KifiSession.FORTYTWO_USER_ID)
+        result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(request.session).deleteUserId())
       case None =>
-        result.withSession(request.session - KifiSession.FORTYTWO_USER_ID)
+        result.withSession(request.session.deleteUserId())
     }
   }
 }
