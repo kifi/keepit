@@ -388,7 +388,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           // send invites to same library with different access levels (only want highest access level)
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE, state=LibraryInviteStates.DECLINED))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE, state = LibraryInviteStates.DECLINED))
           (user1, user2, library1, library2, library3)
         }
 
