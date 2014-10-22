@@ -545,11 +545,10 @@ if (searchUrlRe.test(document.URL)) !function () {
       var $a = $(this);
       var i = $a.prevAll('.kifi-res-lib').length;
       var library = $a.closest('.kifi-res-why').data('libraries')[i];
-      render('html/library_card', library, function (html) {
+      render('html/library_card', $.extend({origin: response.origin}, library), function (html) {
         configureHover(html, {
           position: {my: 'left-46 bottom-16', at: 'center top', of: $a, collision: 'none'},
           canLeaveFor: 600,
-          hideAfter: 4000,
           click: 'toggle'});
       });
       if (!library.owner) {
@@ -558,7 +557,6 @@ if (searchUrlRe.test(document.URL)) !function () {
           if ($card) {
             $card.find('.kifi-lc-pic').css('background-image', 'url(' + lib.owner.pictureUrl + ')');
             $card.find('.kifi-lc-owner').text(lib.owner.name);
-            $card.find('.kifi-lc-name').prop('href', lib.url);
             var $n = $card.find('.kifi-lc-count-n');
             $n.first().text(lib.keeps);
             $n.last().text(lib.followers);
@@ -572,10 +570,12 @@ if (searchUrlRe.test(document.URL)) !function () {
       var moreLibs = data.libraries.slice(nLibsShown, nLibsShown + 3);
       render('html/search/more_libraries', {
         libraries: moreLibs,
+        origin: response.origin,
         others: +$a.text() - moreLibs.length
       }, function (html) {
         configureHover(html, {
           position: {my: 'center bottom-16', at: 'center top', of: $a, collision: 'none'},
+          canLeaveFor: 600,
           click: 'toggle'});
       });
       moreLibs.forEach(function (lib) {
@@ -583,7 +583,6 @@ if (searchUrlRe.test(document.URL)) !function () {
           detailLibrary(lib, function (lib) {
             var $lib = (($a.data('hoverfu') || {}).$h || $()).find('.kifi-ml-lib[data-id=' + lib.id + ']');
             if ($lib) {
-              $lib.find('.kifi-ml-name').prop('href', lib.url);
               $lib.find('.kifi-ml-owner').text(lib.owner.name);
               var $n = $lib.find('.kifi-ml-count');
               $n.first().attr('data-n', lib.keeps);
@@ -690,7 +689,6 @@ if (searchUrlRe.test(document.URL)) !function () {
   function detailLibrary(lib, callback) {
     api.port.emit('get_library', lib.id, function (o) {
       $.extend(lib, o);
-      lib.url = response.origin + '/' + o.owner.username + '/' + o.slug;
       lib.owner.pictureUrl = cdnBase + '/users/' + o.owner.id + '/pics/200/' + o.owner.pictureName;
       lib.owner.name = o.owner.firstName + ' ' + o.owner.lastName;
       callback(lib);
@@ -799,7 +797,8 @@ if (searchUrlRe.test(document.URL)) !function () {
       libraries: hit.libraries,
       librariesMore: hit.librariesOmitted || '',
       tags: hit.tags,
-      tagsMore: hit.tagsOmitted || ''
+      tagsMore: hit.tagsOmitted || '',
+      origin: response.origin
     };
   }
 

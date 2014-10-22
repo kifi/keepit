@@ -1,7 +1,7 @@
 <div class="kifi-lc {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}">
   <div class="kifi-lc-pic"{{#owner}} style="background-image:url({{owner.pictureUrl}})"{{/owner}}></div>
   <div class="kifi-lc-owner">{{owner.name}}</div>
-  <a class="kifi-lc-name {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}"{{#url}} href="{{url}}"{{/url}} target="_blank">{{name}}</a>
+  <a class="kifi-lc-name {{#secret}}kifi-secret{{/secret}}{{^secret}}kifi-public{{/secret}}" href="{{origin}}{{path}}" target="_blank">{{name}}</a>
   <div class="kifi-lc-counts">
     <div class="kifi-lc-count">Keeps<div class="kifi-lc-count-n">{{keeps}}</div></div>
     <div class="kifi-lc-count">Followers<div class="kifi-lc-count-n">{{followers}}</div></div>

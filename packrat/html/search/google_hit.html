@@ -30,7 +30,7 @@
     {{#libraries.length}}
       <span class="kifi-res-libs"></span>
       {{#libraries}}
-        <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
+        <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="{{origin}}{{path}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
       {{/libraries}}
       <a class="kifi-res-libs-n" href="javascript:">{{librariesMore}}</a>
     {{/libraries.length}}
