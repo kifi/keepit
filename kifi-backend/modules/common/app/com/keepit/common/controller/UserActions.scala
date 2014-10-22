@@ -183,10 +183,10 @@ trait UserActions extends Logging { self: Controller =>
         } getOrElse ("na")
         request.session.get("kcid").map { existingKcid =>
           if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
-            res.addingToSession("kcid" -> s"organic-$referrer")(request)
+            res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
           } else res
         } getOrElse {
-          res.addingToSession("kcid" -> s"organic-$referrer")(request)
+          res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
         }
       }
     } getOrElse res
