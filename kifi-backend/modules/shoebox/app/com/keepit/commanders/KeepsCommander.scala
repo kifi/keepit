@@ -88,18 +88,6 @@ object KeepInfo {
   }
 }
 
-case class FullKeepInfo(
-  bookmark: Keep,
-  users: Set[BasicUser],
-  collections: Set[ExternalId[Collection]], //deprecated, will be removed in favor off tags once site transition is complete
-  tags: Set[BasicCollection],
-  others: Int,
-  siteName: Option[String] = None,
-  uriSummary: Option[URISummary] = None,
-  clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None,
-  libraryId: Option[PublicId[Library]] = None)
-
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
 
@@ -336,31 +324,6 @@ class KeepsCommander @Inject() (
               keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
           }
         }
-    }
-  }
-
-  /**
-   * This function currently does not return help rank info (can be added if necessary)
-   * Waiting is enabled for URISummary fetching
-   */
-  def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
-    // might be called right after a keep is created (e.g. via Add a Keep on website)
-    db.readOnlyMaster { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
-      val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
-      val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
-      for {
-        sharingInfo <- sharingInfoFuture
-        pageInfo <- pageInfoFuture
-      } yield {
-        val (idToBasicUser, colls) = db.readOnlyMaster { implicit s =>
-          val idToBasicUser = basicUserRepo.loadAll(sharingInfo.sharingUserIds)
-          val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-          val colls: Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
-          (idToBasicUser, colls)
-        }
-        val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-        FullKeepInfo(keep, sharingInfo.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfo)
-      }
     }
   }
 
