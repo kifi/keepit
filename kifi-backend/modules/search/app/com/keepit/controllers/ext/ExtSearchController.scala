@@ -94,7 +94,7 @@ class ExtSearchController @Inject() (
             val libraries = libraryIds.map { libId =>
               val library = librariesById(libId)
               val owner = usersById(library.ownerId)
-              writesLibrary(library, owner)
+              BasicLibrary.writeWithPath(library, owner)
             }
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
           }

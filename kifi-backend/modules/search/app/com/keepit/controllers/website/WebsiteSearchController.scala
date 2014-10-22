@@ -113,7 +113,7 @@ class WebsiteSearchController @Inject() (
               val libraries = libraryIds.map { libId =>
                 val library = librariesById(libId)
                 val owner = usersById(library.ownerId)
-                writesLibrary(library, owner)
+                BasicLibrary.writeWithPath(library, owner)
               }
               val users = userIds.map(id => Json.toJson(usersById(id)))
               (jsHits, users, libraries)
