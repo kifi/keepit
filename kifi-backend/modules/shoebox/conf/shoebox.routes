@@ -331,6 +331,9 @@ GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.Lib
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
+
+POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])

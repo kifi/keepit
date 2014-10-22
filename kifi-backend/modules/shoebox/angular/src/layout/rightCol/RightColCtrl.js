@@ -115,6 +115,7 @@ angular.module('kifi')
           name: ['Steve Jobs:','How to Live','Before You Die'],
           site: 'ted.com',
           thumb: '/img/guide/before_you_die.jpg',
+          image: ['/img/guide/ted_jobs.jpg', 480, 425],
           noun: 'video',
           tag: 'Inspiration',
           query: 'steve+jobs',

@@ -1,19 +1,19 @@
 package com.keepit.controllers.email
 
-import com.keepit.common.controller.{ UserRequest, ShoeboxServiceController }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserRequest }
 import com.keepit.common.db.Id
-import com.keepit.common.net.UserAgent
-import com.keepit.model.{ User, DeepLocator, NormalizedURI }
-import play.api.mvc.{ Result, Request }
+import com.keepit.common.http._
+import com.keepit.model.{ DeepLocator, NormalizedURI, User }
+import play.api.mvc.{ Request, Result }
 
 protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =>
 
   def handleAuthenticatedDeepLink(request: UserRequest[_], uri: NormalizedURI, locator: DeepLocator, recipientUserId: Option[Id[User]]) = {
-    val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
-    if (isKifiIphoneApp) {
+    val (isMobileWeb, isMobileApp) = mobileCheck(request.request)
+    if (isMobileApp) {
       log.info(s"redirecting user ${request.userId} on iphone app")
       Redirect(uri.url)
-    } else if (isIphone) {
+    } else if (isMobileWeb) {
       log.info(s"user ${request.userId} on iphone")
       doHandleMobile(request, uri, locator)
     } else {
@@ -29,11 +29,11 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
   }
 
   def handleUnauthenticatedDeepLink(request: Request[_], uri: NormalizedURI, locator: DeepLocator) = {
-    val (isIphone, isKifiIphoneApp) = mobileCheck(request)
-    if (isKifiIphoneApp) {
+    val (isMobileWeb, isMobileApp) = mobileCheck(request)
+    if (isMobileApp) {
       log.info(s"handling unknown user on iphone app")
       Redirect(uri.url)
-    } else if (isIphone) {
+    } else if (isMobileWeb) {
       doHandleMobile(request, uri, locator)
     } else {
       log.info(s"sending unknown user to $uri")
@@ -42,27 +42,22 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
   }
 
   protected def doHandleMobile(request: Request[_], uri: NormalizedURI, locator: DeepLocator): Result = {
-    val (isIphone, isKifiIphoneApp) = mobileCheck(request)
+    val (isMobileWeb, isMobileApp) = mobileCheck(request)
     if (locator.value.endsWith("#compose")) {
       log.info(s"iphone app cannot yet handle #compose")
       Redirect(uri.url)
-    } else if (isKifiIphoneApp) {
+    } else if (isMobileApp) {
       log.info(s"handling request from iphone app")
       Redirect(uri.url)
-    } else if (isIphone) {
+    } else if (isMobileWeb) {
       log.info(s"sending via iphone app page to $uri")
-      Ok(views.html.iphoneDeeplink(uri.url, locator.value))
+      Ok(views.html.mobile.MobileRedirect(s"open${locator.value}"))
     } else throw new IllegalStateException("not mobile!")
   }
 
   protected def mobileCheck(request: Request[_]) = {
-    request.headers.get(USER_AGENT).headOption map { agentString =>
-      if (agentString == null || agentString.isEmpty) {
-        (false, false)
-      } else {
-        val agent = UserAgent(agentString)
-        (agent.isIphone, agent.isKifiIphoneApp)
-      }
+    request.userAgentOpt map { agent =>
+      (agent.isMobileWeb, agent.isMobileApp)
     } getOrElse (false, false)
   }
 }

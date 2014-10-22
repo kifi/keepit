@@ -104,7 +104,6 @@ class KifiSiteRouter @Inject() (
 
   def route(request: MaybeUserRequest[_]): Routeable = {
     val path = Path(request.path)
-
     redirects.get(path.path).map { targetPath =>
       RedirectRoute(targetPath)
     } getOrElse {

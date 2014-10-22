@@ -370,6 +370,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?kma=1") === true
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
