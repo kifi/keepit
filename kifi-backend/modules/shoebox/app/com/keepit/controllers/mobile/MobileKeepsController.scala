@@ -7,6 +7,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
+import com.keepit.common.crypto.PublicIdConfiguration
 
 import play.api.libs.json._
 
@@ -18,6 +19,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.commanders.CollectionSaveFail
 import scala.Some
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.common.core._
 
 class MobileKeepsController @Inject() (
   db: Database,
@@ -32,7 +34,8 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
-  heimdalContextBuilder: HeimdalContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
   def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
@@ -201,6 +204,15 @@ class MobileKeepsController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     keepsCommander.removeTag(id, url, request.userId)
     Ok(Json.obj())
+  }
+
+  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
+    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+    keepOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
+    }
   }
 
   private def toJsObject(
