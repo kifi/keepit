@@ -22,6 +22,31 @@ placeholder(color)
     font-style: normal
     color: color
 
+pop-over(top, left, color)
+  position: absolute
+  top: top
+  left: left
+  display: inline-block
+  border-radius: 5px
+  padding: 3px 5px
+  width: auto
+  background-color: color
+  font-size: 13px
+  color: #fff
+  z-index: 10
+
+  &::before
+    position: absolute
+    top: -6px
+    left: 28px
+    display: inline-block
+    border-right: 7px solid transparent
+    border-bottom: 7px solid color
+    border-left: 7px solid transparent
+    border-bottom-color: color
+    content: ''
+    z-index: 10
+
 
 //
 // Styles.
