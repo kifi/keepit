@@ -23,6 +23,7 @@ angular.module('kifi')
         //
         scope.username = profileService.me.username;
         scope.userHasEditedSlug = false;
+        scope.emptySlug = true;
         scope.$error = {};
         scope.showFollowers = false;
 
@@ -35,8 +36,9 @@ angular.module('kifi')
         };
 
         scope.editSlug = function () {
-          scope.userHasEditedSlug = !!scope.library.slug;
+          scope.emptySlug = !scope.library.slug;
           scope.library.slug = util.generateSlug(scope.library.slug);
+          scope.userHasEditedSlug = true;
         };
 
         scope.saveLibrary = function () {
@@ -182,8 +184,12 @@ angular.module('kifi')
           return scope.library.name;
         }, function (newVal, oldVal) {
           if (newVal !== oldVal) {
-            scope.userHasEditedSlug = !!scope.library.name;
-            scope.library.slug = util.generateSlug(newVal);
+            // Update the slug to reflect the library's name only if we're not modifying an
+            // existing library and the user has not edited the slug yet.
+            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
+              scope.library.slug = util.generateSlug(newVal);
+              scope.emptySlug = false;
+            }
           }
         });
 
@@ -200,7 +206,7 @@ angular.module('kifi')
           scope.offset = 1;
           returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
-          scope.userHasEditedSlug = true;
+          scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
         } else {
           scope.library = {
