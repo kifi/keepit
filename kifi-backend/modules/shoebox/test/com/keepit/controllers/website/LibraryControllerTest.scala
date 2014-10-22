@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ RawBookmarkRepresentation, LibraryInfo, UsernameOps }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -19,7 +19,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsValue, JsArray, Json }
+import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.social.BasicUser
@@ -763,51 +763,75 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPathMove = com.keepit.controllers.website.routes.LibraryController.moveKeeps().url
         inject[FakeUserActionsHelper].setUser(userA)
 
-        val inputJsonTo2 = Json.obj(
-          "to" -> Library.publicId(lib2.id.get),
+        val pubId1 = Library.publicId(lib1.id.get).id
+        val pubId2 = Library.publicId(lib2.id.get).id
+        val inputJson1 = Json.obj(
+          "to" -> pubId2,
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
         )
 
         // keeps are all in library 1
         // move keeps (from Lib1 to Lib2) as user 1 (should fail)
-        val request1 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2)
+        val request1 = FakeRequest("POST", testPathMove).withBody(inputJson1)
         val result1 = libraryController.moveKeeps()(request1)
         (contentAsJson(result1) \ "failures" \\ "error").head.as[String] === "dest_permission_denied"
 
         inject[FakeUserActionsHelper].setUser(userB)
 
         // move keeps (from Lib1 to Lib2) as user 2 (ok) - keeps 1,2 in lib2
-        val request2 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "2")
+        val request2 = FakeRequest("POST", testPathMove).withBody(inputJson1).withHeaders("userId" -> "2")
         val result2 = libraryController.moveKeeps()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        val jsonRes2 = Json.parse(contentAsString(result2))
-        (jsonRes2 \ "success").as[Boolean] === true
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+            |{
+            | "successes":[
+            |   {
+            |     "library":"${pubId1}",
+            |     "numMoved": 2
+            |   }
+            | ]
+            |}
+          """.stripMargin))
 
         inject[FakeUserActionsHelper].setUser(userA)
 
         // copy keeps from Lib1 to Lib2 as user 1 (should fail)
-        val request3 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo2)
+        val request3 = FakeRequest("POST", testPathCopy).withBody(inputJson1)
         val result3 = libraryController.copyKeeps()(request3)
         status(result3) must equalTo(OK)
 
-        (contentAsJson(result3) \ "success").as[Boolean] === false
+        (contentAsJson(result3) \ "successes").as[Int] === 0
         (contentAsJson(result3) \\ "error").map(_.as[String]).toSet === Set("dest_permission_denied")
 
         inject[FakeUserActionsHelper].setUser(userB)
 
         // copy keeps from Lib2 to Lib1 as user 2 (ok) - keeps 1,2 in both lib1 & lib2
-        val inputJsonTo1 = Json.obj(
+        val inputJson2 = Json.obj(
           "to" -> Library.publicId(lib1.id.get),
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
         )
-        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo1).withHeaders("userId" -> "2")
+        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJson2).withHeaders("userId" -> "2")
         val result4 = libraryController.copyKeeps()(request4)
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
         val jsonRes4 = Json.parse(contentAsString(result4))
-        (jsonRes4 \ "success").as[Boolean] === true
+        (jsonRes4 \ "successes").as[Int] === 2
         (jsonRes4 \\ "keep").length === 0
+
+        // move duplicate active keeps 1 & 2 from Lib1 to Lib2 as user 2 (error: already exists in dst)
+        val inputJson3 = Json.obj(
+          "to" -> Library.publicId(lib1.id.get),
+          "keeps" -> Seq(keep1.externalId, keep2.externalId)
+        )
+        val request5 = FakeRequest("POST", testPathMove).withBody(inputJson3).withHeaders("userId" -> "2")
+        val result5 = libraryController.moveKeeps()(request5)
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        val jsonRes5 = Json.parse(contentAsString(result5))
+        (jsonRes5 \ "successes").as[Seq[JsObject]].length === 0
+        (contentAsJson(result5) \\ "error").map(_.as[String]).toSet === Set("already_exists_in_dest")
       }
     }
 
