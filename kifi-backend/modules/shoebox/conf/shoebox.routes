@@ -165,7 +165,6 @@ POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.Mobil
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.addKeeps()
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 
-GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
 POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepBatch()
 POST    /m/1/keeps/:id/delete               @com.keepit.controllers.mobile.MobileKeepsController.unkeep(id: ExternalId[Keep])
@@ -237,6 +236,8 @@ POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Option[Int], count: Int ?= 10)
+
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 
 
 
