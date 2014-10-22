@@ -192,7 +192,7 @@ class SearchController @Inject() (
 
   def augment() = Action.async(parse.json) { implicit request =>
     // This should stay in sync with SearchServiceClient.augment
-    val userId = (request.body \ "userId").as[Option[Id[User]]]
+    val userId = (request.body \ "userId").asOpt[Id[User]]
     val maxKeepersShown = (request.body \ "maxKeepersShown").as[Int]
     val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
     val maxTagsShown = (request.body \ "maxTagsShown").as[Int]
