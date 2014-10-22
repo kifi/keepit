@@ -97,7 +97,6 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
-          $rootScope.$emit('libraryUrl', scope.library);
         }
 
 

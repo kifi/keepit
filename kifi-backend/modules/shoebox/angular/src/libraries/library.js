@@ -126,6 +126,7 @@ angular.module('kifi')
         } else {
           util.replaceObjectInPlace($scope.library, library);
         }
+        $rootScope.$emit('libraryUrl', $scope.library);
 
         library.keeps.forEach(function (rawKeep) {
           var keep = new keepDecoratorService.Keep(rawKeep);
