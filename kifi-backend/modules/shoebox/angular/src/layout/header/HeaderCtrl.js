@@ -22,7 +22,7 @@ angular.module('kifi')
 
     $scope.isFocused = false;
     $scope.library = {};
-    $scope.search = { text: '', showName: true};
+    $scope.search = { text: '', showName: false };
     $scope.stayInLibraryPath = '';
 
     $rootScope.$on('libraryUrl', function (e, library) {
@@ -36,6 +36,11 @@ angular.module('kifi')
       }
     });
 
+    $scope.$on('$routeChangeSuccess', function (event, current) {
+      if (current.params.q) {
+        $scope.search.text = current.params.q;
+      }
+    });
 
     $scope.focusInput = function () {
       $scope.isFocused = true;
