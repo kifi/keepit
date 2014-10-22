@@ -29,6 +29,11 @@ angular.module('kifi')
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
 
+        var magicImages = {
+          'some public id': 'some image absolute path' //put actual images here
+        };
+        scope.magicImage = magicImages[scope.library.id];
+
 
         //
         // Internal methods.

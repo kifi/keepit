@@ -10,15 +10,6 @@
 
   .kf-main-title
     position: relative
-    &::after
-      content: 'beta';
-      position: absolute;
-      bottom: -8px;
-      right: -40px;
-      padding: 2px 40px 0;
-      font: 11px Lato, Helvetica, Arial, sans-serif;
-      text-align: center;
-      color: #c00;
 
   &::after
     content: ''
@@ -125,6 +116,38 @@
 
   h4
     font-weight: bold
+
+.kf-reco-cta
+  background-color: #5ab86d
+  position: relative
+  margin-bottom: 40px
+  border-radius: 4px
+
+.kf-reco-cta-text
+  display: inline-block
+  color: white
+  letter-spacing: 0.5px
+  line-height: 150%
+  width: 40%
+  padding: 25px 0px 25px 25px
+
+.kf-reco-cta-image
+  display: inline-block
+  width: 28%
+  padding: 5% 10%
+  float: right
+
+.kf-reco-cta::after
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  height: 0;
+  width: 0;
+  border: solid;
+  margin-left: -16px;
+  border-width: 16px 20px 0;
+  border-color: #5ab86d transparent transparent;
 
 .kf-reco-top
   padding: 20px 20px 0px
