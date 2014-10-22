@@ -253,7 +253,19 @@ class LibraryController @Inject() (
     SafeFuture {
       libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-        case Right(success) => Ok(JsString("success"))
+        case Right((goodKeeps, badKeeps)) =>
+          val errors = badKeeps.map {
+            case (keep, error) =>
+              Json.obj(
+                "keep" -> KeepInfo.fromKeep(keep),
+                "error" -> error.message
+              )
+          }
+          if (errors.nonEmpty) {
+            Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete or partial failure
+          } else {
+            Ok(Json.obj("successes" -> goodKeeps.length))
+          }
       }
     }
   }
@@ -264,7 +276,25 @@ class LibraryController @Inject() (
     SafeFuture {
       libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
         case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-        case Right(success) => Ok(JsString("success"))
+        case Right((goodKeeps, badKeeps)) =>
+          val errors = badKeeps.map {
+            case (keep, error) =>
+              Json.obj(
+                "keep" -> KeepInfo.fromKeep(keep),
+                "error" -> error.message
+              )
+          }
+          val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+            case (libId, keeps) =>
+              val pubId = Library.publicId(libId.get)
+              val numKeepsMoved = keeps.length
+              Json.obj("library" -> pubId, "numMoved" -> numKeepsMoved)
+          }
+          if (errors.nonEmpty) {
+            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete or partial failure
+          } else {
+            Ok(Json.obj("successes" -> mapLibrary))
+          }
       }
     }
   }
@@ -287,11 +317,7 @@ class LibraryController @Inject() (
             )
         }
         if (errors.nonEmpty) {
-          if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete failure
-          } else {
-            Ok(Json.obj("successes" -> goodKeeps.length, "failures" -> errors)) // partial failure
-          }
+          Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete or partial failure
         } else {
           Ok(Json.obj("successes" -> goodKeeps.length))
         }
@@ -322,11 +348,7 @@ class LibraryController @Inject() (
             Json.obj("library" -> pubId, "numMoved" -> numKeepsMoved)
         }
         if (errors.nonEmpty) {
-          if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete failure
-          } else {
-            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // partial failure
-          }
+          Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete or partial failure
         } else {
           Ok(Json.obj("successes" -> mapLibrary))
         }
