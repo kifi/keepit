@@ -693,7 +693,7 @@ class LibraryCommander @Inject() (
         val keeps = db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
         }
-        Right(copyKeeps(userId, libraryId, keeps))
+        Right(copyKeeps(userId, libraryId, keeps, withSource = Some(KeepSource.tagImport)))
     }
   }
 
@@ -711,7 +711,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource]): Seq[(Keep, LibraryError)] = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
@@ -726,7 +726,7 @@ class LibraryCommander @Inject() (
           keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = k.userId, source = k.source, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+                userId = k.userId, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
               combineTags(k.id.get, newKeep.id.get)
               Right()
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>

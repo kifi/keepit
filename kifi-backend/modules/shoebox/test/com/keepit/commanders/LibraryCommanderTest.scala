@@ -664,7 +664,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Ironman copies 3 keeps from Murica to libOwn (tests RO -> RW)
-        val copy1 = libraryCommander.copyKeeps(userIron.id.get, libOwn.id.get, keepsInMurica)
+        val copy1 = libraryCommander.copyKeeps(userIron.id.get, libOwn.id.get, keepsInMurica, None)
         copy1.size === 0
         val keeps2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
@@ -674,12 +674,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         keeps2.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
 
         // Ironman attempts to copy from libOwn to Murica (but only has read_only access to Murica) (tests RW -> RO)
-        val copy2 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, keeps2.slice(0, 2))
+        val copy2 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, keeps2.slice(0, 2), None)
         copy2.size === 2
         copy2.head._2 === LibraryError.DestPermissionDenied
 
         // Ironman copies 2 keeps from libOwn to libRW (tests RW -> RW)
-        val copy3 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps2.slice(0, 2))
+        val copy3 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps2.slice(0, 2), None)
         copy3.size === 0
 
         val keeps3 = db.readOnlyMaster { implicit s =>
@@ -694,12 +694,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Ironman copies from Murica to libRW (libRW already has existing active URI)
-        val copy4 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(0, 1))
+        val copy4 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(0, 1), None)
         copy4.size === 1
         copy4.head._2 === LibraryError.AlreadyExistsInDest
 
         // Ironman copies from Murica to libRW (libRW already has existing inactive URI)
-        val copy5 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(1, 2))
+        val copy5 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(1, 2), None)
         copy5.size === 0
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
@@ -734,7 +734,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         move1.size === 3
         move1.head._2 === LibraryError.SourcePermissionDenied
 
-        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica)
+        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica, None)
         val keeps2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
           keepRepo.getByLibrary(libRW.id.get, 0, 20)
@@ -757,7 +757,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         move3.size === 2
 
         // prepare to test moving duplicates
-        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica)
+        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica, None)
         db.readWrite { implicit s =>
           val copiedKeeps = keepRepo.getByLibrary(libRW.id.get, 0, 20)
           keepRepo.save(copiedKeeps(1).copy(state = KeepStates.INACTIVE)) // Freedom is now inactive keep
