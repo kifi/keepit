@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('HelpRankCtrl', [
-  '$scope', 'keepActionService', 'keepDecoratorService', '$routeParams',
-  function ($scope, keepActionService, keepDecoratorService, $routeParams) {
+  '$scope', 'keepActionService', 'keepDecoratorService', '$routeParams', '$rootScope',
+  function ($scope, keepActionService, keepDecoratorService, $routeParams, $rootScope) {
     //
     // Internal data.
     //
@@ -81,10 +81,11 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
-    
+
     //
     // On HelpRankCtrl initialization.
     //
     $scope.getNextKeeps();
+    $rootScope.$emit('libraryUrl', {});
   }
 ]);
