@@ -19,13 +19,11 @@ import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.{ Writes, Json, JsObject }
-import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexable }
+import play.api.libs.json.{ Json, JsObject }
+import com.keepit.search.graph.library.{ LibraryIndexable }
 
 import scala.util.{ Failure, Success }
-import com.keepit.common.json
 import com.keepit.search.augmentation._
-import com.keepit.social.BasicUser
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -145,11 +143,6 @@ trait SearchControllerUtil {
     libraryIds.map { libId =>
       libId -> LibraryIndexable.getBasicLibrary(librarySearcher, libId).get
     }.toMap
-  }
-
-  def writesLibrary(library: BasicLibrary, owner: BasicUser): JsObject = {
-    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    json.minify(Json.obj("id" -> Library.publicId(library.id), "name" -> library.name, "path" -> path, "secret" -> library.isSecret))
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {

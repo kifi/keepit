@@ -82,9 +82,9 @@ class RecommendationsCommander @Inject() (
               title = nUri.title,
               url = nUri.url,
               isPrivate = false,
-              uriSummary = Some(uriSummary.copy(description = Some(augmentedDescription))),
+              summary = Some(uriSummary.copy(description = Some(augmentedDescription))),
               others = reco.attribution.get.user.map(_.others),
-              keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load).toSet) }
+              keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load)) }
             )
           }
       })

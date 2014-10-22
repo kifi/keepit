@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ RawBookmarksWithCollection, RawBookmarkRepresentation, FullLibraryInfo, LibraryInfo, UsernameOps }
+import com.keepit.commanders.{ RawBookmarkRepresentation, LibraryInfo, UsernameOps }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -14,18 +14,15 @@ import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsObject, JsString, JsArray, Json }
-import play.api.mvc.Result
+import play.api.libs.json.{ JsObject, JsValue, JsArray, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.common.json._
-
-import scala.concurrent.Future
+import com.keepit.social.BasicUser
 
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
@@ -67,12 +64,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        val parse1 = Json.parse(contentAsString(result1)).as[FullLibraryInfo]
-        parse1.name === "Library1"
-        parse1.slug.value === "lib1"
-        parse1.visibility.value === "secret"
-        parse1.keeps.size === 0
-        parse1.owner.externalId === user.externalId
+        val parse1 = Json.parse(contentAsString(result1))
+        (parse1 \ "name").as[String] === "Library1"
+        (parse1 \ "slug").as[LibrarySlug].value === "lib1"
+        (parse1 \ "visibility").as[LibraryVisibility].value === "secret"
+        (parse1 \ "keeps").as[Seq[JsValue]].size === 0
+        (parse1 \ "owner").as[BasicUser].externalId === user.externalId
 
         val inputJson2 = Json.obj(
           "name" -> "Invalid Library - Slug",
@@ -644,12 +641,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val site1 = "http://www.google.com/"
         val site2 = "http://www.amazon.com/"
-        val (user1, user2, lib1, keep1, keep2) = db.readWrite { implicit s =>
-          val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userB = userRepo.save(User(firstName = "AyAyRon", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+        val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
@@ -657,15 +653,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
-          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get), inDisjointLib = library1.isDisjoint))
 
-          (userA, userB, library1, keep1, keep2)
+          (user1, library1, keep1, keep2)
         }
+
+        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keep1.isPrivate), Seq(keep1.userId), 1), (Some(keep2.isPrivate), Seq(keep2.userId), 1))
 
         val pubId1 = Library.publicId(lib1.id.get)
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, Some(10), -1).url
@@ -685,17 +683,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "url": "http://www.amazon.com/",
                 "isPrivate": false,
                 "createdAt": "${keep2.createdAt}",
-                "others": -1,
-                "keepers": [
-                  {
-                    "id": "${user1.externalId}",
-                    "firstName": "Aaron",
-                    "lastName": "Hsu",
-                    "pictureName": "0.jpg","username":"test"
-                  }
-                ],
+                "others":0,
+                "secret":false,
+                "keepers":[],
+                "keepersOmitted": 0,
+                "keepersTotal": 1,
+                "libraries":[],
+                "librariesOmitted": 0,
+                "librariesTotal": 0,
                 "collections": [],
                 "tags": [],
+                "hashtags":[],
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su"
@@ -706,17 +704,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "url": "http://www.google.com/",
                 "isPrivate": false,
                 "createdAt": "${keep1.createdAt}",
-                "others": -1,
-                "keepers": [
-                  {
-                    "id": "${user1.externalId}",
-                    "firstName": "Aaron",
-                    "lastName": "Hsu",
-                    "pictureName": "0.jpg","username":"test"
-                  }
-                ],
+                "others":0,
+                "secret":false,
+                "keepers":[],
+                "keepersOmitted": 0,
+                "keepersTotal": 1,
+                "libraries":[],
+                "librariesOmitted": 0,
+                "librariesTotal": 0,
                 "collections": [],
                 "tags": [],
+                "hashtags":[],
                 "summary": {},
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su"

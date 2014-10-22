@@ -24,6 +24,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.core._
 
 class KeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -275,19 +276,12 @@ class KeepsController @Inject() (
   }
 
   def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
-    val resOpt = if (withFullInfo) {
-      keepsCommander.getFullKeepInfo(id, request.userId, true) map { infoFut =>
-        infoFut map { info =>
-          Ok(Json.toJson(KeepInfo.fromFullKeepInfo(info)))
-        }
-      }
-    } else {
-      // user may get the info for a keep that was just created
-      db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(b))))
-      }
+    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+    keepOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
-    resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
   }
 
   def updateKeepInfo(id: ExternalId[Keep]) = UserAction { request =>
