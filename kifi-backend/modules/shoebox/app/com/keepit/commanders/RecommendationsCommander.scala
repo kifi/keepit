@@ -224,8 +224,10 @@ class RecommendationsCommander @Inject() (
   }
 
   def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
+    val curatedLibs: Seq[Id[Library]] = Seq(25957L, 25537L, 25353L, 25368L, 25171L, 25116L, 25341L).map(Id[Library])
+
     Future.sequence(db.readOnlyReplica { implicit session =>
-      Seq[Id[Library]](Id[Library](24138)).map(libRepo.get)
+      curatedLibs.map(libRepo.get)
     }.map { lib =>
       libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
     }).map {
