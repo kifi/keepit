@@ -21,6 +21,7 @@ import com.keepit.common.core._
 import com.keepit.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
+import com.keepit.social.BasicUser
 
 class WebsiteSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -74,7 +75,7 @@ class WebsiteSearchController @Inject() (
     searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
 
       val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) {
-        Future.successful((Seq.empty[JsObject], Seq.empty[JsObject], Seq.empty[JsObject]))
+        Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[LibraryChip]))
       } else {
 
         val futureUriSummaries = {
@@ -113,9 +114,9 @@ class WebsiteSearchController @Inject() (
               val libraries = libraryIds.map { libId =>
                 val library = librariesById(libId)
                 val owner = usersById(library.ownerId)
-                BasicLibrary.writeWithPath(library, owner)
+                LibraryChip(library, owner)
               }
-              val users = userIds.map(id => Json.toJson(usersById(id)))
+              val users = userIds.map(usersById(_))
               (jsHits, users, libraries)
             }
           }

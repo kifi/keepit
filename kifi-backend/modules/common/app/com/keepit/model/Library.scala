@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
-import com.keepit.common.crypto.{PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion}
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
@@ -165,9 +165,16 @@ case class BasicLibrary(id: Id[Library], ownerId: Id[User], name: String, descri
 
 object BasicLibrary {
   implicit val format = Json.format[BasicLibrary]
+}
 
-  def writeWithPath(library: BasicLibrary, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): JsObject = {
+case class LibraryChip(id: PublicId[Library], name: String, path: String, secret: Boolean)
+
+object LibraryChip {
+  implicit val writes = Writes[LibraryChip] { libraryChip =>
+    json.minify(Json.obj("id" -> libraryChip.id, "name" -> libraryChip.name, "path" -> libraryChip.path, "secret" -> libraryChip.secret))
+  }
+  def apply(library: BasicLibrary, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): LibraryChip = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    json.minify(Json.obj("id" -> Library.publicId(library.id), "name" -> library.name, "path" -> path, "secret" -> library.isSecret))
+    LibraryChip(Library.publicId(library.id), library.name, path, library.isSecret)
   }
 }
