@@ -34,27 +34,21 @@ SubredditSpec = namedtuple('SubredditSpec', ['name', 'limit', 'cutoff'])
 
 rs = [
   SubredditSpec('design', 100, 25),
-  SubredditSpec('music', 100, 300),
-  SubredditSpec('worldnews', 100, 1800),
-  SubredditSpec('coffee', 100, 35),
-  SubredditSpec('truereddit', 100, 50),
+  SubredditSpec('truereddit', 100, 70),
   SubredditSpec('economics', 100, 35),
   SubredditSpec('programming', 100, 40),
   SubredditSpec('technology', 100, 150),
   SubredditSpec('travel', 100, 40),
-  SubredditSpec('vignettes', 100, 3),
   SubredditSpec('foodforthought', 100, 25),
   SubredditSpec('dataisbeautiful', 100, 25),
-  SubredditSpec('politics', 100, 1500),
-  SubredditSpec('literature', 100, 15),
   SubredditSpec('history', 100, 25),
   SubredditSpec('psychology', 100, 25),
   SubredditSpec('documentaries', 100, 50),
   SubredditSpec('science', 100, 75),
   SubredditSpec('everythingscience', 100, 40),
   SubredditSpec('frugal', 100, 60),
-  SubredditSpec('businesshub', 100, 8),
-  SubredditSpec('advertising', 100, 20),
+  SubredditSpec('businesshub', 100, 20),
+  SubredditSpec('advertising', 100, 25),
   SubredditSpec('business', 100, 100)
 ]
 
