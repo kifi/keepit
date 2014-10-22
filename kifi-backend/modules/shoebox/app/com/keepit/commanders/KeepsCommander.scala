@@ -19,7 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.{ SharingUserInfo, SearchServiceClient }
+import com.keepit.search.{ SearchServiceClient }
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
@@ -39,46 +39,39 @@ import org.joda.time.DateTime
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
+import com.keepit.common.json.TupleFormat
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
   title: Option[String],
   url: String,
-  isPrivate: Boolean,
+  isPrivate: Boolean, // deprecated
   createdAt: Option[DateTime] = None,
-  others: Option[Int] = None,
+  others: Option[Int] = None, // deprecated
+  secret: Option[Boolean] = None,
   keepers: Option[Seq[BasicUser]] = None,
-  collections: Option[Set[String]] = None,
-  tags: Option[Set[BasicCollection]] = None,
+  keepersOmitted: Option[Int] = None,
+  keepersTotal: Option[Int] = None,
+  libraries: Option[Seq[(LibraryChip, BasicUser)]] = None,
+  librariesOmitted: Option[Int] = None,
+  librariesTotal: Option[Int] = None,
+  collections: Option[Set[String]] = None, // deprecated
+  tags: Option[Set[BasicCollection]] = None, // deprecated
   hashtags: Option[Set[Hashtag]] = None,
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
-  clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None,
+  clickCount: Option[Int] = None, // deprecated
+  rekeepCount: Option[Int] = None, // deprecated
   libraryId: Option[PublicId[Library]] = None)
 
 object KeepInfo {
 
-  implicit val writes = Json.writes[KeepInfo]
+  val maxKeepersShown = 20
+  val maxLibrariesShown = 10
 
-  def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
-    KeepInfo(
-      Some(info.bookmark.externalId),
-      info.bookmark.title,
-      if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url,
-      info.bookmark.isPrivate,
-      Some(info.bookmark.createdAt),
-      Some(info.others),
-      Some(info.users.toSeq),
-      Some(info.collections.map(_.id)),
-      Some(info.tags),
-      Some(info.tags.map { c: BasicCollection => Hashtag(c.name) }),
-      info.uriSummary,
-      info.siteName,
-      info.clickCount,
-      info.rekeepCount,
-      info.libraryId
-    )
+  implicit val writes = {
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[LibraryChip, BasicUser]
+    Json.writes[KeepInfo]
   }
 
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?
@@ -241,11 +234,9 @@ class KeepsCommander @Inject() (
   }
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
-    val sharingInfosFuture = perspectiveUserIdOpt match {
-      case Some(userId) =>
-        searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
-      case None =>
-        Future.successful(Seq.fill(keeps.length)(SharingUserInfo(Set.empty, 0)))
+    val augmentationFuture = {
+      val items = keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }
+      searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
       getKeepSummary(keep)
@@ -258,15 +249,20 @@ class KeepsCommander @Inject() (
     }.map(collectionCommander.getBasicCollections)
 
     for {
-      sharingInfos <- sharingInfosFuture
+      (augmentationInfos, basicLibraries) <- augmentationFuture
       pageInfos <- pageInfosFuture
     } yield {
       val idToBasicUser = db.readOnlyMaster { implicit s =>
-        basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
+        val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+        val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
+        val libraryOwners = basicLibraries.map(_.ownerId)
+        basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners)
       }
-      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
-        case ((keep, collsForKeep), sharingInfoForKeep, pageInfoForKeep) =>
-          val others = sharingInfoForKeep.keepersEdgeSetSize - sharingInfoForKeep.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+      val idToLibraryChip = basicLibraries.map { library => library.id -> LibraryChip(library, idToBasicUser(library.ownerId)) }.toMap
+      val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
+        case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+          val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
+          val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
           KeepInfo(
             id = Some(keep.externalId),
             title = keep.title,
@@ -274,7 +270,12 @@ class KeepsCommander @Inject() (
             isPrivate = keep.isPrivate,
             createdAt = Some(keep.createdAt),
             others = Some(others),
-            keepers = Some(sharingInfoForKeep.sharingUserIds.toSeq.map(idToBasicUser)),
+            keepers = Some(keepers.map(idToBasicUser)),
+            keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
+            keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
+            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToLibraryChip(libraryId), idToBasicUser(contributorId)) }),
+            librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
+            librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
             tags = Some(collsForKeep.toSet),
             hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
