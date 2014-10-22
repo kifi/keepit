@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ PublicId, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
@@ -68,7 +68,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime]
   )(Library.apply, unlift(Library.unapply))
 
-  val maxNameLength = 50
+  val maxNameLength = 200
   def isValidName(name: String): Boolean = {
     (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
   }
@@ -157,4 +157,10 @@ case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[
 
 object LibraryView {
   implicit val format = Json.format[LibraryView]
+}
+
+case class BasicLibrary(id: Id[Library], ownerId: Id[User], name: String, description: Option[String], slug: LibrarySlug, isSecret: Boolean)
+
+object BasicLibrary {
+  implicit val format = Json.format[BasicLibrary]
 }

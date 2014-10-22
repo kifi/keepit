@@ -327,6 +327,7 @@ POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Option[Int], count: Int ?= 10)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: String, n: Int ?= 5)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
@@ -768,8 +769,6 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
-
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.savePageInfo
@@ -792,7 +791,6 @@ POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers
 POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
 GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
-GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()

@@ -2,7 +2,7 @@ package com.keepit.common.controller
 
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.AirbrakeError
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.core._
 import com.keepit.common.net.URI
@@ -14,6 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import securesocial.core.{ UserService, SecureSocial, Identity }
 import scala.concurrent.duration._
 import scala.concurrent.{ Promise, Await, Future }
+import scala.util.{ Failure, Success, Try }
 
 sealed trait MaybeUserRequest[T] extends Request[T] {
   // for backward compatibility only; use UserRequest/NonUserRequest where possible
@@ -74,6 +75,8 @@ trait SecureSocialIdentityAccess[T] { self: MaybeUserRequest[T] =>
 
 trait UserActionsRequirements {
 
+  def airbrake: AirbrakeNotifier
+
   def buildNonUserRequest[A](implicit request: Request[A]): NonUserRequest[A] = NonUserRequest(request)
 
   def kifiInstallationCookie: KifiInstallationCookie
@@ -112,14 +115,21 @@ trait SecureSocialHelper extends Logging {
   }
 }
 
-trait UserActionsHelper extends UserActionsRequirements {
+trait UserActionsHelper extends UserActionsRequirements with Logging {
 
-  protected def getUserIdFromRequest(implicit request: Request[_]): Option[Id[User]] = {
-    request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong))
-  }
+  def getUserIdFromSession(implicit request: Request[_]): Try[Option[Id[User]]] =
+    Try {
+      Play.maybeApplication.flatMap { _ => request.session.get(KifiSession.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)) }
+    }
 
-  def getUserIdOpt(implicit request: Request[_]): Future[Option[Id[User]]] = {
-    getUserIdFromRequest match {
+  def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = {
+    val kifiIdOpt = getUserIdFromSession recover {
+      case t: Throwable =>
+        airbrake.notify(s"[getUserIdOpt] Caught exception $t while retrieving userId from request; cause=${t.getCause}", t)
+        None
+    } get
+
+    kifiIdOpt match {
       case Some(userId) =>
         Future.successful(Some(userId))
       case None =>
@@ -180,13 +190,16 @@ trait UserActions extends Logging { self: Controller =>
     } getOrElse res
   }
 
-  private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Future[Result] = {
-    userActionsHelper.getUserIdOpt map { userIdOpt =>
-      userIdOpt match {
-        case Some(id) if id == userId => res
-        case _ => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+  private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
+    Play.maybeApplication.map { app =>
+      userActionsHelper.getUserIdFromSession match {
+        case Success(Some(id)) if id == userId => res
+        case Success(_) => res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+        case Failure(t) =>
+          log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
+          res.withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
       }
-    }
+    } getOrElse res
   }
 
   private def impersonate[A](adminUserId: Id[User], impersonateExtId: ExternalId[User])(implicit request: Request[A]): Future[UserRequest[A]] = {
@@ -204,10 +217,10 @@ trait UserActions extends Logging { self: Controller =>
     userActionsHelper.getImpersonatedUserIdOpt match {
       case Some(impExtId) =>
         impersonate(userId, impExtId).flatMap { userRequest =>
-          block(userRequest).flatMap(maybeSetUserIdInSession(userId, _))
+          block(userRequest).map(maybeSetUserIdInSession(userId, _))
         }
       case None =>
-        block(buildUserRequest(userId)).flatMap(maybeSetUserIdInSession(userId, _))
+        block(buildUserRequest(userId)).map(maybeSetUserIdInSession(userId, _))
     }
   }
 
@@ -220,7 +233,7 @@ trait UserActions extends Logging { self: Controller =>
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      val result = userActionsHelper.getUserIdOpt flatMap { userIdOpt =>
+      val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
           case None => Future.successful(Forbidden) tap { _ => log.warn(s"[UserAction] Failed to retrieve userId for request=$request; headers=${request.headers.toMap}") }
@@ -234,7 +247,7 @@ trait UserActions extends Logging { self: Controller =>
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      val result = userActionsHelper.getUserIdOpt flatMap { userIdOpt =>
+      val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
           case None => block(userActionsHelper.buildNonUserRequest).map(maybeAugmentKcid(_))

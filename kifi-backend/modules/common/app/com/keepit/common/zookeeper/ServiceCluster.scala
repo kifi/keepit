@@ -16,12 +16,12 @@ import com.google.inject.Provider
 
 class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler, forceUpdateTopology: () => Unit) extends Logging {
 
-  private var instances = new TrieMap[Node, ServiceInstance]()
-  private var routingList: Vector[ServiceInstance] = Vector()
-  private val nextRoutingInstance = new AtomicInteger(1)
+  @volatile private[this] var instances = new TrieMap[Node, ServiceInstance]()
+  @volatile private[this] var routingList: Vector[ServiceInstance] = Vector()
+  private[this] val nextRoutingInstance = new AtomicInteger(1)
 
-  private var scheduledWarning: Option[Cancellable] = None
-  private var scheduledPanic: Option[Cancellable] = None
+  private[this] var scheduledWarning: Option[Cancellable] = None
+  private[this] var scheduledPanic: Option[Cancellable] = None
 
   val servicePath = Node(s"/fortytwo/services/${serviceType.name}")
 

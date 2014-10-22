@@ -3,8 +3,33 @@
   padding: 0 25px 0 30px
   margin-bottom: 10px
 
+.kf-logged-out .kf-library-card-header
+  margin-top: 14px
+
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
+
+// For library cards that are displayed when there
+// is no logged in user.
+.library-card.loggedOutUser
+  border: none
+  box-shadow: none
+
+  .kf-keep-lib-name-container
+    width: 100%
+
+  .kf-keep-lib-name
+    text-align: center
+    display: inline-block
+    width: calc(100% - 30px)
+    font-size: 42px
+    line-height: 1.23em
+    font-weight: bold
+    vertical-align: middle
+
+  .kf-keep-lib-info
+    margin: 36px 40px 0
+
 
 .library-card
   .kf-keep-lib-header
@@ -37,10 +62,11 @@
 
   .kf-keep-lib-name
     display: inline-block
-    width: calc(100% - 10px)
+    width: calc(100% - 30px)
     font-size: 26px
     font-weight: bold
     vertical-align: middle
+
 
   .kf-keep-lib-info
     margin: 0 25px 10px 80px
@@ -253,11 +279,6 @@
     width: 0
     height: 0
     content: ''
-
-.library-share-contact-list
-  overflow-y: scroll
-  overflow-x: hidden
-  max-height: 268px
 
 .library-share-contact
   box-sizing: border-box

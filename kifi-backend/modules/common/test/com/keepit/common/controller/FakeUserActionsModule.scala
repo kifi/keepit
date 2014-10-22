@@ -3,6 +3,7 @@ package com.keepit.common.controller
 import com.google.inject.{ Provides, Inject, Singleton }
 import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ SocialUserInfo, User, ExperimentType }
 import play.api.mvc.Request
@@ -17,11 +18,12 @@ case class FakeUserActionsModule() extends UserActionsModule {
 
   @Singleton
   @Provides
-  def userActionsHelper(impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(impCookie, installCookie)
+  def userActionsHelper(airbrake: AirbrakeNotifier, impCookie: ImpersonateCookie, installCookie: KifiInstallationCookie) = new FakeUserActionsHelper(airbrake, impCookie, installCookie)
 
 }
 
 class FakeUserActionsHelper(
+    val airbrake: AirbrakeNotifier,
     val impersonateCookie: ImpersonateCookie,
     val kifiInstallationCookie: KifiInstallationCookie) extends UserActionsHelper with SecureSocialHelper with Logging {
 
@@ -35,8 +37,7 @@ class FakeUserActionsHelper(
     this
   }
 
-  override def getUserIdFromRequest(implicit request: Request[_]): Option[Id[User]] = fixedUser.flatMap(_.id)
-  override def getUserIdOpt(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
+  override def getUserIdOptWithFallback(implicit request: Request[_]): Future[Option[Id[User]]] = Future.successful(fixedUser.flatMap(_.id))
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)

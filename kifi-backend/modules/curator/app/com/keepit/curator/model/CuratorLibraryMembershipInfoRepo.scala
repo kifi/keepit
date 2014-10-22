@@ -13,6 +13,7 @@ import scala.slick.jdbc.StaticQuery
 trait CuratorLibraryMembershipInfoRepo extends DbRepo[CuratorLibraryMembershipInfo] {
   def getByUserAndLibraryId(userId: Id[User], libId: Id[Library])(implicit session: RSession): Option[CuratorLibraryMembershipInfo]
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]]
+  def getUsersFollowingALibrary()(implicit session: RSession): Set[Id[User]]
   def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]]
 }
 
@@ -44,6 +45,11 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
 
   def getLibrariesByUserId(userId: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
     (for (row <- rows if row.userId === userId && row.state === CuratorLibraryMembershipInfoStates.ACTIVE) yield row.libraryId).list.distinct
+  }
+
+  def getUsersFollowingALibrary()(implicit session: RSession): Set[Id[User]] = {
+    import StaticQuery.interpolation
+    sql"SELECT DISTINCT(user_id) FROM curator_library_membership_info WHERE state='active' AND library_access='read_only'".as[Id[User]].list.toSet
   }
 
   def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]] = {

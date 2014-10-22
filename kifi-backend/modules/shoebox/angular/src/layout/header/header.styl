@@ -47,20 +47,27 @@
 .kf-header-profile-picture
   width: 32px
   height: 32px
-  margin: 0 6px 0 14px
+  margin: 0 6px 0 6px
   border-radius: 100%
   background-size: 100%
 
 .kf-header-logo
-  height: 19px
+  width: 70px
+  height: 27px
+  margin-left: 10px
 
 @media (max-width: 1024px)
   .kf-header-toggle-menu
   .kf-header-left-separator
     display: inline-block
 
+  .kf-header-inner
+    .kf-header-search-bar
+      width: calc(100% - 380px)
+
   .kf-header-left
     margin-left: 20px
+    width: 140px
 
   .kf-header-toggle-menu
     &.open
@@ -74,6 +81,7 @@
         display: inline-block
       &.closed
         display: none
+
 
 a.kf-header-callout
   position: relative
@@ -94,8 +102,8 @@ a.kf-header-callout:hover
 .kf-header-search-bar
   float: left
   box-sizing: border-box
-  max-width: 820px
-  width: calc(100% - 270px - 270px)
+  max-width: 850px
+  width: calc(100% - 530px)
   padding-top: 8px
 
 .kf-query-lib-container
@@ -119,7 +127,7 @@ a.kf-header-callout:hover
 
   &.extend
     top: 0px
-    width: calc(100% - 110px)
+    width: calc(100% - 90px)
     margin-left: 5px
 
   input
@@ -275,3 +283,51 @@ a.kf-header-callout:hover
     transform: scale(1)
   }
 }
+
+
+//
+// Public header styles.
+//
+.public-header
+  &.kf-header
+    border-bottom: 1px solid #dbdbdb
+    background-color: #fff
+
+  .kf-header-inner
+    width: 745px
+
+  .kifi-clover-logo-icon
+    display: inline-block
+    vertical-align: middle
+    margin-right: 2px
+    width: 28px
+    height: 28px
+    background-repeat: no-repeat
+
+  .kf-header-logo
+    margin-right: 4px
+    width: 40px
+    height: 21px
+    background-repeat: no-repeat
+
+  .public-header-tagline
+    display: inline-block
+    vertical-align: -7px
+    width: 100px
+    font-size: 11px
+    color: #7d7d7d
+    line-height: 1.1
+
+  .public-header-link
+  .public-header-dot
+    color: #818692
+
+  .public-header-link
+    &:focus
+    &:hover
+      color: #686d79
+
+  .public-header-dot
+    margin: 0 10px
+
+

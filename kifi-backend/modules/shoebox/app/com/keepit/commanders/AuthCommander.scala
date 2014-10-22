@@ -314,14 +314,14 @@ class AuthCommander @Inject() (
         socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
       } map { su => (su.userId, identity) }
     } map {
-      case (userId, identity) =>
-        log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userId")
+      case (userIdOpt, identity) =>
+        log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userIdOpt")
         val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
         Authenticator.create(identity) fold (
           error => throw error,
           authenticator =>
             Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userId.toString))
+              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey + (KifiSession.FORTYTWO_USER_ID -> userIdOpt.get.toString))
               .withCookies(authenticator.toCookie)
         )
     } getOrElse {

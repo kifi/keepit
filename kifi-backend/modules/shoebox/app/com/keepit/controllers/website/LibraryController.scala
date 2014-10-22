@@ -81,17 +81,6 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
-    val hashtag = Hashtag(tag)
-    val id = Library.decodePublicId(libraryId).get
-    SafeFuture {
-      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-        case Right(success) => Ok(JsString("success"))
-      }
-    }
-  }
-
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
     libraryCommander.getLibraryById(request.userIdOpt, id) map {
@@ -144,7 +133,7 @@ class LibraryController @Inject() (
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.inviterId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, inviteOwner, numKeeps)
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
@@ -254,6 +243,17 @@ class LibraryController @Inject() (
         val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
         Ok(Json.obj("members" -> maybeMembers))
+    }
+  }
+
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
+    val hashtag = Hashtag(tag)
+    val id = Library.decodePublicId(libraryId).get
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right(success) => Ok(JsString("success"))
+      }
     }
   }
 
@@ -412,6 +412,13 @@ class LibraryController @Inject() (
     }
   }
 
+  def suggestMembers(pubId: PublicId[Library], query: String, limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+      case Success(libraryId) => libraryCommander.suggestMembers(request.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+    }
+  }
 }
 
 private object ImplicitHelper {
