@@ -783,7 +783,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
-    "create library from tag" in {
+    "copy/move keeps between libraries from tag" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
@@ -857,6 +857,19 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 4
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+          keepToCollectionRepo.count === 6
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
+        }
+
+        // Test Moving keeps with 'tag2' from libMurica to libUSA
+        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
+        res3.isRight === true
+        res3.right.get.length === 1
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 4
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 0
           keepToCollectionRepo.count === 6
           keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
           keepToCollectionRepo.getByCollection(tag2.id.get).length === 4

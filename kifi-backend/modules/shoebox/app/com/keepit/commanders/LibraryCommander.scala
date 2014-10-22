@@ -697,6 +697,20 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    db.readOnlyMaster { implicit s =>
+      collectionRepo.getByUserAndName(userId, tagName)
+    } match {
+      case None =>
+        Left(LibraryFail("tag_not_found"))
+      case Some(tag) =>
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
+        }
+        Right(moveKeeps(userId, libraryId, keeps))
+    }
+  }
+
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource]): Seq[(Keep, LibraryError)] = {
     val (toLibrary, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)

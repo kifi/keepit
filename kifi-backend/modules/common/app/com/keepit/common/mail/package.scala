@@ -9,7 +9,14 @@ import play.twirl.api.Html
 object KifiMobileAppLinkFlag {
   val key = "kma"
   val value = "1"
-  val arg = s"&$key=$value"
+  val arg = s"$key=$value"
+  def apply(url: String): String = if (url.contains(arg)) {
+    url
+  } else if (url.contains("?")) {
+    url + "&" + arg
+  } else {
+    url + "?" + arg
+  }
 }
 
 package object template {
@@ -102,7 +109,7 @@ package object template {
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
       s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content" +
-        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}$openInAppIfMobileDirective"
+        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}&$openInAppIfMobileDirective"
     }
 
     def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)

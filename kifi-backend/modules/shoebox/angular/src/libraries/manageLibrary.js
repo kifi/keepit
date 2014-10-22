@@ -208,7 +208,7 @@ angular.module('kifi')
             'description': '',
             'slug': '',
 
-            // By default, the create library form selects the "discoverable" visibility for a new library.
+            // By default, the create library form selects the "published" visibility for a new library.
             'visibility': 'published'
           };
           scope.modalTitle = 'Create a library';
