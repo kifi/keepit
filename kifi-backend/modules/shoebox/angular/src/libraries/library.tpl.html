@@ -11,7 +11,7 @@
         recommendation="false"
       ></div>
     </div>
-    <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()">
+    <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
       You don't have any keeps in this Library yet. You can:
       <ul>
         <li><a href="javascript:" ng-click="addKeeps()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>

@@ -30,8 +30,8 @@
           <div ng-if="!result.id && !result.custom" class="library-share-contact-container library-share-email">
             <div class="library-share-contact-email-icon"></div>
             <div class="library-share-contact-summary">
-              <div class="library-share-contact-name" ng-bind-html="result.name || result.email"></div>
-              <div class="library-share-contact-network" ng-bind-html="result.name ? result.email : 'An email contact'"></div>
+              <div class="library-share-contact-name" ng-bind-html="result.name || result.emailFormatted"></div>
+              <div class="library-share-contact-network" ng-bind-html="result.name ? result.emailFormatted : 'An email contact'"></div>
             </div>
             <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="library-share-contact-button">
               <span class="kf-keep-lib-footer-button-icon svg-envelope"></span>Share
