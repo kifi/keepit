@@ -412,7 +412,7 @@ class KeepsCommander @Inject() (
         }
       }.flatten
       val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
-      collIds.foreach { cid => collectionRepo.collectionChanged(cid) }
+      collIds.foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
       bms
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
@@ -508,7 +508,7 @@ class KeepsCommander @Inject() (
   private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val saved = keepRepo.save(keep withState state)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
-    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
   }
 
@@ -601,7 +601,7 @@ class KeepsCommander @Inject() (
       }
 
       val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0)
+        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0, inactivateIfEmpty = false)
       }
       val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
@@ -721,11 +721,11 @@ class KeepsCommander @Inject() (
               case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
               case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
             }
-            collectionRepo.collectionChanged(tagId, true)
+            collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
           }
           tagsToRemove.map { tagId =>
             keepToCollectionRepo.remove(keep.id.get, tagId)
-            collectionRepo.collectionChanged(tagId, false)
+            collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
           }
           keepRepo.save(keep) // notify keep index
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
