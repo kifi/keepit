@@ -98,4 +98,6 @@ object LimitedAugmentationInfo {
     implicit val libraryFormat = TupleFormat.tuple2Format[Id[Library], Id[User]]
     Json.format[LimitedAugmentationInfo]
   }
+
+  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }
