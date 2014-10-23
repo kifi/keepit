@@ -30,6 +30,7 @@ angular.module('kifi')
 
       var decompressedKeepers = [];
       var decompressedLibraries = [];
+      var myLibraries = [];
       var libUsers = {};
       hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
@@ -41,8 +42,9 @@ angular.module('kifi')
         var idxLib = hit.libraries[i];
         var idxUser = hit.libraries[i+1];
         var lib = libraries[idxLib];
+        var user;
         if (idxUser !== -1) {
-          var user = users[idxUser];
+          user = users[idxUser];
           decompressedLibraries.push({
             id: lib.id,
             name: lib.name,
@@ -50,6 +52,14 @@ angular.module('kifi')
             path: lib.path
           });
           libUsers[idxUser] = true;
+        } else {
+          user = profileService.me;
+          lib.keeperPic = friendService.getPictureUrlForUser(user);
+          if (lib.name !== 'Main Library' && lib.name !== 'Secret Library') {
+            decompressedLibraries.push(lib);
+          }
+          myLibraries.push(lib);
+
         }
       }
 
@@ -69,6 +79,7 @@ angular.module('kifi')
 
       hit.keepers = decompressedKeepers;
       hit.libraries = librariesEnabled ? decompressedLibraries : [];
+      hit.myLibraries = myLibraries;
     }
 
     function reportSearchAnalytics(endedWith, numResults) {
