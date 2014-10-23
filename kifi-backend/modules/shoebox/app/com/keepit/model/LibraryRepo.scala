@@ -16,7 +16,6 @@ import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
-  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
@@ -81,12 +80,6 @@ class LibraryRepoImpl @Inject() (
         idCache.set(LibraryIdKey(id), library)
       }
     }
-  }
-
-  private def getIdAndUserCompiled(libraryId: Column[Id[Library]], ownerId: Column[Id[User]], excludeState: Option[State[Library]]) =
-    Compiled { (for (b <- rows if b.id === libraryId && b.ownerId === ownerId && b.state =!= excludeState.orNull) yield b) }
-  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    getIdAndUserCompiled(libraryId, ownerId, excludeState).firstOption
   }
 
   private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String], excludeState: Option[State[Library]]) =
