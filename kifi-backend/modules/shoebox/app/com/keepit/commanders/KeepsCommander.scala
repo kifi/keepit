@@ -298,10 +298,7 @@ class KeepsCommander @Inject() (
     futureSummary.map { summary =>
       keepImageUrlOpt match {
         case Some(keepImageUrl) => summary.copy(imageUrl = Some(keepImageUrl))
-        case None => {
-          SafeFuture { keepImageCommander.autoSetKeepImage(keep.id.get, localOnly = true, overwriteExistingChoice = false) }
-          summary
-        }
+        case None => summary
       }
     }
   }
