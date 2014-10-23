@@ -25,10 +25,7 @@ object QueryProjector {
   def projectBooleanQuery(query: BooleanQuery, fields: Set[String]): Query = {
     val projectedQuery = new BooleanQuery()
     query.getClauses.foreach { c =>
-      val q = c.getQuery match {
-        case projectable: ProjectableQuery => projectable.project(fields)
-        case nonProjectable: Query => project(nonProjectable, fields)
-      }
+      val q = project(c.getQuery, fields)
       if (q != null) projectedQuery.add(q, c.getOccur)
     }
     projectedQuery.setBoost(query.getBoost())
@@ -38,10 +35,7 @@ object QueryProjector {
   def projectDisjunctionMaxQuery(query: DisjunctionMaxQuery, fields: Set[String]): Query = {
     val projectedQuery = new DisjunctionMaxQuery(query.getTieBreakerMultiplier)
     query.getDisjuncts.foreach { subq =>
-      val q = subq match {
-        case projectable: ProjectableQuery => projectable.project(fields)
-        case nonProjectable: Query => project(nonProjectable, fields)
-      }
+      val q = project(subq, fields)
       if (q != null) projectedQuery.add(q)
     }
     projectedQuery.setBoost(query.getBoost())

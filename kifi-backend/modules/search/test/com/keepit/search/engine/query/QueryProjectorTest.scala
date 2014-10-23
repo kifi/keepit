@@ -1,6 +1,6 @@
 package com.keepit.search.engine.query
 
-import com.keepit.search.query.HomePageQuery
+import com.keepit.search.query.{ FixedScoreQuery, HomePageQuery }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ DisjunctionMaxQuery, PhraseQuery, BooleanQuery, TermQuery }
@@ -212,6 +212,20 @@ class QueryProjectorTest extends Specification {
         expected.setBoost(2.71828f)
         expected
       }
+    }
+
+    "project KWrapperQuery" in {
+      val w1 = new KWrapperQuery(new FixedScoreQuery(t1))
+      w1.setBoost(2.71828f)
+
+      project(w1, Set("a")) === w1
+      project(w1, Set("z")) === new KWrapperQuery(new NullQuery())
+
+      val w2 = new KWrapperQuery(t1)
+      w2.setBoost(2.71828f)
+
+      project(w2, Set("a")) === w2
+      project(w2, Set("z")) === new KWrapperQuery(new NullQuery())
     }
   }
 }
