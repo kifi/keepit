@@ -211,10 +211,10 @@ class LibraryCommander @Inject() (
     actualMembers ++ invitedMembers
   }
 
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
-    val futureFriendsAndContacts = query.trim match {
-      case q if q.isEmpty => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
-      case q => typeaheadCommander.searchFriendsAndContacts(userId, q, limit)
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+    val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
+      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
     }
 
     val activeInvites = db.readOnlyMaster { implicit session =>
