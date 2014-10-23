@@ -59,7 +59,9 @@ class KifiSiteRouter @Inject() (
     if (request.host.contains("42go")) {
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
-      landingPage(request)
+      landingPage(request) //[LAUNCH] drop this line and the next
+    } else if (request.path == "/marketing" && request.userIdOpt.isEmpty) {
+      frogsparkLandingPage(request)
     } else if (userAgentOpt.exists(_.isMobile) &&
       request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))
@@ -87,18 +89,16 @@ class KifiSiteRouter @Inject() (
       case r: NonUserRequest[_] if r.identityOpt.isDefined =>
         Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
       case _ =>
-        val agent = UserAgent(request)
-        if (!agent.screenCanFitWebApp) {
-          val ua = agent.userAgent
-          val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-          if (isIphone) {
-            homeController.get.iPhoneAppStoreRedirectWithTracking(request)
-          } else {
-            Ok(views.html.marketing.mobileLanding(""))
-          }
-        } else {
-          Ok(views.html.marketing.landing())
-        }
+        Ok(views.html.marketing.landing())
+    }
+  }
+
+  private def frogsparkLandingPage(request: MaybeUserRequest[_]): Result = {
+    request match {
+      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
+        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+      case _ =>
+        MarketingSiteRouter.marketingSite()
     }
   }
 
