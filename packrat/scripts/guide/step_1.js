@@ -59,7 +59,7 @@ guide.step1 = guide.step1 || function () {
     }
   };
 
-  function show($guide, page, pageIdx, allowEsc) {
+  function show($guide, page, pageIdx) {
     if (!step) {
       tile.style.display = '';
       steps[3].arrow.to.sel = origSteps3ArrowToSel.replace('{{tag}}', page.tag);
@@ -73,8 +73,7 @@ guide.step1 = guide.step1 || function () {
         opacity: .8,
         step: onStep,
         next: onClickNext,
-        hide: onHide,
-        esc: allowEsc
+        hide: onHide
       });
     }
   }
