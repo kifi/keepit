@@ -142,6 +142,12 @@ class KeepsCommander @Inject() (
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
+          /**
+           * todo(eishay): we need to parse the index family.
+           * Name will look like "KeepIndexer_2_4" where the family is "4" and shard id is "2".
+           * If there is more then one family at the same time (i.e. "8" based shareds), we'll have double counting.
+           * We need to get a count of only one family (say count both and pick the largest one).
+           */
           if (info.name.startsWith("KeepIndex")) {
             countMap.get(info.name) match {
               case Some(count) if count >= info.numDocs =>
