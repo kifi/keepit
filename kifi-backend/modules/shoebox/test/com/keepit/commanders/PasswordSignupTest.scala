@@ -106,5 +106,31 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
       }
     }
 
+    "one-step signup (simple)" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        inject[MaybeAppFakeUserActionsHelper].removeUser()
+        val authController = inject[AuthController]
+        val path = "/auth/email-signup"
+        val fooEmail = EmailAddress("foo@bar.com")
+        val payload = Json.obj("email" -> fooEmail.address, "password" -> "1234567", "firstName" -> "Foo", "lastName" -> "Bar")
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result = authController.emailSignup()(request)
+        status(result) === OK
+        contentType(result) must beSome("application/json")
+        contentAsString(result) === Json.obj("uri" -> "/").toString()
+        val session1 = session(result)
+        session1.getUserId.isDefined === true
+        val userId = session1.getUserId.get
+        val cookies1 = cookies(result)
+        val (user, suiOpt) = db.readOnlyMaster { implicit s =>
+          val user = userRepo.get(userId)
+          val suiOpt = socialUserInfoRepo.getByUser(userId).headOption
+          (user, suiOpt)
+        }
+        user.state === UserStates.ACTIVE
+        suiOpt.isDefined === true
+      }
+    }
+
   }
 }
