@@ -50,7 +50,10 @@ class LibraryInviteEmailSender @Inject() (
         category = NotificationCategory.User.LIBRARY_INVITATION,
         htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase),
         textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase)),
-        templateOptions = Seq(CustomLayout).toMap
+        templateOptions = Seq(CustomLayout).toMap,
+        campaign = Some("na"),
+        channel = Some("vf_email"),
+        source = Some("library_invite")
       )
       emailTemplateSender.send(emailToSend) map (Some(_))
     } getOrElse {

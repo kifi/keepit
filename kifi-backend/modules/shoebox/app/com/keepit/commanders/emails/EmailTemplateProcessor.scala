@@ -156,7 +156,8 @@ class EmailTemplateProcessorImpl @Inject() (
           // converts underscored_categories_like_this to camelCaseCategoryNames
           emailToSend.category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
         }
-        case tags.parentCategory => NotificationCategory.ParentCategory.get(emailToSend.category).getOrElse("unknown")
+        case tags.channel => emailToSend.channel.getOrElse("email")
+        case tags.source => emailToSend.source orElse NotificationCategory.ParentCategory.get(emailToSend.category) orElse (Some("na")) get
         case tags.footerHtml => evalTemplate(views.html.email.layouts.footer().body, input, emailToSend, None)
         case tags.trackingParam =>
           EmailTrackingParam(
