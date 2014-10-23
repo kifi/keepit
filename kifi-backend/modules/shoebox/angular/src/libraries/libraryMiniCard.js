@@ -2,8 +2,9 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryMiniCard', ['libraryService', 'profileService', 'friendService', 'modalService', '$location',
-  function (libraryService, profileService, friendService, modalService, $location) {
+.directive('kfLibraryMiniCard', [
+  '$rootScope', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
+  function ($rootScope, libraryService, profileService, friendService, modalService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -54,6 +55,10 @@ angular.module('kifi')
               } else {
                 lib.membership = 'read_only';
                 lib.numFollowers = lib.numFollowers + 1;
+
+                libraryService.fetchLibrarySummaries(true).then(function () {
+                  $rootScope.$emit('librarySummariesChanged');
+                });
               }
             });
           }
@@ -62,6 +67,10 @@ angular.module('kifi')
             libraryService.leaveLibrary(scope.libraryId).then(function () {
               lib.membership = 'none';
               lib.numFollowers = lib.numFollowers - 1;
+
+              libraryService.fetchLibrarySummaries(true).then(function () {
+                $rootScope.$emit('librarySummariesChanged');
+              });
             });
           }
 
