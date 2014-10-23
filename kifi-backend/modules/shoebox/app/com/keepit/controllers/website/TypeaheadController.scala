@@ -25,11 +25,9 @@ class TypeaheadController @Inject() (
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
     commander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
-      val res1 = res.map { r =>
-        r match {
-          case u: UserContactResult => Json.toJson(u)
-          case e: EmailContactResult => Json.toJson(e)
-        }
+      val res1 = res.map {
+        case u: UserContactResult => Json.toJson(u)
+        case e: EmailContactResult => Json.toJson(e)
       }
       Ok(Json.toJson(res1))
     }

@@ -2,16 +2,16 @@ package com.keepit.search
 
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
-import com.keepit.model.Collection
-import com.keepit.search.augmentation.{ AugmentationScores, ItemAugmentationResponse, ItemAugmentationRequest }
+import com.keepit.model.{ BasicLibrary, Collection, NormalizedURI, User }
+import com.keepit.search.augmentation._
 import play.twirl.api.Html
 import scala.concurrent.Future
 import play.api.libs.json.JsArray
-import com.keepit.model.NormalizedURI
-import com.keepit.model.User
 import com.keepit.search.user.UserSearchResult
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ TypeaheadUserHit, BasicUser }
+import com.keepit.common.healthcheck.BenchmarkResults
+import scala.Some
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
@@ -71,6 +71,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
+  override def warmUpUser(userId: Id[User]): Unit = {}
+
   override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
     itemAugmentations.getOrElse(request,
       ItemAugmentationResponse(
@@ -82,5 +84,15 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
         )
       )
     )
+  }
+
+  var augmentationInfoData: Option[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])] = None
+
+  def setSecrecyAndKeepers(keeperInfos: (Option[Boolean], Seq[Id[User]], Int)*) = {
+    val augmentationInfos = keeperInfos.map { case (secret, keepers, keepersTotal) => LimitedAugmentationInfo(secret, keepers, 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
+    augmentationInfoData = Some((augmentationInfos, Set.empty))
+  }
+  override def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])] = {
+    Future.successful(augmentationInfoData getOrElse (Seq.fill(items.length)(LimitedAugmentationInfo.empty), Set.empty[BasicLibrary]))
   }
 }

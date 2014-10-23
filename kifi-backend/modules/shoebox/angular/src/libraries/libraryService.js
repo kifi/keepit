@@ -255,6 +255,13 @@ angular.module('kifi')
         });
       },
 
+      declineToJoinLibrary: function (libraryId) {
+        return $http.post(routeService.declineToJoinLibrary(libraryId)).then(function () {
+          _.remove(invitedSummaries, { id: libraryId });
+          $rootScope.$emit('librarySummariesChanged');
+        });
+      },
+
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, function (library) {
@@ -271,6 +278,12 @@ angular.module('kifi')
 
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      moveKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.moveKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
           return resp.data;
         });
       },

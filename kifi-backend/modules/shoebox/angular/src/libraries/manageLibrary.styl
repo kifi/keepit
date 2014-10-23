@@ -84,7 +84,7 @@
     color: white
 
   .dialog-text
-    padding: 0 24px
+    padding: 0 35px
 
   .manage-lib-input-wrapper
     margin-bottom: 15px
@@ -121,10 +121,10 @@
 
     .manage-lib-slug-input
       border-bottom: 1px dotted #c7c7c7
-      width: 70px
+      width: 75px
       placeholder secondaryTextGray
 
-      &.slug-edited
+      &.non-empty-slug
         border-bottom: none
         width: 275px
 
@@ -147,6 +147,7 @@
   .manage-lib-create-visibility-input-container
     display: inline-block
     margin: 0 15px 0 20px
+    width: 90px
 
   .manage-lib-visibility-description
     display: inline-block
@@ -156,6 +157,7 @@
   .manage-lib-visibility-description-content
     font-size: 15px
     line-height: 18px
+    overflow: auto
 
   .manage-lib-choice-card
     display: inline-block
@@ -192,8 +194,7 @@
     color: redColor
 
   .manage-lib-name-error
-    margin-top: -5px
-    font-size: 12px
+    pop-over 66px 138px redColor
 
   .manage-lib-invite
     display: block
@@ -228,6 +229,9 @@
         border: 1px solid #c7c7c7
         border-bottom-left-radius: 5px
         border-bottom-right-radius: 5px
+        overflow-y: auto
+        overflow-x: hidden
+        max-height: 268px
 
         &:empty
           display: none
@@ -273,6 +277,7 @@
 .manage-lib-member
   position: relative
   box-sizing: border-box
+  margin: 0 auto
   padding: 12px 20px
   border-bottom: 1px solid #c7c7c7
   width: 540px
@@ -298,7 +303,7 @@
 .manage-lib-member-status
   position: absolute
   top: 22px
-  right: 25px
+  right: 55px
   color: green
 
   .manage-lib-owner &
@@ -311,7 +316,6 @@
 
 .manage-lib-default-content
   position: absolute
-  left: 15px
   background-color: #fff
   transition: margin ease 0.5s
   z-index: 1060
@@ -320,6 +324,7 @@
     margin-left: -600px
 
 .manage-lib-members-content
+  margin-top: 10px
   height: 100%
   overflow-y: auto
   overflow-x: hidden

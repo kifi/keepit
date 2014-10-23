@@ -125,8 +125,7 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limitOpt: Option[Int], deprecatedCount: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val limit = limitOpt getOrElse deprecatedCount
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))

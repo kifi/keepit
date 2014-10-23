@@ -1,0 +1,3 @@
+[submodule "kifi-backend/modules/shoebox/marketing"]
+	path = kifi-backend/modules/shoebox/marketing
+	url = git@github.com:kifi/FrogSpark

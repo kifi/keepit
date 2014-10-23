@@ -136,6 +136,10 @@ angular.module('kifi')
           keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+            });
+
             libraryService.fetchLibrarySummaries(true).then(function () {
               $rootScope.$emit('librarySummariesChanged');
             });
@@ -218,7 +222,8 @@ angular.module('kifi')
                 selectedKeep.makeUnkept();
               });
 
-              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+              var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
+              undoService.add(selectedKeeps.length + keepsDeletedText, function () {
                 keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), libraryId);
 
                 _.forEach(selectedKeeps, function (selectedKeep) {

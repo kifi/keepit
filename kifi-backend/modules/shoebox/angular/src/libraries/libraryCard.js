@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
   'profileService', 'platformService', 'signupService', '$twitter',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService,
+  function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
     profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
@@ -28,6 +28,25 @@ angular.module('kifi')
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+
+        var magicImages = {
+          'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
+          'l4APrlM5wzaM': '//djty7jcqog9qu.cloudfront.net/special-libs/l4APrlM5wzaM.png',
+          'l2iJXRO7vtoa': '//djty7jcqog9qu.cloudfront.net/special-libs/l2iJXRO7vtoa.png',
+          'l292wb07mhuB': '//djty7jcqog9qu.cloudfront.net/special-libs/l292wb07mhuB.png',
+          'lGcw3PhnD9Wo': '//djty7jcqog9qu.cloudfront.net/special-libs/lGcw3PhnD9Wo.png',
+          'l3ai2ejn5t9L': '//djty7jcqog9qu.cloudfront.net/special-libs/l3ai2ejn5t9L.png',
+          'lzgAqPcczp5J': '//djty7jcqog9qu.cloudfront.net/special-libs/lzgAqPcczp5J.png',
+          'l14bTasWaiYK': '//djty7jcqog9qu.cloudfront.net/special-libs/l14bTasWaiYK.png',
+          'l5ooCseWZXla': '//djty7jcqog9qu.cloudfront.net/special-libs/l5ooCseWZXla.png',
+          'lEcCuEc9ONEj': '//djty7jcqog9qu.cloudfront.net/special-libs/lEcCuEc9ONEj.png',
+          'lFiSQapwp732': '//djty7jcqog9qu.cloudfront.net/special-libs/lFiSQapwp732.png',
+          'l5NTaqYXZRc6': '//djty7jcqog9qu.cloudfront.net/special-libs/l5NTaqYXZRc6.png',
+          'lGWrqQb9JsbJ': '//djty7jcqog9qu.cloudfront.net/special-libs/lGWrqQb9JsbJ.png',
+          'lCaeGbBOh5YT': '//djty7jcqog9qu.cloudfront.net/special-libs/lCaeGbBOh5YT.png',
+          'lEc2xD0eNU9f': '//djty7jcqog9qu.cloudfront.net/special-libs/lEc2xD0eNU9f.png'
+        };
+        scope.magicImage = magicImages[scope.library.id];
 
 
         //
@@ -99,7 +118,26 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
-          $rootScope.$emit('libraryUrl', scope.library);
+
+          // Figure out whether this library is a library that the user has been invited to.
+          // If so, display an invite header.
+          var promise = null;
+          if (libraryService.invitedSummaries) {
+            promise = $q.when(libraryService.invitedSummaries);
+          } else {
+            promise = libraryService.fetchLibrarySummaries(true).then(function () {
+              return libraryService.invitedSummaries;
+            });
+          }
+
+          promise.then(function (invitedSummaries) {
+            if (_.find(invitedSummaries, { 'id' : scope.library.id })) {
+              scope.library.invite = {
+                inviterName: scope.library.owner.firstName + ' ' + scope.library.owner.lastName,
+                actedOn: false
+              };
+            }
+          });
         }
 
         function preloadSocial () {
@@ -116,6 +154,17 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.acceptInvitation = function (library) {
+          scope.followLibrary(library);
+        };
+
+        scope.ignoreInvitation = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+            libraryService.declineToJoinLibrary(library.id);
+          }
+        };
+
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
         };
@@ -162,6 +211,10 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+          }
+
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore($location.absUrl());
             return;

@@ -97,7 +97,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
-  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
@@ -619,20 +618,6 @@ class ShoeboxServiceClientImpl @Inject() (
       case None => Json.obj("uriId" -> id, "restriction" -> JsNull)
     }
     call(Shoebox.internal.updateURIRestriction(), payload).map { r => }
-  }
-
-  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String,
-    deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = {
-    implicit val userIdFormat = Id.format[User]
-    val payload = Json.obj(
-      "threadItems" -> threadItems,
-      "otherParticipants" -> otherParticipants.toSeq,
-      "userId" -> userId,
-      "title" -> title,
-      "deepLocator" -> deepLocator.value,
-      "notificationUpdatedAt" -> notificationUpdatedAt
-    )
-    call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {

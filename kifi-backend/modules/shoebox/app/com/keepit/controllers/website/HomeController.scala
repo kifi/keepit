@@ -24,6 +24,7 @@ import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
 
 import scala.concurrent.Future
+import KifiSession._
 
 class HomeController @Inject() (
   db: Database,
@@ -140,12 +141,13 @@ class HomeController @Inject() (
     iPhoneAppStoreRedirectWithTracking
   }
   def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
-    val context = new HeimdalContextBuilder()
-    context.addRequestInfo(request)
-    context += ("type", "landing")
-    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
-    Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
+    SafeFuture {
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      context += ("type", "landing")
+      heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+    }
+    Ok(views.html.mobile.iPhoneRedirect(request.uri))
   }
 
   def mobileLanding = MaybeUserAction { implicit request =>
@@ -281,7 +283,7 @@ class HomeController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)("0"),
           authenticator => {
             Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
-              .withSession(request.session - SecureSocial.OriginalUrlKey + (KifiSession.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession((request.session - SecureSocial.OriginalUrlKey).setUserId(newLoginUser.userId.get))
               .withCookies(authenticator.toCookie)
           }
         )

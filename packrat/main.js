@@ -1249,7 +1249,7 @@ api.port.on({
         break;
       }
     }
-    api.tabs.emit(tab, 'guide', {step: 0, page: guidePage, x: !experiments || experiments.indexOf('guide_forced') < 0});
+    api.tabs.emit(tab, 'guide', {step: 0, page: guidePage});
     unsilence(false);
   },
   track_guide: function (stepParts) {
@@ -1549,8 +1549,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         api.tabs.emit(tab, 'guide', {
           step: +loc.substr(7, 1),
-          page: guidePage,
-          x: !experiments || experiments.indexOf('guide_forced') < 0
+          page: guidePage
         }, {queue: 1});
       } else if (loc.indexOf('#compose') >= 0) {
         api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});

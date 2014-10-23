@@ -42,6 +42,8 @@ object RecoKind {
 @json case class RecoMetaData( //WARNING, adding another field here will break clients, due to the way the @json macro behaves with classes with only one field
   attribution: Seq[RecoAttributionInfo])
 
+@json case class RecoLibraryInfo(owner: BasicUser, id: PublicId[Library], name: String, path: String)
+
 trait RecoItemInfo
 
 @json case class UriRecoItemInfo(
@@ -49,6 +51,7 @@ trait RecoItemInfo
   title: Option[String],
   url: String,
   keepers: Seq[BasicUser],
+  libraries: Seq[RecoLibraryInfo],
   others: Int,
   siteName: Option[String],
   summary: URISummary) extends RecoItemInfo
