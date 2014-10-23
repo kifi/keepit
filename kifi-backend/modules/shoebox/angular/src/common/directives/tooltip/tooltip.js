@@ -104,7 +104,7 @@ angular.module('kifi')
           $w.off('scroll', debouncedScroll);
         });
 
-        scope.showing = function() {
+        scope.showing = function () {
           return visible;
         };
 
