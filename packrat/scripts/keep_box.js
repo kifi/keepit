@@ -536,13 +536,14 @@ var keepBox = keepBox || (function () {
   }
 
   function isSuitableImage(img) {
+    var nH, nW, src;
     return (
-      img.naturalHeight >= 200 &&
-      img.naturalWidth >= 200 &&
-      img.offsetWidth > 0 &&
-      img.offsetHeight > 0 &&
+      (nH = img.naturalHeight) >= 64 &&
+      (nW = img.naturalWidth) >= 64 &&
+      nW * nH >= 12000 &&
       img.complete &&
-      img.src.lastIndexOf('http', 0) === 0 &&
+      (src = getSrc(img)).lastIndexOf('http', 0) === 0 &&
+      src.indexOf('.svg', src.length - 4) === -1 &&  // TODO: exempt SVG from min size when supported
       !img[matches]('.kifi-root *'));
   }
 
