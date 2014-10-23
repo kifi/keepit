@@ -858,36 +858,21 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
         }
 
-        // unkeep k2
+        // unkeep k1
         db.readWrite { implicit s =>
-          keepRepo.save(k2.copy(state = KeepStates.INACTIVE))
+          keepRepo.save(k1.copy(state = KeepStates.INACTIVE))
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
         }
-        // There should be 4 keeps now with 'tag2' try to copy them into libMurica
+        // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res2.isRight === true
-        res2.right.get._1.length === 1 // 1 keep reactivated
-        res2.right.get._2.length === 3 // 3 failed keeps
+        res2.right.get._1.length === 1 // 1 reactivated keep
+        res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 4
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
-          keepToCollectionRepo.count === 6
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
-        }
-
-        // Test Moving keeps with 'tag2' from libMurica to libUSA
-        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
-        res3.isRight === true
-        res3.right.get._1.length === 3
-        res3.right.get._2.length === 1
-        db.readOnlyMaster { implicit s =>
-          keepRepo.count === 4
-          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 3
-          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 0
-          keepToCollectionRepo.count === 6
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
         }
       }
     }
