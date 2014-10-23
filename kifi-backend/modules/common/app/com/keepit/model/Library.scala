@@ -171,7 +171,7 @@ case class LibraryChip(id: PublicId[Library], name: String, path: String, secret
 
 object LibraryChip {
   implicit val writes = Writes[LibraryChip] { libraryChip =>
-    json.minify(Json.obj("id" -> libraryChip.id, "name" -> libraryChip.name, "path" -> libraryChip.path, "secret" -> libraryChip.secret))
+    Json.obj("id" -> libraryChip.id, "name" -> libraryChip.name, "path" -> libraryChip.path, "secret" -> libraryChip.secret)
   }
   def apply(library: BasicLibrary, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): LibraryChip = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)

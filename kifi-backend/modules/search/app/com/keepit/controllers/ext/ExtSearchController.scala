@@ -87,7 +87,7 @@ class ExtSearchController @Inject() (
             shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
           }
 
-          val hitsJson = allSecondaryFields.map(json.minify)
+          val hitsJson = allSecondaryFields.map(secondaryFields => json.minify(secondaryFields - "librariesTotal"))
 
           futureUsers.map { usersById =>
             val users = userIds.map(usersById(_))
@@ -96,7 +96,8 @@ class ExtSearchController @Inject() (
               val owner = usersById(library.ownerId)
               LibraryChip(library, owner)
             }
-            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
+            val librariesJson = libraries.map(libraryChip => json.minify(Json.toJson(libraryChip)))
+            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
           }
       }
     }
