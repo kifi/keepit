@@ -268,7 +268,9 @@ class SearchServiceClientImpl(
     else {
       // This should stay in sync with SearchController.augment
       val payload = Json.obj("userId" -> userId, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
-      call(Search.internal.augment(), payload).map(_.json.as[Seq[LimitedAugmentationInfo]])
+      call(Search.internal.augment(), payload).map { res =>
+        res.json.asOpt[Seq[LimitedAugmentationInfo]] getOrElse (res.json \ "infos").as[Seq[LimitedAugmentationInfo]]
+      }
     }
   }
 
