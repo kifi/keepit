@@ -30,7 +30,21 @@ angular.module('kifi')
         scope.editKeepsText = 'Edit Keeps';
 
         var magicImages = {
-          'some public id': 'some image absolute path' //put actual images here
+          'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
+          'l4APrlM5wzaM': '//djty7jcqog9qu.cloudfront.net/special-libs/l4APrlM5wzaM.png',
+          'l2iJXRO7vtoa': '//djty7jcqog9qu.cloudfront.net/special-libs/l2iJXRO7vtoa.png',
+          'l292wb07mhuB': '//djty7jcqog9qu.cloudfront.net/special-libs/l292wb07mhuB.png',
+          'lGcw3PhnD9Wo': '//djty7jcqog9qu.cloudfront.net/special-libs/lGcw3PhnD9Wo.png',
+          'l3ai2ejn5t9L': '//djty7jcqog9qu.cloudfront.net/special-libs/l3ai2ejn5t9L.png',
+          'lzgAqPcczp5J': '//djty7jcqog9qu.cloudfront.net/special-libs/lzgAqPcczp5J.png',
+          'l14bTasWaiYK': '//djty7jcqog9qu.cloudfront.net/special-libs/l14bTasWaiYK.png',
+          'l5ooCseWZXla': '//djty7jcqog9qu.cloudfront.net/special-libs/l5ooCseWZXla.png',
+          'lEcCuEc9ONEj': '//djty7jcqog9qu.cloudfront.net/special-libs/lEcCuEc9ONEj.png',
+          'lFiSQapwp732': '//djty7jcqog9qu.cloudfront.net/special-libs/lFiSQapwp732.png',
+          'l5NTaqYXZRc6': '//djty7jcqog9qu.cloudfront.net/special-libs/l5NTaqYXZRc6.png',
+          'lGWrqQb9JsbJ': '//djty7jcqog9qu.cloudfront.net/special-libs/lGWrqQb9JsbJ.png',
+          'lCaeGbBOh5YT': '//djty7jcqog9qu.cloudfront.net/special-libs/lCaeGbBOh5YT.png',
+          'lEc2xD0eNU9f': '//djty7jcqog9qu.cloudfront.net/special-libs/lEc2xD0eNU9f.png'
         };
         scope.magicImage = magicImages[scope.library.id];
 
