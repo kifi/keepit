@@ -11,7 +11,6 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
@@ -19,13 +18,14 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient }
+import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.BodyParsers.parse
 
 import scala.concurrent.Future
 import akka.actor.Scheduler
@@ -649,6 +649,16 @@ class KeepsCommander @Inject() (
     }
     val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmark, userId, library, source, installationId = kifiInstallationId)
     addToCollection(tag.id.get, bookmarks) // why doesn't this update search?
+  }
+
+  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
+    val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
+      keepIds map keepRepo.get partition { keep =>
+        keep.libraryId.exists(libraryCommander.canModifyLibrary(_, userId))
+      }
+    }
+    addToCollection(tag.id.get, canEditKeep)
+    (canEditKeep, cantEditKeeps)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
