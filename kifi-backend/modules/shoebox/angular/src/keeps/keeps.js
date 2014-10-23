@@ -122,9 +122,7 @@ angular.module('kifi')
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-            });
+            libraryService.fetchLibrarySummaries(true);
           });
         }
 
@@ -140,9 +138,7 @@ angular.module('kifi')
               selectedKeep.makeUnkept();
             });
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-            });
+            libraryService.fetchLibrarySummaries(true);
           });
         }
 

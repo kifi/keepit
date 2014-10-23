@@ -261,8 +261,6 @@ angular.module('kifi')
 
           libraryService.createLibrary(library).then(function () {
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-
               scope.$evalAsync(function () {
                 scope.librarySelection.library = _.find(scope.libraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {

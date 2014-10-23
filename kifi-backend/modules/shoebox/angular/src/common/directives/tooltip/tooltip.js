@@ -50,7 +50,7 @@ angular.module('kifi')
               setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left - el.outerWidth());
               break;
             case 'right':
-              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + container.outerWidth());
+              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + 0.5*container.outerWidth());
               break;
           }
         }

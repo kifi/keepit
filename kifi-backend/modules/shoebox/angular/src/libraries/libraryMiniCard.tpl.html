@@ -1,6 +1,6 @@
 <div class="kf-library-mini-card">
 
-  <div ng-switch="visibility()">
+  <div ng-switch="library.visibility">
     <div ng-switch-when="published" class="kf-library-mini-card-visbility svg-public-library-icon"></div>
     <div ng-switch-when="secret" class="kf-library-mini-card-visbility svg-private-library-icon"></div>
     <div ng-switch-when="discoverable" class="kf-library-mini-card-visbility svg-yellow-card-with-globe"></div>
@@ -8,35 +8,28 @@
 
   <div class="kf-library-mini-card-header">
     <div class="kf-library-mini-card-curator">
-      <img class="kf-library-mini-card-curator-img" ng-src="{{curatorImage() || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
+      <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
       <span class="kf-library-mini-card-curator-info">
         <div class="kf-library-mini-card-curator-heading">Library Curator:</div>
-        <div class="kf-library-mini-card-curator-name">{{curatorName()}}</div>
+        <div class="kf-library-mini-card-curator-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
       </span>
     </div>
   </div>
 
   <div class="kf-library-mini-card-body">
-    <div class="kf-library-mini-card-name" ng-click="view()">{{libraryName()}}</div>
+    <div class="kf-library-mini-card-name" ng-click="view()">{{library.name}}</div>
 
     <div class="kf-library-mini-card-stats-container">
       <span class="kf-library-mini-card-stat">
         <div class="kf-library-mini-card-stat-title">Keeps</div>
-        <div class="kf-library-mini-card-stat-num">{{numKeeps() || 0}}</div>
+        <div class="kf-library-mini-card-stat-num">{{library.numKeeps || 0}}</div>
       </span>
 
       <span class="kf-library-mini-card-vdivider"></span>
 
       <span class="kf-library-mini-card-stat">
         <div class="kf-library-mini-card-stat-title">Followers<div>
-        <div class="kf-library-mini-card-stat-num">{{numFollowers() || 0}}</div>
-      </span>
-
-      <span class="kf-library-mini-card-vdivider" ng-if="numNewKeeps()"></span>
-
-      <span class="kf-library-mini-card-stat" ng-if="numNewKeeps()">
-        <div class="kf-library-mini-card-stat-title">New Keeps<div>
-        <div class="kf-library-mini-card-stat-num">{{numNewKeeps()}}</div>
+        <div class="kf-library-mini-card-stat-num">{{library.numFollowers || 0}}</div>
       </span>
     </div>
   </div>
@@ -44,13 +37,13 @@
   <div class="kf-library-mini-card-hdivider"></div>
 
   <div>
-    <button ng-if="!isMine()"
-      ng-class="{'kf-library-mini-card-button-follow': !following() && !isMine(), 'kf-library-mini-card-button-unfollow': following()}"
+    <button ng-if="!library.isMine"
+      ng-class="{'kf-library-mini-card-button-follow': !following(), 'kf-library-mini-card-button-unfollow': following()}"
       class="kf-library-mini-card-button"
-      ng-click="toggleFollow()"
+      ng-click="toggleFollow($event)"
     ></button>
 
-    <button ng-if="isMine()"
+    <button ng-if="library.isMine"
       class="kf-library-mini-card-button kf-library-mini-card-button-view"
       ng-click="view()"
     >View my library</button>
