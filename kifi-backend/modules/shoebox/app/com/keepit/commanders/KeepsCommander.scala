@@ -40,6 +40,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.store.ImageSize
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -239,13 +240,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
       val items = keeps.map { keep => AugmentableItem(keep.uriId) }
       searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
-      getKeepSummary(keep)
+      getKeepSummary(keep, idealImageSize)
     })
 
     val colls = db.readOnlyMaster { implicit s =>
@@ -305,8 +306,15 @@ class KeepsCommander @Inject() (
     }
   }
 
-  private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
-    uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
+  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
+    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
+    val keepImageUrlOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize).map(keepImageCommander.getUrl)
+    futureSummary.map { summary =>
+      keepImageUrlOpt match {
+        case Some(keepImageUrl) => summary.copy(imageUrl = Some(keepImageUrl))
+        case None => summary
+      }
+    }
   }
 
   // Please do not add to this. It mixes concerns and data sources.
