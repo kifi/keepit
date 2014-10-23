@@ -52,7 +52,7 @@ case class KeepInfo(
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(LibraryChip, BasicUser)]] = None,
+  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
   librariesOmitted: Option[Int] = None,
   librariesTotal: Option[Int] = None,
   collections: Option[Set[String]] = None, // deprecated
@@ -70,7 +70,7 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[LibraryChip, BasicUser]
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     Json.writes[KeepInfo]
   }
 
@@ -255,16 +255,24 @@ class KeepsCommander @Inject() (
     }.map(collectionCommander.getBasicCollections)
 
     for {
-      (augmentationInfos, basicLibraries) <- augmentationFuture
+      augmentationInfos <- augmentationFuture
       pageInfos <- pageInfosFuture
     } yield {
-      val idToBasicUser = db.readOnlyMaster { implicit s =>
+
+      val idToLibrary = {
+        val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+        db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+      }
+
+      val idToBasicUser = {
         val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
         val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-        val libraryOwners = basicLibraries.map(_.ownerId)
-        basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners)
+        val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
+        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
       }
-      val idToLibraryChip = basicLibraries.map { library => library.id -> LibraryChip(library, idToBasicUser(library.ownerId)) }.toMap
+
+      val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+
       val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
         case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
           val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
@@ -280,7 +288,7 @@ class KeepsCommander @Inject() (
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToLibraryChip(libraryId), idToBasicUser(contributorId)) }),
+            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }),
             librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
             librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
