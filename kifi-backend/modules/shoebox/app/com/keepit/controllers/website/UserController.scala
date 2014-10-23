@@ -327,7 +327,8 @@ class UserController @Inject() (
     UserValueName.SITE_LEFT_COL_WIDTH,
     UserValueName.SITE_WELCOMED,
     UserValueName.ONBOARDING_SEEN,
-    UserValueName.SHOW_DELIGHTED_QUESTION
+    UserValueName.SHOW_DELIGHTED_QUESTION,
+    UserValueName.LIBRARY_SORTING_PREF
   )
 
   def getPrefs() = UserAction.async { request =>
