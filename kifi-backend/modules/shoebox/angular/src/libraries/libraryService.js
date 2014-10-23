@@ -139,8 +139,9 @@ angular.module('kifi')
         if (invalidateCache) {
           userLibrarySummariesService.expire();
         }
-        return userLibrarySummariesService.get().then(function () {
+        return userLibrarySummariesService.get().then(function (response) {
           $rootScope.$emit('librarySummariesChanged');
+          return response;
         });
       },
 
