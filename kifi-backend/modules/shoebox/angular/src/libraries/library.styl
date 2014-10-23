@@ -57,7 +57,14 @@ invite-header-orange = #ff7c3c
 
   .library-card-invite-header
     padding: 10px 32px
+    max-height: 200px
     background-color: invite-header-orange
+    opacity: 1
+
+    &.ng-hide
+      transition: opacity .4s, max-height .4s .4s
+      max-height: 0
+      opacity: 0
 
   .library-card-invite-header-info
     font-size: 13px
