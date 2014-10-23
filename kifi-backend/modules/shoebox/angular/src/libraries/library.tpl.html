@@ -20,6 +20,10 @@
         <li kf-max-version><a href="javascript:" ng-click="triggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
       </ul>
     </div>
+    <div class="kf-empty-state" ng-if="keeps.length === 0 && !userIsOwner()" ng-show="!loading">
+      <p class="public-library-empty-explain">{{library.owner.firstName || 'The curator'}} hasn't added anything to this library yet.</p>
+      <p class="public-library-empty-explain">Want to create and share your own libraries? <a href="/signup">Sign up</a> to join the Kifi family.</p>
+    </div>
 
     <div kf-keeps
       library="library"
