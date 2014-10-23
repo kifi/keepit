@@ -21,6 +21,8 @@ angular.module('kifi')
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
+    $scope.librariesEnabled = libraryService.isAllowed;
+
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
 
