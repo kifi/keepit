@@ -280,7 +280,9 @@ angular.module('kifi')
         //
         // On link.
         //
-        scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+        if (scope.librarySelection) {
+          scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+        }
 
 
         //
