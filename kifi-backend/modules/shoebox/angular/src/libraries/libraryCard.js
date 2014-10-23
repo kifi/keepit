@@ -155,10 +155,7 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.acceptInvitation = function (library) {
-          if (library.invite) {
-            library.invite.actedOn = true;
-            scope.followLibrary(library);
-          }
+          scope.followLibrary(library);
         };
 
         scope.ignoreInvitation = function (library) {
@@ -214,6 +211,10 @@ angular.module('kifi')
         };
 
         scope.followLibrary = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+          }
+
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore($location.absUrl());
             return;
