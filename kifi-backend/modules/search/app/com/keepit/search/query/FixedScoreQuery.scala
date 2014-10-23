@@ -1,11 +1,17 @@
 package com.keepit.search.query
 
+import com.keepit.search.engine.query.ProjectableQuery
 import org.apache.lucene.index.{ Term, AtomicReaderContext, IndexReader }
 import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 import java.util.{ Set => JSet }
 
-class FixedScoreQuery(val subQuery: Query) extends Query {
+class FixedScoreQuery(val subQuery: Query) extends Query with ProjectableQuery {
+
+  def project(fields: Set[String]) = {
+    val q = project(subQuery, fields)
+    if (q != null) new FixedScoreQuery(q) else null
+  }
 
   override def extractTerms(out: JSet[Term]): Unit = {}
 
