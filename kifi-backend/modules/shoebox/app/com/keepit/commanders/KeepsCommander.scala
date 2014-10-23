@@ -669,8 +669,9 @@ class KeepsCommander @Inject() (
 
   def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
     val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
+      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryCommander.canModifyLibrary(id, userId))
       keepIds map keepRepo.get partition { keep =>
-        keep.libraryId.exists(libraryCommander.canModifyLibrary(_, userId))
+        keep.libraryId.exists(canAccess)
       }
     }
     addToCollection(tag.id.get, canEditKeep)
