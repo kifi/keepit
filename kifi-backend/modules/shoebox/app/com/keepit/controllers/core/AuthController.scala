@@ -10,11 +10,12 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SocialId, SecureSocialClientIds, SocialNetworkType }
 import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
 
 import play.api.Play._
+import play.api.i18n.Messages
 import play.api.libs.json.{ JsValue, JsNumber, Json }
 import play.api.mvc._
 import securesocial.core._
@@ -29,6 +30,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
+import securesocial.core.providers.utils.RoutesHelper
 
 import scala.concurrent.Future
 
@@ -131,12 +133,11 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String) = MaybeUserAction.async { implicit request =>
-    ProviderController.authenticate(provider)(request)
+  def loginSocial(provider: String) = MaybeUserAction { implicit request =>
+    handleAuth(provider)
   }
-  def logInWithUserPass(link: String) = MaybeUserAction.async { implicit request =>
-    val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
-    authRes.map {
+  def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
+    handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
@@ -145,6 +146,51 @@ class AuthController @Inject() (
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
       case res => res
+    }
+  }
+
+  private def handleAuth(provider: String)(implicit request: Request[_]): Result = {
+    Registry.providers.get(provider) match { // todo(ray): remove dependency on SecureSocial registry
+      case Some(p) => {
+        try {
+          p.authenticate().fold(
+            result => result,
+            user => completeAuthentication(user, request.session)
+          )
+        } catch {
+          case ex: AccessDeniedException => {
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
+          }
+          case other: Throwable => {
+            log.error("Unable to log user in. An exception was thrown", other)
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
+          }
+        }
+      }
+      case _ => NotFound
+    }
+  }
+
+  private def completeAuthentication(socialUser: Identity, session: Session)(implicit request: RequestHeader): Result = {
+    log.info(s"[completeAuthentication] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
+    val sess = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
+    Authenticator.create(socialUser) match {
+      case Right(authenticator) => {
+        val (user, sui) = db.readOnlyMaster { implicit s =>
+          val sui = socialRepo.get(SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
+          val user = userRepo.get(sui.userId.get)
+          log.info(s"[completeAuthentication] kifi user=$user; socialUser=${socialUser.identityId}")
+          (user, sui)
+        }
+        val userId = user.id.getOrElse(sui.userId.get)
+        Redirect(ProviderController.toUrl(sess))
+          .withSession(sess.setUserId(userId))
+          .withCookies(authenticator.toCookie)
+      }
+      case Left(error) => {
+        log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
+        throw new RuntimeException("Error creating authenticator", error)
+      }
     }
   }
 

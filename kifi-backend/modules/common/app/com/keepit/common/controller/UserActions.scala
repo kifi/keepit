@@ -195,7 +195,7 @@ trait UserActions extends Logging { self: Controller =>
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     Play.maybeApplication.map { app =>
       userActionsHelper.getUserIdFromSession match {
-        case Success(Some(id)) if id == userId => res
+        case Success(Some(id)) if id == userId => res.withSession(request.session)
         case Success(_) => res.withSession(request.session.setUserId(userId))
         case Failure(t) =>
           log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
