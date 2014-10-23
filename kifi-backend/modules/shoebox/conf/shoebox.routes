@@ -299,6 +299,8 @@ POST    /site/keeps/private         @com.keepit.controllers.website.KeepsControl
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
+POST    /site/tags/:tag             @com.keepit.controllers.website.KeepsController.tagKeeps(tag: String)
+
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()

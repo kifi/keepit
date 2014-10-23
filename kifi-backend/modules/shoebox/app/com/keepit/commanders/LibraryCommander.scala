@@ -318,6 +318,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
+    db.readOnlyReplica { implicit s => libraryMembershipRepo.getOpt(userId, libraryId) } exists { memebership => //not cached!
+      memebership.canWrite
+    }
+  }
+
   def modifyLibrary(libraryId: Id[Library], userId: Id[User],
     name: Option[String] = None,
     description: Option[String] = None,
