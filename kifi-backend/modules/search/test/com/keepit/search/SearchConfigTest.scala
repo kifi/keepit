@@ -164,7 +164,10 @@ class SearchConfigTest extends Specification with CommonTestInjector {
     }
 
     "config overriders should work" in {
-      val conf = SearchConfig.byUserSegment(new UserSegment(3))
+      var conf = SearchConfig.byUserSegment(new UserSegment(-999999999))
+      conf === SearchConfig.defaultConfig
+
+      conf = SearchConfig.byUserSegment(new UserSegment(3))
       conf.asFloat("dampingHalfDecayFriends") === 2.5f
       conf.asInt("percentMatch") === 85
     }
