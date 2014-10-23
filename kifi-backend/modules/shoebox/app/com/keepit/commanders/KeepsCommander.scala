@@ -235,7 +235,7 @@ class KeepsCommander @Inject() (
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
-      val items = keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }
+      val items = keeps.map { keep => AugmentableItem(keep.uriId) }
       searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
