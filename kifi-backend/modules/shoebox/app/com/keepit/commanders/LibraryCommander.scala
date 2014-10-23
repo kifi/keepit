@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Provider, Inject }
 import com.keepit.commanders.emails.{ LibraryInviteEmailSender, EmailOptOutCommander }
-import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -42,6 +42,7 @@ class LibraryCommander @Inject() (
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     keepsCommanderProvider: Provider[KeepsCommander],
+    countByLibraryCache: CountByLibraryCache,
     typeaheadCommander: TypeaheadCommander,
     collectionRepo: CollectionRepo,
     s3ImageStore: S3ImageStore,
@@ -669,8 +670,9 @@ class LibraryCommander @Inject() (
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     val goodKeeps = collection.mutable.Set[Keep]()
-    db.readWrite { implicit s =>
-      keeps.groupBy(_.libraryId).map {
+    val srcLibs = db.readWrite { implicit s =>
+      val groupedKeeps = keeps.groupBy(_.libraryId)
+      groupedKeeps.map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
@@ -692,7 +694,13 @@ class LibraryCommander @Inject() (
       searchClient.updateKeepIndex()
       if (badKeeps.size != keeps.size)
         libraryRepo.updateLastKept(dstLibraryId)
+      groupedKeeps.keys.flatten
     }
+    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
+    srcLibs.map { srcLibId =>
+      countByLibraryCache.remove(CountByLibraryKey(srcLibId))
+    }
+    countByLibraryCache.remove(CountByLibraryKey(dstLibraryId))
     (goodKeeps.toSeq, badKeeps.toSeq)
   }
 
