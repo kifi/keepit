@@ -7,6 +7,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.{ ExperimentType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -77,12 +78,13 @@ object SearchConfig {
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params: _*))
   def getDescription(name: String) = descriptions.get(name)
 
-  def byUserSegment(seg: UserSegment): SearchConfig = {
-    seg.value match {
-      case 3 => new SearchConfig(Map("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
-      case _ => empty
+  private[this] val segmentConfigs: mutable.HashMap[UserSegment, SearchConfig] = {
+    val map = new mutable.HashMap[UserSegment, SearchConfig]() {
+      override def default(key: UserSegment): SearchConfig = SearchConfig.defaultConfig
     }
+    map += (UserSegment(3) -> SearchConfig.defaultConfig.overrideWith("dampingHalfDecayFriends" -> "2.5", "percentMatch" -> "85"))
   }
+  def byUserSegment(seg: UserSegment): SearchConfig = segmentConfigs(seg)
 
   implicit val format = new Format[SearchConfig] {
     def reads(json: JsValue) = json.validate[JsObject].map { obj => SearchConfig(obj.fields.map { case (key, value) => (key, value.as[String]) }: _*) }
@@ -138,7 +140,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
 
         segFuture.map { seg =>
           val segmentConfig = SearchConfig.byUserSegment(seg)
-          (defaultConfig.overrideWith(segmentConfig).overrideWith(experimentConfig), experimentId)
+          (segmentConfig.overrideWith(experimentConfig), experimentId)
         }
     }
   }
@@ -152,7 +154,9 @@ case class SearchConfig(params: Map[String, String]) {
   def asBoolean(name: String) = params(name).toBoolean
   def asString(name: String) = params(name)
 
-  def overrideWith(newParams: Map[String, String]): SearchConfig = new SearchConfig(params ++ newParams)
+  def overrideWith(newParams: Map[String, String]): SearchConfig = {
+    if (newParams.isEmpty) this else new SearchConfig(params ++ newParams)
+  }
   def overrideWith(newParams: (String, String)*): SearchConfig = overrideWith(Map(newParams: _*))
   def overrideWith(config: SearchConfig): SearchConfig = overrideWith(config.params)
 

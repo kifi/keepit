@@ -141,7 +141,7 @@ class MessagingAnalytics @Inject() (
           }
         }
 
-        case MessageSender.NonUser(nonUser) => heimdal.trackEvent(NonUserEvent(nonUser.identifier, nonUser.kind, contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+        case MessageSender.NonUser(nonUser) => heimdal.trackEvent(NonUserEvent(nonUser.identifier, nonUser.kind, contextBuilder.build, NonUserEventTypes.MESSAGED, sentAt))
 
         case MessageSender.System => heimdal.trackEvent(SystemEvent(contextBuilder.build, SystemEventTypes.MESSAGED))
       }

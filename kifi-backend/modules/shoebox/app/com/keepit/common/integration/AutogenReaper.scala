@@ -129,7 +129,7 @@ private[integration] class AutogenReaper @Inject() (
                 k2cRepo.save(k2c.inactivate)
               }
               collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
-              collectionRepo.collectionChanged(collection.id.get)
+              collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = false)
             }
           }
           db.readWrite { implicit s =>
