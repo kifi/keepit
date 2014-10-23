@@ -769,7 +769,7 @@ class LibraryCommander @Inject() (
           implicit val session = s
           keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
             case None =>
-              keepRepo.save(k.copy(visibility = toLibrary.visibility, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+              keepRepo.save(k.copy(visibility = toLibrary.visibility, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
               Right()
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
