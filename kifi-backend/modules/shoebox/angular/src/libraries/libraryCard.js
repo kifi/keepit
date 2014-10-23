@@ -239,23 +239,13 @@ angular.module('kifi')
               pictureName: profileService.me.pictureName
             });
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-              augmentData();
-              adjustFollowerPicsSize();
-            });
+            augmentData();
+            adjustFollowerPicsSize();
           });
         };
 
         scope.unfollowLibrary = function (library) {
-          libraryService.leaveLibrary(library.id).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-
-              // Note: no need to augmentData for unfollowed library.
-              adjustFollowerPicsSize();
-            });
-          });
+          libraryService.leaveLibrary(library.id);
         };
 
         scope.manageLibrary = function () {

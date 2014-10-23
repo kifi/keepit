@@ -126,6 +126,8 @@ angular.module('kifi')
 
 
     var init = function (invalidateCache) {
+      debugger;
+
       // Request for library object also retrieves an initial set of keeps in the library.
       libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken, invalidateCache || false).then(function (library) {
         // If library information has already been prepopulated, extend the library object.

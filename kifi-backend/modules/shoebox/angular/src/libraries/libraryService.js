@@ -8,32 +8,27 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
+
+    //
+    // Clutches.
+    //
     var userLibrarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
         var invites = res.data.invited || [];
 
-        var lines;
         libs.forEach(function(lib) {
-          lines = shortenLibName(lib.name);
-          lib.firstLine = lines[0];
-          lib.secondLine = lines[1];
-          if (lib.owner) {
-            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
-          }
+          augmentLibrarySummary(lib);
           lib.isMine = lib.owner.id === profileService.me.id;
         });
 
         invites.forEach(function(lib) {
-          lines = shortenLibName(lib.name);
-          lib.firstLine = lines[0];
-          lib.secondLine = lines[1];
-          if (lib.owner) {
-            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
-          }
+          augmentLibrarySummary(lib);
         });
+
         util.replaceArrayInPlace(librarySummaries, libs);
         util.replaceArrayInPlace(invitedSummaries, invites);
+
         return res.data;
       });
     });
@@ -85,11 +80,15 @@ angular.module('kifi')
       });
     });
 
-    var maxLength = 25;
 
+    //
+    // Internal helper methods.
+    //
     function shortenLibName(fullName) {
+      var maxLength = 25;
       var firstLine = fullName;
       var secondLine = '';
+
       if (fullName.length > maxLength) {
         var full = false;
         var line = '';
@@ -115,6 +114,19 @@ angular.module('kifi')
       return [firstLine, secondLine];
     }
 
+    function augmentLibrarySummary(library) {
+      if (library.owner) {
+        library.owner.image = friendService.getPictureUrlForUser(library.owner);
+      }
+      var lines = shortenLibName(library.name);
+      library.firstLine = lines[0];
+      library.secondLine = lines[1];
+    }
+
+
+    //
+    // API methods.
+    //
     var api = {
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
@@ -127,7 +139,9 @@ angular.module('kifi')
         if (invalidateCache) {
           userLibrarySummariesService.expire();
         }
-        return userLibrarySummariesService.get();
+        return userLibrarySummariesService.get().then(function () {
+          $rootScope.$emit('librarySummariesChanged');
+        });
       },
 
       getLibraryById: function (libraryId, invalidateCache) {
@@ -231,10 +245,14 @@ angular.module('kifi')
 
         if (!alreadyJoined) {
           return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-            librarySummaries.push(response.data);
+            var library = response.data;
+            augmentLibrarySummary(library);
+
+            librarySummaries.push(library);
             _.remove(invitedSummaries, { id: libraryId });
+
             $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryUpdated', response.data);
+            $rootScope.$emit('libraryUpdated', library);
           });
         }
 
