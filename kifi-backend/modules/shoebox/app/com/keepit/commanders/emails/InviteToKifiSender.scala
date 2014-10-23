@@ -64,7 +64,10 @@ class InviteToKifiSender @Inject() (
         val builder = new HeimdalContextBuilder
         builder += ("emailAbCode", emailData.abCode)
         Some(builder.build)
-      }
+      },
+      campaign = Some("na"),
+      channel = Some("vf_email"),
+      source = Some("kifi_invite")
     )
   }
 
