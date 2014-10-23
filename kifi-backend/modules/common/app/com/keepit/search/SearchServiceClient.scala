@@ -70,6 +70,8 @@ trait SearchServiceClient extends ServiceClient {
 
   def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])]
 
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, uriIds: Seq[Id[NormalizedURI]]): Future[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])]
+
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
 
@@ -271,6 +273,10 @@ class SearchServiceClientImpl(
       val libraries = (r.json \ "libraries").as[Set[BasicLibrary]]
       (infos, libraries)
     }
+  }
+
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, uriIds: Seq[Id[NormalizedURI]]): Future[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])] = {
+    augment(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, uriIds.map(AugmentableItem(_)))
   }
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {
