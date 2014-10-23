@@ -22,6 +22,7 @@ angular.module('kifi')
         if (res && res.data) {
           // Save recommendation data from the backend so we don't have to
           // fetch them again on Angular route reload of recommendations.
+          res.data = [];
           rawRecos = res.data;
           return res.data;
         }

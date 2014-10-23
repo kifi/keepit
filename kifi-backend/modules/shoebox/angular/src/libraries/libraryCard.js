@@ -298,9 +298,11 @@ angular.module('kifi')
         });
 
         $rootScope.$on('libraryUpdated', function (e, library) {
-          _.assign(scope.library, library);
-          augmentData();
-          adjustFollowerPicsSize();
+          if (library.id === scope.library.id) {
+            _.assign(scope.library, library);
+            augmentData();
+            adjustFollowerPicsSize();
+          }
         });
 
         // Update how many follower pics are shown when the window is resized.
