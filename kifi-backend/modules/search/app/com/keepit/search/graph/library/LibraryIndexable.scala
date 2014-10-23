@@ -17,6 +17,8 @@ object LibraryFields {
   val allUsersField = "a"
   val recordField = "rec"
 
+  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+
   object Visibility {
     val SECRET = 0
     val DISCOVERABLE = 1
@@ -39,10 +41,6 @@ object LibraryIndexable {
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
-  }
-
-  def getBasicLibrary(librarySearcher: Searcher, libraryId: Id[Library]): Option[BasicLibrary] = {
-    getRecord(librarySearcher, libraryId).map { record => BasicLibrary(record.id, record.owner, record.name, record.description, record.slug, isSecret(librarySearcher, libraryId)) }
   }
 }
 

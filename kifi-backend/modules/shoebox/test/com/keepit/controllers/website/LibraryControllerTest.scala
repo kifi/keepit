@@ -666,10 +666,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keep1.isPrivate), Seq(keep1.userId), 1), (Some(keep2.isPrivate), Seq(keep2.userId), 1))
 
         val pubId1 = Library.publicId(lib1.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, Some(10), -1).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1 = libraryController.getKeeps(pubId1, 0, Some(10), -1)(request1)
+        val result1 = libraryController.getKeeps(pubId1, 0, 10)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 

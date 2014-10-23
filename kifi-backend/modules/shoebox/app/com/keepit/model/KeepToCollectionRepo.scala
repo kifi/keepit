@@ -12,6 +12,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
   def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]]
+  def getKeepsForTag(collectionId: Id[Collection],
+    excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection]
@@ -66,6 +68,14 @@ class KeepToCollectionRepoImpl @Inject() (
   def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
     (for (c <- rows if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.bookmarkId).list
+
+  def getKeepsForTag(collectionId: Id[Collection], excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]] = {
+    val q = for {
+      kc <- rows if kc.collectionId === collectionId && kc.state =!= excludeState.orNull
+      k <- keepRepoProvider.get.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+    } yield (k.id)
+    q.list
+  }
 
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection] =

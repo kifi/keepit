@@ -2,12 +2,52 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', ['tagService', 'util',
-  function (tagService, util) {
+.factory('keepDecoratorService', ['tagService', 'util', 'friendService', 'profileService',
+  function (tagService, util, friendService, profileService) {
+    function processLibraries(item) {
+      if (item.libraries && item.libraries.length>0 && Array.isArray(item.libraries[0])) {
+        var cleanedLibraries = [];
+        var usersWithLibs = {};
+        item.myLibraries = [];
+        item.libraries.forEach( function (lib) {
+          if (lib[1].id!==profileService.me.id) {
+            usersWithLibs[lib[1].id] = true;
+            cleanedLibraries.push({
+              id: lib[0].id,
+              name: lib[0].name,
+              keeperPic: friendService.getPictureUrlForUser(lib[1]),
+              path: lib[0].path
+            });
+          } else {
+            item.myLibraries.push(lib[0]);
+          }
+        });
+
+
+        item.keepers.forEach(function (keeper) {
+          if (usersWithLibs[keeper.id]) {
+            keeper.hidden = true;
+          }
+        });
+
+        item.libraries = cleanedLibraries;
+        item.keepers = [];
+      }
+    }
+
+
     function Keep (item, itemType) {
       if (!item) {
         return {};
       }
+
+      processLibraries(item);
+
+      if (profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') < 0){
+        item.libraries = [];
+      }
+
+
 
       _.assign(this, item);
       this.itemType = itemType;

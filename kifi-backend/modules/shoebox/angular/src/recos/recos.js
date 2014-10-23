@@ -12,13 +12,16 @@ angular.module('kifi')
   'recoDecoratorService',
   'recoStateService',
   'undoService',
+  'libraryService',
   function ($scope, $rootScope, $analytics, $window,
-    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoDecoratorService, recoStateService, undoService, libraryService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
+
+    $scope.librariesEnabled = libraryService.isAllowed;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -118,26 +121,29 @@ angular.module('kifi')
       recoStateService.empty();
       recoActionService.get().then(function (rawRecos) {
         var recos = [];
-
-        if (rawRecos.length > 0) {
-          rawRecos.forEach(function (rawReco) {
-            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
-          });
-          recoStateService.populate(recos);
-          $scope.recosState = 'hasRecos';
-          $scope.loading = false;
-        } else {
-          // If the user has no recommendations, show some popular
-          // keeps/libraries as recommendations.
-          recoActionService.getPopular().then(function (rawRecos) {
+        //really hacky way of preventing user from seeing their personalized recos if they haven't followed a library
+        //if this is still here after Oct 10th 2014 throw something (soft) at Stephen
+        libraryService.fetchLibrarySummaries().then(function (librarySummaries){
+          if (rawRecos.length > 0 && librarySummaries.libraries.length>2) {
             rawRecos.forEach(function (rawReco) {
-              recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+              recos.push(recoDecoratorService.newUserRecommendation(rawReco));
             });
             recoStateService.populate(recos);
-            $scope.recosState = 'noRecos';
+            $scope.recosState = 'hasRecos';
             $scope.loading = false;
-          });
-        }
+          } else {
+            // If the user has no recommendations, show some popular
+            // keeps/libraries as recommendations.
+            recoActionService.getPopular().then(function (rawRecos) {
+              rawRecos.forEach(function (rawReco) {
+                recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+              });
+              recoStateService.populate(recos);
+              $scope.recosState = 'noRecos';
+              $scope.loading = false;
+            });
+          }
+        });
       });
     }
   }

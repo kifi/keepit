@@ -202,9 +202,7 @@ class SearchController @Inject() (
     augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
       val librarySearcher = libraryIndexer.getSearcher
       val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(librarySearcher, maxKeepersShown, maxLibrariesShown, maxTagsShown))
-      val libraryIds = infos.flatMap(_.libraries.map(_._1)).toSet
-      val libraries = libraryIds.map(LibraryIndexable.getBasicLibrary(librarySearcher, _).get)
-      val result = Json.obj("infos" -> infos, "libraries" -> libraries)
+      val result = Json.toJson(infos)
       Ok(result)
     }
   }

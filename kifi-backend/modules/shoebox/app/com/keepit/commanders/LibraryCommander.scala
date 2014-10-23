@@ -211,10 +211,10 @@ class LibraryCommander @Inject() (
     actualMembers ++ invitedMembers
   }
 
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
-    val futureFriendsAndContacts = query.trim match {
-      case q if q.isEmpty => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
-      case q => typeaheadCommander.searchFriendsAndContacts(userId, q, limit)
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+    val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
+      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
     }
 
     val activeInvites = db.readOnlyMaster { implicit session =>
@@ -704,7 +704,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
+          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
         }
         Right(copyKeeps(userId, libraryId, keeps, withSource = Some(KeepSource.tagImport)))
     }
@@ -718,7 +718,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
+          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
         }
         Right(moveKeeps(userId, libraryId, keeps))
     }
@@ -769,7 +769,7 @@ class LibraryCommander @Inject() (
           implicit val session = s
           keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
             case None =>
-              keepRepo.save(k.copy(visibility = toLibrary.visibility, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+              keepRepo.save(k.copy(visibility = toLibrary.visibility, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
               Right()
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
               keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
@@ -777,8 +777,10 @@ class LibraryCommander @Inject() (
               combineTags(k.id.get, existingKeep.id.get)
               Right()
             case Some(existingKeep) =>
-              keepRepo.save(k.copy(state = KeepStates.INACTIVE))
-              combineTags(k.id.get, existingKeep.id.get)
+              if (toLibraryId != k.libraryId.get) {
+                keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+                combineTags(k.id.get, existingKeep.id.get)
+              }
               Left(LibraryError.AlreadyExistsInDest)
           }
         }

@@ -16,7 +16,6 @@ import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
-  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
@@ -24,6 +23,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
+  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
 }
 
 @Singleton
@@ -83,12 +83,6 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  private def getIdAndUserCompiled(libraryId: Column[Id[Library]], ownerId: Column[Id[User]], excludeState: Option[State[Library]]) =
-    Compiled { (for (b <- rows if b.id === libraryId && b.ownerId === ownerId && b.state =!= excludeState.orNull) yield b) }
-  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
-    getIdAndUserCompiled(libraryId, ownerId, excludeState).firstOption
-  }
-
   private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String], excludeState: Option[State[Library]]) =
     Compiled { (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
@@ -139,6 +133,16 @@ class LibraryRepoImpl @Inject() (
   override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
     import StaticQuery.interpolation
     sql"""select min(seq) from library where seq < 0""".as[Option[Long]].first
+  }
+
+  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
+    idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
+      getLibrariesCompiled(missingKeys.map(_.id)).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
+    }.map { case (libraryKey, library) => libraryKey.id -> library }
+  }
+
+  private def getLibrariesCompiled(libraryIds: Set[Id[Library]]) = Compiled {
+    (for (r <- rows if r.id.inSet(libraryIds)) yield r)
   }
 
 }
