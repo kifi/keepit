@@ -6,13 +6,13 @@ import com.keepit.common.logging.Logging
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
-import play.api.mvc.{Action, Controller}
-import play.api.{Mode, Play}
+import play.api.mvc.{ Action, Controller }
+import play.api.{ Mode, Play }
 
 object MarketingAssets extends AssetsBuilder with Controller with Logging {
 
   private def fileLoad(path: String): String = {
-    val stream = Play.resourceAsStream(s"html/k/$path.html").get
+    val stream = Play.resourceAsStream(s"/k/$path.html").get
     val writer = new StringWriter()
     val fileStr = try {
       IOUtils.copy(stream, writer, "UTF-8")
