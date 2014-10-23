@@ -23,6 +23,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByNameOrSlug(userId: Id[User], name: String, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
+  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
 }
 
 @Singleton
@@ -132,6 +133,16 @@ class LibraryRepoImpl @Inject() (
   override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
     import StaticQuery.interpolation
     sql"""select min(seq) from library where seq < 0""".as[Option[Long]].first
+  }
+
+  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
+    idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
+      getLibrariesCompiled(missingKeys.map(_.id)).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
+    }.map { case (libraryKey, library) => libraryKey.id -> library }
+  }
+
+  private def getLibrariesCompiled(libraryIds: Set[Id[Library]]) = Compiled {
+    (for (r <- rows if r.id.inSet(libraryIds)) yield r)
   }
 
 }

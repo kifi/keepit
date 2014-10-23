@@ -5,7 +5,7 @@ import com.keepit.model.{ LibrarySlug, User, Library }
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
-case class LibraryRecord(name: String, description: Option[String], id: Id[Library], owner: Id[User], slug: LibrarySlug)
+case class LibraryRecord(name: String, description: Option[String], id: Id[Library], ownerId: Id[User], slug: LibrarySlug)
 
 object LibraryRecord {
   def apply(library: Library): LibraryRecord = LibraryRecord(library.name, library.description, library.id.get, library.ownerId, library.slug)
@@ -18,7 +18,7 @@ object LibraryRecord {
     out.writeString(record.name)
     out.writeString(record.description.getOrElse(""))
     out.writeLong(record.id.id)
-    out.writeLong(record.owner.id)
+    out.writeLong(record.ownerId.id)
     out.writeString(record.slug.value)
 
     out.close()
