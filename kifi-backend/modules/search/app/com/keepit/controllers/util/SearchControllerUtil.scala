@@ -132,6 +132,7 @@ trait SearchControllerUtil {
         "keepersTotal" -> limitedInfo.keepersTotal,
         "libraries" -> librariesIndices,
         "librariesOmitted" -> limitedInfo.librariesOmitted,
+        "librariesTotal" -> limitedInfo.librariesTotal,
         "tags" -> limitedInfo.tags,
         "tagsOmitted" -> limitedInfo.tagsOmitted
       )
