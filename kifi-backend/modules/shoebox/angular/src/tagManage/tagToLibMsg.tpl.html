@@ -1,6 +1,6 @@
 <div kf-modal class="kf-copy-tag-to-library-modal" kf-width="480px">
-  <div kf-basic-modal-content title="Copying Keeps" action-text="Go to Library" action="navigateToLibrary()" >
-    <div>We're copying your tagged keeps over, but it might take a second...<br>
+  <div kf-basic-modal-content title="{{action}} Keeps" action-text="Go to Library" action="navigateToLibrary()" >
+    <div>We're {{action.toLowerCase()}} your tagged keeps over, but it might take a second...<br>
          Feel free to continue managing your tags or visit the library.
     </div>
   </div>

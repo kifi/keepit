@@ -7,9 +7,13 @@ import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 import java.util.{ Set => JSet }
 
-class KWrapperQuery(private val subQuery: Query) extends Query with Logging {
+class KWrapperQuery(private val subQuery: Query, val label: String) extends Query with ProjectableQuery with Logging {
+  def this(subQuery: Query) = this(subQuery, subQuery.toString)
 
-  val label = subQuery.toString
+  def project(fields: Set[String]): Query = {
+    val q = project(subQuery, fields)
+    new KWrapperQuery(if (q != null) q else new NullQuery, label)
+  }
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     new KWrapperWeight(this, subQuery.createWeight(searcher))

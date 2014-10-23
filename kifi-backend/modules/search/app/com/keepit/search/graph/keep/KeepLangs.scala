@@ -11,7 +11,7 @@ class KeepLangs(searcher: Searcher) {
 
   // we use int arrays as int value holders in the following hash map
   private[this] val langFreq = new mutable.HashMap[String, Array[Int]]() {
-    override def default(key: String): Array[Int] = new Array[Int](1)
+    override def default(key: String): Array[Int] = new Array[Int](1) // == Array(0)
   }
 
   private[this] var keepCount = 0
@@ -32,7 +32,6 @@ class KeepLangs(searcher: Searcher) {
               val holder = langFreq(lang)
               if (holder(0) <= 0) langFreq.put(lang, holder)
               holder(0) += 1
-
             }
             doc = tp.nextDoc()
           }

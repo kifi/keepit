@@ -43,8 +43,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
-
   def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
   def saveImageInfo(imageInfo: ImageInfo): Future[Unit] = ???

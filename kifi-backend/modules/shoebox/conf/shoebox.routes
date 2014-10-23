@@ -137,7 +137,7 @@ POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryContro
 DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
-GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
+GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
@@ -235,7 +235,9 @@ GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
-GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Option[Int], count: Int ?= 10)
+GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 
 
 
@@ -297,6 +299,8 @@ POST    /site/keeps/private         @com.keepit.controllers.website.KeepsControl
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
+POST    /site/tags/:tag             @com.keepit.controllers.website.KeepsController.tagKeeps(tag: String)
+
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
@@ -324,13 +328,13 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
-GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Option[Int], count: Int ?= 10)
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
-GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: String, n: Int ?= 5)
+GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
-GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
+GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
 
 POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
@@ -776,7 +780,6 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.savePageInfo
-GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.getImageInfo(id:Id[ImageInfo])
 POST     /internal/shoebox/database/saveImageInfo     @com.keepit.controllers.internal.ShoeboxScraperController.saveImageInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.saveNormalizedURI
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
@@ -821,6 +824,8 @@ POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/public/ng/img", file)
+GET     /marketing/*file           com.keepit.controllers.website.MarketingAssets.marketingSite(file)
+GET     /marketing/                com.keepit.controllers.website.MarketingAssets.marketingSite(file = "")
 
 ##########################################
 # Marketing site

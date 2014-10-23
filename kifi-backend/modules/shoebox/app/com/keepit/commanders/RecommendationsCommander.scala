@@ -82,9 +82,9 @@ class RecommendationsCommander @Inject() (
               title = nUri.title,
               url = nUri.url,
               isPrivate = false,
-              uriSummary = Some(uriSummary.copy(description = Some(augmentedDescription))),
+              summary = Some(uriSummary.copy(description = Some(augmentedDescription))),
               others = reco.attribution.get.user.map(_.others),
-              keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load).toSet) }
+              keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load)) }
             )
           }
       })
@@ -224,7 +224,9 @@ class RecommendationsCommander @Inject() (
   }
 
   def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
-    val curatedLibs: Seq[Id[Library]] = Seq(25957L, 25537L, 25353L, 25368L, 25171L, 25116L, 25341L).map(Id[Library])
+    val curatedLibs: Seq[Id[Library]] = Seq(
+      25537L, 25116L, 24542L, 25345L, 25471L, 25381L, 24203L, 25370L, 25388L, 25528L, 25371L, 25350L, 25340L, 25000L, 26106L
+    ).map(Id[Library])
 
     Future.sequence(db.readOnlyReplica { implicit session =>
       curatedLibs.map(libRepo.get)

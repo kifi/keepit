@@ -10,7 +10,7 @@ import com.keepit.commanders.RawBookmarksWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
@@ -24,6 +24,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsObject
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.core._
 
 class KeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -258,6 +259,15 @@ class KeepsController @Inject() (
     }
   }
 
+  def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
+    val keepIds = (request.body \ "keepIds").as[Seq[ExternalId[Keep]]]
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val tag = keepsCommander.getOrCreateTag(request.userId, tagName)
+    val (canEditKeep, cantEditKeeps) = keepsCommander.tagKeeps(tag, request.userId, keepIds)
+    Ok(Json.obj("success" -> canEditKeep.map(_.externalId),
+      "failure" -> cantEditKeeps.map(_.externalId)))
+  }
+
   def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))
 
   def untagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, false))
@@ -275,19 +285,12 @@ class KeepsController @Inject() (
   }
 
   def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
-    val resOpt = if (withFullInfo) {
-      keepsCommander.getFullKeepInfo(id, request.userId, true) map { infoFut =>
-        infoFut map { info =>
-          Ok(Json.toJson(KeepInfo.fromFullKeepInfo(info)))
-        }
-      }
-    } else {
-      // user may get the info for a keep that was just created
-      db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(b))))
-      }
+    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+    keepOpt match {
+      case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
+      case Some(keep) if withFullInfo => keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, Seq(keep)).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
-    resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
   }
 
   def updateKeepInfo(id: ExternalId[Keep]) = UserAction { request =>

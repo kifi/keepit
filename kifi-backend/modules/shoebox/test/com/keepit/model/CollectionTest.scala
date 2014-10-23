@@ -123,7 +123,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
 
         db.readWrite { implicit s =>
-          keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
+          keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = false))
         }
         db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCount(coll1.id.get) === 1

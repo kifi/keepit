@@ -24,11 +24,12 @@ object ArticleFields {
   val contentField = "c"
   val contentStemmedField = "cs"
   val contentLangField = "cl"
-  val semanticVectorField = "sv"
   val siteField = "site"
   val homePageField = "home_page"
   val mediaField = "media"
   val recordField = "rec"
+
+  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
 }
 
 class ArticleIndexer(

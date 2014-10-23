@@ -21,6 +21,7 @@ import com.keepit.common.core._
 import com.keepit.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
+import com.keepit.social.BasicUser
 
 class WebsiteSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -74,7 +75,7 @@ class WebsiteSearchController @Inject() (
     searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
 
       val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) {
-        Future.successful((Seq.empty[JsObject], Seq.empty[JsObject], Seq.empty[JsObject]))
+        Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
       } else {
 
         val futureUriSummaries = {
@@ -86,10 +87,10 @@ class WebsiteSearchController @Inject() (
         augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
           case (allSecondaryFields, userIds, libraryIds) => {
 
-            val librariesById = getBasicLibraries(librarySearcher, libraryIds.toSet)
+            val libraryRecordsWithSecrecyById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
 
             val futureUsers = {
-              val libraryOwnerIds = librariesById.values.map(_.ownerId)
+              val libraryOwnerIds = libraryRecordsWithSecrecyById.values.map(_._1.ownerId)
               shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
             }
 
@@ -111,11 +112,11 @@ class WebsiteSearchController @Inject() (
               jsHits <- futureJsHits
             } yield {
               val libraries = libraryIds.map { libId =>
-                val library = librariesById(libId)
+                val (library, secret) = libraryRecordsWithSecrecyById(libId)
                 val owner = usersById(library.ownerId)
-                writesLibrary(library, owner)
+                makeBasicLibrary(library, owner, secret)
               }
-              val users = userIds.map(id => Json.toJson(usersById(id)))
+              val users = userIds.map(usersById(_))
               (jsHits, users, libraries)
             }
           }

@@ -7,11 +7,13 @@ import org.apache.lucene.search._
 import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 
-class KBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery {
+class KBoostQuery(override val textQuery: Query, override val boosterQuery: Query, val boosterStrength: Float) extends BoostQuery with ProjectableQuery {
 
   override def createWeight(searcher: IndexSearcher): Weight = new KBoostWeight(this, searcher)
 
   override protected val name = "KBoost"
+
+  def project(fields: Set[String]): Query = new KBoostQuery(project(textQuery, fields), boosterQuery, boosterStrength)
 
   override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQuery: Query): Query = {
     new KBoostQuery(rewrittenTextQuery, rewrittenBoosterQuery, boosterStrength)

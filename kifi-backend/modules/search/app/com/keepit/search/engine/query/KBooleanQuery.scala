@@ -1,19 +1,27 @@
 package com.keepit.search.engine.query
 
 import org.apache.lucene.index.{ AtomicReaderContext, IndexReader }
-import org.apache.lucene.search.{ BooleanClause, BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Scorer, Weight }
-import org.apache.lucene.util.Bits
-
-import java.util.{ List => JList }
+import org.apache.lucene.search.{ BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Scorer, Weight }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 
-class KBooleanQuery() extends BooleanQuery(false) {
+class KBooleanQuery() extends BooleanQuery(false) with ProjectableQuery {
+
+  def project(fields: Set[String]): Query = {
+    val projectedQuery = new KBooleanQuery()
+    getClauses.foreach { c =>
+      val query = QueryProjector.project(c.getQuery, fields)
+      if (query != null) projectedQuery.add(query, c.getOccur)
+    }
+    projectedQuery.setBoost(getBoost())
+    projectedQuery
+  }
 
   override def rewrite(reader: IndexReader): Query = {
     var returnQuery = this
     val rewrittenQuery = new KBooleanQuery() // recursively rewrite
+    rewrittenQuery.setBoost(getBoost())
     getClauses.foreach { c =>
       val query = c.getQuery.rewrite(reader)
 

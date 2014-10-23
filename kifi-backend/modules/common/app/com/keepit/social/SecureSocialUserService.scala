@@ -11,6 +11,7 @@ import play.api.mvc.{ Session, RequestHeader }
 import securesocial.core._
 import securesocial.core.providers.Token
 import net.codingwell.scalaguice.ScalaModule
+import KifiSession._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -38,7 +39,7 @@ private class SecureSocialEventListener extends securesocial.core.EventListener 
   def onEvent(event: Event, request: RequestHeader, session: Session): Option[Session] = event match {
     case LogoutEvent(identity) =>
       // Remove our user ID info when the user logs out
-      Some(session - KifiSession.FORTYTWO_USER_ID)
+      Some(session.deleteUserId)
     case _ =>
       None
   }

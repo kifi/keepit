@@ -19,11 +19,10 @@ import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.{ Writes, Json, JsObject }
+import play.api.libs.json.{ Json, JsObject }
 import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexable }
 
 import scala.util.{ Failure, Success }
-import com.keepit.common.json
 import com.keepit.search.augmentation._
 import com.keepit.social.BasicUser
 
@@ -134,6 +133,7 @@ trait SearchControllerUtil {
         "keepersTotal" -> limitedInfo.keepersTotal,
         "libraries" -> librariesIndices,
         "librariesOmitted" -> limitedInfo.librariesOmitted,
+        "librariesTotal" -> limitedInfo.librariesTotal,
         "tags" -> limitedInfo.tags,
         "tagsOmitted" -> limitedInfo.tagsOmitted
       )
@@ -141,15 +141,15 @@ trait SearchControllerUtil {
     (augmentationFields, userIds, libraryIds)
   }
 
-  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
+  def getLibraryRecordsWithSecrecy(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, Boolean)] = {
     libraryIds.map { libId =>
-      libId -> LibraryIndexable.getBasicLibrary(librarySearcher, libId).get
+      libId -> (LibraryIndexable.getRecord(librarySearcher, libId).get, LibraryIndexable.isSecret(librarySearcher, libId))
     }.toMap
   }
 
-  def writesLibrary(library: BasicLibrary, owner: BasicUser): JsObject = {
+  def makeBasicLibrary(library: LibraryRecord, owner: BasicUser, secret: Boolean)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    json.minify(Json.obj("id" -> Library.publicId(library.id), "name" -> library.name, "path" -> path, "secret" -> library.isSecret))
+    BasicLibrary(Library.publicId(library.id), library.name, path, secret)
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
