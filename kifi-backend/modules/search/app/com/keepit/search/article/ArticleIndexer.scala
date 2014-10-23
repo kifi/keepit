@@ -28,6 +28,8 @@ object ArticleFields {
   val homePageField = "home_page"
   val mediaField = "media"
   val recordField = "rec"
+
+  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
 }
 
 class ArticleIndexer(

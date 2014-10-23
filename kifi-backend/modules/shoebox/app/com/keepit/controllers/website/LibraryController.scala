@@ -219,8 +219,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limitOpt: Option[Int], deprecatedCount: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val limit = limitOpt getOrElse deprecatedCount
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -467,13 +466,14 @@ class LibraryController @Inject() (
     }
   }
 
-  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    val futureTagsAndMatches = if (query.trim.isEmpty) {
-      val libraryId = Library.decodePublicId(pubId).get
-      val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
-      keepsCommander.suggestTags(request.userId, libraryId, uriId, limit).map(_.map((_, Seq.empty[(Int, Int)])))
-    } else {
-      keepsCommander.searchTags(request.userId, query, limit).map(_.map(hit => (hit.tag, hit.matches)))
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None => {
+        val libraryId = Library.decodePublicId(pubId).get
+        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      }
     }
     futureTagsAndMatches.imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
@@ -482,7 +482,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def suggestMembers(pubId: PublicId[Library], query: String, limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+  def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))

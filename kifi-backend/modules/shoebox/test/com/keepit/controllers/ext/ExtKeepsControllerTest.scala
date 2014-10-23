@@ -92,7 +92,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = k1.id.get, collectionId = collections(0).id.get))
-          collectionRepo.collectionChanged(collections(0).id.get, true)
+          collectionRepo.collectionChanged(collections(0).id.get, true, false)
           (user1, k1, collections)
         }
 
@@ -166,7 +166,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
             collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("myCollection3"))) ::
             Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
-          collectionRepo.collectionChanged(collections(0).id.get, true)
+          collectionRepo.collectionChanged(collections(0).id.get, true, false)
           (user1, collections)
         }
 

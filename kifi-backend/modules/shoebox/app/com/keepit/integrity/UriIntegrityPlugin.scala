@@ -143,7 +143,7 @@ class UriIntegrityActor @Inject() (
       }
     }.flatten
 
-    collectionsToUpdate.foreach(collectionRepo.collectionChanged(_))
+    collectionsToUpdate.foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = true))
   }
 
   /**

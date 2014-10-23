@@ -52,7 +52,7 @@ case class KeepInfo(
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(LibraryChip, BasicUser)]] = None,
+  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
   librariesOmitted: Option[Int] = None,
   librariesTotal: Option[Int] = None,
   collections: Option[Set[String]] = None, // deprecated
@@ -70,7 +70,7 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[LibraryChip, BasicUser]
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     Json.writes[KeepInfo]
   }
 
@@ -142,6 +142,12 @@ class KeepsCommander @Inject() (
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
+          /**
+           * todo(eishay): we need to parse the index family.
+           * Name will look like "KeepIndexer_2_4" where the family is "4" and shard id is "2".
+           * If there is more then one family at the same time (i.e. "8" based shareds), we'll have double counting.
+           * We need to get a count of only one family (say count both and pick the largest one).
+           */
           if (info.name.startsWith("KeepIndex")) {
             countMap.get(info.name) match {
               case Some(count) if count >= info.numDocs =>
@@ -235,7 +241,7 @@ class KeepsCommander @Inject() (
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
-      val items = keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }
+      val items = keeps.map { keep => AugmentableItem(keep.uriId) }
       searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
@@ -249,16 +255,24 @@ class KeepsCommander @Inject() (
     }.map(collectionCommander.getBasicCollections)
 
     for {
-      (augmentationInfos, basicLibraries) <- augmentationFuture
+      augmentationInfos <- augmentationFuture
       pageInfos <- pageInfosFuture
     } yield {
-      val idToBasicUser = db.readOnlyMaster { implicit s =>
+
+      val idToLibrary = {
+        val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+        db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+      }
+
+      val idToBasicUser = {
         val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
         val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-        val libraryOwners = basicLibraries.map(_.ownerId)
-        basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners)
+        val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
+        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
       }
-      val idToLibraryChip = basicLibraries.map { library => library.id -> LibraryChip(library, idToBasicUser(library.ownerId)) }.toMap
+
+      val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+
       val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
         case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
           val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
@@ -274,7 +288,7 @@ class KeepsCommander @Inject() (
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToLibraryChip(libraryId), idToBasicUser(contributorId)) }),
+            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }),
             librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
             librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
@@ -412,7 +426,7 @@ class KeepsCommander @Inject() (
         }
       }.flatten
       val collIds = bms.flatMap(bm => keepToCollectionRepo.getCollectionsForKeep(bm.id.get)).toSet
-      collIds.foreach { cid => collectionRepo.collectionChanged(cid) }
+      collIds.foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
       bms
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
@@ -508,7 +522,7 @@ class KeepsCommander @Inject() (
   private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val saved = keepRepo.save(keep withState state)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
-    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+    keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
   }
 
@@ -601,7 +615,7 @@ class KeepsCommander @Inject() (
       }
 
       val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0)
+        collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0, inactivateIfEmpty = false)
       }
       val tagged = (activated ++ newK2C).toSet
       val taggingAt = currentDateTime
@@ -624,7 +638,7 @@ class KeepsCommander @Inject() (
         case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepsById.contains(ktc.keepId) =>
           keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
       }
-      collectionRepo.collectionChanged(collection.id.get)
+      collectionRepo.collectionChanged(collection.id.get, inactivateIfEmpty = true)
 
       val removedAt = currentDateTime
       removed.foreach { ktc =>
@@ -721,11 +735,11 @@ class KeepsCommander @Inject() (
               case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
               case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
             }
-            collectionRepo.collectionChanged(tagId, true)
+            collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
           }
           tagsToRemove.map { tagId =>
             keepToCollectionRepo.remove(keep.id.get, tagId)
-            collectionRepo.collectionChanged(tagId, false)
+            collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
           }
           keepRepo.save(keep) // notify keep index
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }

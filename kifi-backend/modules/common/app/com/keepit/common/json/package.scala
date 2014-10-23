@@ -39,7 +39,10 @@ package object json {
     case _ => false
   }
 
-  def minify(fullJson: JsObject): JsObject = JsObject(fullJson.fields.filterNot { case (key, value) => canBeOmitted(value) })
+  def minify(fullJson: JsValue): JsValue = fullJson match {
+    case obj: JsObject => JsObject(obj.fields.filterNot { case (key, value) => canBeOmitted(value) })
+    case _ => fullJson
+  }
 
   /* Be careful, this will always attempt to deserialize to Left first, and then to Right if Left has failed.
   This could lead to an incorrect behavior if the Right type can be serialized to a valid Left type

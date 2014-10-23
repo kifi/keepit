@@ -212,10 +212,10 @@ class LibraryCommander @Inject() (
     actualMembers ++ invitedMembers
   }
 
-  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: String, limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
-    val futureFriendsAndContacts = query.trim match {
-      case q if q.isEmpty => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
-      case q => typeaheadCommander.searchFriendsAndContacts(userId, q, limit)
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
+    val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
+      case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
     }
 
     val activeInvites = db.readOnlyMaster { implicit session =>
@@ -311,6 +311,7 @@ class LibraryCommander @Inject() (
             val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, inviterId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
             inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
+            searchClient.updateLibraryIndex()
             Right(library)
         }
       }
@@ -336,7 +337,7 @@ class LibraryCommander @Inject() (
         else Left(LibraryFail("invalid_slug"))
       }
 
-      for {
+      val result = for {
         newName <- validName(name.getOrElse(targetLib.name)).right
         newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
       } yield {
@@ -350,12 +351,15 @@ class LibraryCommander @Inject() (
             db.readWriteBatch(keeps) { (s, k) =>
               keepRepo.save(k.copy(visibility = newVisibility))(s)
             }
+            searchClient.updateKeepIndex()
           }
         }
         db.readWrite { implicit s =>
           libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
         }
       }
+      searchClient.updateLibraryIndex()
+      result
     }
   }
 
@@ -385,6 +389,7 @@ class LibraryCommander @Inject() (
       db.readWrite { implicit s =>
         libraryRepo.save(oldLibrary.sanitizeForDelete())
       }
+      searchClient.updateLibraryIndex()
       None
     }
   }
@@ -552,16 +557,20 @@ class LibraryCommander @Inject() (
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
         val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
-        if (!generateNew)
+        if (!generateNew) {
           airbrake.notify(s"${userId} missing main library")
+        }
+        searchClient.updateLibraryIndex()
         Some(mainLib)
       } else None
 
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
         val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
-        if (!generateNew)
+        if (!generateNew) {
           airbrake.notify(s"${userId} missing secret library")
+        }
+        searchClient.updateLibraryIndex()
         Some(secretLib)
       } else None
 
@@ -623,6 +632,7 @@ class LibraryCommander @Inject() (
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         trackLibraryInvitation(userId, libraryId, Seq(), eventContext, action = "accepted")
+        searchClient.updateLibraryIndex()
         Right(updatedLib)
       }
     }
@@ -644,6 +654,7 @@ class LibraryCommander @Inject() (
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
+          searchClient.updateLibraryIndex()
           Right()
         }
       }
@@ -680,6 +691,7 @@ class LibraryCommander @Inject() (
           case _ => goodKeeps += keep
         }
       }
+      searchClient.updateKeepIndex()
       if (badKeeps.size != keeps.size)
         libraryRepo.updateLastKept(dstLibraryId)
       groupedKeeps.keys.flatten

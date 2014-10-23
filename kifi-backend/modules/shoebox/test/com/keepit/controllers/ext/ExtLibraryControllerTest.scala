@@ -506,7 +506,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
 
   private def searchTags(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.suggestTags(libraryId, keepId, q, Some(n))(request(routes.ExtLibraryController.suggestTags(libraryId, keepId, q, Some(n))))
+    controller.suggestTags(libraryId, keepId, Some(q), n)(request(routes.ExtLibraryController.suggestTags(libraryId, keepId, Some(q), n)))
   }
 
   private def keepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {

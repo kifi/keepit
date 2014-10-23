@@ -71,6 +71,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
 
+  override def warmUpUser(userId: Id[User]): Unit = {}
+
   override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
     itemAugmentations.getOrElse(request,
       ItemAugmentationResponse(
@@ -84,13 +86,13 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
     )
   }
 
-  var augmentationInfoData: Option[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])] = None
+  var augmentationInfoData: Option[Seq[LimitedAugmentationInfo]] = None
 
   def setSecrecyAndKeepers(keeperInfos: (Option[Boolean], Seq[Id[User]], Int)*) = {
     val augmentationInfos = keeperInfos.map { case (secret, keepers, keepersTotal) => LimitedAugmentationInfo(secret, keepers, 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
-    augmentationInfoData = Some((augmentationInfos, Set.empty))
+    augmentationInfoData = Some(augmentationInfos)
   }
-  override def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[(Seq[LimitedAugmentationInfo], Set[BasicLibrary])] = {
-    Future.successful(augmentationInfoData getOrElse (Seq.fill(items.length)(LimitedAugmentationInfo.empty), Set.empty[BasicLibrary]))
+  override def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+    Future.successful(augmentationInfoData getOrElse Seq.fill(items.length)(LimitedAugmentationInfo.empty))
   }
 }

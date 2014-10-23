@@ -13,7 +13,7 @@ object KTextQuery {
   val tieBreakerMultiplier = 0.5f
 }
 
-class KTextQuery(val label: String) extends Query with Logging {
+class KTextQuery(val label: String) extends Query with ProjectableQuery with Logging {
 
   private var subQuery: Query = new DisjunctionMaxQuery(KTextQuery.tieBreakerMultiplier)
 
@@ -39,6 +39,12 @@ class KTextQuery(val label: String) extends Query with Logging {
         disjunct.add(query)
         disjunct
     }
+  }
+
+  def project(fields: Set[String]) = {
+    val projectedQuery = this.clone().asInstanceOf[KTextQuery]
+    projectedQuery.subQuery = QueryProjector.project(subQuery, fields)
+    projectedQuery
   }
 
   override def createWeight(searcher: IndexSearcher): Weight = {

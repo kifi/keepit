@@ -100,7 +100,7 @@ class KQueryExpansionTest extends Specification {
 
     "expand a query with site" in new QueryParserScope(concatBoostValue = 0.0f) {
       parser.parse("www.yahoo.com").get.toString ===
-        s"""KTextQuery((t:"www yahoo com"$b | c:"www yahoo com" | h:"www yahoo com" | site(site:www.yahoo.com) | ts:"www yahoo com"$b | cs:"www yahoo com" | hs:"www yahoo com")~$tb)"""
+        s"""KTextQuery((t:"www yahoo com"$b | c:"www yahoo com" | h:"www yahoo com" | site:www.yahoo.com | ts:"www yahoo com"$b | cs:"www yahoo com" | hs:"www yahoo com")~$tb)"""
     }
   }
 }

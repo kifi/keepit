@@ -183,10 +183,10 @@ trait UserActions extends Logging { self: Controller =>
         } getOrElse ("na")
         request.session.get("kcid").map { existingKcid =>
           if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
-            res.addingToSession("kcid" -> s"organic-$referrer")(request)
+            res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
           } else res
         } getOrElse {
-          res.addingToSession("kcid" -> s"organic-$referrer")(request)
+          res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
         }
       }
     } getOrElse res
@@ -195,7 +195,7 @@ trait UserActions extends Logging { self: Controller =>
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     Play.maybeApplication.map { app =>
       userActionsHelper.getUserIdFromSession match {
-        case Success(Some(id)) if id == userId => res
+        case Success(Some(id)) if id == userId => res.withSession(request.session)
         case Success(_) => res.withSession(request.session.setUserId(userId))
         case Failure(t) =>
           log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
