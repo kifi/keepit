@@ -84,6 +84,7 @@ keepBorderRadius = 3px
 
 .kf-keep-selection-option
   display: inline-block
+  color: linkBlueColor
 
   span
     cursor: pointer
@@ -152,6 +153,7 @@ keepBorderRadius = 3px
   padding: 7px 0
 
 .kf-keep-footer-link a
+  color: linkBlueColor
   cursor: pointer
 
   &:hover
@@ -318,7 +320,7 @@ keepBorderRadius = 3px
 
 .kf-keep-tag
 input.kf-keep-tag-input
-  border: 1px solid blueColor
+  border: 1px solid linkBlueColor
   border-radius: 3px
   margin-right: 4px
   vertical-align: middle
@@ -330,7 +332,7 @@ input.kf-keep-tag-input
   max-width: 150px
   font-size: 12px
   font-smoothing: antialiased
-  color: linkColor
+  color: linkBlueColor
 
 .kf-keep-tag
 input.kf-keep-tag-input
@@ -359,12 +361,17 @@ input.kf-keep-tag-input
     transition: width .12s ease-in-out
 
 .kf-keep-tag-link
+  position: relative
+  top: -1px
   padding: 0 11px 0 0
   font-smoothing: antialiased
   long-text()
 
   &:active
     color: clearBlueColor
+
+  a
+    color: linkBlueColor
 
 .kf-keep-tag-x
   position: absolute
