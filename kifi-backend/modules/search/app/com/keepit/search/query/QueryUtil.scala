@@ -5,23 +5,12 @@ import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsEnum
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.BooleanQuery
-import org.apache.lucene.search.DocIdSet
-import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.PhraseQuery
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Scorer
-import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import java.util.{ HashSet => JHashSet }
 import scala.collection.JavaConversions._
-import org.apache.lucene.analysis.Analyzer
-import java.io.StringReader
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
-import scala.collection.mutable.ListBuffer
 
 object QueryUtil extends Logging {
 

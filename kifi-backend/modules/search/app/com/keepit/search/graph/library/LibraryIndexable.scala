@@ -17,6 +17,8 @@ object LibraryFields {
   val allUsersField = "a"
   val recordField = "rec"
 
+  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+
   object Visibility {
     val SECRET = 0
     val DISCOVERABLE = 1

@@ -29,6 +29,8 @@ object KeepFields {
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
+  val textSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 

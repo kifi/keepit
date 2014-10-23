@@ -5,8 +5,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.engine.explain.{ TargetedScorer, DirectExplainContext }
 import com.keepit.search.graph.library.LibraryFields
 import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
-import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.engine.query.KWeight
+import com.keepit.search.article.{ ArticleFields, ArticleVisibility }
+import com.keepit.search.engine.query.{ QueryProjector, KWeight }
 import com.keepit.search.graph.keep.KeepFields
 import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.util.LongArraySet
@@ -27,9 +27,11 @@ trait ScoreVectorSource {
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
   private[this] val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
 
+  protected def preprocess(query: Query): Query = query
+
   def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
     weights.clear()
-    val weight = searcher.createWeight(query)
+    val weight = searcher.createWeight(preprocess(query))
     if (weight != null) {
       weight.asInstanceOf[KWeight].getWeights(weights)
     }
@@ -105,6 +107,8 @@ trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOpt
 
 class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
 
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, ArticleFields.textSearchFields)
+
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
@@ -179,6 +183,8 @@ class UriFromKeepsScoreVectorSource(
   override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
     docValueBasedIdResolver(readerContext, KeepFields.uriIdField)
   }
+
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
 
   override def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     super.execute(coreSize, dataBuffer, directScoreContext)
@@ -328,6 +334,8 @@ class LibraryScoreVectorSource(
     protected val config: SearchConfig,
     protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with VisibilityEvaluator {
 
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.textSearchFields)
+
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
@@ -382,6 +390,8 @@ class LibraryFromKeepsScoreVectorSource(
   override protected def idResolver(readerContext: AtomicReaderContext): TargetedScorer.Resolver = {
     docValueBasedIdResolver(readerContext, KeepFields.libraryIdField)
   }
+
+  override protected def preprocess(query: Query): Query = QueryProjector.project(query, KeepFields.textSearchFields)
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
