@@ -15,6 +15,7 @@ angular.module('kifi')
         if (scope.libraryId == null) {
           return;
         }
+
         libraryService.getLibrarySummaryById(scope.libraryId).then(function (lib) {
           scope.curatorName = function () {
             return lib.library.owner.firstName + ' ' + lib.library.owner.lastName;
@@ -58,7 +59,7 @@ angular.module('kifi')
           }
 
           function unfollowLibrary() {
-            libraryService.leaveLibrary(scope.libraryId).then( function () {
+            libraryService.leaveLibrary(scope.libraryId).then(function () {
               lib.membership = 'none';
               lib.numFollowers = lib.numFollowers - 1;
             });
@@ -84,12 +85,8 @@ angular.module('kifi')
           scope.view = function () {
             $location.path(lib.library.url);
           };
-
-
         });
-
       }
-
     };
   }
 ]);
