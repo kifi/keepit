@@ -704,7 +704,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
+          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
         }
         Right(copyKeeps(userId, libraryId, keeps, withSource = Some(KeepSource.tagImport)))
     }
@@ -718,7 +718,7 @@ class LibraryCommander @Inject() (
         Left(LibraryFail("tag_not_found"))
       case Some(tag) =>
         val keeps = db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getByCollection(tag.id.get).map { ktc => keepRepo.get(ktc.keepId) }
+          keepToCollectionRepo.getKeepsForTag(tag.id.get).map { kId => keepRepo.get(kId) }
         }
         Right(moveKeeps(userId, libraryId, keeps))
     }
@@ -777,8 +777,10 @@ class LibraryCommander @Inject() (
               combineTags(k.id.get, existingKeep.id.get)
               Right()
             case Some(existingKeep) =>
-              keepRepo.save(k.copy(state = KeepStates.INACTIVE))
-              combineTags(k.id.get, existingKeep.id.get)
+              if (toLibraryId != k.libraryId.get) {
+                keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+                combineTags(k.id.get, existingKeep.id.get)
+              }
               Left(LibraryError.AlreadyExistsInDest)
           }
         }

@@ -795,7 +795,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
-    "copy/move keeps between libraries from tag" in {
+    "copy keeps between libraries from tag" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
@@ -858,36 +858,121 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
         }
 
-        // unkeep k2
+        // unkeep k1
         db.readWrite { implicit s =>
-          keepRepo.save(k2.copy(state = KeepStates.INACTIVE))
+          keepRepo.save(k1.copy(state = KeepStates.INACTIVE))
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
         }
-        // There should be 4 keeps now with 'tag2' try to copy them into libMurica
+        // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
         val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res2.isRight === true
-        res2.right.get._1.length === 1 // 1 keep reactivated
-        res2.right.get._2.length === 3 // 3 failed keeps
+        res2.right.get._1.length === 1 // 1 reactivated keep
+        res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 4
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
-          keepToCollectionRepo.count === 6
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
+        }
+      }
+    }
+
+    "move keeps between libraries from tag" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val site1 = "http://www.reddit.com/r/murica"
+        val site2 = "http://www.freedom.org/"
+        val site3 = "http://www.mcdonalds.com/"
+
+        val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
+          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          // libMurica has 3 keeps
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag2")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+
+          collectionRepo.count(userCaptain.id.get) === 2
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 4
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
+          (tag1, tag2, libUSA, keep1, keep2, keep3)
         }
 
-        // Test Moving keeps with 'tag2' from libMurica to libUSA
-        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
-        res3.isRight === true
-        res3.right.get._1.length === 3
-        res3.right.get._2.length === 1
+        val libraryCommander = inject[LibraryCommander]
+
+        //move 1 keep to libUSA - libUSA has no keeps
+        val res1 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
+        res1.right.get._1.length === 1 // all successes
+        res1.right.get._2.length === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 4
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+        }
+
+        //move 1 keep to libUSA - libUSA has no keeps
+        val res2 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
+        res2.right.get._1.length === 1 // all successes
+        res2.right.get._2.length === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+        }
+
+        // move duplicate keeps to its own library
+        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
+        res3.right.get._1.length === 0
+        res3.right.get._2.length === 1 // already kept
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+        }
+
+        // move in bulk
+        val res4 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
+        res4.right.get._1.length === 3
+        res4.right.get._2.length === 0
+        db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 3
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 0
-          keepToCollectionRepo.count === 6
-          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
-          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
+        }
+
+        // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
+        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Seq(k2), None)
+
+        val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
+        res5.right.get._1.length === 2
+        res5.right.get._2.length === 2 // already kept
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }

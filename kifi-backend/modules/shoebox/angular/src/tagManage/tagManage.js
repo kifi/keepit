@@ -177,6 +177,9 @@ angular.module('kifi')
             modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
           });
           // todo (aaron): call addToLibraryCount accordingly (make sure source libraries do NOT lose keep counts)
+          libraryService.fetchLibrarySummaries(true).then(function () {
+            $rootScope.$emit('librarySummariesChanged');
+          });
         });
       } else {
         tagActionResult = libraryService.moveKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
@@ -185,6 +188,9 @@ angular.module('kifi')
             modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
           });
           // todo (aaron): call addToLibraryCount accordingly (make sure source libraries lose keep counts)
+          libraryService.fetchLibrarySummaries(true).then(function () {
+            $rootScope.$emit('librarySummariesChanged');
+          });
         });
       }
       tagActionResult['catch'](function () {
