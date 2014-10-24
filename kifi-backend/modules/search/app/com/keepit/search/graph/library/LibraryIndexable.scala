@@ -2,7 +2,7 @@ package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
-import com.keepit.model.{ LibraryVisibility, User, Library, BasicLibrary }
+import com.keepit.model._
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.{ Searcher, LangDetector }
 
@@ -18,6 +18,7 @@ object LibraryFields {
   val recordField = "rec"
 
   val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+  val nameSearchFields = Set(nameField, nameStemmedField)
 
   object Visibility {
     val SECRET = 0
@@ -64,9 +65,13 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     import LibraryFields._
     val doc = super.buildDocument
 
-    val nameLang = LangDetector.detect(library.name)
-    doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
-    doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+    library.kind match {
+      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET => // do not index the name of main/private libraries
+      case LibraryKind.USER_CREATED =>
+        val nameLang = LangDetector.detect(library.name)
+        doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
+        doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+    }
 
     library.description.foreach { description =>
       val descriptionLang = LangDetector.detect(description)

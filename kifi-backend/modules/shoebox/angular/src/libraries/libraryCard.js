@@ -239,23 +239,13 @@ angular.module('kifi')
               pictureName: profileService.me.pictureName
             });
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-              augmentData();
-              adjustFollowerPicsSize();
-            });
+            augmentData();
+            adjustFollowerPicsSize();
           });
         };
 
         scope.unfollowLibrary = function (library) {
-          libraryService.leaveLibrary(library.id).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-
-              // Note: no need to augmentData for unfollowed library.
-              adjustFollowerPicsSize();
-            });
-          });
+          libraryService.leaveLibrary(library.id);
         };
 
         scope.manageLibrary = function () {
@@ -299,9 +289,11 @@ angular.module('kifi')
         });
 
         $rootScope.$on('libraryUpdated', function (e, library) {
-          _.assign(scope.library, library);
-          augmentData();
-          adjustFollowerPicsSize();
+          if (library.id === scope.library.id) {
+            _.assign(scope.library, library);
+            augmentData();
+            adjustFollowerPicsSize();
+          }
         });
 
         // Update how many follower pics are shown when the window is resized.

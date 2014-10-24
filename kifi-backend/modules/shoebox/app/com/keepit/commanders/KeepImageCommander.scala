@@ -26,6 +26,7 @@ import com.keepit.common.core._
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
+import com.keepit.common.akka.SafeFuture
 
 @ImplementedBy(classOf[KeepImageCommanderImpl])
 trait KeepImageCommander {
@@ -61,10 +62,12 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage] = {
-    val keepImages = db.readOnlyReplica { implicit session =>
-      keepImageRepo.getForKeepId(keepId)
+    val allKeepImages = db.readOnlyReplica { implicit session =>
+      keepImageRepo.getAllForKeepId(keepId)
     }
-    KeepImageSize.pickBest(idealSize, keepImages)
+    if (allKeepImages.isEmpty) SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
+    val validKeepImages = allKeepImages.filter(_.state == KeepImageStates.ACTIVE)
+    KeepImageSize.pickBest(idealSize, validKeepImages)
   }
 
   private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](1.minute)
@@ -180,7 +183,7 @@ class KeepImageCommanderImpl @Inject() (
 
   private def runFetcherAndPersist(keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     val existingImagesForKeep = db.readOnlyMaster { implicit session =>
-      keepImageRepo.getForKeepId(keepId)
+      keepImageRepo.getAllForKeepId(keepId)
     }
     if (existingImagesForKeep.nonEmpty && !overwriteExistingImage) {
       Future.successful(ImageProcessState.ExistingStoredImagesFound(existingImagesForKeep))

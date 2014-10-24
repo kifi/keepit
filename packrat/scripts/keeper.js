@@ -282,8 +282,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }, 400, true));
   }
 
-  function stopPropagation(e) {
+  function insulatePageFromEvent(e) {
     e.stopPropagation();
+    if (e.type === 'click' && !e.isDefaultPrevented() && $(e.target).is('a[href^="javascript:"],a[href^="javascript:"] *')) {
+      e.preventDefault();
+    }
   }
 
   function showSlider() {
@@ -299,7 +302,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       })
       .removeClass('kifi-hidden');
-    $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
+    $(tile).on('mousedown click keydown keypress keyup', insulatePageFromEvent);
 
     api.port.emit('keeper_shown', withUrls({}));
   }
@@ -319,7 +322,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       log('[hideSlider]', trigger, 'synchronously');
       hideSlider2();
     }
-    $(tile).off('mousedown click keydown keypress keyup', stopPropagation);
+    $(tile).off('mousedown click keydown keypress keyup', insulatePageFromEvent);
   }
 
   function hideSlider2() {

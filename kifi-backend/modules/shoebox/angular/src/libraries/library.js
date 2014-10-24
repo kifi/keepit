@@ -34,7 +34,6 @@ angular.module('kifi')
       return $scope.library && $scope.library.owner.id === profileService.me.id;
     };
 
-
     //
     // Scope methods.
     //
@@ -89,15 +88,26 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
-
     //
     // Watches and listeners.
     //
-    $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if (libSlug === $scope.librarySlug) {
+    var keepAddedHandler = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+      if ((libSlug === 'secret' && $scope.librarySlug === 'main') || 
+          (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+        var idx = _.findIndex($scope.keeps, { url: keep.url });
+        if (idx > -1) {
+          $scope.keeps.splice(idx, 1);
+        }
+      } else if (libSlug === $scope.librarySlug) {
         $scope.keeps.unshift(keep);
       }
     });
+    $scope.$on('$destroy', keepAddedHandler);
+
+    var currentLibraryHandler = $rootScope.$on('getCurrentLibrary', function (e, args) {
+      args.callback($scope.library);
+    });
+    $scope.$on('$destroy', currentLibraryHandler);
 
     var setTitle = function (lib) {
       $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
@@ -140,7 +150,6 @@ angular.module('kifi')
           var keep = new keepDecoratorService.Keep(rawKeep);
           keep.buildKeep(keep);
           keep.makeKept();
-
           $scope.keeps.push(keep);
         });
 

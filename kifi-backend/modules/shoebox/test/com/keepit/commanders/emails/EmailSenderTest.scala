@@ -373,8 +373,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
-        //println("\n\n\n body: " + email.htmlBody)
+        //        println("\n\n\n body: " + email.htmlBody)
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")

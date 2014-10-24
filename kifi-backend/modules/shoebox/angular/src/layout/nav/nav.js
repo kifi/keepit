@@ -27,7 +27,7 @@ angular.module('kifi')
         scope.secretLib = {};
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
-        scope.sortingMenu = { show : false, option : 'last_kept' };
+        scope.sortingMenu = { show : false, option : '' };
 
         scope.counts = {
           friendsCount: friendService.totalFriends(),
@@ -54,9 +54,9 @@ angular.module('kifi')
           var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
           scope.userLibsToShow = newList[0];
           scope.invitedLibsToShow  = newList[1];
-
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
+
           scope.$broadcast('refreshScroll');
         }
 
@@ -89,6 +89,14 @@ angular.module('kifi')
 
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
 
+        $rootScope.$on('changedLibrarySorting', function() {
+          scope.sortingMenu.option = profileService.prefs.library_sorting_pref;
+          if (!scope.sortingMenu.option) {
+            scope.sortingMenu.option = 'last_kept';
+          }
+          updateNavLibs();
+        });
+
         scope.$watch(function () {
           return friendService.requests.length;
         }, function (value) {
@@ -106,8 +114,11 @@ angular.module('kifi')
         scope.$watch(function () {
             return scope.sortingMenu.option;
           }, function () {
-          scope.changeList();
-          scope.turnDropdownOff();
+          if (scope.sortingMenu.option) {
+            scope.changeList();
+            scope.turnDropdownOff();
+            profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
+          }
         });
 
         // on resizing window -> trigger new turn -> reset library list height

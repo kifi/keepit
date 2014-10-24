@@ -25,7 +25,7 @@ trait ScoreVectorSource {
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource with Logging with DebugOption {
-  private[this] val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
+  protected val weights: ArrayBuffer[(Weight, Float)] = new ArrayBuffer[(Weight, Float)]
 
   protected def preprocess(query: Query): Query = query
 
@@ -276,24 +276,8 @@ class UriFromKeepsScoreVectorSource(
       }
     }
 
-    // load URIs from my own libraries
-    var lastTotal = output.size
-    myOwnLibraryIds.foreachLong { libId => load(libId, Visibility.OWNER) }
-    myOwnLibraryKeepCount += output.size - lastTotal
-
-    // load URIs from libraries I am a member of
-    // memberLibraryIds includes myOwnLibraryIds
-    lastTotal = output.size
-    memberLibraryIds.foreachLong { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
-    memberLibraryKeepCount += output.size - lastTotal
-
-    // load URIs from an authorized library as MEMBER
-    lastTotal = output.size
-    authorizedLibraryIds.foreachLong { libId => if (memberLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
-    authorizedLibraryKeepCount += output.size - lastTotal
-
     // load discoverable URIs from friends' keeps
-    lastTotal = output.size
+    val lastTotal = output.size
     myFriendIds.foreachLong { friendId =>
       val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
       if (td != null) {
