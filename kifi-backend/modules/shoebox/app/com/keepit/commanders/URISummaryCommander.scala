@@ -184,9 +184,9 @@ class URISummaryCommander @Inject() (
       Future.successful(None)
     }
     embedlyResultFut flatMap { embedlyResultOpt =>
-      val shouldFetchFromPagePeeker =
-        (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
-          (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty) // Couldn't find appropriate Embedly image
+      val shouldFetchFromPagePeeker = false // todo(Léo, Andrew): move away from PagePeeker
+      /* (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
+          (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty) // Couldn't find appropriate Embedly image */
       if (shouldFetchFromPagePeeker) {
         fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
           val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
