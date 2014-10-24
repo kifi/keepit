@@ -207,7 +207,7 @@ angular.module('kifi')
         };
 
         scope.alreadyFollowingLibrary = function (library) {
-          return (library.access && (library.access === 'read_only')) || _.some(library.followers, { id: profileService.me.id });
+          return (library.access && (library.access === 'read_only')) || _.some(libraryService.librarySummaries, { id: library.id });
         };
 
         scope.followLibrary = function (library) {
