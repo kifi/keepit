@@ -48,13 +48,13 @@ class NewKeepsInLibraryCommander @Inject() (
 
   private def keptByUser(keep: Keep, userId: Id[User])(implicit session: RSession): Boolean = {
     val kept = keepRepo.getByUriAndUser(keep.uriId, userId).isDefined
-    if (kept) log.info(s"keep ${keep.title.get} was kept by user $userId, filtering out")
+    if (kept) log.info(s"keep uriId=${keep.uriId} was kept by userId=$userId, filtering out")
     kept
   }
 
   private def pornUrl(keep: Keep)(implicit session: RSession): Boolean = {
     val restricted = normalizedUriRepo.get(keep.uriId).restriction.isDefined
-    if (restricted) log.info(s"keep ${keep.title.get} is restricted, filtering out")
+    if (restricted) log.info(s"keep uriId=${keep.uriId} is restricted, filtering out")
     restricted
   }
 
