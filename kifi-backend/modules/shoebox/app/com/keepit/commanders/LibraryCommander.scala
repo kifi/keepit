@@ -83,9 +83,10 @@ class LibraryCommander @Inject() (
       } flatten
       val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
       val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
-
+      val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
       PublicPageMetaTags(title = library.name,
-        url = s"${applicationConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, library.slug)}",
+        url = s"${applicationConfig.applicationBaseUrl}$urlPathOnly",
+        urlPathOnly = urlPathOnly,
         description = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
         images = imageUrls,
         createdAt = library.createdAt,
