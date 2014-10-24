@@ -9,7 +9,20 @@
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
-  <div kf-keeps
+<div ng-if="librariesEnabled"
+    kf-keeps
+    keeps="keeps"
+    keeps-loading="loading"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
+    scroll-distance="scrollDistance"
+    scroll-next="getNextKeeps()"
+    edit-mode="editMode"
+    toggle-edit="toggleEdit"
+    update-selected-count="updateSelectedCount(numSelected)"
+  ></div>
+  <div ng-if="!librariesEnabled"
+    kf-keeps-deprecated
     keeps="keeps"
     keeps-loading="loading"
     keeps-has-more="hasMore"

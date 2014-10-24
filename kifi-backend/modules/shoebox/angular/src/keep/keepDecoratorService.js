@@ -10,19 +10,14 @@ angular.module('kifi')
         var usersWithLibs = {};
         item.myLibraries = [];
         item.libraries.forEach( function (lib) {
-          if (lib[1].id!==profileService.me.id) {
+          lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
+          if (lib[1].id !== profileService.me.id) {
             usersWithLibs[lib[1].id] = true;
-            cleanedLibraries.push({
-              id: lib[0].id,
-              name: lib[0].name,
-              keeperPic: friendService.getPictureUrlForUser(lib[1]),
-              path: lib[0].path
-            });
+            cleanedLibraries.push(lib[0]);
           } else {
             item.myLibraries.push(lib[0]);
           }
         });
-
 
         item.keepers.forEach(function (keeper) {
           if (usersWithLibs[keeper.id]) {
@@ -123,6 +118,26 @@ angular.module('kifi')
         var idx2 = this.collections.indexOf(tagId);
         if (idx2 > -1) {
           this.collections.splice(idx2, 1);
+          return true;
+        } else {
+          return false;
+        }
+      };
+
+      this.hasHashtag = function (hashtag) {
+        return _.contains(this.hashtags, hashtag);
+      };
+
+      this.addHashtag = function (hashtag) {
+        this.hashtags.push(hashtag);
+      };
+
+      this.removeHashtag = function (hashtag) {
+        var idx = _.findIndex(this.hashtags, function (tag) {
+          return tag === hashtag;
+        });
+        if (idx > -1) {
+          this.hashtags.splice(idx, 1);
           return true;
         } else {
           return false;
