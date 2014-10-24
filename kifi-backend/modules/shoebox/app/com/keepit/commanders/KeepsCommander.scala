@@ -240,10 +240,11 @@ class KeepsCommander @Inject() (
     }
   }
 
+  // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
   def getUserKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[KeepData]] = {
     db.readOnlyMaster { implicit session =>
       uriIds.map { uriId =>
-        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep =>
+        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
           val keeperId = keep.userId
           val mine = userId == keeperId
           val libraryId = keep.libraryId.get

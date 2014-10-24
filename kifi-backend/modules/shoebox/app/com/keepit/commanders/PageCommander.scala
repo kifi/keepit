@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
-import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.AugmentableItem
 
 class PageCommander @Inject() (
     db: Database,
@@ -121,14 +121,11 @@ class PageCommander @Inject() (
 
     val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
     nUriOpt.map { normUri =>
-      val item = AugmentableItem(normUri.id.get)
-      val request = ItemAugmentationRequest.uniform(userId, item)
 
       // get all keepers from search (read_only data)
-      val getKeepersFuture = searchClient.augmentation(request).map { response =>
-        val restrictedKeeps = response.infos(item).keeps
+      val getKeepersFuture = searchClient.augment(Some(userId), Int.MaxValue, 0, 0, Seq(AugmentableItem(normUri.id.get))).map { case Seq(info) =>
         db.readOnlyMaster { implicit session =>
-          val userIdSet = restrictedKeeps.map(_.keptBy).flatten.toSet
+          val userIdSet = info.keepers.toSet
           basicUserRepo.loadAll(userIdSet).values.toSeq
         }
       }
