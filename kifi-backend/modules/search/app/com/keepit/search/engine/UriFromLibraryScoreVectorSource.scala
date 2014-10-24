@@ -188,7 +188,6 @@ class UriFromLibraryScoreVectorSource(
       protected val monitoredAwait: MonitoredAwait,
       libraryNameBoost: Float) extends ScoreVectorSourceLike {
 
-
     private[this] lazy val libIdFilter = new IdSetFilter(memberLibraryIds)
 
     override protected def preprocess(query: Query): Query = QueryProjector.project(query, LibraryFields.nameSearchFields) // trim down to name fields

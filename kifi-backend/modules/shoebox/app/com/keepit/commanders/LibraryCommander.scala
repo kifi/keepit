@@ -9,22 +9,24 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.mail.template.tags
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import views.html.admin.images
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -54,8 +56,45 @@ class LibraryCommander @Inject() (
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
+    keepImageCommander: KeepImageCommander,
+    applicationConfig: FortyTwoConfig,
+    uriSummaryCommander: URISummaryCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
+
+  def libraryMetaTags(library: Library): PublicPageMetaTags = {
+    db.readOnlyMaster { implicit s =>
+      val memberCount = library.memberCount
+      val owner = userRepo.get(library.ownerId)
+      val ownerName = owner.fullName
+      val name = library.name
+      val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
+      //facebook OG recommends:
+      //We suggest that you use an image of at least 1200x630 pixels.
+      val imageUrls: Seq[String] = keeps map { keep =>
+        keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize) map { image =>
+          keepImageCommander.getUrl(image)
+        }
+      } flatten
+
+      //should also get owr word2vec
+      val embedlyKeywords: Seq[String] = keeps map { keep =>
+        uriSummaryCommander.getStoredEmbedlyKeywords(keep.uriId).map(_.name)
+      } flatten
+      val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
+      val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
+
+      PublicPageMetaTags(title = library.name,
+        url = s"${applicationConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, owner.externalId, library.slug)}",
+        description = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
+        images = imageUrls,
+        createdAt = library.createdAt,
+        updatedAt = library.updatedAt,
+        tags = allTags,
+        firstName = owner.firstName,
+        lastName = owner.lastName)
+    }
+  }
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
     db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }

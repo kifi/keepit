@@ -61,6 +61,7 @@ class KeepRepoImpl @Inject() (
     val clock: Clock,
     val countCache: KeepCountCache,
     keepUriUserCache: KeepUriUserCache,
+    libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache,
     latestKeepUriCache: LatestKeepUriCache,
     latestKeepUrlCache: LatestKeepUrlCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
@@ -149,7 +150,10 @@ class KeepRepoImpl @Inject() (
   }
 
   override def deleteCache(keep: Keep)(implicit session: RSession): Unit = {
-    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    keep.libraryId foreach { id =>
+      countByLibraryCache.remove(CountByLibraryKey(id))
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
+    }
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
     latestKeepUriCache.remove(LatestKeepUriKey(keep.uriId))
@@ -157,7 +161,10 @@ class KeepRepoImpl @Inject() (
   }
 
   override def invalidateCache(keep: Keep)(implicit session: RSession): Unit = {
-    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    keep.libraryId foreach { id =>
+      countByLibraryCache.remove(CountByLibraryKey(id))
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
+    }
     if (keep.state == KeepStates.INACTIVE) {
       deleteCache(keep)
     } else {

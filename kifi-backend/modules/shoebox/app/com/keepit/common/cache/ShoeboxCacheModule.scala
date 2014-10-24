@@ -281,6 +281,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def libraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryMetadataCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
 
