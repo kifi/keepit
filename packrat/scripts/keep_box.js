@@ -352,9 +352,7 @@ var keepBox = keepBox || (function () {
     });
     $view
     .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
-      var checked = this.checked;
-      this.parentNode.classList.toggle('kifi-checked', checked);
-      $name.toggleClass('kifi-secret', checked);
+      this.parentNode.classList.toggle('kifi-secret');
     });
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
     .on('click', function (e) {
@@ -853,7 +851,7 @@ var keepBox = keepBox || (function () {
 
   function createLibrary($view, $btn) {
     var $name = $view.find('.kifi-keep-box-new-lib-name');
-    var $secret = $view.find('.kifi-keep-box-new-lib-secret');
+    var $vis = $view.find('.kifi-keep-box-new-lib-visibility');
     var name = $name.val().trim();
     if (name) {
       $name.prop('disabled', true);
@@ -861,7 +859,7 @@ var keepBox = keepBox || (function () {
       var deferred = Q.defer();
       api.port.emit('create_library', {
         name: name,
-        visibility: $secret.prop('checked') ? 'secret' : 'published'
+        visibility: $vis.hasClass('kifi-secret') ? 'secret' : 'published'
       }, function (library) {
         if (library) {
           $box.data('libraryCreated', library);
@@ -876,7 +874,7 @@ var keepBox = keepBox || (function () {
           deferred.reject();
         }
       });
-      progress($view.find('.kifi-keep-box-new-lib-visibility'), deferred.promise).done(function (library) {
+      progress($vis, deferred.promise).done(function (library) {
         showKeep(library, true);
       });
     } else {
