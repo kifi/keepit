@@ -471,26 +471,33 @@ var keepBox = keepBox || (function () {
   }
 
   function showKeep(library, justKept) {
+    var images = [];
+    determineInitialImageIdx(images, library, justKept, findImages(images))
+      .done(showKeep2.bind(null, library, justKept, images));
+  }
+
+  function determineInitialImageIdx(images, library, justKept, pageImagePromise) {
+    var keepImageUrl = library.keep.image;
+    if (keepImageUrl) {
+      var img = new Image;
+      img.src = keepImageUrl;
+      images.push(img);
+      return Q(0);
+    } else if (justKept) {
+      return pageImagePromise.then(function (img) {
+        api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
+        return 0;
+      }, function () {
+        return -1;
+      });
+    }
+    return Q(-1);
+  }
+
+  function showKeep2(library, autoClose, images, imageIdx) {
     var keep = library.keep;
     var title = keep.title || formatTitleFromUrl(document.URL);
-    var images = findImages(), canvases = [], imageIdx;
-    if (keep.image) {
-      var img = new Image;
-      img.src = keep.image;
-      images.unshift(img);
-      canvases.unshift(newKeepCanvas(img));
-      imageIdx = 0;
-    } else if (justKept) {
-      if (images.length) {
-        canvases.unshift(newKeepCanvas(images[0]));
-        api.port.emit('save_keep_image', {libraryId: library.id, image: images[0].src});
-      }
-      imageIdx = 0;
-    } else {
-      imageIdx = images.length;
-    }
-
-    var autoClose = justKept;
+    var canvases = imageIdx >= 0 ? [newKeepCanvas(images[imageIdx])] : [];   // TODO: show spinner while this image is loading
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
       title: title,
@@ -531,12 +538,114 @@ var keepBox = keepBox || (function () {
     swipeTo($view);
   }
 
-  function findImages() {
-    return Array.prototype.slice.call(document.getElementsByTagName('img')).filter(isSuitableImage);
+  // Returns a promise the resolves with the first suitable image identified (an IMG element).
+  // Additional images may be appended later.
+  function findImages(images) {
+    var srcs = {};
+    function useImageIfSuitable(img) {
+      var src;
+      if (isSuitableImage(img) && !srcs[(src = img.src)]) {
+        srcs[src] = true;
+        images.push(img);
+        return true;
+      }
+    }
+
+    var deferred = Q.defer();
+    var imgs = document.getElementsByTagName('img');
+    for (var i = 0, n = imgs.length; i < n; i++) {
+      var img = imgs[i];
+      if (useImageIfSuitable(img)) {
+        deferred.resolve(img);
+        break;
+      }
+    }
+    imgs = Array.prototype.slice.call(imgs, i + 1);
+
+    function finishFindingImages() {
+      imgs.forEach(useImageIfSuitable);
+
+      var bgUrls = Array.prototype.reduce.call(document.styleSheets, appendBgImagesInStylesheet, []);
+      var loading = {}, nLoading = 0;
+      bgUrls.forEach(function (url) {
+        if (nLoading < 120 && !loading[url]) {
+          nLoading++, loading[url] = true;
+          var img = new Image;
+          img.onload = onImageLoadEnd;
+          img.onerror = onImageLoadEnd;
+          img.src = url;
+        }
+      });
+
+      function onImageLoadEnd() {
+        var url = this.src;
+        if (loading[url]) {
+          nLoading--, loading[url] = false;
+          var used = useImageIfSuitable(this);
+          if (nLoading === 0 && deferred.promise.isPending() && !used) {
+            deferred.reject();
+          }
+        }
+      }
+    }
+
+    if (deferred.promise.isPending()) {
+      finishFindingImages();
+      setTimeout(function () {
+        if (deferred.promise.isPending()) {
+          deferred.reject();
+        }
+      }, 1200);
+    } else {
+      setTimeout(finishFindingImages);
+    }
+
+    return deferred.promise;
+  }
+
+  function appendBgImagesInStylesheet(arr, ss) {
+    var rules = ss.rules;
+    if (rules && rules.length) {
+      var baseUrl = ss.href;
+      if (!baseUrl || baseUrl.lastIndexOf('http', 0) === 0) {  // no extension resource: stylesheets
+        var resolveUri = resolveUriRelativeToThis.bind(baseUrl || document.baseURI);
+        Array.prototype.reduce.call(rules, appendBgImagesInRule.bind(null, resolveUri), arr);
+      }
+    }
+    return arr;
+  }
+
+  function appendBgImagesInRule(resolveUri, arr, rule) {
+    var s = rule.style, bi = s && s.backgroundImage;
+    if (bi) {
+      var uris = bi.match(/url\(\s*(?:[^"'].*?|".*?"|'.*?')\s*\)/g);
+      if (uris) {
+        uris = uris.map(parseUriFromCssUrl).filter(bgUriLooksInteresting);
+        if (uris.length) {
+          if (rule.selectorText.indexOf('kifi') < 0) {
+            arr.push.apply(arr, uris.map(resolveUri));
+          }
+        }
+      }
+    }
+    return arr;
+  }
+
+  function parseUriFromCssUrl(cssUrl) {  // e.g. 'url( "foo.png" )' -> 'foo.png'
+    return cssUrl.substring(4, cssUrl.length - 1).trim().replace(/(?:^['"]*|['"]*$)/g, '');
+  }
+
+  function bgUriLooksInteresting(uri) {
+    return !/(?:^data:|sprite|icon)/i.test(uri);
+  }
+
+  function resolveUriRelativeToThis(uri) {
+    return new URL(uri, this).href;
   }
 
   function isSuitableImage(img) {
     var nH, nW, src;
+    // log(img.naturalHeight, img.naturalWidth, img.naturalHeight * img.naturalWidth, img.complete, img.src);
     return (
       (nH = img.naturalHeight) >= 64 &&
       (nW = img.naturalWidth) >= 64 &&
@@ -622,7 +731,7 @@ var keepBox = keepBox || (function () {
       data.saving.imageIdx = i;
       api.port.emit('save_keep_image', {
         libraryId: data.library.id,
-        image: i < data.images.length ? getSrc(data.images[i]) : null
+        image: i >= 0 ? getSrc(data.images[i]) : null
       }, function (success) {
         if (data.saving.imageIdx === i) {
           delete data.saving.imageIdx;
@@ -676,7 +785,6 @@ var keepBox = keepBox || (function () {
     var timeout = setTimeout(function update() {
       var left = .9 - frac;
       frac += .06 * left;
-      log('[progress:update]', left, frac);
       $el[0].style.width = Math.min(frac * 100, 100) + '%';
       if (left > .0001) {
         timeout = setTimeout(update, ms);
