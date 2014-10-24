@@ -52,7 +52,7 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
 
     s"""
       |<html itemscope itemtype="http://schema.org/Product">
-      |<title>${title} \u2022 ${firstName} ${lastName} \u2022 Kifi</title>
+      |<title>${title}</title>
       |<meta property="og:description" content="${description}" />
       |<meta property="og:title" content="${title}" />
       |<meta property="og:type" content="blog" />
