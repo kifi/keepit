@@ -89,6 +89,7 @@ angular.module('kifi')
         scope.librariesEnabled = libraryService.isAllowed();
         scope.userLoggedIn = $rootScope.userLoggedIn;
 
+
         //
         // Internal methods.
         //
@@ -220,7 +221,7 @@ angular.module('kifi')
           var res = calcHeightDelta(guess);
           var bestRes = res;
 
-          while(low + i < high && bestRes.score > 20) {
+          while (low + i < high && bestRes.score > 20) {
             res = calcHeightDelta(low + i);
             if (bestRes.score > res.score) {
               bestRes = res;
