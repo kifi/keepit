@@ -50,8 +50,21 @@ angular.module('kifi')
               setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left - el.outerWidth());
               break;
             case 'right':
-              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + 0.5*container.outerWidth());
+              setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + container.outerWidth());
               break;
+            case 'top-right':
+              setCssPos(parentPos.top - el.outerHeight(), parentPos.left + container.outerWidth());
+              break;
+            case 'top-left':
+              setCssPos(parentPos.top - el.outerHeight(), parentPos.left - el.outerWidth());
+              break;
+            case 'bottom-right':
+              setCssPos(parentPos.top + container.outerHeight(), parentPos.left + container.outerWidth());
+              break;
+            case 'bottom-left':
+              setCssPos(parentPos.top + container.outerHeight(), parentPos.left - el.outerWidth());
+              break;
+
           }
         }
 
@@ -59,7 +72,7 @@ angular.module('kifi')
         function ensureCorrectPositioning() {
           var pos = attrs.position;
 
-          var poss = _.filter(['top', 'right', 'bottom', 'left'], function (p) {
+          var poss = _.filter(['top', 'right', 'bottom', 'left', 'top-right', 'top-left', 'bottom-right', 'bottom-left'], function (p) {
             return p!==pos;
           });
           poss.push(pos);
