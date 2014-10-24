@@ -84,7 +84,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 }
 
 case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
-  override val version = 0
+  override val version = 1
   val namespace = "library_metadata_by_id"
   def toKey(): String = id.id.toString
 }
