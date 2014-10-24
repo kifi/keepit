@@ -82,10 +82,10 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta name="twitter:url" content="$url" />
       |<meta name="twitter:app:name:iphone" content="Kifi Iphone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
-      |<meta name="twitter:app:url:iphone" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:iphone" content="kifi:/$urlPathOnly">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
-      |<meta name="twitter:app:url:googleplay" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">
       |$twitterImageTags
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">
