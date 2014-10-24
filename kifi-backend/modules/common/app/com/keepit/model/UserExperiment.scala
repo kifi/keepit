@@ -57,7 +57,6 @@ object ExperimentType {
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SHOW_DISCUSSIONS = ExperimentType("show_discussions")
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
-  val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
   val SPECIAL_CURATOR = ExperimentType("special_curator")
   val LIBRARIES = ExperimentType("libraries")
@@ -66,7 +65,7 @@ object ExperimentType {
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: GRAPH_BASED_PEOPLE_TO_INVITE :: Nil
+    MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: GRAPH_BASED_PEOPLE_TO_INVITE :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

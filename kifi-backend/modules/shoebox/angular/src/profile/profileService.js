@@ -232,6 +232,15 @@ angular.module('kifi')
       });
     }
 
+    function savePrefs(newPrefObject) {
+      if (newPrefObject.length > 0) {
+        return $http.post(routeService.prefs, newPrefObject).then(function (p) {
+          util.replaceObjectInPlace(prefs, p.data);
+          return p.data;
+        });
+      }
+    }
+
     function logout() {
       $window.location = routeService.logout;
     }
@@ -268,6 +277,7 @@ angular.module('kifi')
       logout: logout,
       fetchPrefs: fetchPrefs,
       prefs: prefs,
+      savePrefs: savePrefs,
       setNewName: setNewName,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,

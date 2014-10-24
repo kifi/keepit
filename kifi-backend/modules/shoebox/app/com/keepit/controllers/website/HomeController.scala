@@ -60,6 +60,15 @@ class HomeController @Inject() (
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
+  def home = Action { implicit request =>
+    request match {
+      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
+        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+      case _ =>
+        MarketingSiteRouter.marketingSite()
+    }
+  }
+
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
@@ -68,6 +77,10 @@ class HomeController @Inject() (
     keepsCommander.getKeepsCountFuture() imap { count =>
       Ok(count.toString)
     }
+  }
+
+  def route(path: String) = Action {
+    MarketingSiteRouter.marketingSite(path)
   }
 
   def about = MaybeUserAction { implicit request =>
@@ -161,66 +174,8 @@ class HomeController @Inject() (
     }
   }
 
-  def home = {
-    val htmlAction = MaybeUserAction { implicit request =>
-      request match {
-        case ur: UserRequest[_] => homeAuthed(ur)
-        case _ => homeNotAuthed
-      }
-    }
-    Action.async(htmlAction.parser) { request =>
-      if (request.host.contains("42go")) {
-        Future.successful(MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html"))
-      } else {
-        htmlAction(request)
-      }
-    }
-  }
-
-  private def homeAuthed(implicit request: UserRequest[_]): Result = {
-    val linkWith = request.session.get(AuthController.LinkWithKey)
-    val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent(agent)
-    }
-    if (linkWith.isDefined) {
-      Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
-        .withSession(request.session - AuthController.LinkWithKey)
-    } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
-      Redirect(routes.HomeController.install())
-    } else if (agentOpt.exists(_.screenCanFitWebApp)) {
-      AngularDistAssets.angularApp()
-    } else {
-      Redirect(routes.HomeController.unsupported())
-    }
-  }
-
   def unsupported = Action {
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
-  }
-
-  private def homeNotAuthed(implicit request: MaybeUserRequest[_]): Result = {
-    if (request.identityOpt.isDefined) {
-      // User needs to sign up or (social) finalize
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else {
-      // TODO: Redirect to /login if the path is not /
-      // Non-user landing page
-      temporaryReportLandingLoad()
-      val agent: UserAgent = UserAgent(request)
-      if (!agent.screenCanFitWebApp) {
-        val ua = agent.userAgent
-        val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-        if (isIphone) {
-          iPhoneAppStoreRedirectWithTracking
-        } else {
-          Ok(views.html.marketing.mobileLanding(""))
-        }
-      } else {
-        Ok(views.html.marketing.landing())
-      }
-    }
   }
 
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
@@ -236,8 +191,6 @@ class HomeController @Inject() (
     }
     Ok(res.toString)
   }
-
-  def homeWithParam(id: String) = home
 
   def blog = MaybeUserAction { implicit request =>
     MovedPermanently("http://blog.kifi.com/")

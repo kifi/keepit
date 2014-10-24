@@ -29,7 +29,6 @@ trait ShoeboxScraperClient extends ServiceClient {
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def savePageInfo(pageInfo: PageInfo): Future[Unit]
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo]
   def saveImageInfo(imgInfo: ImageInfo): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
@@ -83,12 +82,6 @@ class ShoeboxScraperClientImpl @Inject() (
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
     call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
-  }
-
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = {
-    call(Shoebox.internal.getImageInfo(id)).map { r =>
-      r.json.as[ImageInfo]
-    }
   }
 
   def saveImageInfo(imgInfo: ImageInfo): Future[Unit] = {

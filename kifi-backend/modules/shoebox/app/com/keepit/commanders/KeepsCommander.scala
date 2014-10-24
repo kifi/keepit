@@ -11,7 +11,6 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URISanitizer
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
@@ -19,13 +18,14 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient }
+import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.BodyParsers.parse
 
 import scala.concurrent.Future
 import akka.actor.Scheduler
@@ -40,6 +40,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.typeahead.{ HashtagTypeahead, HashtagHit, TypeaheadHit }
 import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.store.ImageSize
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -52,7 +53,7 @@ case class KeepInfo(
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(LibraryChip, BasicUser)]] = None,
+  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
   librariesOmitted: Option[Int] = None,
   librariesTotal: Option[Int] = None,
   collections: Option[Set[String]] = None, // deprecated
@@ -70,7 +71,7 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[LibraryChip, BasicUser]
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     Json.writes[KeepInfo]
   }
 
@@ -142,6 +143,12 @@ class KeepsCommander @Inject() (
       Future.sequence(searchClient.indexInfoList()).map { results =>
         var countMap = Map.empty[String, Int]
         results.flatMap(_._2).foreach { info =>
+          /**
+           * todo(eishay): we need to parse the index family.
+           * Name will look like "KeepIndexer_2_4" where the family is "4" and shard id is "2".
+           * If there is more then one family at the same time (i.e. "8" based shareds), we'll have double counting.
+           * We need to get a count of only one family (say count both and pick the largest one).
+           */
           if (info.name.startsWith("KeepIndex")) {
             countMap.get(info.name) match {
               case Some(count) if count >= info.numDocs =>
@@ -233,13 +240,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep]): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
       val items = keeps.map { keep => AugmentableItem(keep.uriId) }
       searchClient.augment(perspectiveUserIdOpt, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items)
     }
     val pageInfosFuture = Future.sequence(keeps.map { keep =>
-      getKeepSummary(keep)
+      getKeepSummary(keep, idealImageSize)
     })
 
     val colls = db.readOnlyMaster { implicit s =>
@@ -249,16 +256,24 @@ class KeepsCommander @Inject() (
     }.map(collectionCommander.getBasicCollections)
 
     for {
-      (augmentationInfos, basicLibraries) <- augmentationFuture
+      augmentationInfos <- augmentationFuture
       pageInfos <- pageInfosFuture
     } yield {
-      val idToBasicUser = db.readOnlyMaster { implicit s =>
+
+      val idToLibrary = {
+        val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+        db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) }
+      }
+
+      val idToBasicUser = {
         val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
         val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
-        val libraryOwners = basicLibraries.map(_.ownerId)
-        basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners)
+        val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
+        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) }
       }
-      val idToLibraryChip = basicLibraries.map { library => library.id -> LibraryChip(library, idToBasicUser(library.ownerId)) }.toMap
+
+      val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+
       val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
         case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
           val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
@@ -274,7 +289,7 @@ class KeepsCommander @Inject() (
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
-            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToLibraryChip(libraryId), idToBasicUser(contributorId)) }),
+            libraries = Some(augmentationInfoForKeep.libraries.map { case (libraryId, contributorId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }),
             librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
             librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
             collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
@@ -291,8 +306,15 @@ class KeepsCommander @Inject() (
     }
   }
 
-  private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
-    uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
+  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
+    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
+    val keepImageUrlOpt = keepImageCommander.getBestImageForKeep(keep.id.get, idealImageSize).map(keepImageCommander.getUrl)
+    futureSummary.map { summary =>
+      keepImageUrlOpt match {
+        case Some(keepImageUrl) => summary.copy(imageUrl = Some(keepImageUrl))
+        case None => summary
+      }
+    }
   }
 
   // Please do not add to this. It mixes concerns and data sources.
@@ -643,6 +665,17 @@ class KeepsCommander @Inject() (
     }
     val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmark, userId, library, source, installationId = kifiInstallationId)
     addToCollection(tag.id.get, bookmarks) // why doesn't this update search?
+  }
+
+  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
+    val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
+      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryCommander.canModifyLibrary(id, userId))
+      keepIds map keepRepo.get partition { keep =>
+        keep.libraryId.exists(canAccess)
+      }
+    }
+    addToCollection(tag.id.get, canEditKeep)
+    (canEditKeep, cantEditKeeps)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {

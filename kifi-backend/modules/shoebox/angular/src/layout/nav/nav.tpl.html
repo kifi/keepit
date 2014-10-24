@@ -120,11 +120,10 @@
                                      'other':' {} followers'}"></ng-pluralize>
               </div>
             </div>
-            <div kf-tooltip position="right" padding="3">
-              <div kf-library-mini-card library-id="library.id"></div>
-            </div>
           </a>
-
+          <div kf-tooltip position="top" padding="3">
+            <div kf-library-mini-card library="library"></div>
+          </div>
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
           <a class="kf-nav-link" ng-href="{{library.url}}">
@@ -137,10 +136,10 @@
               <div class="kf-nav-lib-name">{{library.secondLine}}</div>
               <div class="kf-nav-lib-text">invitation pending</div>
             </div>
-            <div kf-tooltip position="right" padding="3">
-              <div kf-library-mini-card library-id="library.id"></div>
-            </div>
           </a>
+          <div kf-tooltip position="top" padding="3">
+            <div kf-library-mini-card library="library" invite="true"></div>
+          </div>
         </li>
       </ul>
     </div>

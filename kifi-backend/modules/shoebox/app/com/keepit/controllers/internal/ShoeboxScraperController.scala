@@ -223,14 +223,6 @@ class ShoeboxScraperController @Inject() (
     Ok(JsBoolean(res))
   }
 
-  def getImageInfo(id: Id[ImageInfo]) = SafeAsyncAction { request =>
-    val imageInfo = db.readOnlyReplica { implicit ro =>
-      imageInfoRepo.get(id)
-    }
-    log.debug(s"[getImageInfo($id)] result=$imageInfo")
-    Ok(Json.toJson(imageInfo))
-  }
-
   // Todo(Eishay): Stop returning ImageInfo
   def saveImageInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body

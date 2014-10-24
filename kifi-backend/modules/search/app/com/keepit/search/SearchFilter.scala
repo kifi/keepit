@@ -40,7 +40,7 @@ object SearchFilter {
     new SearchFilter(library, context) {
       def includeMine = true
       def includeFriends = true
-      def includeOthers = false
+      def includeOthers = true
     }
   }
 

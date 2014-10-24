@@ -18,7 +18,7 @@ angular.module('kifi')
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
-    $scope.recosState = 'hasRecos';
+    $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
 
     $scope.librariesEnabled = libraryService.isAllowed;

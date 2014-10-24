@@ -53,7 +53,9 @@ case class EmailToSend(
   tips: Seq[EmailTip] = Seq.empty,
   templateOptions: Map[String, ContextData] = Map.empty,
   extraHeaders: Option[Map[String, String]] = None,
-  auxiliaryData: Option[HeimdalContext] = None)
+  auxiliaryData: Option[HeimdalContext] = None,
+  channel: Option[String] = None,
+  source: Option[String] = None)
 
 object EmailToSend {
   import com.keepit.common.mail.ElectronicMail.emailCategoryFormat
@@ -84,7 +86,9 @@ object EmailToSend {
     (__ \ 'tips).format[Seq[EmailTip]] and
     (__ \ 'templateOptions).format[Map[String, ContextData]] and
     (__ \ 'extraHeaders).formatNullable[Map[String, String]] and
-    (__ \ 'auxiliaryData).formatNullable[HeimdalContext]
+    (__ \ 'auxiliaryData).formatNullable[HeimdalContext] and
+    (__ \ 'channel).format[Option[String]] and
+    (__ \ 'source).format[Option[String]]
   )(EmailToSend.apply, unlift(EmailToSend.unapply))
 }
 

@@ -89,7 +89,6 @@ angular.module('kifi')
             submitting = false;
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
               scope.close();
 
               if (!returnAction) {
