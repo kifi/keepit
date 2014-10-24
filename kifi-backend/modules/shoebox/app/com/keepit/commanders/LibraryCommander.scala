@@ -83,7 +83,7 @@ class LibraryCommander @Inject() (
         }
         val urls: Seq[String] = sorted.take(10) map { image =>
           val url = keepImageCommander.getUrl(image)
-          if (url.startsWith("http")) url else s"http:$url"
+          if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
         }
         //last image is the kifi image we want to append to all image lists
         if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
@@ -92,7 +92,7 @@ class LibraryCommander @Inject() (
       val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
       val url = {
         val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
-        if (fullUrl.startsWith("http")) fullUrl else s"http:$fullUrl"
+        if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
       }
       //should also get owr word2vec
       val embedlyKeywords: Seq[String] = keeps map { keep =>
@@ -101,17 +101,17 @@ class LibraryCommander @Inject() (
       val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
       val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
       PublicPageMetaTags(
-        title = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
+        unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
         url = url,
         urlPathOnly = urlPathOnly,
-        description = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
+        unsafeDescription = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
         images = imageUrls,
         facebookId = facebookId,
         createdAt = library.createdAt,
         updatedAt = library.updatedAt,
-        tags = allTags,
-        firstName = owner.firstName,
-        lastName = owner.lastName)
+        unsafeTags = allTags,
+        unsafeFirstName = owner.firstName,
+        unsafeLastName = owner.lastName)
     }
   }
 
