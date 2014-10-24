@@ -28,8 +28,16 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, tags: Seq[String], firstName: String, lastName: String) {
+case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) {
+
+  def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
+
+  val title = clean(unsafeTitle)
+  val description = clean(unsafeDescription)
+  val tags = unsafeTags.distinct.filter(_.length > 1).take(100).map(clean)
+  val firstName = clean(unsafeFirstName)
+  val lastName = clean(unsafeLastName)
 
   def tagList = tags.mkString(",")
 
@@ -66,9 +74,9 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta property="og:url" content="$url" />
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
-      |<meta property="fb:first_name" content="${firstName}" />
-      |<meta property="fb:last_name" content="${lastName}" />
-      |<meta property="fb:tag" content="$tagList" />
+      |<meta property="og:first_name" content="${firstName}" />
+      |<meta property="og:last_name" content="${lastName}" />
+      |<meta property="og:tag" content="$tagList" />
       |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310" />
       |<meta name="description" content="$description">
       |<meta name="keywords" content="$tagList">
