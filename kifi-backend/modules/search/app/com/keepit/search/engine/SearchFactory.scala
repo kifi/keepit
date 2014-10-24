@@ -82,6 +82,8 @@ class SearchFactory @Inject() (
           case _ =>
         }
 
+        val librarySearcher = libraryIndexer.getSearcher
+
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
@@ -97,6 +99,7 @@ class SearchFactory @Inject() (
             engBuilder,
             articleSearcher,
             keepSearcher,
+            librarySearcher,
             friendIdsFuture,
             libraryIdsFuture,
             clickBoostsFuture,
