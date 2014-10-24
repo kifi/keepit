@@ -371,14 +371,6 @@ class AuthController @Inject() (
   }
 
   private def doSignupPage(implicit request: MaybeUserRequest[_]): Result = {
-    def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
-      identity.email.flatMap { addr =>
-        db.readOnlyMaster { implicit s =>
-          emailAddressRepo.getByAddressOpt(EmailAddress(addr))
-        }
-      }.isDefined
-    }
-
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent(agent)
     }
@@ -412,7 +404,7 @@ class AuthController @Inject() (
         case request: NonUserRequest[_] =>
           if (request.identityOpt.isDefined) {
             val identity = request.identityOpt.get
-            if (emailAddressMatchesSomeKifiUser(identity)) {
+            if (identity.email.exists(e => authHelper.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
                 emailAddress = identity.email.get,
