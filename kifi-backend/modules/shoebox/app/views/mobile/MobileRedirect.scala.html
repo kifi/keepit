@@ -32,7 +32,12 @@ if (IS_IOS) {
     }, 25);
 
 } else if (IS_ANDROID) {
-    window.location = 'intent://@url#Intent;package=com.kifi;scheme=kifi;launchFlags=268435456;end;';
+    //drop slash if exist
+    var cleanUrl = '@url';
+    while (cleanUrl.charAt(0) == "/") {
+      cleanUrl = cleanUrl.substring(1);
+    }
+    window.location = 'intent://' + cleanUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
 }
 </script>
 </body>

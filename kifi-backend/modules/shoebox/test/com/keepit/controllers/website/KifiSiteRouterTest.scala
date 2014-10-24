@@ -89,7 +89,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         contentType(result) must beSome("text/html");
         val resString = contentAsString(result)
         resString.contains("window.location = 'kifi:/some/path?kma=1';") === true
-        resString.contains("intent:///some/path?kma=1#Intent;package=com.kifi;scheme=kifi;launchFlags=268435456;end;") === true
+        resString.contains("var cleanUrl = '/some/path?kma=1") === true
       }
     }
 
