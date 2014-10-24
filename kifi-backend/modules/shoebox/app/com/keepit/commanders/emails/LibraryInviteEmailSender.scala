@@ -42,14 +42,18 @@ class LibraryInviteEmailSender @Inject() (
 
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
+      val passPhrase = toUserRecipient match {
+        case Right(userId) => None
+        case Left(email) => Some(invite.passPhrase)
+      }
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
         to = toUserRecipient,
         category = NotificationCategory.User.LIBRARY_INVITATION,
-        htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase),
-        textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase)),
+        htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase),
+        textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase)),
         templateOptions = Seq(CustomLayout).toMap,
         campaign = Some("na"),
         channel = Some("vf_email"),

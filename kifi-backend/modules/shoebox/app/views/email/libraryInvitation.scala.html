@@ -2,7 +2,7 @@
   inviterId: Id[User],
   inviteMsg: Option[String],
   libraryInfo: com.keepit.commanders.LibraryInfo,
-  passPhrase: String)
+  passPhrase: Option[String])
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?", "followLibraryButton", true)}
@@ -218,8 +218,11 @@
               <tr>
                 <td style="font-family:'HelveticaNeueLT Std Roman', Helvetica, Arial, sans-serif;font-size:16px;color:#333333;line-height:20px;">
                   @libraryInfo.shortDescription.getOrElse("")
-                  <br/><br/>
-                  You may need to enter the following passphrase to view library: @passPhrase
+                  <br/>
+                  <br/>
+                  @{passPhrase map { prase =>
+                      "You may need to enter the following passphrase to view library: @passPhrase"
+                  }}
                 </td>
               </tr>
               @email.tags.trSpacer(18)
