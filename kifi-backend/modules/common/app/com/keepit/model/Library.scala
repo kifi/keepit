@@ -131,10 +131,8 @@ object LibraryVisibility {
 sealed abstract class LibraryKind(val value: String)
 
 object LibraryKind {
-  trait SystemGenerated extends LibraryKind
-
-  case object SYSTEM_MAIN extends LibraryKind("system_main") with SystemGenerated
-  case object SYSTEM_SECRET extends LibraryKind("system_secret") with SystemGenerated
+  case object SYSTEM_MAIN extends LibraryKind("system_main")
+  case object SYSTEM_SECRET extends LibraryKind("system_secret")
   case object USER_CREATED extends LibraryKind("user_created")
 
   implicit def format[T]: Format[LibraryKind] =
