@@ -337,5 +337,76 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "query & dedup contacts" in {
+      withDb(modules: _*) { implicit injector =>
+        val userInteractionCommander = inject[UserInteractionCommander]
+        val (u1, u2, u3, u4, u5) = db.readWrite { implicit session =>
+          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("test"), normalizedUsername = "test"))
+          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star", username = Username("test"), normalizedUsername = "test"))
+          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles", username = Username("test"), normalizedUsername = "test"))
+          val u4 = EmailAddress("squirrelsandy@texas.gov")
+          val u5 = EmailAddress("mrkrabs@krusty.com")
+
+          userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
+          userConnRepo.addConnections(u1.id.get, Set(u3.id.get))
+
+          (u1, u2, u3, u4, u5)
+        }
+
+        val interactions = Seq(
+          (UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (EmailRecipient(u4), UserInteraction.INVITE_LIBRARY),
+          (EmailRecipient(u5), UserInteraction.INVITE_LIBRARY))
+        userInteractionCommander.addInteractions(u1.id.get, interactions)
+
+        val contacts = Seq(
+          TypeaheadHit[RichContact](0, "陳家洛", 0, RichContact(EmailAddress("chan@jing.com"), Some("陳家洛 電郵"))),
+          TypeaheadHit[RichContact](0, "陳生", 0, RichContact(EmailAddress("chan@jing.com"), Some("陳生 電郵"))), // dup email
+          TypeaheadHit[RichContact](0, "郭靖", 0, RichContact(email = EmailAddress("kwok@jing.com"), name = Some("郭靖 電郵"))),
+          TypeaheadHit[RichContact](0, "郭生", 0, RichContact(email = EmailAddress("kwok@jing.com"), name = Some("郭生 電郵"))) // dup email
+        )
+        val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+        abookClient.addTypeaheadHits(u1.id.get, contacts)
+
+        inject[FakeUserActionsHelper].setUser(u1)
+
+        @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
+          val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
+          val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
+            (j \ "id").asOpt[ExternalId[User]] match {
+              case Some(id) => j.as[UserContactResult]
+              case None => j.as[EmailContactResult]
+            }
+          }
+          js
+        }
+
+        def parseRes(contacts: Seq[ContactSearchResult]) = {
+          contacts.collect {
+            case u: UserContactResult => u.name
+            case e: EmailContactResult => e.email.address
+          }
+        }
+
+        val res0 = search("") // (no query) should get all contacts in Recent_Interactions
+        res0.length === 4
+
+        val res1 = search("chan") // chan@jing.com (deduped)
+        res1.length === 1
+        parseRes(res1) === Seq("chan@jing.com")
+
+        val res2 = search("kwok") // deduped
+        res2.length === 1
+        parseRes(res2) === Seq("kwok@jing.com")
+
+        val res3 = search("squid")
+        res3.length === 1
+        parseRes(res3) === Seq("Squidward Tentacles")
+
+      }
+    }
+
   }
 }
