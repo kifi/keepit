@@ -8,7 +8,7 @@
 api.port.emit('prefs', function (prefs) {
   if (prefs.showExtMsgIntro && document.hasFocus()) {
     var handlers = {
-      hide_external_messaging_intro: hide.bind(null, null)
+      hide_ext_msg_intro: hide.bind(null, null)
     };
     var $intro = $(render('html/keeper/tile_tooltip', {
       header: 'Email this page to anyone',
@@ -27,7 +27,7 @@ api.port.emit('prefs', function (prefs) {
     api.port.on(handlers);
     api.onEnd.push(hide);
     window.hideKeeperCallout = hide;
-    api.port.emit('track_showing_external_messaging_intro');
+    api.port.emit('track_ftue', 'e');
   }
 
   function onClickX(e) {
@@ -56,7 +56,7 @@ api.port.emit('prefs', function (prefs) {
       if (e) {
         e.preventDefault();
       }
-      api.port.emit('stop_showing_external_messaging_intro', action);
+      api.port.emit('terminate_ftue', {type: 'e', action: action});
     }
   }
 });

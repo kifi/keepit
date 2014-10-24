@@ -763,26 +763,30 @@ api.port.on({
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
-  stop_showing_external_messaging_intro: function(action) {
-    ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
+  terminate_ftue: function (data) {
+    var prefName = {e: 'showExtMsgIntro'}[data.type];
+    if (!prefName) return;
+    ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, 'hide_external_messaging_intro');
+      api.tabs.emit(tab, {e: 'hide_ext_msg_intro'}[data.type]);
     });
-    if (prefs) prefs.showExtMsgIntro = false;
+    (prefs || {})[prefName] = false;
     tracker.track('user_was_notified', {
       action: 'click',
-      subaction: action,
+      subaction: data.action,
       channel: 'kifi',
       subchannel: 'tooltip',
-      category: 'extMsgFTUE'
+      category: {e: 'extMsgFTUE'}[data.type]
     });
   },
-  track_showing_external_messaging_intro: function() {
+  track_ftue: function (type) {
+    var category = {e: 'extMsgFTUE'}[type];
+    if (!category) return;
     tracker.track('user_was_notified', {
       action: 'open',
       channel: 'kifi',
       subchannel: 'tooltip',
-      category: 'extMsgFTUE'
+      category: category
     });
   },
   log_search_event: function(data) {
