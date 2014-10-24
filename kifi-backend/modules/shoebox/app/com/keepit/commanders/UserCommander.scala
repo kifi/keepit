@@ -493,12 +493,10 @@ class UserCommander @Inject() (
   def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]) = {
     db.readWrite(attempts = 3) { implicit s =>
       o.map {
-        case (name, value) =>
-          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
-            userValueRepo.clearValue(userId, name)
-          } else {
-            userValueRepo.setValue(userId, name, value.toString)
-          }
+        case (name, JsNull) => userValueRepo.clearValue(userId, name)
+        case (name, _: JsUndefined) => userValueRepo.clearValue(userId, name)
+        case (name, JsString(value)) => userValueRepo.setValue(userId, name, value)
+        case (name, value) => userValueRepo.setValue(userId, name, value.toString)
       }
     }
   }

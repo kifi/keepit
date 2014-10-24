@@ -55,12 +55,28 @@ angular.module('kifi')
         return route('/keeps/' + keepId);
       },
       removeKeeps: route('/keeps/remove'),
+
+      ////////////////////////////
+      // Tags                   //
+      ////////////////////////////
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
       pageTags: route('/collections/page'),
+      
       searchTags: function (query, limit) {
         return route('/collections/search') + '?query=' + query + '&limit=' + limit;
       },
+      
+      suggestTags: function (libraryId, keepId, query) {
+        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + query;
+      },
+      tagKeep: function (libraryId, keepId, tag) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+      },
+      untagKeep: function (libraryId, keepId, tag) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+      },
+
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {

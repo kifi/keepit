@@ -145,6 +145,7 @@ angular.module('kifi')
             return lib.access !== 'read_only';
           });
           scope.librarySelection = {};
+          scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
           scope.libSelectTopOffset = 110;
         }
 

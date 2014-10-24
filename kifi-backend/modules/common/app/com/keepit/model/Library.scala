@@ -161,20 +161,14 @@ object LibraryView {
   implicit val format = Json.format[LibraryView]
 }
 
-case class BasicLibrary(id: Id[Library], ownerId: Id[User], name: String, description: Option[String], slug: LibrarySlug, isSecret: Boolean)
+case class BasicLibrary(id: PublicId[Library], name: String, path: String, secret: Boolean)
 
 object BasicLibrary {
-  implicit val format = Json.format[BasicLibrary]
-}
-
-case class LibraryChip(id: PublicId[Library], name: String, path: String, secret: Boolean)
-
-object LibraryChip {
-  implicit val writes = Writes[LibraryChip] { libraryChip =>
-    Json.obj("id" -> libraryChip.id, "name" -> libraryChip.name, "path" -> libraryChip.path, "secret" -> libraryChip.secret)
+  implicit val writes = Writes[BasicLibrary] { library =>
+    Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.secret)
   }
-  def apply(library: BasicLibrary, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): LibraryChip = {
+  def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    LibraryChip(Library.publicId(library.id), library.name, path, library.isSecret)
+    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility == LibraryVisibility.SECRET)
   }
 }

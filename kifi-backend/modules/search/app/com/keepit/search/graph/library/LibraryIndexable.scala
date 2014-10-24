@@ -43,10 +43,6 @@ object LibraryIndexable {
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
-
-  def getBasicLibrary(librarySearcher: Searcher, libraryId: Id[Library]): Option[BasicLibrary] = {
-    getRecord(librarySearcher, libraryId).map { record => BasicLibrary(record.id, record.owner, record.name, record.description, record.slug, isSecret(librarySearcher, libraryId)) }
-  }
 }
 
 class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]) extends Indexable[Library, Library] {

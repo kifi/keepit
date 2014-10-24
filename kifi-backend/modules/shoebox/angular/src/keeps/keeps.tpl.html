@@ -28,7 +28,7 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
     <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
-      keep="keep" me="me" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
+      keep="keep" me="me" libraries="libraries" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
     <div class="kf-shadow-dragged-keeps" ng-class="{ two: draggedTwo(), three: draggedThree(), more: draggedMore() }">
       <span class="kf-shadow-keep-first" ng-show="data.draggedKeeps.length >= 1">
         <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[0])" keep="data.draggedKeeps[0]" edit-mode="editMode"></div>

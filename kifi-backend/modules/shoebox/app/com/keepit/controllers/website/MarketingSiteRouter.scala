@@ -9,7 +9,7 @@ import play.api.Play.current
 import play.api.mvc.{ Action, Controller }
 import play.api.{ Mode, Play }
 
-object MarketingAssets extends AssetsBuilder with Controller with Logging {
+object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
 
   private def fileLoad(path: String): Option[String] = {
     Play.resourceAsStream(s"/k/$path.html").map { stream =>
@@ -34,7 +34,7 @@ object MarketingAssets extends AssetsBuilder with Controller with Logging {
     }
   }
 
-  def marketingSite(path: String) = Action { request =>
+  def marketingSite(path: String = "index") = {
     val file = if (path.isEmpty) "index" else path
     if (file.contains(".html")) {
       NotFound(views.html.error.notFound(s"request.path (try to remove the .html)"))
@@ -42,7 +42,7 @@ object MarketingAssets extends AssetsBuilder with Controller with Logging {
       maybeCachedIndex(file) map { content =>
         Ok(content).as(HTML)
       } getOrElse {
-        NotFound(views.html.error.notFound(request.path))
+        NotFound(views.html.error.notFound(path))
       }
     }
   }

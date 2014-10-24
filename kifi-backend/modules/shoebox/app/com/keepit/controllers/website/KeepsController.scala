@@ -10,7 +10,7 @@ import com.keepit.commanders.RawBookmarksWithCollection._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, UserRequest, ShoeboxServiceController }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
@@ -257,6 +257,15 @@ class KeepsController @Inject() (
     } getOrElse {
       BadRequest(Json.obj("error" -> "Could not parse JSON keep selection from request body"))
     }
+  }
+
+  def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
+    val keepIds = (request.body \ "keepIds").as[Seq[ExternalId[Keep]]]
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    val tag = keepsCommander.getOrCreateTag(request.userId, tagName)
+    val (canEditKeep, cantEditKeeps) = keepsCommander.tagKeeps(tag, request.userId, keepIds)
+    Ok(Json.obj("success" -> canEditKeep.map(_.externalId),
+      "failure" -> cantEditKeeps.map(_.externalId)))
   }
 
   def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))

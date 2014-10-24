@@ -18,7 +18,7 @@ angular.module('kifi')
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
-    $scope.recosState = 'hasRecos';
+    $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
 
     $scope.librariesEnabled = libraryService.isAllowed;
@@ -151,10 +151,17 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'modalService', 'recoActionService',
-  function ($scope, modalService, recoActionService) {
+  '$scope', 'modalService', 'recoActionService', 'libraryService',
+  function ($scope, modalService, recoActionService, libraryService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
+
+    $scope.librariesEnabled = libraryService.isAllowed();
+    if ($scope.librariesEnabled) {
+      $scope.libraries = libraryService.fetchLibrarySummaries(false);
+    } else {
+      $scope.libraries = [];
+    }
 
     $scope.hasReason = function () {
       return $scope.reco.recoData.reasons &&

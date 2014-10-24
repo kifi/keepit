@@ -75,7 +75,7 @@ class WebsiteSearchController @Inject() (
     searchCommander.search2(userId, acceptLangs, experiments, query, filter, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { kifiPlainResult =>
 
       val futureWebsiteSearchHits = if (kifiPlainResult.hits.isEmpty) {
-        Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[LibraryChip]))
+        Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
       } else {
 
         val futureUriSummaries = {
@@ -87,10 +87,10 @@ class WebsiteSearchController @Inject() (
         augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
           case (allSecondaryFields, userIds, libraryIds) => {
 
-            val librariesById = getBasicLibraries(librarySearcher, libraryIds.toSet)
+            val libraryRecordsWithSecrecyById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
 
             val futureUsers = {
-              val libraryOwnerIds = librariesById.values.map(_.ownerId)
+              val libraryOwnerIds = libraryRecordsWithSecrecyById.values.map(_._1.ownerId)
               shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
             }
 
@@ -112,9 +112,9 @@ class WebsiteSearchController @Inject() (
               jsHits <- futureJsHits
             } yield {
               val libraries = libraryIds.map { libId =>
-                val library = librariesById(libId)
+                val (library, secret) = libraryRecordsWithSecrecyById(libId)
                 val owner = usersById(library.ownerId)
-                LibraryChip(library, owner)
+                makeBasicLibrary(library, owner, secret)
               }
               val users = userIds.map(usersById(_))
               (jsHits, users, libraries)

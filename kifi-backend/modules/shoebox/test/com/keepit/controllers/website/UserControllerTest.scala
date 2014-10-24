@@ -56,7 +56,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           user
         }
 
-        val path = com.keepit.controllers.website.routes.UserController.currentUser().toString
+        val path = routes.UserController.currentUser().url
         path === "/site/user/me"
 
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
@@ -95,7 +95,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
-        val path = com.keepit.controllers.website.routes.UserController.updateUsername().url
+        val path = routes.UserController.updateUsername().url
         path === "/site/user/me/username"
 
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
@@ -118,8 +118,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
         }
         val userController = inject[UserController]
-        val pathName = com.keepit.controllers.website.routes.UserController.updateName().url
-        val pathDescription = com.keepit.controllers.website.routes.UserController.updateDescription().url
+        val pathName = routes.UserController.updateName().url
+        val pathDescription = routes.UserController.updateDescription().url
         pathName === "/site/user/me/name"
         pathDescription === "/site/user/me/description"
 
@@ -153,6 +153,55 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "update user preferences" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
+        }
+
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        val userController = inject[UserController]
+        val path = routes.UserController.savePrefs().url
+
+        val inputJson1 = Json.obj(
+          "library_sorting_pref" -> "name",
+          "onboarding_seen" -> true
+        )
+        val request1 = FakeRequest("POST", path).withBody(inputJson1)
+        val result1: Future[Result] = userController.savePrefs()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
+          s"""
+             |{
+             |  "library_sorting_pref": "name",
+             |  "onboarding_seen": true
+             |}
+           """.stripMargin
+        ))
+
+        db.readOnlyMaster { implicit s =>
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.LIBRARY_SORTING_PREF) === Some("name")
+        }
+
+        val request2 = FakeRequest("GET", path)
+        val result2: Future[Result] = userController.getPrefs()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+             |{
+             |  "site_welcomed":null,
+             |  "library_sorting_pref":"name",
+             |  "site_left_col_width":null,
+             |  "show_delighted_question":false,
+             |  "onboarding_seen":true
+             |}
+           """.stripMargin
+        ))
+      }
+    }
+
     "handling emails" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
@@ -160,7 +209,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         }
         val userController = inject[UserController]
         val userValueRepo = inject[UserValueRepo]
-        val path = com.keepit.controllers.website.routes.UserController.addEmail().url
+        val path = routes.UserController.addEmail().url
         path === "/site/user/me/email"
 
         val address1 = "vampireXslayer@gmail.com"

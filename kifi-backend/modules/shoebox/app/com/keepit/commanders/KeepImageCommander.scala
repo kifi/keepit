@@ -180,7 +180,7 @@ class KeepImageCommanderImpl @Inject() (
 
   private def runFetcherAndPersist(keepId: Id[Keep], source: KeepImageSource, overwriteExistingImage: Boolean)(fetcher: => Future[Either[KeepImageStoreFailure, ImageProcessState.ImageLoadedAndHashed]])(implicit requestId: Option[Id[KeepImageRequest]]): Future[ImageProcessDone] = {
     val existingImagesForKeep = db.readOnlyMaster { implicit session =>
-      keepImageRepo.getForKeepId(keepId)
+      keepImageRepo.getAllForKeepId(keepId)
     }
     if (existingImagesForKeep.nonEmpty && !overwriteExistingImage) {
       Future.successful(ImageProcessState.ExistingStoredImagesFound(existingImagesForKeep))

@@ -60,6 +60,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.from === SystemEmailAddress.INVITATION
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
         email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
+
+        val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true)
       }
     }
   }
@@ -370,7 +373,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?kma=1") === true
+        //        println("\n\n\n body: " + email.htmlBody)
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
@@ -390,6 +397,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.subject === "Tom Brady invited you to follow Football!"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         val html = email.htmlBody.value
         testHtml(html)
         html must contain(invite.passPhrase)

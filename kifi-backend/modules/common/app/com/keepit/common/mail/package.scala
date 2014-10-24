@@ -31,7 +31,8 @@ package object template {
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
     val campaign = TagLabel("campaign")
-    val parentCategory = TagLabel("parentCategory")
+    val channel = TagLabel("channel")
+    val source = TagLabel("source")
     val title = TagLabel("title")
     val baseUrl = TagLabel("baseUrl")
     val trackingParam = TagLabel("trackingParam")
@@ -76,8 +77,11 @@ package object template {
     val campaign = Tag0(tags.campaign).toHtml
     private val campaignTagStr = campaign.body
 
-    val parentCategory = Tag0(tags.parentCategory).toHtml
-    private val parentCategoryTagStr = parentCategory.body
+    val channel = Tag0(tags.channel).toHtml
+    private val channelTagStr = channel.body
+
+    val source = Tag0(tags.source).toHtml
+    private val sourceTagStr = source.body
 
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
@@ -103,12 +107,11 @@ package object template {
       Html(appendTrackingParams(url = url, content = content, openInAppIfMobile = openInAppIfMobile))
 
     // url param must end with a ? or &
-    private def appendTrackingParams(url: String, content: String, campaign: String = campaignTagStr,
-      medium: String = "email", source: String = parentCategoryTagStr, openInAppIfMobile: Boolean): String = {
+    private def appendTrackingParams(url: String, content: String, openInAppIfMobile: Boolean): String = {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
-      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content" +
+      s"${url}utm_source=$sourceTagStr&utm_medium=$channelTagStr&utm_campaign=$campaignTagStr&utm_content=$content" +
         s"&${EmailTrackingParam.paramName}=${trackingParam(content)}&$openInAppIfMobileDirective"
     }
 
