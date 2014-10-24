@@ -61,7 +61,7 @@ angular.module('kifi')
         };
 
         scope.getLibrariesText = function () {
-          var num = keep.librariesTotal;
+          var num = keep.librariesTotal || keep.libraries.length;
           var text = (num === 1) ? '1 library' : num + ' libraries';
           return text;
         };
