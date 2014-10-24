@@ -50,10 +50,9 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
        """.stripMargin
     } mkString ("\n")
 
-    def twitterImageTags = images.take(4).zipWithIndex map {
-      case (image, i) =>
-        s"""
-        |<meta name="twitter:image$i" content="$image">
+    def twitterImageTags = images.headOption map { image =>
+      s"""
+        |<meta name="twitter:image:src" content="$image">
        """.stripMargin
     } mkString ("\n")
 
@@ -82,7 +81,7 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
       |<link rel="canonical" href="$url" />
-      |<meta name="twitter:card" content="gallery" />
+      |<meta name="twitter:card" content="summary_large_image" />
       |<meta name="twitter:site" content="@kifi" />
       |<meta name="twitter:creator" content="@kifi" />
       |<meta name="twitter:title" content="${title}">
@@ -90,10 +89,10 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       |<meta name="twitter:url" content="$url" />
       |<meta name="twitter:app:name:iphone" content="Kifi Iphone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
-      |<meta name="twitter:app:url:iphone" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:iphone" content="kifi:/$urlPathOnly">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
-      |<meta name="twitter:app:url:googleplay" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">
       |$twitterImageTags
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">
