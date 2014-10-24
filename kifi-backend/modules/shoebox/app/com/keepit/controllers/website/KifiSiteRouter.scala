@@ -1,6 +1,10 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
+import com.keepit.commanders.LibraryCommander
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.DBSession.RSession
@@ -17,9 +21,11 @@ import java.net.{ URLEncoder, URLDecoder }
 import scala.concurrent.Future
 
 sealed trait Routeable
-trait AngularRoute extends Routeable
-private case class AngularLoggedIn(preload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends AngularRoute
-private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
+trait AngularRoute extends Routeable {
+  def headerload: Option[String]
+}
+private case class AngularLoggedIn(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends AngularRoute
+private case class Angular(headerload: Option[String], postload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class RedirectRoute(url: String) extends Routeable
 private case object Error404 extends Routeable
 
@@ -71,15 +77,15 @@ class KifiSiteRouter @Inject() (
           NotFound(views.html.error.notFound(request.path))
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
-          AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
+          AngularDistAssets.angularApp(ng.headerload, ng.postload.map(s => s(r)))
         case (r: MaybeUserRequest[T], route: RedirectRoute) =>
           Redirect(route.url)
         case (r: NonUserRequest[T], _) if r.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
         case (r: MaybeUserRequest[T], ng: AngularRoute) =>
-          // routing to ng page
-          AngularDistAssets.angularApp()
+          // routing to ng page - could be public pages like public library, user profile and other shared routes with private views
+          AngularDistAssets.angularApp(ng.headerload)
       }
     }
   }
@@ -116,7 +122,12 @@ class KifiSiteRouter @Inject() (
 }
 
 @Singleton
-class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
+class AngularRouter @Inject() (
+    userRepo: UserRepo,
+    libraryCommander: LibraryCommander,
+    airbreak: AirbrakeNotifier,
+    libraryRepo: LibraryRepo,
+    libraryMetadataCache: LibraryMetadataCache) {
 
   def route(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
     ngStaticPage(request, path) orElse userOrLibrary(request, path)
@@ -153,19 +164,26 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
           val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
           Some(RedirectRoute(redir))
         } else if (path.split.length == 1) { // user profile page
-          Some(Angular()) // great place to preload request data since we have `user` available
+          Some(Angular(None)) // great place to postload request data since we have `user` available
         } else {
-          val libOpt = libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get))
-          if (libOpt.isDefined) {
-            Some(Angular()) // great place to preload request data since we have `lib` available
-          } else {
-            None
-          }
+          libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get)) map { lib =>
+            Some(Angular(Some(libMetadata(lib)))) // great place to postload request data since we have `lib` available
+          } getOrElse None
         }
       }
     } else {
       None
     }
+  }
+
+  private def libMetadata(library: Library): String = try {
+    libraryMetadataCache.getOrElse(LibraryMetadataKey(library.id.get)) {
+      libraryCommander.libraryMetaTags(library).formatOpenGraph
+    }
+  } catch {
+    case e: Throwable =>
+      airbreak.notify(s"on getting library metadata for $library", e)
+      ""
   }
 
   // Some means to serve Angular. The Seq is possible injected data to include
@@ -174,7 +192,7 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     request match {
       case u: UserRequest[_] =>
         (ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary)).map { dataLoader =>
-          AngularLoggedIn(dataLoader)
+          AngularLoggedIn(None, dataLoader)
         }
       case n: NonUserRequest[_] => None
     }

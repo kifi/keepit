@@ -83,6 +83,15 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
 
+case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
+  override val version = 0
+  val namespace = "library_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
   override val version = 3
   val namespace = "library_by_id"

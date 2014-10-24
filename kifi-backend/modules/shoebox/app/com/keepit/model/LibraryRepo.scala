@@ -31,6 +31,7 @@ class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
+  val libraryMetadataCache: LibraryMetadataCache,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -69,12 +70,14 @@ class LibraryRepoImpl @Inject() (
 
   override def deleteCache(library: Library)(implicit session: RSession): Unit = {
     library.id.map { id =>
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
       idCache.remove(LibraryIdKey(id))
     }
   }
 
   override def invalidateCache(library: Library)(implicit session: RSession): Unit = {
     library.id.map { id =>
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
       if (library.state == LibraryStates.INACTIVE) {
         deleteCache(library)
       } else {
