@@ -342,7 +342,7 @@ var keepBox = keepBox || (function () {
   function addCreateLibraryBindings($view) {
     var $name = $view
     .on('keydown', function (e) {
-      if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
+      if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) { // enter, numpad enter
         createLibrary($view, $submit);
         e.preventDefault();
       } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
@@ -352,7 +352,17 @@ var keepBox = keepBox || (function () {
     });
     $view
     .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
+      $(this).on('transitionend', function end() {
+        $(this).off('transitionend', end).removeClass('kifi-transition');
+      }).addClass('kifi-transition');
       this.parentNode.classList.toggle('kifi-secret');
+      e.preventDefault();
+    })
+    .on('keydown', '.kifi-keep-box-new-lib-secret', function (e) {
+      if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
+        $(this).click();
+        e.preventDefault();
+      }
     });
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
     .on('click', function (e) {
