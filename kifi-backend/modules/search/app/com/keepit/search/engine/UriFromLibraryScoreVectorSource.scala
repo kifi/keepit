@@ -43,15 +43,15 @@ class UriFromLibraryScoreVectorSource(
   private[this] val libraryNameSource: LibraryNameSource = new LibraryNameSource(librarySearcher, libraryIdsFuture, monitoredAwait, libraryNameBoost)
 
   override def prepare(query: Query, matchWeightNormalizer: MatchWeightNormalizer): Unit = {
-    if (libraryNameBoost > 0.0f) libraryNameSource.prepare(query, matchWeightNormalizer)
+    libraryNameSource.prepare(query, matchWeightNormalizer)
   }
 
   override def execute(coreSize: Int, dataBuffer: DataBuffer, directScoreContext: DirectScoreContext): Unit = {
-    if (libraryNameBoost > 0.0f) execute(coreSize, dataBuffer) // todo: remove 'if'
+    execute(coreSize, dataBuffer)
   }
 
   override def explain(targetId: Long, coreSize: Int, dataBuffer: DataBuffer, directExplainContext: DirectExplainContext): Unit = {
-    if (libraryNameBoost > 0.0f) execute(coreSize, dataBuffer) // todo: remove 'if'
+    execute(coreSize, dataBuffer)
   }
 
   private def execute(coreSize: Int, output: DataBuffer): Unit = {
@@ -187,7 +187,6 @@ class UriFromLibraryScoreVectorSource(
       protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long], Set[Long])],
       protected val monitoredAwait: MonitoredAwait,
       libraryNameBoost: Float) extends ScoreVectorSourceLike {
-
 
     private[this] lazy val libIdFilter = new IdSetFilter(memberLibraryIds)
 

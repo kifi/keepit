@@ -19,7 +19,7 @@ import play.api.libs.json.JsObject
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "libraryNameBoost" -> "0.0",
+      "libraryNameBoost" -> "0.5",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
