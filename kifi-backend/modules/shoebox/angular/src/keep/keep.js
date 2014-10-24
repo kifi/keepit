@@ -166,7 +166,7 @@ angular.module('kifi')
 
           function trimDesc(desc) {
             $sizer.text(desc);
-            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 23);
+            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 24);
 
             if (desc.length > 150) {
               // If description is quite long, trim it. We're drawing it, because for non-latin
@@ -235,8 +235,8 @@ angular.module('kifi')
 
           var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
           //var calcTextWidth = 100 - asideWidthPercent;
-          var linesToShow = Math.floor((bestRes.hi / 23)); // line height
-          var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
+          var linesToShow = Math.floor((bestRes.hi / 24)); // line height
+          var calcTextHeight = linesToShow * 24 + 22; // 22px subtitle
 
           keep.sizeCard = function () {
             var $content = element.find('.kf-keep-content-line');
