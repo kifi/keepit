@@ -86,7 +86,7 @@ class LibraryCommander @Inject() (
           if (url.startsWith("http")) url else s"http:$url"
         }
         //last image is the kifi image we want to append to all image lists
-        urls :+ "https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png"
+        if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
       }
 
       val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
