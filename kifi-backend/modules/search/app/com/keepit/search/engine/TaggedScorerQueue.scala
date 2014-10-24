@@ -114,5 +114,14 @@ final class TaggedScorerQueue(coreSize: Int, boosterScorers: Array[TaggedScorer]
     scorer.doc
   }
 
+  def advance(docId: Int): Int = {
+    var scorer = top()
+    while (scorer.doc < docId) {
+      scorer.advance(docId)
+      scorer = updateTop()
+    }
+    scorer.doc
+  }
+
   def createScoreArray: Array[Int] = new Array[Int](size() + boosterScorers.length)
 }
