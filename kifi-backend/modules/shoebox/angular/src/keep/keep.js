@@ -58,6 +58,11 @@ angular.module('kifi')
           return;
         }
 
+        scope.isMyLibrary = false;
+        scope.$emit('getCurrentLibrary', { callback: function (lib) {
+          scope.isMyLibrary = lib.access === 'owner';
+        }});
+
         // test data:
         // scope.keep.libraries = [
         //   {
@@ -263,6 +268,10 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.isTaggable = function (keep) {
+          return scope.isMyLibrary && keep.isMyBookmark;
+        };
+
         scope.showSmallImage = function (keep) {
           return keep.hasSmallImage && !useBigLayout;
         };
@@ -276,7 +285,7 @@ angular.module('kifi')
         };
 
         scope.showTags = function (keep) {
-          return keep.isMyBookmark && (scope.hasTag(keep) || scope.addingTag.enabled);
+          return scope.isTaggable(keep) && (scope.hasTag(keep) || scope.addingTag.enabled);
         };
 
         scope.showAddTag = function () {
