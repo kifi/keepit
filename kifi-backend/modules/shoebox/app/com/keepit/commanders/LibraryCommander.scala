@@ -78,7 +78,7 @@ class LibraryCommander @Inject() (
       //We suggest that you use an image of at least 1200x630 pixels.
       val imageUrls: Seq[String] = (keeps map { keep =>
         keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize) map { image =>
-          keepImageCommander.getUrl(image)
+          s"http:$keepImageCommander.getUrl(image)"
         }
       }).flatten.take(10)
 
