@@ -226,7 +226,7 @@ angular.module('kifi')
       },
 
       getLibraryShareContacts: function (opt_query) {
-        return contactSearchService.get(opt_query);
+        return contactSearchService.get(opt_query || '');
       },
 
       shareLibrary: function (libraryId, opts) {
