@@ -45,7 +45,7 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$on('triggerAddKeep', function (lib) {
+    $rootScope.$on('triggerAddKeep', function () {
       $scope.addKeeps();
     });
 
