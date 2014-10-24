@@ -153,6 +153,51 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "update user preferences" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
+        }
+
+        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        val userController = inject[UserController]
+        val path = com.keepit.controllers.website.routes.UserController.savePrefs().url
+
+        val inputJson1 = Json.obj(
+          "library_sorting_pref" -> "name",
+          "onboarding_seen" -> true
+        )
+        val request1 = FakeRequest("POST", path).withBody(inputJson1)
+        val result1: Future[Result] = userController.savePrefs()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
+          s"""
+             |{
+             |  "library_sorting_pref": "name",
+             |  "onboarding_seen": true
+             |}
+           """.stripMargin
+        ))
+
+        val request2 = FakeRequest("GET", path)
+        val result2: Future[Result] = userController.getPrefs()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+             |{
+             |  "site_welcomed":null,
+             |  "library_sorting_pref":"name",
+             |  "site_left_col_width":null,
+             |  "show_delighted_question":false,
+             |  "onboarding_seen":true
+             |}
+           """.stripMargin
+        ))
+      }
+    }
+
     "handling emails" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>

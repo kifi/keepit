@@ -475,7 +475,7 @@ class UserCommander @Inject() (
         if (value == "false") JsBoolean(false)
         else if (value == "true") JsBoolean(true)
         else if (value == "null") JsNull
-        else JsString(value)
+        else Json.parse(value)
       }).getOrElse(JsNull)
     })
   }
