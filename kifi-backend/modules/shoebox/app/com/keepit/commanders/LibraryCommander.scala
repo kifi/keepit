@@ -78,9 +78,9 @@ class LibraryCommander @Inject() (
       //We suggest that you use an image of at least 1200x630 pixels.
       val imageUrls: Seq[String] = (keeps map { keep =>
         keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize) map { image =>
-          s"http:$keepImageCommander.getUrl(image)"
-        }
-      }).flatten.take(10)
+          s"http:${keepImageCommander.getUrl(image)}"
+        }                   //last image is the kifi image we want to append to all image lists
+      }).flatten.take(10) :+ "https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png"
 
       //should also get owr word2vec
       val embedlyKeywords: Seq[String] = keeps map { keep =>
