@@ -1,5 +1,5 @@
 <button class="kf-keep-lib-footer-button kf-keep-master-btn" kf-keep-to-library-widget ng-click="showWidget()"
-        ng-class="{'state-kept-private': isKeptPrivate, 'state-kept-public': isKeptPublic, 'state-not-kept': isNotKept}">
+        ng-class="{'state-kept-private': isKeptPrivate, 'state-kept-public': isKeptPublic, 'state-not-kept': isNotKept}" libraries="libraries">
   <span ng-show="isKeptPrivate" class="svg-small-lock">Kept Private</span>
   <span ng-show="isKeptPublic" class="svg-button-keep-heart-green">Kept</span>
   <span ng-show="isNotKept" class="svg-button-keep-heart-gray">Keep</span>

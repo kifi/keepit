@@ -5,10 +5,10 @@ angular.module('kifi')
 .factory('keepDecoratorService', ['tagService', 'util', 'friendService', 'profileService',
   function (tagService, util, friendService, profileService) {
     function processLibraries(item) {
+      item.myLibraries = [];
       if (item.libraries && item.libraries.length>0 && Array.isArray(item.libraries[0])) {
         var cleanedLibraries = [];
         var usersWithLibs = {};
-        item.myLibraries = [];
         item.libraries.forEach( function (lib) {
           lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
           if (lib[1].id !== profileService.me.id) {
