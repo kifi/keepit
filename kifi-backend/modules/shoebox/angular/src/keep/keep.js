@@ -943,6 +943,7 @@ angular.module('kifi')
           } else {
             keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
               if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+                // TODO: check with Leo that this endpoint will be consistent after switching from search to database.
                 return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
                   var keep = new keepDecoratorService.Keep(fullKeep);
                   libraryService.fetchLibrarySummaries(true);
@@ -952,7 +953,10 @@ angular.module('kifi')
                   var library = scope.librarySelection.library;
                   keep.buildKeep(keep);
                   keep.makeKept();
+
+                  // May not want to do this since this is actually a keep from a different library!
                   _.assign(scope.keep, keep);
+                  scope.keptToLibraries = scope.keep.myLibraries;
 
                   scope.$emit('keepAdded', libraryService.getSlugById(library.id), scope.keep);
                 });
