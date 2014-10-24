@@ -68,13 +68,7 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-
-    val t1 = System.currentTimeMillis
-
     val scores = lda.batchUserURIsInterests(userId, uriIds)
-
-    val t2 = System.currentTimeMillis
-    log.info(s"batch uris scoring for user = ${userId}, num of uris: ${uriIds.size}, took ${t2 - t1} milli seconds")
     Ok(Json.toJson(scores))
   }
 
@@ -122,10 +116,7 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
-    val t1 = System.currentTimeMillis
     val explain = lda.explainFeed(userId, uris)
-    val t2 = System.currentTimeMillis
-    log.info(s"batch explain feeds for user = ${userId}, num of uris: ${uris.size}, took ${t2 - t1} milli seconds")
     Ok(Json.toJson(explain))
   }
 
