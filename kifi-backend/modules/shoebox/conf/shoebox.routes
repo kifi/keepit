@@ -27,7 +27,6 @@ POST    /auth/email-signup           @com.keepit.controllers.core.AuthController
 POST    /auth/upload-binary-image   @com.keepit.controllers.core.AuthController.uploadBinaryPicture()
 POST    /auth/upload-multipart-image @com.keepit.controllers.core.AuthController.uploadFormEncodedPicture()
 POST    /auth/cancel                @com.keepit.controllers.core.AuthController.cancelAuth()
-POST    /auth/connectOption         @com.keepit.controllers.core.AuthController.connectOption()
 
 # See common.routes for our better ProviderController routes.
 

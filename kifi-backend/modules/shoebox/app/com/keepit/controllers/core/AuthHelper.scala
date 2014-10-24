@@ -454,7 +454,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  val connectOptionUrl = com.keepit.controllers.core.routes.AuthController.connectOption().url
+  val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
 
   def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
     Registry.providers.get(providerName) match {
@@ -470,35 +470,36 @@ class AuthHelper @Inject() (
             authCommander.exchangeLongTermToken(provider, oauth2InfoOrig) map { oauth2InfoNew =>
               authCommander.getSocialUserOpt(filledUser.identityId) match {
                 case None =>
-                  if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
-                    Ok(Json.obj("code" -> "connect_option", "uri" -> connectOptionUrl, "email" -> filledUser.email.get))
-                  } else {
-                    val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
-                    log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
-                    Authenticator.create(saved).fold(
-                      error => throw error,
-                      authenticator =>
-                        Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                          .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                          .withCookies(authenticator.toCookie)
-                    )
-                  }
+                  val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
+                  val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                    Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                  else
+                    Json.obj("code" -> "continue_signup")
+                  log.info(s"[accessTokenSignup($providerName)] created social user(${saved.identityId}) email=${saved.email}; payload=$payload")
+                  Authenticator.create(saved).fold(
+                    error => throw error,
+                    authenticator =>
+                      Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
+                        .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                        .withCookies(authenticator.toCookie)
+                  )
                 case Some(identity) => // social user exists
                   db.readOnlyMaster(attempts = 2) { implicit s =>
                     socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
                   } match {
                     case None => // kifi user does not exist
-                      if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
-                        Ok(Json.obj("code" -> "connect_option", "uri" -> connectOptionUrl, "email" -> filledUser.email.get))
-                      } else {
-                        Authenticator.create(identity).fold(
-                          error => throw error,
-                          authenticator =>
-                            Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
-                              .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                              .withCookies(authenticator.toCookie)
-                        )
-                      }
+                      val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                        Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                      else
+                        Json.obj("code" -> "continue_signup")
+                      log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${filledUser.identityId} email=${filledUser.email}; payload=$payload")
+                      Authenticator.create(identity).fold(
+                        error => throw error,
+                        authenticator =>
+                          Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
+                            .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                            .withCookies(authenticator.toCookie)
+                      )
                     case Some(userId) =>
                       val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
                       Authenticator.create(identity).fold(

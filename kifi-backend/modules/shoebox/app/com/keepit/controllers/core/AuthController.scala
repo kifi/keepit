@@ -15,8 +15,6 @@ import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
 
 import play.api.Play._
-import play.api.data._
-import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.{ JsValue, JsNumber, Json }
 import play.api.mvc._
@@ -42,8 +40,6 @@ object AuthController {
   private lazy val obscureRegex = """^(?:[^@]|([^@])[^@]+)@""".r
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
-
-case class ConnectOptionInfo(val emailAddress: EmailAddress, provider: String)
 
 @json case class EmailSignupInfo(email: String)
 
@@ -254,26 +250,6 @@ class AuthController @Inject() (
           authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
     }
-  }
-
-  val connectOptionForm = Form[ConnectOptionInfo](
-    mapping(
-      "email" -> EmailAddress.formMapping,
-      "provider" -> text
-    )(ConnectOptionInfo.apply)(ConnectOptionInfo.unapply)
-  )
-  def connectOption() = MaybeUserAction { implicit request =>
-    connectOptionForm.bindFromRequest.fold(
-      hasErrors = formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-      success = {
-        case info: ConnectOptionInfo =>
-          if (authHelper.emailAddressMatchesSomeKifiUser(info.emailAddress)) { // sanity check
-            Ok(authHelper.connectOptionView(info.emailAddress, info.provider))
-          } else {
-            BadRequest(Json.obj("error" -> "not_found")) // shouldn't happen
-          }
-      }
-    )
   }
 
   def afterLogin() = MaybeUserAction { implicit req =>
