@@ -82,10 +82,17 @@ class LibraryCommander @Inject() (
             (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
         }
         val urls: Seq[String] = sorted.take(10) map { image =>
-          s"http:${keepImageCommander.getUrl(image)}"
+          val url = keepImageCommander.getUrl(image)
+          if (url.startsWith("http:")) url else s"http:$url"
         }
         //last image is the kifi image we want to append to all image lists
         urls :+ "https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png"
+      }
+
+      val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+      val url = {
+        val url = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
+        if (url.startsWith("http:")) url else s"http:$url"
       }
       //should also get owr word2vec
       val embedlyKeywords: Seq[String] = keeps map { keep =>
@@ -93,10 +100,9 @@ class LibraryCommander @Inject() (
       } flatten
       val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
       val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
-      val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
       PublicPageMetaTags(
         title = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
-        url = s"http:${applicationConfig.applicationBaseUrl}$urlPathOnly",
+        url = url,
         urlPathOnly = urlPathOnly,
         description = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
         images = imageUrls,
