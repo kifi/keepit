@@ -65,10 +65,7 @@ class LibraryCommander @Inject() (
 
   def libraryMetaTags(library: Library): PublicPageMetaTags = {
     db.readOnlyMaster { implicit s =>
-      val memberCount = library.memberCount
       val owner = userRepo.get(library.ownerId)
-      val ownerName = owner.fullName
-      val name = library.name
 
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
 
@@ -76,12 +73,20 @@ class LibraryCommander @Inject() (
 
       //facebook OG recommends:
       //We suggest that you use an image of at least 1200x630 pixels.
-      val imageUrls: Seq[String] = (keeps map { keep =>
-        keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize) map { image =>
+      val imageUrls: Seq[String] = {
+        val images: Seq[KeepImage] = keeps map { keep =>
+          keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize)
+        } flatten
+        val sorted: Seq[KeepImage] = images.sortWith {
+          case (image1, image2) =>
+            (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+        }
+        val urls: Seq[String] = sorted.take(10) map { image =>
           s"http:${keepImageCommander.getUrl(image)}"
-        }                   //last image is the kifi image we want to append to all image lists
-      }).flatten.take(10) :+ "https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png"
-
+        }
+        //last image is the kifi image we want to append to all image lists
+        urls :+ "https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png"
+      }
       //should also get owr word2vec
       val embedlyKeywords: Seq[String] = keeps map { keep =>
         uriSummaryCommander.getStoredEmbedlyKeywords(keep.uriId).map(_.name)
