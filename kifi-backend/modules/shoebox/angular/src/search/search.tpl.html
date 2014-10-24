@@ -13,7 +13,20 @@
       </div>
     </div>
   </div>
-  <div kf-keeps
+  <div ng-if="librariesEnabled"
+    kf-keeps
+    keeps="resultKeeps"
+    keeps-loading="loading"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
+    scroll-next="getNextKeeps()"
+    keep-click="analyticsTrack"
+    edit-mode="editMode"
+    toggle-edit="toggleEdit"
+    update-selected-count="updateSelectedCount(numSelected)"
+  ></div>
+  <div ng-if="!librariesEnabled"
+    kf-keeps-deprecated
     keeps="resultKeeps"
     keeps-loading="loading"
     keeps-has-more="hasMore"

@@ -5,7 +5,7 @@
   passPhrase: String)
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
-@libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}}
+@libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?", "followLibraryButton", true)}
 @invitedHeader = {@firstName(inviterId) invited you to follow a library on Kifi}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -211,7 +211,7 @@
               @email.tags.trSpacer(20)
               <tr>
                 <td class="grey_link1" style="font-family:'HelveticaNeueLT Std Roman', Helvetica, Arial, sans-serif;font-size:16px;color:#333333;line-height:20px;">Curator:<br />
-                  <span style="color:#999999">@fullName(inviterId)</span>
+                  <span style="color:#999999">@libraryInfo.owner.fullName</span>
                 </td>
               </tr>
               @email.tags.trSpacer(18)
