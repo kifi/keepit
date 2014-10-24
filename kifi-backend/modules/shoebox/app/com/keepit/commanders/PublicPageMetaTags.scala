@@ -54,7 +54,7 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } mkString ("\n")
+    } getOrElse("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
@@ -73,10 +73,10 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       |<meta property="og:url" content="$url" />
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
-      |<meta property="og:first_name" content="${firstName}" />
-      |<meta property="og:last_name" content="${lastName}" />
-      |<meta property="og:tag" content="$tagList" />
-      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310" />
+      |<meta property="fb:first_name" content="${firstName}" />
+      |<meta property="fb:last_name" content="${lastName}" />
+      |<meta property="fb:tag" content="$tagList" />
+      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310,636721190" />
       |<meta name="description" content="$description">
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
