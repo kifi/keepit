@@ -115,7 +115,11 @@ angular.module('kifi')
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.
-    if (recoStateService.recosList.length === 0) {
+    if ($scope.recos.length > 0) {
+      _.remove($scope.recos, function (reco) {
+        return reco.recoKeep.isMyBookmark;
+      });
+    } else {
       $scope.loading = true;
 
       recoStateService.empty();
