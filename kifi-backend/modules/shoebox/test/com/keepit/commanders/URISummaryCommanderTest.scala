@@ -215,8 +215,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         // fetch image from pagepeeker
         val result8Fut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequest) map { _.imageUrl }
         result8Fut must beLike({
-          case Some(result: String) =>
-            result === FakeS3URIImageStore.placeholderImageURL
+          case None => true === true // PagePeeker has been deactivated, should be Some(FakeS3URIImageStore.placeholderImageURL) otherwise
         }: Partial).await
 
         // find any kind of image
@@ -231,7 +230,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         val pagePeekerResultFut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequestWithAny) map { _.imageUrl }
         pagePeekerResultFut must beLike({
           case Some(result: String) =>
-            result === FakeS3URIImageStore.placeholderImageURL
+            result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl // PagePeeker has been deactivated, should be FakeS3URIImageStore.placeholderImageURL otherwise
         }: Partial).await
       }
     }
