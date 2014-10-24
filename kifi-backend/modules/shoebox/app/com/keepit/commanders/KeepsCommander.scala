@@ -240,6 +240,28 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def getUserKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[KeepData]] = {
+    db.readOnlyMaster { implicit session =>
+      uriIds.map { uriId =>
+        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep =>
+          val keeperId = keep.userId
+          val mine = userId == keeperId
+          val libraryId = keep.libraryId.get
+          val lib = libraryRepo.get(libraryId)
+          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
+          KeepData(
+            id = keep.externalId,
+            mine = mine,
+            removable = removable,
+            secret = lib.visibility == LibraryVisibility.SECRET,
+            libraryId = Library.publicId(lib.id.get)
+          )
+        }
+        uriId -> userKeeps
+      }
+    }.toMap
+  }
+
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
       val items = keeps.map { keep => AugmentableItem(keep.uriId) }

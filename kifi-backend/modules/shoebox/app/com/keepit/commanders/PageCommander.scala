@@ -29,6 +29,7 @@ class PageCommander @Inject() (
     userToDomainRepo: UserToDomainRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    keepsCommander: KeepsCommander,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -133,22 +134,8 @@ class PageCommander @Inject() (
       }
 
       // find all keeps in database (with uri) (read_write actions)
-      val keepsData = db.readOnlyMaster { implicit session =>
-        val userKeeps = keepRepo.getAllByUriAndUser(normUri.id.get, userId)
-        userKeeps.map { keep =>
-          val keeperId = keep.userId
-          val mine = userId == keeperId
-          val libraryId = keep.libraryId.get
-          val lib = libraryRepo.get(libraryId)
-          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
-          KeepData(
-            id = keep.externalId,
-            mine = mine,
-            removable = removable,
-            secret = lib.visibility == LibraryVisibility.SECRET,
-            libraryId = Library.publicId(lib.id.get))
-        }
-      }
+      val keepsData = keepsCommander.getUserKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq
+
       getKeepersFuture.map { keepers =>
         KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
       }
