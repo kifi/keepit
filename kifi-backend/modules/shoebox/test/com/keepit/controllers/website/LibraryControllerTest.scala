@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ RawBookmarkRepresentation, LibraryInfo, UsernameOps }
+import com.keepit.commanders.{ KeepData, RawBookmarkRepresentation, LibraryInfo, UsernameOps }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -684,7 +684,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "createdAt": "${keep2.createdAt}",
                 "others":0,
-                "secret":false,
+                "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -705,7 +705,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "createdAt": "${keep1.createdAt}",
                 "others":0,
-                "secret":false,
+                "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,

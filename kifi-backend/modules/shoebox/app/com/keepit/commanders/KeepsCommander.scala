@@ -49,8 +49,7 @@ case class KeepInfo(
   isPrivate: Boolean, // deprecated
   createdAt: Option[DateTime] = None,
   others: Option[Int] = None, // deprecated
-  secret: Option[Boolean] = None,
-  myKeeps: Option[Set[KeepData]] = None,
+  keeps: Option[Set[KeepData]] = None,
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
@@ -311,8 +310,7 @@ class KeepsCommander @Inject() (
             isPrivate = keep.isPrivate,
             createdAt = Some(keep.createdAt),
             others = Some(others),
-            secret = augmentationInfoForKeep.secret,
-            myKeeps = allMyKeeps.get(keep.uriId),
+            keeps = allMyKeeps.get(keep.uriId),
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
