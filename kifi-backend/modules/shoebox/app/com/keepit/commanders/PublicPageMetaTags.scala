@@ -24,25 +24,41 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  *
  * profile:first_name - string - A name normally given to an individual by a parent or self-chosen.
  * profile:last_name - string - A name inherited from a family or marriage and by which the individual is commonly known.
+ *
+ * For twitter meta tags we use https://dev.twitter.com/cards/types/gallery
+ * Notes:
+ * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(title: String, url: String, description: String, images: Seq[String],
+case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String],
     createdAt: DateTime, updatedAt: DateTime, tags: Seq[String], firstName: String, lastName: String) {
 
   val tagList = tags.mkString(",")
 
   def formatOpenGraph: String = {
-    val imageTags = images map { image =>
-      s"""<meta property="og:image" content="$image" />"""
+
+    val ogImageTags = images map { image =>
+      s"""
+         |<meta property="og:image" content="$image" />
+         |<meta itemprop="image" content="$image">
+       """.stripMargin
+    } mkString ("\n")
+
+    val twitterImageTags = images.take(4).zipWithIndex map {
+      case (image, i) =>
+        s"""
+        |<meta name="twitter:image$i" content="$image">
+       """.stripMargin
     } mkString ("\n")
 
     s"""
-      |<title>${title} \u2022 ${firstName} ${lastName} \u2022 Kifi</title>
+      |<html itemscope itemtype="http://schema.org/Product">
+      |<title>${title}</title>
       |<meta property="og:description" content="${description}" />
       |<meta property="og:title" content="${title}" />
       |<meta property="og:type" content="blog" />
       |<meta property="og:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}" />
       |<meta property="og:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}" />
-      |$imageTags
+      |$ogImageTags
       |<meta property="og:url" content="$url" />
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
@@ -53,6 +69,21 @@ case class PublicPageMetaTags(title: String, url: String, description: String, i
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
       |<link rel="canonical" href="$url" />
+      |<meta name="twitter:card" content="gallery" />
+      |<meta name="twitter:site" content="@kifi" />
+      |<meta name="twitter:creator" content="@kifi" />
+      |<meta name="twitter:title" content="${title}">
+      |<meta name="twitter:description" content="${description}">
+      |<meta name="twitter:url" content="$url" />
+      |<meta name="twitter:app:name:iphone" content="Kifi Iphone App">
+      |<meta name="twitter:app:id:iphone" content="740232575">
+      |<meta name="twitter:app:url:iphone" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
+      |<meta name="twitter:app:id:googleplay" content="com.kifi">
+      |<meta name="twitter:app:url:googleplay" content="kifi://$urlPathOnly">
+      |$twitterImageTags
+      |<meta itemprop="name" content="$title">
+      |<meta itemprop="description" content="$description">
     """.stripMargin
   }
 }
