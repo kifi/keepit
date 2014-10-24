@@ -15,7 +15,6 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  *   we'll use article for now
  *   article - Namespace URI: http://ogp.me/ns/article#
  *
- * we'll do author later
  * article:author - This property links to the authors of the article. The target of this can be either a Facebook Profile or a Facebook Page and Facebook will likely offer a chance to follow that author when it's displayed in the news feed. (Note that your authors should have follow enabled so that people can follow them.)
  *
  * article:published_time - datetime - When the article was first published.
@@ -29,26 +28,30 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String],
+case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String], facebookId: Option[String],
     createdAt: DateTime, updatedAt: DateTime, tags: Seq[String], firstName: String, lastName: String) {
 
-  val tagList = tags.mkString(",")
+  def tagList = tags.mkString(",")
 
   def formatOpenGraph: String = {
 
-    val ogImageTags = images map { image =>
+    def ogImageTags = images map { image =>
       s"""
          |<meta property="og:image" content="$image" />
          |<meta itemprop="image" content="$image">
        """.stripMargin
     } mkString ("\n")
 
-    val twitterImageTags = images.take(4).zipWithIndex map {
+    def twitterImageTags = images.take(4).zipWithIndex map {
       case (image, i) =>
         s"""
         |<meta name="twitter:image$i" content="$image">
        """.stripMargin
     } mkString ("\n")
+
+    def facebookIdTag = facebookId.map { id =>
+      <meta property="article:author" content="$id"/>
+    } getOrElse ""
 
     s"""
       |<html itemscope itemtype="http://schema.org/Product">
@@ -59,6 +62,7 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta property="og:published_time" content="${ISO_8601_DAY_FORMAT.print(createdAt)}" />
       |<meta property="og:modified_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}" />
       |$ogImageTags
+      |$facebookIdTag
       |<meta property="og:url" content="$url" />
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />

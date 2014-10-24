@@ -19,7 +19,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContext
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.BasicUser
+import com.keepit.social.{ SocialNetworks, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -59,6 +59,7 @@ class LibraryCommander @Inject() (
     keepImageCommander: KeepImageCommander,
     applicationConfig: FortyTwoConfig,
     uriSummaryCommander: URISummaryCommander,
+    socialUserInfoRepo: SocialUserInfoRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -68,6 +69,9 @@ class LibraryCommander @Inject() (
       val owner = userRepo.get(library.ownerId)
       val ownerName = owner.fullName
       val name = library.name
+
+      val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
+
       val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
       //facebook OG recommends:
       //We suggest that you use an image of at least 1200x630 pixels.
@@ -90,6 +94,7 @@ class LibraryCommander @Inject() (
         urlPathOnly = urlPathOnly,
         description = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
         images = imageUrls,
+        facebookId = facebookId,
         createdAt = library.createdAt,
         updatedAt = library.updatedAt,
         tags = allTags,
