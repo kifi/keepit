@@ -50,6 +50,20 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
+  val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
+  val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"
+
+  def getDisplayName(name: String, kind: LibraryKind): String = kind match {
+    case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN_DISPLAY_NAME
+    case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET_DISPLAY_NAME
+    case _ => name
+  }
+
+  // is_primary: trueOrNull in db
+  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept)
+  }
+
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
