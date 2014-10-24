@@ -112,6 +112,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarksLibraryModal.tpl.html',
           scope: $scope
         });
+        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarksModal.tpl.html',
@@ -132,6 +133,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
           scope: $scope
         });
+        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarkFileModal.tpl.html',
