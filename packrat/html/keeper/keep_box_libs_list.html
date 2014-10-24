@@ -18,7 +18,9 @@
         <div class="kifi-keep-box-lib-head">Other Libraries</div>
       {{/recentLibs.length}}
       {{^recentLibs.length}}
-        <div class="kifi-keep-box-lib-head">My Libraries</div>
+        {{#showMyLibrariesHeading}}
+          <div class="kifi-keep-box-lib-head">My Libraries</div>
+        {{/showMyLibrariesHeading}}
       {{/recentLibs.length}}
       {{#otherLibs}}{{>keep_box_lib}}{{/otherLibs}}
     {{/query}}

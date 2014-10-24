@@ -191,15 +191,16 @@ var keepBox = keepBox || (function () {
   }
 
   function partitionLibs(libs) {
+    var nLibs = libs.length;
     var inLibs = [];
     var otherLibs = [];
     var recentLibs = [];
-    for (var i = 0; i < libs.length; i++) {
+    for (var i = 0; i < nLibs; i++) {
       var lib = libs[i];
       lib.highlighted = false;
       if (lib.keep) {
         inLibs.push(lib);
-      } else if (lib.recent) {
+      } else if (lib.recent && nLibs >= 6) {
         recentLibs.push(lib);
       } else {
         otherLibs.push(lib);
@@ -207,6 +208,8 @@ var keepBox = keepBox || (function () {
     }
     (inLibs[0] || recentLibs[0] || otherLibs[0]).highlighted = true;
     return {
+      showMyLibrariesHeading: nLibs >= 6 || inLibs.length,
+      allowFiltering: nLibs >= 6,
       inLibs: inLibs,
       recentLibs: otherLibs.length ? recentLibs : [],
       otherLibs: otherLibs.length ? otherLibs : recentLibs
@@ -216,6 +219,7 @@ var keepBox = keepBox || (function () {
   function addLibrariesBindings($view) {
     $view
     .on('input', '.kifi-keep-box-lib-input', function (e) {
+      if (this.classList.contains('kifi-disabled')) return;
       var q = this.value.trim();
       var data = $.data(this);
       if (data.q !== q) {

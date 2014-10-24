@@ -1,5 +1,5 @@
 <div class="kifi-keep-box-view kifi-keep-box-view-libs" data-box-title="Keep to a library">
-  <input class="kifi-keep-box-lib-input" type="text" placeholder="Search your libraries"/>
+  <input class="kifi-keep-box-lib-input{{^allowFiltering}} kifi-disabled{{/allowFiltering}}" type="text" placeholder="Filter your libraries"/>
   {{>keep_box_libs_list}}
-  <a class="kifi-keep-box-lib kifi-keep-box-with-lib-icon kifi-create" href="javascript:" tabindex="-1">Create New Library</a>
+  <a class="kifi-keep-box-lib kifi-keep-box-with-lib-icon kifi-create" href="javascript:" tabindex="-1">Create a new library</a>
 </div>

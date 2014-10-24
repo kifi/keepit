@@ -179,13 +179,19 @@
   @url: %(@svgFindDataUrl, #b3b3b3, #b3b3b3);
   background: url(@url) 13px center / 18px 18px no-repeat !important;
   border-bottom: 1px solid @lib-border-color;
+  &.kifi-disabled {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 0;
+    font-size: 0;
+    border-bottom: none;
+  }
 }
 .kifi-keep-box-libs {
   position: relative;
   overflow: hidden;
   &>.kifi-scroll-inner {
     max-height: 320px;
-    min-height: 240px;
     overflow: hidden !important;
     overflow-y: auto !important;
     position: relative;
@@ -278,6 +284,9 @@
   .kifi-keep-box-lib-kept>& {
     padding-right: 85px;
   }
+  &:last-child {
+    border-bottom: none;
+  }
   &.kifi-create&:not(.kifi-query) {
     background-color: #f3f3f3;
     border-bottom: none;
@@ -287,9 +296,9 @@
     }
   }
   &.kifi-highlighted {
-    background-color: #e8e8e8;
+    background-color: #e8e8e8 !important;
     &:active {
-      background-color: #e3e3e3;
+      background-color: #e3e3e3 !important;
     }
   }
   &::before {
@@ -387,8 +396,7 @@
   color: @lib-color !important;
 }
 .kifi-keep-box-new-lib-visibility {
-  padding: 16px 24px 0;
-  min-height: 140px;
+  padding: 16px 24px;
   line-height: 17px;
   font-size: 13px;
   color: #777;
