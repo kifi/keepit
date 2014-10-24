@@ -89,6 +89,7 @@ class UriFromLibraryScoreVectorSource(
     loadWithNoScore(LongArraySet.fromSet(libsSeen), output, writer)
 
     if ((debugFlags & DebugOption.Library.flag) != 0) {
+      listLibraries()
       listLibraryKeepCounts()
     }
   }
@@ -174,6 +175,13 @@ class UriFromLibraryScoreVectorSource(
       }
       authorizedLibraryKeepCount += output.size - lastTotal
     }
+  }
+
+  protected def listLibraries(): Unit = {
+    debugLog(s"""myLibs: ${myOwnLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""memberLibs: ${memberLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""trustedLibs: ${trustedLibraryIds.toSeq.sorted.mkString(",")}""")
+    debugLog(s"""authorizedLibs: ${authorizedLibraryIds.toSeq.sorted.mkString(",")}""")
   }
 
   private def listLibraryKeepCounts(): Unit = {
