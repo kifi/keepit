@@ -60,8 +60,13 @@ class HomeController @Inject() (
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
-  def home = Action {
-    MarketingSiteRouter.marketingSite()
+  def home(request: MaybeUserRequest[_]) = Action {
+    request match {
+      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
+        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+      case _ =>
+        MarketingSiteRouter.marketingSite()
+    }
   }
 
   def version = Action {
