@@ -41,6 +41,10 @@ object AuthController {
   def obscureEmailAddress(address: String) = obscureRegex.replaceFirstIn(address, """$1...@""")
 }
 
+@json case class ConnectOptionInfo(private val email: String, provider: String) {
+  val emailAddress = EmailAddress(email)
+}
+
 @json case class EmailSignupInfo(email: String)
 
 @json case class UserPassFinalizeInfo(
@@ -252,6 +256,18 @@ class AuthController @Inject() (
     }
   }
 
+  def connectOption() = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    request.body.asOpt[ConnectOptionInfo] match {
+      case None => BadRequest(Json.obj("error" -> "invalid_arguments"))
+      case Some(info) =>
+        if (authHelper.emailAddressMatchesSomeKifiUser(info.emailAddress)) { // sanity check
+          Ok(authHelper.connectOptionView(info.emailAddress, info.provider))
+        } else {
+          BadRequest(Json.obj("error" -> "not_found")) // shouldn't happen
+        }
+    }
+  }
+
   def afterLogin() = MaybeUserAction { implicit req =>
     req match {
       case userRequest: UserRequest[_] =>
@@ -404,7 +420,7 @@ class AuthController @Inject() (
         case request: NonUserRequest[_] =>
           if (request.identityOpt.isDefined) {
             val identity = request.identityOpt.get
-            if (authHelper.emailAddressMatchesSomeKifiUser(identity)) {
+            if (identity.email.exists(e => authHelper.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
                 emailAddress = identity.email.get,

@@ -67,20 +67,18 @@ class AuthHelper @Inject() (
     resetPasswordEmailSender: ResetPasswordEmailSender,
     fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
 
-  def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
-    identity.email.flatMap { addr =>
-      db.readOnlyMaster { implicit s =>
-        emailAddressRepo.getByAddressOpt(EmailAddress(addr))
-      }
-    }.isDefined
+  def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
+    db.readOnlyMaster { implicit s =>
+      emailAddressRepo.getByAddressOpt(addr).isDefined
+    }
   }
 
-  def connectOptionView(identity: Identity) = {
-    log.info(s"[connectOptionView] ${identity.email} matches some kifi user, but no (social) user exists for ${identity.identityId}")
+  def connectOptionView(email: EmailAddress, providerId: String) = {
+    log.info(s"[connectOptionView] $email matches some kifi user, but no (social) user exists given $providerId")
     views.html.auth.connectToAuthenticate(
-      emailAddress = identity.email.get,
-      network = SocialNetworkType(identity.identityId.providerId),
-      logInAttempted = false
+      emailAddress = email.address,
+      network = SocialNetworkType(providerId),
+      logInAttempted = true
     )
   }
 
@@ -456,6 +454,8 @@ class AuthHelper @Inject() (
     }
   }
 
+  val connectOptionUrl = com.keepit.controllers.core.routes.AuthController.connectOption().url
+
   def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
     Registry.providers.get(providerName) match {
       case None =>
@@ -470,8 +470,9 @@ class AuthHelper @Inject() (
             authCommander.exchangeLongTermToken(provider, oauth2InfoOrig) map { oauth2InfoNew =>
               authCommander.getSocialUserOpt(filledUser.identityId) match {
                 case None =>
-                  if (emailAddressMatchesSomeKifiUser(filledUser)) Ok(connectOptionView(filledUser))
-                  else {
+                  if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
+                    Ok(Json.obj("code" -> "connect_option", "uri" -> connectOptionUrl, "email" -> filledUser.email.get))
+                  } else {
                     val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
                     log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
                     Authenticator.create(saved).fold(
@@ -487,8 +488,9 @@ class AuthHelper @Inject() (
                     socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
                   } match {
                     case None => // kifi user does not exist
-                      if (emailAddressMatchesSomeKifiUser(filledUser)) Ok(connectOptionView(identity))
-                      else {
+                      if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
+                        Ok(Json.obj("code" -> "connect_option", "uri" -> connectOptionUrl, "email" -> filledUser.email.get))
+                      } else {
                         Authenticator.create(identity).fold(
                           error => throw error,
                           authenticator =>
