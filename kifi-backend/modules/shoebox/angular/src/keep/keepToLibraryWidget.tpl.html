@@ -5,8 +5,8 @@
       <input class="keep-to-library-search-input" ng-model="search.name" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
     </div>
     <ul class="library-select-list">
-      <li ng-repeat="library in libraries | filter:search" class="library-select-option"
-        ng-class="{'selected': library.selected}"
+      <li ng-repeat="library in widgetLibraries | filter:search" class="library-select-option"
+        ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
         ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
         <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
           <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
@@ -20,6 +20,7 @@
           </span>
         </span>
         {{library.name}}
+        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
       </li>
     </ul>
     <div class="keep-to-library-create" ng-click="showCreatePanel()">

@@ -42,6 +42,7 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
+        library: '=',
         libraries: '=',
         editMode: '=',
         toggleSelect: '&',
@@ -93,6 +94,7 @@ angular.module('kifi')
         scope.isDragging = false;
         scope.librariesEnabled = libraryService.isAllowed();
         scope.userLoggedIn = $rootScope.userLoggedIn;
+
 
         //
         // Internal methods.
@@ -225,7 +227,7 @@ angular.module('kifi')
           var res = calcHeightDelta(guess);
           var bestRes = res;
 
-          while(low + i < high && bestRes.score > 20) {
+          while (low + i < high && bestRes.score > 20) {
             res = calcHeightDelta(low + i);
             if (bestRes.score > res.score) {
               bestRes = res;
@@ -894,19 +896,28 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
-  function (keepActionService, keepDecoratorService, libraryService, tagService) {
+.directive('kfKeepMasterButton', ['$log', 'keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
+  function ($log, keepActionService, keepDecoratorService, libraryService, tagService) {
     return {
       restrict: 'A',
       scope: {
         keep: '=',
-
-        // This is the libraries set on the scope of kfKeeps (see 'keeps.js').
+        library: '=',
         libraries: '='
       },
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
       link: function (scope/*, element, attrs*/) {
+        //
+        // Scope data.
+        //
+        scope.librarySelection = {};
+        scope.keptToLibraries = scope.keep.myLibraries;
+
+
+        //
+        // Internal methods.
+        //
         function updateKeepStatus() {
           scope.isNotKept = scope.isKeptPublic = scope.isKeptPrivate = false; // reset
           if (scope.keep.myLibraries.length === 0) {
@@ -920,39 +931,70 @@ angular.module('kifi')
           }
         }
 
-        updateKeepStatus();
 
+        //
+        // Scope methods.
+        //
+        scope.clickAction = function () {
+          if (scope.librarySelection.library.keptTo) {
+            if (scope.librarySelection.library.id === scope.library.id) {
+              // TODO: waiting for Leo's change to endpoint so that we can get the keep ids in other libraries.
+              keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, scope.keep.id).then(function () {
+                if (scope.librarySelection.library.id === scope.library.id) {
+                  scope.keep.makeUnkept();
+                }
+
+                libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
+              });
+            } else {
+              $log.log('Unkeeping from other libraries is still awaiting endpoint support!');
+            }
+          } else {
+            keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
+              if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+                // TODO: check with Leo that this endpoint will be consistent after switching from search to database.
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+                  var keep = new keepDecoratorService.Keep(fullKeep);
+                  libraryService.fetchLibrarySummaries(true);
+                  libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
+                  tagService.addToKeepCount(1);
+
+                  var library = scope.librarySelection.library;
+                  keep.buildKeep(keep);
+                  keep.makeKept();
+
+                  // May not want to do this since this is actually a keep from a different library!
+                  _.assign(scope.keep, keep);
+                  scope.keptToLibraries = scope.keep.myLibraries;
+
+                  scope.$emit('keepAdded', libraryService.getSlugById(library.id), scope.keep);
+                });
+              }
+            });
+          }
+        };
+
+
+        //
+        // Watches and listeners.
+        //
         scope.$watchCollection(function () {
           return _.pluck(scope.keep.myLibraries, 'secret');
         }, updateKeepStatus);
+
         scope.$watch('keep.isMyBookmark', updateKeepStatus);
-
-        scope.librarySelection = {};
-        scope.clickAction = function () {
-          keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
-            if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-              return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                var keep = new keepDecoratorService.Keep(fullKeep);
-                libraryService.fetchLibrarySummaries(true);
-                libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
-                tagService.addToKeepCount(1);
-
-                var library = scope.librarySelection.library;
-                keep.buildKeep(keep);
-                keep.makeKept();
-                _.assign(scope.keep, keep);
-
-                scope.$emit('keepAdded', libraryService.getSlugById(library.id), scope.keep);
-              });
-            }
-          });
-        };
 
         scope.$watch('libraries.length', function (newVal) {
           if (newVal > 0) {
             scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
           }
         });
+
+
+        //
+        // On link.
+        //
+        updateKeepStatus();
       }
     };
   }
@@ -995,6 +1037,4 @@ angular.module('kifi')
       templateUrl: 'keep/keepTagButton.tpl.html'
     };
   }
-])
-
-;
+]);
