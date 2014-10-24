@@ -124,7 +124,7 @@ angular.module('kifi')
         //really hacky way of preventing user from seeing their personalized recos if they haven't followed a library
         //if this is still here after Oct 10th 2014 throw something (soft) at Stephen
         libraryService.fetchLibrarySummaries().then(function (librarySummaries){
-          if (rawRecos.length > 0 && librarySummaries.libraries.length>2) {
+          if (rawRecos.length > 0 && (librarySummaries.libraries.length>2 || !libraryService.isAllowed()) ) {
             rawRecos.forEach(function (rawReco) {
               recos.push(recoDecoratorService.newUserRecommendation(rawReco));
             });
