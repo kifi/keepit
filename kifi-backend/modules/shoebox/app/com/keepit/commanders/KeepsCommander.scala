@@ -50,6 +50,7 @@ case class KeepInfo(
   createdAt: Option[DateTime] = None,
   others: Option[Int] = None, // deprecated
   secret: Option[Boolean] = None,
+  myKeeps: Option[Set[KeepData]] = None,
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
@@ -278,6 +279,8 @@ class KeepsCommander @Inject() (
       }
     }.map(collectionCommander.getBasicCollections)
 
+    val allMyKeeps = perspectiveUserIdOpt.map { userId => getUserKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[KeepData]]
+
     for {
       augmentationInfos <- augmentationFuture
       pageInfos <- pageInfosFuture
@@ -309,6 +312,7 @@ class KeepsCommander @Inject() (
             createdAt = Some(keep.createdAt),
             others = Some(others),
             secret = augmentationInfoForKeep.secret,
+            myKeeps = allMyKeeps.get(keep.uriId),
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
