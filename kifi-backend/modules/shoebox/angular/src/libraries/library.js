@@ -172,6 +172,19 @@ angular.module('kifi')
       });
     };
 
+    $scope.callAddKeep = function () {
+      $rootScope.$emit('triggerAddKeep', $scope.library);
+    };
+    $scope.callImportBookmarks = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+    };
+    $scope.callImportBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+    };
+    $scope.callTriggerInstall = function () {
+      $rootScope.$emit('triggerExtensionInstall');
+    };
+
     $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
 
     init(true);

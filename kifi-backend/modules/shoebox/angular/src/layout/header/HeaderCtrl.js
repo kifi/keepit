@@ -25,6 +25,9 @@ angular.module('kifi')
     $scope.search = { text: '', showName: false };
     $scope.stayInLibraryPath = '';
 
+    //
+    // Watchers & Listeners
+    //
     $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
       $scope.search.text = '';
@@ -40,6 +43,10 @@ angular.module('kifi')
       if (current.params.q) {
         $scope.search.text = current.params.q;
       }
+    });
+
+    $rootScope.$on('triggerAddKeep', function (lib) {
+      $scope.addKeeps();
     });
 
     $scope.focusInput = function () {

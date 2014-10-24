@@ -90,10 +90,7 @@ angular.module('kifi')
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
 
         $rootScope.$on('changedLibrarySorting', function() {
-          scope.sortingMenu.option = profileService.prefs.library_sorting_pref;
-          if (!scope.sortingMenu.option) {
-            scope.sortingMenu.option = 'last_kept';
-          }
+          scope.sortingMenu.option = profileService.prefs.library_sorting_pref || 'last_kept';
           updateNavLibs();
         });
 

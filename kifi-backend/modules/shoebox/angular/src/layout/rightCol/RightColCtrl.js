@@ -184,6 +184,10 @@ angular.module('kifi')
       });
     });
 
+    $rootScope.$on('triggerExtensionInstall', function() {
+      $scope.triggerInstall();
+    });
+
     $scope.logout = function () {
       profileService.logout();
     };
