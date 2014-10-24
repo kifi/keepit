@@ -87,7 +87,7 @@ angular.module('kifi')
         scope.isDragTarget = false;
         scope.isDragging = false;
         scope.librariesEnabled = libraryService.isAllowed();
-        scope.userLoggedIn = $rootScope.userLoggedIn
+        scope.userLoggedIn = $rootScope.userLoggedIn;
 
         //
         // Internal methods.
