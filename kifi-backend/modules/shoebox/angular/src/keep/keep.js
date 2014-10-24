@@ -898,13 +898,12 @@ angular.module('kifi')
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        var keep = scope.keep;
         function updateKeepStatus() {
           scope.isNotKept = scope.isKeptPublic = scope.isKeptPrivate = false; // reset
-          if (keep.myLibraries.length === 0) {
+          if (scope.keep.myLibraries.length === 0) {
             scope.isNotKept = true;
           } else {
-            if (_.all(keep.myLibraries, { secret: true })) {
+            if (_.all(scope.keep.myLibraries, { secret: true })) {
               scope.isKeptPrivate = true;
             } else {
               scope.isKeptPublic = true;
@@ -915,8 +914,9 @@ angular.module('kifi')
         updateKeepStatus();
 
         scope.$watchCollection(function () {
-          return _.pluck(keep.myLibraries, 'secret');
+          return _.pluck(scope.keep.myLibraries, 'secret');
         }, updateKeepStatus);
+        scope.$watch('keep.isMyBookmark', updateKeepStatus);
 
         scope.librarySelection = {};
         scope.clickAction = function () {
@@ -928,10 +928,12 @@ angular.module('kifi')
                 libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
                 tagService.addToKeepCount(1);
 
-                // Frankly, this is not needed because library.js is always fetching with cache invalidation right now.
+                var library = scope.librarySelection.library;
                 keep.buildKeep(keep);
                 keep.makeKept();
-                scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
+                _.assign(scope.keep, keep);
+
+                scope.$emit('keepAdded', libraryService.getSlugById(library.id), scope.keep);
               });
             }
           });
