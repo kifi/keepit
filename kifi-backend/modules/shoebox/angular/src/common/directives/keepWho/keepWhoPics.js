@@ -26,23 +26,26 @@ angular.module('kifi')
         keep: '='
       },
       link: function (scope) {
-        var keep = scope.keep;
-
         scope.me = profileService.me;
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.librariesEnabled = libraryService.isAllowed();
 
-        if (scope.librariesEnabled) {
-          scope.visibleKeepLibraries = _.union(keep.libraries, keep.myLibraries);
-          scope.$emit('getCurrentLibrary', { callback: function (currentLibrary) {
-            var currentLibraryIdx = _.findIndex(scope.visibleKeepLibraries, { id: currentLibrary.id });
-            if (currentLibraryIdx > -1) {
-              scope.visibleKeepLibraries.splice(currentLibraryIdx, 1);
-            }
-          }});
+        function updateVisibleKeepLibraries() {
+          if (scope.librariesEnabled) {
+            scope.visibleKeepLibraries = _.union(scope.keep.libraries, scope.keep.myLibraries);
+            scope.$emit('getCurrentLibrary', { callback: function (currentLibrary) {
+              var currentLibraryIdx = _.findIndex(scope.visibleKeepLibraries, { id: currentLibrary.id });
+              if (currentLibraryIdx > -1) {
+                scope.visibleKeepLibraries.splice(currentLibraryIdx, 1);
+              }
+            }});
+          }
         }
+
+        scope.$watch('keep.myLibraries.length', updateVisibleKeepLibraries);
+        updateVisibleKeepLibraries();
       }
     };
   }
