@@ -2173,7 +2173,7 @@ function loadLibraries(done, fail) {
   }
   if (libraries) {
     done(libraries);
-    if (!(+stored('libraries_loaded_at') > Date.now() - 2 * 60 * 60 * 1000)) {
+    if (!(+stored('libraries_loaded_at') > Date.now() - 30000)) {
       ajaxLoadLibraries(done);
     }
   } else {
