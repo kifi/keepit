@@ -51,16 +51,11 @@ angular.module('kifi')
           scope.secretLib = _.find(libraryService.librarySummaries, { 'kind' : 'system_secret' });
           allUserLibs = _.filter(libraryService.librarySummaries, { 'kind' : 'user_created' });
 
-          if (typeof(scope.sortingMenu.option) === 'undefined') {
-            scope.userLibsToShow = [];
-            scope.invitedLibsToShow  = [];
-          } else {
-            var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
-            scope.userLibsToShow = newList[0];
-            scope.invitedLibsToShow  = newList[1];
-            librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
-            invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
-          }
+          var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
+          scope.userLibsToShow = newList[0];
+          scope.invitedLibsToShow  = newList[1];
+          librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
+          invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
 
           scope.$broadcast('refreshScroll');
         }
@@ -95,8 +90,10 @@ angular.module('kifi')
         $rootScope.$on('librarySummariesChanged', updateNavLibs);
 
         $rootScope.$on('changedLibrarySorting', function() {
-          scope.sortingMenu.option = profileService.prefs.library_sorting_pref.replace(/[\\\"]/g, '');
-          updateNavLibs();
+          scope.sortingMenu.option = profileService.prefs.library_sorting_pref;
+          if (scope.sortingMenu.option) {
+            updateNavLibs();
+          }
         });
 
         scope.$watch(function () {
@@ -116,10 +113,10 @@ angular.module('kifi')
         scope.$watch(function () {
             return scope.sortingMenu.option;
           }, function () {
-          if (scope.sortingMenu.option !== '' && typeof(scope.sortingMenu.option) !== 'undefined') {
+          if (scope.sortingMenu.option) {
             scope.changeList();
             scope.turnDropdownOff();
-            profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option.replace(/[\\\"]/g, '') });
+            profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
           }
         });
 
