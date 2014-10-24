@@ -42,10 +42,9 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
        """.stripMargin
     } mkString ("\n")
 
-    def twitterImageTags = images.take(4).zipWithIndex map {
-      case (image, i) =>
-        s"""
-        |<meta name="twitter:image$i" content="$image">
+    def twitterImageTags = images.headOption map { image =>
+      s"""
+        |<meta name="twitter:image:src" content="$image">
        """.stripMargin
     } mkString ("\n")
 
@@ -74,7 +73,7 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
       |<link rel="canonical" href="$url" />
-      |<meta name="twitter:card" content="gallery" />
+      |<meta name="twitter:card" content="summary_large_image" />
       |<meta name="twitter:site" content="@kifi" />
       |<meta name="twitter:creator" content="@kifi" />
       |<meta name="twitter:title" content="${title}">
