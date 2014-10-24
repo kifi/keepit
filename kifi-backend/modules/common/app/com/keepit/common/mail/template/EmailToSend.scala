@@ -3,7 +3,7 @@ package com.keepit.common.mail.template
 import com.keepit.common.db.Id
 import com.keepit.common.mail.{ ElectronicMailCategory, EmailAddress }
 import com.keepit.heimdal.{ HeimdalContext, ContextStringData, ContextData }
-import com.keepit.model.User
+import com.keepit.model.{ NotificationCategory, User }
 import play.twirl.api.Html
 import com.keepit.common.json.EitherFormat
 
@@ -39,23 +39,39 @@ object TemplateOptions {
 }
 
 case class EmailToSend(
-  title: String = "Kifi",
-  from: EmailAddress,
-  fromName: Option[Either[Id[User], String]] = Some(Right("Kifi")),
-  to: Either[Id[User], EmailAddress],
-  cc: Seq[EmailAddress] = Seq[EmailAddress](),
-  subject: String,
-  htmlTemplate: Html,
-  textTemplate: Option[Html] = None,
-  category: ElectronicMailCategory,
-  campaign: Option[String] = None,
-  senderUserId: Option[Id[User]] = None,
-  tips: Seq[EmailTip] = Seq.empty,
-  templateOptions: Map[String, ContextData] = Map.empty,
-  extraHeaders: Option[Map[String, String]] = None,
-  auxiliaryData: Option[HeimdalContext] = None,
-  channel: Option[String] = None,
-  source: Option[String] = None)
+    title: String = "Kifi",
+    from: EmailAddress,
+    fromName: Option[Either[Id[User], String]] = Some(Right("Kifi")),
+    to: Either[Id[User], EmailAddress],
+    cc: Seq[EmailAddress] = Seq[EmailAddress](),
+    subject: String,
+    htmlTemplate: Html,
+    textTemplate: Option[Html] = None,
+    category: ElectronicMailCategory,
+    campaign: Option[String] = None,
+    senderUserId: Option[Id[User]] = None,
+    tips: Seq[EmailTip] = Seq.empty,
+    templateOptions: Map[String, ContextData] = Map.empty,
+    extraHeaders: Option[Map[String, String]] = None,
+    auxiliaryData: Option[HeimdalContext] = None,
+    channel: Option[String] = None,
+    source: Option[String] = None) {
+
+  // aka kcid1
+  def urlCampaignParam: String = campaign.getOrElse {
+    // converts underscored_categories_like_this to camelCaseCategoryNames
+    category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
+  }
+
+  // aka kcid2
+  def urlChannelParam: String = channel.getOrElse("email")
+
+  // aka kcid3
+  def urlSourceParam: String = source orElse NotificationCategory.ParentCategory.get(category) orElse (Some("na")) get
+
+  def urlKcidParam: String = List(urlCampaignParam, urlChannelParam, urlSourceParam).mkString("-")
+
+}
 
 object EmailToSend {
   import com.keepit.common.mail.ElectronicMail.emailCategoryFormat
