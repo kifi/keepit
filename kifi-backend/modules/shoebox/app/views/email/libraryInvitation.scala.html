@@ -220,8 +220,8 @@
                   @libraryInfo.shortDescription.getOrElse("")
                   <br/>
                   <br/>
-                  @{passPhrase map { prase =>
-                      "You may need to enter the following passphrase to view library: @passPhrase"
+                  @{passPhrase map { phrase =>
+                      s"You may need to enter the following passphrase to view library: $phrase"
                   }}
                 </td>
               </tr>

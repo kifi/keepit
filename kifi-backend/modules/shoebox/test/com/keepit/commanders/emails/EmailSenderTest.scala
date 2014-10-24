@@ -380,6 +380,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
+        html must not contain (invite.passPhrase)
       }
     }
 

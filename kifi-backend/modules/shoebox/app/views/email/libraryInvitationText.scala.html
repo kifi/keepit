@@ -16,8 +16,8 @@ passPhrase: Option[String])
 @libraryInfo.shortDescription.getOrElse("")
 
 @libraryUrl
-@{passPhrase map {prase =>
-"Passphrase: @passPhrase"
+@{passPhrase map { phrase =>
+s"Passphrase: $phrase"
 }}
 
 Cheers!
