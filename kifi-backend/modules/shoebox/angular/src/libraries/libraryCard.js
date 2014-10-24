@@ -104,7 +104,9 @@ angular.module('kifi')
           }
 
           var maxLength = 150;
-          if (scope.library.description && scope.library.description.length > maxLength) {
+          scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
+
+          if (scope.library.description && scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
             var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
@@ -185,7 +187,7 @@ angular.module('kifi')
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
-          return scope.isUserLibrary(library) &&
+          return !scope.isUserLoggedOut && scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
                   scope.isMyLibrary(library));
         };
