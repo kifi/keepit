@@ -589,21 +589,22 @@ var keepBox = keepBox || (function () {
         var url = this.src;
         if (loading[url]) {
           nLoading--, loading[url] = false;
-          var used = useImageIfSuitable(this);
-          if (nLoading === 0 && deferred.promise.isPending() && !used) {
+          if (useImageIfSuitable(this)) {
+            deferred.resolve(this);
+          } else if (nLoading === 0) {
             deferred.reject();
           }
         }
+      }
+
+      if (nLoading === 0) {
+        deferred.reject();
       }
     }
 
     if (deferred.promise.isPending()) {
       finishFindingImages();
-      setTimeout(function () {
-        if (deferred.promise.isPending()) {
-          deferred.reject();
-        }
-      }, 1200);
+      setTimeout(deferred.reject.bind(deferred), 1200);
     } else {
       setTimeout(finishFindingImages);
     }
