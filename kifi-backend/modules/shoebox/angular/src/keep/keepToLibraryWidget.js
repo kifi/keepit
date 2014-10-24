@@ -15,6 +15,8 @@ angular.module('kifi')
        *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
+       *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
+       *   keptToLibraries - an array of library objects that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
@@ -40,6 +42,9 @@ angular.module('kifi')
         scope.search = {};
         scope.showCreate = false;
         scope.newLibrary = {};
+        scope.widgetLibraries = [];
+        scope.excludeLibraries = scope.excludeLibraries || [];
+        scope.keptToLibraries = scope.keptToLibraries || [];
 
 
         //
@@ -51,7 +56,7 @@ angular.module('kifi')
         }
 
         function clearSelection () {
-          scope.libraries.forEach(function (library) {
+          scope.widgetLibraries.forEach(function (library) {
             library.selected = false;
           });
         }
@@ -163,12 +168,24 @@ angular.module('kifi')
           // Initialize state.
           scope.search = {};
           selectedIndex = 0;
-          scope.libraries[selectedIndex].selected = true;
           libraryList = widget.find('.library-select-list');
           searchInput = widget.find('.keep-to-library-search-input');
           scope.showCreate = false;
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
+
+          scope.widgetLibraries = _.filter(scope.libraries, function (library) {
+            return !_.find(scope.excludeLibraries, { 'id': library.id });
+          });
+
+          scope.widgetLibraries.forEach(function (library) {
+            library.keptTo = false;
+            if (scope.keptToLibraries && _.find(scope.keptToLibraries, { 'id': library.id })) {
+              library.keptTo = true;
+            }
+          });
+
+          scope.widgetLibraries[selectedIndex].selected = true;
 
           // Focus on search input.
           searchInput.focus();
@@ -181,7 +198,7 @@ angular.module('kifi')
             clearSelection();
             library.selected = true;
             scope.librarySelection.library = library;
-            selectedIndex = _.indexOf(scope.libraries, library);
+            selectedIndex = _.indexOf(scope.widgetLibraries, library);
           }
         };
 
@@ -192,7 +209,7 @@ angular.module('kifi')
         scope.processKeyEvent = function ($event) {
           function getNextIndex(index, direction) {
             var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.libraries.length - 1) ? index : nextIndex;
+            return (nextIndex < 0 || nextIndex > scope.widgetLibraries.length - 1) ? index : nextIndex;
           }
 
           switch ($event.keyCode) {
@@ -202,7 +219,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, -1);
-              scope.libraries[selectedIndex].selected = true;
+              scope.widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -213,7 +230,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, 1);
-              scope.libraries[selectedIndex].selected = true;
+              scope.widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -222,7 +239,7 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              scope.librarySelection.library = scope.libraries[selectedIndex];
+              scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
               if (_.isFunction(scope.clickAction)) {
                 scope.clickAction(element);
               }
@@ -262,7 +279,7 @@ angular.module('kifi')
           libraryService.createLibrary(library).then(function () {
             libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
-                scope.librarySelection.library = _.find(scope.libraries, { 'name': library.name });
+                scope.librarySelection.library = _.find(scope.widgetLibraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction(element);
                 }

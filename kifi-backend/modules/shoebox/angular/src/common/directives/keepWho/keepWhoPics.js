@@ -33,13 +33,13 @@ angular.module('kifi')
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.librariesEnabled = libraryService.isAllowed();
-        
+
         if (scope.librariesEnabled) {
-          scope.visibleKeepLibaries = _.union(keep.libraries, keep.myLibraries);
+          scope.visibleKeepLibraries = _.union(keep.libraries, keep.myLibraries);
           scope.$emit('getCurrentLibrary', { callback: function (currentLibrary) {
-            var currentLibraryIdx = _.findIndex(scope.visibleKeepLibaries, { id: currentLibrary.id });
+            var currentLibraryIdx = _.findIndex(scope.visibleKeepLibraries, { id: currentLibrary.id });
             if (currentLibraryIdx > -1) {
-              scope.visibleKeepLibaries.splice(currentLibraryIdx, 1);
+              scope.visibleKeepLibraries.splice(currentLibraryIdx, 1);
             }
           }});
         }

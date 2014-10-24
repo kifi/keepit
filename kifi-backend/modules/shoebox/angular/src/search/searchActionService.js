@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .factory('searchActionService', [
-  '$analytics', '$http', '$location', '$log', '$q', 'routeService', 'profileService', 'friendService',
+  '$analytics', '$http', '$location', '$log', '$q', 'routeService', 'profileService', 'friendService', 'libraryService',
 
-  function ($analytics, $http, $location, $log, $q, routeService, profileService, friendService) {
+  function ($analytics, $http, $location, $log, $q, routeService, profileService, friendService, libraryService) {
     //
     // Internal helper methods.
     //
@@ -55,7 +55,7 @@ angular.module('kifi')
         } else {
           user = profileService.me;
           lib.keeperPic = friendService.getPictureUrlForUser(user);
-          if (lib.name !== 'Main Library' && lib.name !== 'Secret Library') {
+          if (!libraryService.isSystemLibrary(lib.id)) {
             decompressedLibraries.push(lib);
           }
           myLibraries.push(lib);

@@ -28,8 +28,16 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, tags: Seq[String], firstName: String, lastName: String) {
+case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) {
+
+  def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
+
+  val title = clean(unsafeTitle)
+  val description = clean(unsafeDescription)
+  val tags = unsafeTags.distinct.filter(_.length > 1).take(100).map(clean)
+  val firstName = clean(unsafeFirstName)
+  val lastName = clean(unsafeLastName)
 
   def tagList = tags.mkString(",")
 
@@ -46,7 +54,7 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } mkString ("\n")
+    } getOrElse("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""

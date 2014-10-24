@@ -38,7 +38,7 @@
           {{library.shortDescription}}&hellip;
           <a href="javascript:" class="kf-desc-more" ng-click="showLongDescription()">More</a>
         </p>
-        <p ng-switch-when="false" class="kf-keep-lib-description">{{library.description}}</p>
+        <p ng-switch-when="false" class="kf-keep-lib-description" ng-bind-html="library.formattedDescription"></p>
       </div>
 
       <div class="kf-keep-lib-stats-and-followers">
