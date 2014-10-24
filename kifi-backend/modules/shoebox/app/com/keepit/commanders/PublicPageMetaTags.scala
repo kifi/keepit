@@ -50,7 +50,7 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
     } mkString ("\n")
 
     def facebookIdTag = facebookId.map { id =>
-      <meta property="article:author" content="$id"/>
+      s"""<meta property="article:author" content="$id"/>"""
     } getOrElse ""
 
     s"""
