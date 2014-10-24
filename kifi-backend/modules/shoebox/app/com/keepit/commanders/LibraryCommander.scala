@@ -72,14 +72,15 @@ class LibraryCommander @Inject() (
 
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
 
-      val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
+      val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
+
       //facebook OG recommends:
       //We suggest that you use an image of at least 1200x630 pixels.
-      val imageUrls: Seq[String] = keeps map { keep =>
+      val imageUrls: Seq[String] = (keeps map { keep =>
         keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize) map { image =>
           keepImageCommander.getUrl(image)
         }
-      } flatten
+      }).flatten.take(10)
 
       //should also get owr word2vec
       val embedlyKeywords: Seq[String] = keeps map { keep =>
