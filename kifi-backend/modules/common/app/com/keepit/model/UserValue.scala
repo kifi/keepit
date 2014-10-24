@@ -37,10 +37,11 @@ object UserValueStates extends States[UserValue]
 @json case class UserValueName(name: String)
 
 object UserValueName {
-  val LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
+  val EXT_LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
   val ENTER_TO_SEND = UserValueName("enter_to_send")
-  val MAX_RESULTS = UserValueName("ext_max_results")
-  val SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
+  val EXT_MAX_RESULTS = UserValueName("ext_max_results")
+  val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
+  val EXT_SHOW_LIBRARY_INTRO = UserValueName("ext_show_library_intro")
   val AVAILABLE_INVITES = UserValueName("availableInvites")
   val HAS_SEEN_INSTALL = UserValueName("has_seen_install")
   val WELCOME_EMAIL_SENT = UserValueName("welcomeEmailSent")
@@ -55,7 +56,6 @@ object UserValueName {
   val BOOKMARK_IMPORT_TOTAL = UserValueName("bookmark_import_total")
   val USER_DESCRIPTION = UserValueName("user_description")
   val PENDING_PRIMARY_EMAIL = UserValueName("pending_primary_email")
-  val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
   val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining")
   val CONTACTS_NOTIFIED_ABOUT_JOINING = UserValueName("contactsNotifiedAboutJoining")
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
@@ -128,12 +128,13 @@ object UserValues {
     def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
   }
 
-  val lookHereMode = UserValueBooleanHandler(UserValueName.LOOK_HERE_MODE, true)
+  val lookHereMode = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, true)
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
-  val maxResults = UserValueIntHandler(UserValueName.MAX_RESULTS, 1)
-  val showExtMsgIntro = UserValueBooleanHandler(UserValueName.SHOW_EXT_MSG_INTRO, true)
+  val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
+  val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
+  val showLibraryIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_LIBRARY_INTRO, true)
 
-  val UserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
+  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showLibraryIntro).map(_.name)
 
   val availableInvites = UserValueIntHandler(UserValueName.AVAILABLE_INVITES, 1000)
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)
