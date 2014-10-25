@@ -145,10 +145,9 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         status(result) === OK
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("uri" -> "/").toString()
-        val session1 = session(result)
-        session1.getUserId.isDefined === true
-        val userId = session1.getUserId.get
-        val cookies1 = cookies(result)
+        val sess = session(result)
+        sess.getUserId.isDefined === true
+        val userId = sess.getUserId.get
         val (user, suiOpt) = db.readOnlyMaster { implicit s =>
           val user = userRepo.get(userId)
           val suiOpt = socialUserInfoRepo.getByUser(userId).headOption
@@ -156,6 +155,15 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         }
         user.state === UserStates.ACTIVE
         suiOpt.isDefined === true
+
+        // (wrong) sign-up
+        val payload1 = Json.obj("email" -> fooEmail.address, "password" -> "wrongpwd", "firstName" -> "NotFoo", "lastName" -> "NotBar")
+        val request1 = FakeRequest("POST", path).withBody(payload1)
+        val result1 = authController.emailSignup()(request1)
+        status(result1) === FORBIDDEN
+        contentType(result1) must beSome("application/json")
+        contentAsString(result1) === Json.obj("error" -> "user_exists_failed_auth").toString()
+        session(result1).getUserId.isDefined === false
       }
     }
 
