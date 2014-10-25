@@ -491,32 +491,32 @@ var keepBox = keepBox || (function () {
 
   function showKeep(library, justKept) {
     var images = [];
-    determineInitialImageIdx(images, library, justKept, findImages(images))
+    determineInitialImage(images, library, justKept, findImages(images))
       .done(showKeep2.bind(null, library, justKept && !$box.data('tip'), images));
   }
 
-  function determineInitialImageIdx(images, library, justKept, pageImagePromise) {
+  function determineInitialImage(images, library, justKept, pageImagePromise) {
     var keepImageUrl = library.keep.image;
     if (keepImageUrl) {
       var img = new Image;
       img.src = keepImageUrl;
       images.unshift(img);
-      return Q(0);
+      return Q(true);
     } else if (justKept) {
-      return pageImagePromise.then(function (img) {
+      return pageImagePromise.done(function (img) {
         api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
-        return 0;
+        return true;
       }, function () {
-        return -1;
+        return false;
       });
     }
-    return Q(-1);
+    return Q(false);
   }
 
-  function showKeep2(library, autoClose, images, imageIdx) {
+  function showKeep2(library, autoClose, images, showImage) {
     var keep = library.keep;
     var title = keep.title || formatTitleFromUrl(document.URL);
-    var canvases = imageIdx >= 0 ? [newKeepCanvas(images[imageIdx])] : [];   // TODO: show spinner while this image is loading
+    var canvases = showImage ? [newKeepCanvas(images[0])] : [];   // TODO: show spinner while this image is loading
     var $view = $(render('html/keeper/keep_box_keep', {
       library: library,
       title: title,
@@ -526,7 +526,10 @@ var keepBox = keepBox || (function () {
     }, {
       keep_box_lib: 'keep_box_lib'
     }));
-    $view.find('.kifi-keep-box-keep-image-cart').append(canvases[imageIdx] || newNoImage());
+    $view.find('.kifi-keep-box-keep-image-cart').append(canvases[0] || newNoImage());
+    if (images.length === 0) {
+      $view.find('.kifi-keep-box-keep-image-picker').addClass('kifi-empty');
+    }
 
     var $tags = $view.find('.kifi-keep-box-tags')
     .data('pre', (keep.tags || []).map(tagNameToTokenItem))
@@ -542,6 +545,7 @@ var keepBox = keepBox || (function () {
       onAdd: $.proxy(onAddTag, null, $view, library.id),
       onDelete: $.proxy(onDeleteTag, null, $view, library.id)
     });
+    var imageIdx = showImage ? 0 : -1;
     $view.data({
       library: library,
       imageIdx: imageIdx,

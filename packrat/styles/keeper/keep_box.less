@@ -531,10 +531,14 @@
   color: #777;
 }
 @image-height: 240px;
+@no-image-height: 80px;
 .kifi-keep-box-keep-image-picker {
   height: @image-height;
   position: relative;
   overflow: hidden;
+  &.kifi-empty {
+    height: @no-image-height;
+  }
 }
 .kifi-keep-box-keep-image-cart {
   position: absolute;
@@ -569,6 +573,9 @@
   &.kifi-none {
     text-align: center;
     line-height: @image-height;
+    .kifi-keep-box-keep-image-picker.kifi-empty & {
+      line-height: @no-image-height;
+    }
     font-size: 24px;
     color: rgba(0,0,0,.2);
     &::before {
