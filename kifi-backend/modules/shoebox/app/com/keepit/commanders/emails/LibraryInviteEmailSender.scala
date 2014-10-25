@@ -35,8 +35,9 @@ class LibraryInviteEmailSender @Inject() (
       val (library, libraryInfo) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
         val libOwner = basicUserRepo.load(library.ownerId)
+        val inviter = basicUserRepo.load(invite.inviterId)
         val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps)
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps, Some(inviter))
         (library, libraryInfo)
       }
 

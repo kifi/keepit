@@ -157,7 +157,7 @@ class LibraryCommander @Inject() (
       val lib = libraryRepo.get(id)
       val owner = basicUserRepo.load(lib.ownerId)
       val numKeeps = keepRepo.getCountByLibrary(id)
-      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
+      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)
     }
     val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
     (libInfo, accessStr)
@@ -995,7 +995,8 @@ case class LibraryInfo(
   numKeeps: Int,
   numFollowers: Int,
   kind: LibraryKind,
-  lastKept: Option[DateTime])
+  lastKept: Option[DateTime],
+  inviter: Option[BasicUser])
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -1009,10 +1010,11 @@ object LibraryInfo {
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'lastKept).formatNullable[DateTime]
+    (__ \ 'lastKept).formatNullable[DateTime] and
+    (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser])(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1023,7 +1025,8 @@ object LibraryInfo {
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind,
-      lastKept = lib.lastKept
+      lastKept = lib.lastKept,
+      inviter = inviter
     )
   }
 
