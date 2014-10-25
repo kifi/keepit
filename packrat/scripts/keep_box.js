@@ -62,7 +62,7 @@ var keepBox = keepBox || (function () {
       return !!$box;
     },
     appendTip: function (tip) {
-      return $(tip).appendTo($box);
+      return $(tip).appendTo($box.data('tip', true));
     },
     keep: function (priv) {
       $box.find('.kifi-keep-box-lib.kifi-system' + (priv ? '.kifi-secret' : '.kifi-discoverable')).each(function () {
@@ -491,7 +491,7 @@ var keepBox = keepBox || (function () {
   function showKeep(library, justKept) {
     var images = [];
     determineInitialImageIdx(images, library, justKept, findImages(images))
-      .done(showKeep2.bind(null, library, justKept, images));
+      .done(showKeep2.bind(null, library, justKept && !$box.data('tip'), images));
   }
 
   function determineInitialImageIdx(images, library, justKept, pageImagePromise) {
