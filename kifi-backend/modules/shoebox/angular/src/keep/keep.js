@@ -266,10 +266,17 @@ angular.module('kifi')
           }
         }
 
-
         //
         // Scope methods.
         //
+        scope.getReadOnlyTags = function (keep) {
+          return (!scope.isTaggable(keep) && !_.isEmpty(keep.tags)) ? keep.tags : [];
+        };
+
+        scope.hasReadyOnlyTags = function (keep) {
+          return scope.getReadOnlyTags(keep).length > 0;
+        };
+
         scope.isTaggable = function (keep) {
           return scope.isMyLibrary && keep.isMyBookmark;
         };
@@ -287,7 +294,8 @@ angular.module('kifi')
         };
 
         scope.showTags = function (keep) {
-          return scope.isTaggable(keep) && (scope.hasTag(keep) || scope.addingTag.enabled);
+          return scope.hasReadyOnlyTags(keep) ||
+            (scope.isTaggable(keep) && (scope.hasTag(keep) || scope.addingTag.enabled));
         };
 
         scope.showAddTag = function () {
