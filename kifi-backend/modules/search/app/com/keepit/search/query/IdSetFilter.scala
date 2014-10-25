@@ -1,6 +1,7 @@
 package com.keepit.search.query
 
 import com.keepit.search.index.WrappedSubReader
+import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSet
 import org.apache.lucene.search.DocIdSetIterator
@@ -9,14 +10,14 @@ import org.apache.lucene.search.Filter
 import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 
-class IdSetFilter(val ids: Set[Long]) extends Filter {
+class IdSetFilter(val ids: LongArraySet) extends Filter {
   override def getDocIdSet(context: AtomicReaderContext, acceptDocs: Bits): DocIdSet = {
     context.reader match {
       case reader: WrappedSubReader =>
         val idBuf = {
           val mapper = reader.getIdMapper
           val buf = new ArrayBuffer[Int]
-          ids.foreach { id =>
+          ids.foreachLong { id =>
             val docid = mapper.getDocId(id)
             if (docid >= 0 && (acceptDocs == null || acceptDocs.get(docid))) buf += docid
           }

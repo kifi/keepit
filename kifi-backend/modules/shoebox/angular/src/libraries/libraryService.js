@@ -135,6 +135,12 @@ angular.module('kifi')
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
       },
 
+      isSystemLibrary: function (libraryId) {
+        return _.some(librarySummaries, function (libSum) {
+          return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
+        });
+      },
+
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
           userLibrarySummariesService.expire();
@@ -226,7 +232,7 @@ angular.module('kifi')
       },
 
       getLibraryShareContacts: function (opt_query) {
-        return contactSearchService.get(opt_query);
+        return contactSearchService.get(opt_query || '');
       },
 
       shareLibrary: function (libraryId, opts) {

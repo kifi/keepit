@@ -68,6 +68,7 @@ package object time {
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   val SQL_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ssZZ").withZone(DEFAULT_DATE_TIME_ZONE)
+  val ISO_8601_DAY_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd").withZone(DEFAULT_DATE_TIME_ZONE)
 
   implicit object DateTimeJsonFormat extends Format[DateTime] {
     def reads(json: JsValue) = try {

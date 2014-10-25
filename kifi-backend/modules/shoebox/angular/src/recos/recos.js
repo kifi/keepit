@@ -115,7 +115,11 @@ angular.module('kifi')
 
     // Load a new set of recommendations only on page refresh.
     // Otherwise, load the recommendations we have previously shown.
-    if (recoStateService.recosList.length === 0) {
+    if ($scope.recos.length > 0) {
+      _.remove($scope.recos, function (reco) {
+        return reco.recoKeep.isMyBookmark;
+      });
+    } else {
       $scope.loading = true;
 
       recoStateService.empty();
@@ -124,7 +128,7 @@ angular.module('kifi')
         //really hacky way of preventing user from seeing their personalized recos if they haven't followed a library
         //if this is still here after Oct 10th 2014 throw something (soft) at Stephen
         libraryService.fetchLibrarySummaries().then(function (librarySummaries){
-          if (rawRecos.length > 0 && librarySummaries.libraries.length>2) {
+          if (rawRecos.length > 0 && (librarySummaries.libraries.length>2 || !libraryService.isAllowed()) ) {
             rawRecos.forEach(function (rawReco) {
               recos.push(recoDecoratorService.newUserRecommendation(rawReco));
             });
@@ -151,10 +155,17 @@ angular.module('kifi')
 
 // For individual recommendation
 .controller('RecoCtrl', [
-  '$scope', 'modalService', 'recoActionService',
-  function ($scope, modalService, recoActionService) {
+  '$scope', 'modalService', 'recoActionService', 'libraryService',
+  function ($scope, modalService, recoActionService, libraryService) {
     $scope.reasons = $scope.reco.recoData.reasons;
     $scope.reasonIndex = 0;
+
+    $scope.librariesEnabled = libraryService.isAllowed();
+    if ($scope.librariesEnabled) {
+      $scope.libraries = libraryService.fetchLibrarySummaries(false);
+    } else {
+      $scope.libraries = [];
+    }
 
     $scope.hasReason = function () {
       return $scope.reco.recoData.reasons &&

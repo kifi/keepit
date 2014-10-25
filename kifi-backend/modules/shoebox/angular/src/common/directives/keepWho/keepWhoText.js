@@ -30,16 +30,20 @@ angular.module('kifi')
           scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
         });
 
+        function librariesTotal() {
+          return keep.librariesTotal || (keep.libraries ? keep.libraries.length : 0);
+        }
+
         scope.hasKeepers = function () {
           return keep.keepers && (keep.keepers.length > 0);
         };
 
         scope.hasOthers = function () {
-          return keep.others > 0;
+          return keep.keepersTotal > 0;
         };
 
         scope.hasLibraries = function () {
-          return scope.librariesEnabled && 1 > 0; // TODO(josh) how to get the libraries a keep is in?
+          return scope.librariesEnabled && librariesTotal() > 0;
         };
 
         scope.getFriendText = function () {
@@ -52,7 +56,7 @@ angular.module('kifi')
         };
 
         scope.getOthersText = function () {
-          var num = keep.others ? keep.others : 0;
+          var num = keep.keepersTotal ? keep.keepersTotal : 0;
           var text = (num === 1) ? '1 other' : num + ' others';
           if (scope.useDeprecated && (scope.hasKeepers() || keep.isMyBookmark)) {
             return 'and ' + text;
@@ -61,7 +65,7 @@ angular.module('kifi')
         };
 
         scope.getLibrariesText = function () {
-          var num = keep.librariesTotal;
+          var num = librariesTotal();
           var text = (num === 1) ? '1 library' : num + ' libraries';
           return text;
         };

@@ -503,11 +503,12 @@ angular.module('kifi')
             if (scope.librariesEnabled) {
               libraryService.fetchLibrarySummaries().then(function () {
                 scope.libraries = !scope.library ? [] : _.filter(libraryService.librarySummaries, function (library) {
-                  return library.access !== 'read_only' && library.id !== scope.library.id;
+                  return library.access !== 'read_only';
                 });
 
                 scope.librarySelection = {};
                 scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+                scope.excludeLibraries = [scope.library];
                 scope.clickAction = function (widgetElement) {
                   if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();

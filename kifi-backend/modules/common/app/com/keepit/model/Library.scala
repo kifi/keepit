@@ -50,6 +50,20 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
+  val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
+  val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"
+
+  def getDisplayName(name: String, kind: LibraryKind): String = kind match {
+    case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN_DISPLAY_NAME
+    case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET_DISPLAY_NAME
+    case _ => name
+  }
+
+  // is_primary: trueOrNull in db
+  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept)
+  }
+
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
@@ -82,6 +96,15 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
+
+case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
+  override val version = 5
+  val namespace = "library_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
   override val version = 3
@@ -131,10 +154,8 @@ object LibraryVisibility {
 sealed abstract class LibraryKind(val value: String)
 
 object LibraryKind {
-  trait SystemGenerated extends LibraryKind
-
-  case object SYSTEM_MAIN extends LibraryKind("system_main") with SystemGenerated
-  case object SYSTEM_SECRET extends LibraryKind("system_secret") with SystemGenerated
+  case object SYSTEM_MAIN extends LibraryKind("system_main")
+  case object SYSTEM_SECRET extends LibraryKind("system_secret")
   case object USER_CREATED extends LibraryKind("user_created")
 
   implicit def format[T]: Format[LibraryKind] =

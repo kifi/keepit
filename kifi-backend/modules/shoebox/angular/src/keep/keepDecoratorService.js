@@ -5,10 +5,10 @@ angular.module('kifi')
 .factory('keepDecoratorService', ['tagService', 'util', 'friendService', 'profileService',
   function (tagService, util, friendService, profileService) {
     function processLibraries(item) {
+      item.myLibraries = [];
       if (item.libraries && item.libraries.length>0 && Array.isArray(item.libraries[0])) {
         var cleanedLibraries = [];
         var usersWithLibs = {};
-        item.myLibraries = [];
         item.libraries.forEach( function (lib) {
           lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
           if (lib[1].id !== profileService.me.id) {
@@ -90,7 +90,7 @@ angular.module('kifi')
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
       this.readTime = getKeepReadTime(this.summary);
-      this.showSocial = this.others || (this.keepers && this.keepers.length > 0) || (this.libraries &&  this.libraries.length > 0);
+      this.showSocial = this.keepersTotal || (this.keepers && this.keepers.length > 0) || (this.libraries && this.libraries.length > 0);
     }
 
     // Add properties that are specific to a really kept Keep.

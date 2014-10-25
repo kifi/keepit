@@ -482,7 +482,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val secret = ironSysLibs.find(_.kind == LibraryKind.SYSTEM_SECRET).get
 
           main.state === LibraryStates.ACTIVE
-          main.name === "Main Library"
+          main.name === Library.SYSTEM_MAIN_DISPLAY_NAME
           main.slug === LibrarySlug("main")
           main.id.get === Id[Library](4)
           secret.state === LibraryStates.ACTIVE

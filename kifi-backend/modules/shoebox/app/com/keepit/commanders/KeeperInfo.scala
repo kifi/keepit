@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.social.BasicUser
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._

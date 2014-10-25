@@ -48,7 +48,7 @@ angular.module('kifi')
           $window.location = 'kifi:' + safeUrl;
         } else if (isAndroid()) {
           safeUrl = url.replace(/https?:\/\/((www.)?kifi.com)?\/?/, '');
-          $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;launchFlags=268435456;end;';
+          $window.location = 'intent://' + safeUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
         }
         timer = setTimeout(goToMobileStore, 2000);
       }

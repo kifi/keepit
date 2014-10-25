@@ -9,22 +9,24 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.mail.template.tags
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory, UserEvent, UserEventTypes }
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.BasicUser
+import com.keepit.social.{ SocialNetworks, BasicUser }
 import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import views.html.admin.images
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
@@ -54,8 +56,64 @@ class LibraryCommander @Inject() (
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
+    keepImageCommander: KeepImageCommander,
+    applicationConfig: FortyTwoConfig,
+    uriSummaryCommander: URISummaryCommander,
+    socialUserInfoRepo: SocialUserInfoRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
+
+  def libraryMetaTags(library: Library): PublicPageMetaTags = {
+    db.readOnlyMaster { implicit s =>
+      val owner = userRepo.get(library.ownerId)
+
+      val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
+
+      val keeps = keepRepo.getByLibrary(library.id.get, 0, 50)
+
+      //facebook OG recommends:
+      //We suggest that you use an image of at least 1200x630 pixels.
+      val imageUrls: Seq[String] = {
+        val images: Seq[KeepImage] = keeps map { keep =>
+          keepImageCommander.getBestImageForKeep(keep.id.get, KeepImageSize.XLarge.idealSize)
+        } flatten
+        val sorted: Seq[KeepImage] = images.sortWith {
+          case (image1, image2) =>
+            (image1.imageSize.width * image1.imageSize.height) > (image2.imageSize.width * image2.imageSize.height)
+        }
+        val urls: Seq[String] = sorted.take(10) map { image =>
+          val url = keepImageCommander.getUrl(image)
+          if (url.startsWith("http:") || url.startsWith("https:")) url else s"http:$url"
+        }
+        //last image is the kifi image we want to append to all image lists
+        if (urls.isEmpty) Seq("https://djty7jcqog9qu.cloudfront.net/assets/fbc1200X630.png") else urls
+      }
+
+      val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+      val url = {
+        val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
+        if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
+      }
+      //should also get owr word2vec
+      val embedlyKeywords: Seq[String] = keeps map { keep =>
+        uriSummaryCommander.getStoredEmbedlyKeywords(keep.uriId).map(_.name)
+      } flatten
+      val tags: Seq[String] = collectionRepo.getTagsByLibrary(library.id.get).map(_.tag).toSeq
+      val allTags: Seq[String] = (embedlyKeywords ++ tags).toSet.toSeq
+      PublicPageMetaTags(
+        unsafeTitle = s"${library.name} by ${owner.firstName} ${owner.lastName} \u2022 Kifi",
+        url = url,
+        urlPathOnly = urlPathOnly,
+        unsafeDescription = library.description.getOrElse(s"${owner.fullName}'s ${library.name} Kifi Library"),
+        images = imageUrls,
+        facebookId = facebookId,
+        createdAt = library.createdAt,
+        updatedAt = library.updatedAt,
+        unsafeTags = allTags,
+        unsafeFirstName = owner.firstName,
+        unsafeLastName = owner.lastName)
+    }
+  }
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
     db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }

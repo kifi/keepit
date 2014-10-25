@@ -15,15 +15,22 @@ import scala.concurrent.Future
 
 object AngularDistAssets extends AssetsBuilder with Controller with Logging {
 
-  private def index() = {
+  val COMMENT_STRING = "<!-- HEADER_PLACEHOLDER -->"
+
+  private def index(): (Enumerator[String], Enumerator[String]) = {
     val fileStream = Play.resourceAsStream("public/ng/index_cdn.html").orElse(Play.resourceAsStream("public/ng/index.html")).get
     val writer = new StringWriter()
     IOUtils.copy(fileStream, writer, "UTF-8")
     val fileStr = writer.toString
-    Enumerator(fileStr)
+    val parts = fileStr.split(COMMENT_STRING)
+    if (parts.size != 2) throw new Exception(s"no two parts for index file $fileStr")
+    (Enumerator(parts(0)), Enumerator(parts(1)))
+
   }
-  private lazy val cachedIndex = index()
-  private def maybeCachedIndex = {
+
+  private lazy val cachedIndex: (Enumerator[String], Enumerator[String]) = index()
+
+  private def maybeCachedIndex: (Enumerator[String], Enumerator[String]) = {
     if (Play.maybeApplication.exists(_.mode == Mode.Prod)) {
       cachedIndex
     } else {
@@ -40,13 +47,18 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   }
 
   @inline
-  private def augmentPage(splice: => Seq[Future[String]]) = {
-    val idx = maybeCachedIndex
-    idx.andThen(reactiveEnumerator(splice)).andThen(Enumerator.eof)
+  private def augmentPage(headerLoad: String, postload: => Seq[Future[String]]) = {
+    val (idx1, idx2) = maybeCachedIndex
+    val compositPage = idx1 andThen Enumerator(headerLoad) andThen idx2
+    compositPage.andThen(reactiveEnumerator(postload)).andThen(Enumerator.eof)
   }
 
-  def angularApp(splice: => Seq[Future[String]] = Seq()) = {
-    Ok.chunked(augmentPage(splice)).as(HTML)
+  def angularApp(headerLoad: Option[String] = None, postload: => Seq[Future[String]] = Seq()) = {
+    val header = headerLoad match {
+      case None => "<title>Kifi</title>"
+      case Some(h) => h
+    }
+    Ok.chunked(augmentPage(header, postload)).as(HTML)
   }
 }
 

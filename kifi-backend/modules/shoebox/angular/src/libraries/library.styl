@@ -7,8 +7,8 @@ invite-header-orange = #ff7c3c
   padding: 0 25px 0 30px
   margin-bottom: 10px
 
-.kf-logged-out .kf-library-card-header
-  margin-top: 14px
+  .kf-logged-out &
+    margin-bottom: -30px
 
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
@@ -18,9 +18,30 @@ invite-header-orange = #ff7c3c
 .library-card.loggedOutUser
   border: none
   box-shadow: none
+  padding-bottom: 20px
+
+  &::before
+    content: ' '
+    position: absolute
+    width: 99999px
+    left: 100%
+    top: 0
+    bottom: 0
+    background-color: #fff
+
+  &::after
+    content: ' '
+    position: absolute
+    width: 99999px
+    right: 100%
+    top: 0
+    bottom: 0
+    background-color: #fff
 
   .kf-keep-lib-name-container
     width: 100%
+    height: auto
+    padding-top: 20px
 
   .kf-keep-lib-name
     text-align: center
@@ -30,6 +51,7 @@ invite-header-orange = #ff7c3c
     line-height: 1.23em
     font-weight: bold
     vertical-align: middle
+    font-family: Merriweather, Lato, Helvetica, Arial, sans-serif
 
   .kf-keep-lib-info
     margin: 36px 40px 0
@@ -49,7 +71,7 @@ invite-header-orange = #ff7c3c
       height: 32px
       font-size: 0
 
-    .kf-keep-lib-footer-share-link
+    .kf-keep-lib-footer-share-link-text
       display: none
 
     .library-share-menu
@@ -257,8 +279,16 @@ invite-header-orange = #ff7c3c
   font-size: 13px
   color: #666
 
-  a
+  .kf-keep-lib-footer-share-link
     color: #666
+
+  &.kf-keep-lib-footer-twitter-button
+    padding: 0
+
+    .kf-keep-lib-footer-share-link
+      display: block
+      height: 16px
+      padding: 8px 15px 8px 40px
 
 .kf-keep-lib-footer-button-icon
   position: absolute

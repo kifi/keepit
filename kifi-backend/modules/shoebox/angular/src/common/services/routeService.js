@@ -62,11 +62,11 @@ angular.module('kifi')
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
       pageTags: route('/collections/page'),
-      
+
       searchTags: function (query, limit) {
         return route('/collections/search') + '?query=' + query + '&limit=' + limit;
       },
-      
+
       suggestTags: function (libraryId, keepId, query) {
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + query;
       },
@@ -86,7 +86,7 @@ angular.module('kifi')
         return env.xhrBase + '/user/' + id + '/friend';
       },
       contactSearch: function (opt_query) {
-        return route('/user/contacts/search' + (opt_query ? '?query=' + opt_query : ''));
+        return route('/user/contacts/search?query=' + (opt_query || '') + '&limit=10');
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
