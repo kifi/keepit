@@ -38,6 +38,7 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
       |<meta name="robots" content="noindex">
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
       |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=myAppId">
     """.stripMargin
 
 }
@@ -79,6 +80,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<title>${title}</title>
       |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
       |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=myAppId">
       |<meta property="og:description" content="${description}" />
       |<meta property="og:title" content="${title}" />
       |<meta property="og:type" content="blog" />
