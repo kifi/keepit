@@ -246,28 +246,20 @@ GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 # Website
 ##########################################
 
-# [LAUNCH] update next section
-GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
-GET     /marketing                  @com.keepit.controllers.website.HomeController.home
-GET     /marketing/                 @com.keepit.controllers.website.HomeController.home
+GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 GET     /blog/                      @com.keepit.controllers.website.HomeController.blog
-GET     /about                      @com.keepit.controllers.website.HomeController.about
-GET     /marketing/about            @com.keepit.controllers.website.HomeController.route(path = "about")
-GET     /marketing/about/           @com.keepit.controllers.website.HomeController.route(path = "about")
-GET     /marketing/about/team       @com.keepit.controllers.website.HomeController.route(path = "about/team")
-GET     /marketing/about/join_us    @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
-GET     /marketing/how_it_works     @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
-GET     /marketing/contact          @com.keepit.controllers.website.HomeController.route(path = "contact")
+GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")
+GET     /about/                     @com.keepit.controllers.website.HomeController.route(path = "about")
+GET     /about/team                 @com.keepit.controllers.website.HomeController.route(path = "about/team")
+GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
+GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
-GET     /marketing/terms            @com.keepit.controllers.website.HomeController.route(path = "terms")
-GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
-GET     /marketing/privacy          @com.keepit.controllers.website.HomeController.route(path = "privacy")
+GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
+GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
-## [LAUNCH] kill it!
-GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
@@ -843,12 +835,6 @@ POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
-
-##########################################
-# Marketing site
-##########################################
-## [LAUNCH] drop the following line
-GET     /about/*file               @com.keepit.controllers.website.AboutAssets.at(path = "/public/about_us", file)
 
 ->  / common.Routes
 

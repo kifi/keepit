@@ -65,9 +65,8 @@ class KifiSiteRouter @Inject() (
     if (request.host.contains("42go")) {
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
-      landingPage(request) //[LAUNCH] drop this line and the next
-    } else if (request.path == "/marketing" && request.userIdOpt.isEmpty) {
-      frogsparkLandingPage(request)
+      //should we ever get to this line???
+      Redirect(com.keepit.controllers.website.routes.HomeController.home)
     } else if (userAgentOpt.exists(_.isMobile) &&
       request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
       Ok(views.html.mobile.MobileRedirect(request.uri))
@@ -87,24 +86,6 @@ class KifiSiteRouter @Inject() (
           // routing to ng page - could be public pages like public library, user profile and other shared routes with private views
           AngularDistAssets.angularApp(ng.headerload)
       }
-    }
-  }
-
-  private def landingPage(request: MaybeUserRequest[_]): Result = {
-    request match {
-      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
-        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-      case _ =>
-        Ok(views.html.marketing.landing())
-    }
-  }
-
-  private def frogsparkLandingPage(request: MaybeUserRequest[_]): Result = {
-    request match {
-      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
-        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-      case _ =>
-        MarketingSiteRouter.marketingSite()
     }
   }
 

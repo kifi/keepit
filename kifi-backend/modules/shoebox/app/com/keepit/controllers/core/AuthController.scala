@@ -220,7 +220,7 @@ class AuthController @Inject() (
       case Some(info) =>
         val hasher = Registry.hashers.currentHasher
         val session = request.session
-        val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
+        val home = com.keepit.controllers.website.routes.HomeController.home()
         authHelper.checkForExistingUser(info.emailAddress) collect {
           case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
@@ -347,8 +347,6 @@ class AuthController @Inject() (
           log.info(s"trying to log in via $agent. orig string: $agentString")
           if (agent.isOldIE) {
             Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-          } else if (!agent.screenCanFitWebApp) {
-            Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
           } else None
         }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
     }
@@ -376,14 +374,12 @@ class AuthController @Inject() (
     }
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
-    } else if (agentOpt.exists(!_.screenCanFitWebApp)) {
-      Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
     } else {
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-            Redirect(s"${com.keepit.controllers.website.routes.KifiSiteRouter.home.url}?m=0")
+            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
           } else if (ur.identityOpt.isDefined) {
             val identity = ur.identityOpt.get
             // User exists, is incomplete
