@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.social.BasicUser
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
@@ -70,6 +70,8 @@ object KeepData {
     (__ \ 'secret).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
+
+  def apply(basicKeep: BasicKeep): KeepData = KeepData(basicKeep.id, basicKeep.mine, basicKeep.removable, basicKeep.visibility == LibraryVisibility.SECRET, basicKeep.libraryId)
 }
 
 // The extension uses this object to augment `KeepData` only when needed. It's useless by itself.

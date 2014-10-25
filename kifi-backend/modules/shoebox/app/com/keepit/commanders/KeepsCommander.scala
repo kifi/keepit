@@ -49,7 +49,7 @@ case class KeepInfo(
   isPrivate: Boolean, // deprecated
   createdAt: Option[DateTime] = None,
   others: Option[Int] = None, // deprecated
-  keeps: Option[Set[KeepData]] = None,
+  keeps: Option[Set[BasicKeep]] = None,
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
@@ -71,6 +71,9 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
+    implicit val libraryWrites = Writes[BasicLibrary] { library =>
+      Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
+    }
     implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
     Json.writes[KeepInfo]
   }
@@ -242,7 +245,7 @@ class KeepsCommander @Inject() (
   }
 
   // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
-  def getUserKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[KeepData]] = {
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
     db.readOnlyMaster { implicit session =>
       uriIds.map { uriId =>
         val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
@@ -251,11 +254,11 @@ class KeepsCommander @Inject() (
           val libraryId = keep.libraryId.get
           val lib = libraryRepo.get(libraryId)
           val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
-          KeepData(
+          BasicKeep(
             id = keep.externalId,
             mine = mine,
             removable = removable,
-            secret = lib.visibility == LibraryVisibility.SECRET,
+            visibility = lib.visibility,
             libraryId = Library.publicId(lib.id.get)
           )
         }
@@ -279,7 +282,7 @@ class KeepsCommander @Inject() (
       }
     }.map(collectionCommander.getBasicCollections)
 
-    val allMyKeeps = perspectiveUserIdOpt.map { userId => getUserKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[KeepData]]
+    val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
 
     for {
       augmentationInfos <- augmentationFuture

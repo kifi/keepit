@@ -132,7 +132,7 @@ class PageCommander @Inject() (
       }
 
       // find all keeps in database (with uri) (read_write actions)
-      val keepsData = keepsCommander.getUserKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq
+      val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
 
       getKeepersFuture.map { keepers =>
         KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
