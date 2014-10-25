@@ -10,6 +10,7 @@ import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.heimdal.SanitizedKifiHit
+import com.keepit.common.crypto.PublicId
 
 case class Keep(
     id: Option[Id[Keep]] = None,
@@ -257,3 +258,19 @@ object KeepAndTags {
   implicit val format = Json.format[KeepAndTags]
 }
 
+case class BasicKeep(
+  id: ExternalId[Keep],
+  mine: Boolean,
+  removable: Boolean,
+  visibility: LibraryVisibility,
+  libraryId: PublicId[Library])
+
+object BasicKeep {
+  implicit val format: Format[BasicKeep] = (
+    (__ \ 'id).format[ExternalId[Keep]] and
+    (__ \ 'mine).format[Boolean] and
+    (__ \ 'removable).format[Boolean] and
+    (__ \ 'visibility).format[LibraryVisibility] and
+    (__ \ 'libraryId).format[PublicId[Library]]
+  )(BasicKeep.apply, unlift(BasicKeep.unapply))
+}
