@@ -56,7 +56,7 @@ angular.module('kifi')
       $scope.loading = true;
       searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
         var hits = result.hits;
-        
+
         hits.forEach(function (hit) {
           var searchKeep = new keepDecoratorService.Keep(hit);
           if (!!searchKeep.id) {
@@ -101,7 +101,7 @@ angular.module('kifi')
       searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
       return [keep, $event]; // log analytics for search click here
     };
-    
+
     $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Searching…';
@@ -146,7 +146,7 @@ angular.module('kifi')
       $window.removeEventListener('beforeunload', onUnload);
     });
 
-    
+
     //
     // On SearchCtrl initialization.
     //
