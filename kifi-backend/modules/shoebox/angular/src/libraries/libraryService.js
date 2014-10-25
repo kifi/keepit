@@ -76,8 +76,6 @@ angular.module('kifi')
     // TODO(yiping): figure out whether this service belongs so specifically within libraryService.
     var contactSearchService = new Clutch(function (libId, opt_query) {
       return $http.get(routeService.libraryShareSuggest(libId, opt_query)).then(function (res) {
-        console.log("new"); //ZZZ down here out
-        console.log(JSON.parse(JSON.stringify(res.data)));
         return res.data.members;
       });
     });
