@@ -47,7 +47,7 @@ var keepBox = keepBox || (function () {
         }
         setShortcut(lib);
       });
-      show($parent, data.libraries);
+      show($parent, data.libraries, data.showLibraryIntro);
     },
     hide: function () {
       if ($box) {
@@ -61,6 +61,9 @@ var keepBox = keepBox || (function () {
     showing: function () {
       return !!$box;
     },
+    appendTip: function (tip) {
+      return $(tip).appendTo($box);
+    },
     keep: function (priv) {
       $box.find('.kifi-keep-box-lib.kifi-system' + (priv ? '.kifi-secret' : '.kifi-discoverable')).each(function () {
         chooseLibrary(this);
@@ -68,7 +71,7 @@ var keepBox = keepBox || (function () {
     }
   };
 
-  function show($parent, libraries) {
+  function show($parent, libraries, showIntro) {
     log('[keepBox:show]');
     $box = $(render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
@@ -99,16 +102,19 @@ var keepBox = keepBox || (function () {
     $(document).data('esc').add(hide);
 
     $box.layout()
-    .on('transitionend', onShown)
+    .on('transitionend', $.proxy(onShown, null, showIntro))
     .removeClass('kifi-down');
   }
 
-  function onShown(e) {
+  function onShown(showIntro, e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onShown]');
       $box.off('transitionend', onShown);
       $box.find('input').first().focus();
       makeScrollable($box);
+      if (showIntro && !window.guide) {
+        api.require('scripts/libraries_intro.js', api.noop);
+      }
     }
   }
 
@@ -991,9 +997,5 @@ var keepBox = keepBox || (function () {
         } catch (e) {}
       }
     }
-  }
-
-  function propsEqual(o1, o2, p) {
-    return o1[p] === o2[p];
   }
 }());
