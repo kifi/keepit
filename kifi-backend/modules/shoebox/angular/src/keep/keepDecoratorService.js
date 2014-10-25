@@ -42,8 +42,7 @@ angular.module('kifi')
         item.libraries = [];
       }
 
-
-
+      this.keeps = []; // default value in case `item` doesn't have it
       _.assign(this, item);
       this.itemType = itemType;
 

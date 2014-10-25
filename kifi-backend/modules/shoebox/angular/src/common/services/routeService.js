@@ -85,11 +85,8 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
-      contactSearch: function (opt_query) {
-        return route('/user/contacts/search?query=' + (opt_query || '') + '&limit=10');
-      },
       libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest?n=10' + (opt_query ? '&query=' + opt_query : ''));
+        return route('/libraries/' + libId + '/members/suggest?n=10' + (opt_query ? '&q=' + opt_query : ''));
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),

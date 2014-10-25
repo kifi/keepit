@@ -34,13 +34,9 @@ angular.module('kifi')
 
         function updateVisibleKeepLibraries() {
           if (scope.librariesEnabled) {
-            scope.visibleKeepLibraries = _.union(scope.keep.libraries, scope.keep.myLibraries);
-            scope.$emit('getCurrentLibrary', { callback: function (currentLibrary) {
-              var currentLibraryIdx = _.findIndex(scope.visibleKeepLibraries, { id: currentLibrary.id });
-              if (currentLibraryIdx > -1) {
-                scope.visibleKeepLibraries.splice(currentLibraryIdx, 1);
-              }
-            }});
+            scope.visibleKeepLibraries = scope.keep.libraries;
+          } else {
+            scope.visibleKeepLibraries = [];
           }
         }
 
