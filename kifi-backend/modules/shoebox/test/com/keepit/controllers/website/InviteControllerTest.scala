@@ -93,7 +93,7 @@ class InviteControllerTest extends Specification with ShoeboxTestInjector {
         val result = inviteController.acceptInvite(invite1.externalId)(request)
         val code = status(result)
         code !== FORBIDDEN
-        code === OK
+        code === 303
         // landing page at this point -- we'll make sure cookie is set
         val invCookie = cookies(result).get("inv")
         invCookie.isDefined === true
