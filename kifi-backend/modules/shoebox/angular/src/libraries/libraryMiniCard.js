@@ -9,11 +9,13 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        library: '=',
+        refLibrary: '&library',
         invite: '='
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
+
+        scope.library = _.cloneDeep(scope.refLibrary());
         //
         // Internal helper methods.
         //
