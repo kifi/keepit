@@ -78,9 +78,14 @@ class WebsiteSearchController @Inject() (
         Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
       } else {
 
-        val futureUriSummaries = {
-          val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
-          shoeboxClient.getUriSummaries(uriIds)
+        val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
+        val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+        val futureBasicKeeps = {
+          if (userId == SearchControllerUtil.nonUser) {
+            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]])
+          } else {
+            shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
+          }
         }
 
         val librarySearcher = libraryIndexer.getSearcher
@@ -94,16 +99,20 @@ class WebsiteSearchController @Inject() (
               shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
             }
 
-            val futureJsHits = futureUriSummaries.map { summaries =>
+            val futureJsHits = for {
+              summaries <- futureUriSummaries
+              basicKeeps <- futureBasicKeeps
+            } yield {
               (kifiPlainResult.hits zip allSecondaryFields).map {
                 case (hit, secondaryFields) => {
                   val primaryFields = Json.obj(
                     "title" -> hit.title,
                     "url" -> hit.url,
                     "score" -> hit.finalScore,
-                    "summary" -> summaries(Id(hit.id))
+                    "summary" -> summaries(Id(hit.id)),
+                    "keeps" -> basicKeeps(Id(hit.id))
                   )
-                  json.minify(primaryFields ++ secondaryFields)
+                  primaryFields ++ secondaryFields
                 }
               }
             }
