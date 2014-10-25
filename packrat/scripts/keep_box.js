@@ -553,7 +553,7 @@ var keepBox = keepBox || (function () {
       canvases: canvases,
       saved: {
         title: keep.title,
-        imageIdx: keep.image ? imageIdx : null
+        imageIdx: keep.image ? imageIdx : -1
       },
       saving: {}
     });
@@ -727,9 +727,9 @@ var keepBox = keepBox || (function () {
       log('[swipeImage] already animated');
       return i;
     }
-    data.imageIdx = i = (i + (back ? n : 1)) % (n + 1);
+    data.imageIdx = i = back ? (i >= 0 ? i : n) - 1 : (i === n - 1 ? -1 : i + 1);
     var $old = $cart.find('.kifi-keep-box-keep-image');  // TODO: verify new img still qualifies, capture its current src
-    var $new = $(i < n ? data.canvases[i] || (data.canvases[i] = newKeepCanvas(data.images[i])) : newNoImage());
+    var $new = $(i >= 0 ? data.canvases[i] || (data.canvases[i] = newKeepCanvas(data.images[i])) : newNoImage());
     $cart.addClass(back ? 'kifi-back' : 'kifi-forward');
     $new[back ? 'prependTo' : 'appendTo']($cart).layout();
     $cart.addClass('kifi-animated').layout()
