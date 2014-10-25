@@ -88,6 +88,9 @@ angular.module('kifi')
       contactSearch: function (opt_query) {
         return route('/user/contacts/search?query=' + (opt_query || '') + '&limit=10');
       },
+      libraryShareSuggest: function (libId, opt_query) {
+        return route('/libraries/' + libId + '/members/suggest?n=10' + (opt_query ? '&query=' + opt_query : ''));
+      },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
