@@ -28,7 +28,7 @@ angular.module('kifi')
     //
     // Watchers & Listeners
     //
-    $rootScope.$on('libraryUrl', function (e, library) {
+    var libraryChipHandler = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
       $scope.search.text = '';
       if ($scope.library.id) {
@@ -38,6 +38,7 @@ angular.module('kifi')
         $scope.clearLibraryName();
       }
     });
+    $scope.$on('$destroy', libraryChipHandler);
 
     $scope.$on('$routeChangeSuccess', function (event, current) {
       if (current.params.q) {
@@ -45,9 +46,10 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$on('triggerAddKeep', function () {
+    var addKeepHandler = $rootScope.$on('triggerAddKeep', function () {
       $scope.addKeeps();
     });
+    $scope.$on('$destroy', addKeepHandler);
 
     $scope.focusInput = function () {
       $scope.isFocused = true;

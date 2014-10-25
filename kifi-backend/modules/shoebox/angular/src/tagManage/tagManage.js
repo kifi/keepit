@@ -215,13 +215,14 @@ angular.module('kifi')
       $scope.tagsToShow.splice(removedIndex, 1);
     };
 
-    $rootScope.$on('undoRemoveTag', function () {
+    var undoRemoveTagHandler = $rootScope.$on('undoRemoveTag', function () {
       if (removedIndex > 0) {
         $scope.tagsToShow.splice(removedIndex, 0, removedTag);
         removedIndex = -1;
         removedTag = {};
       }
     });
+    $scope.$on('$destroy', undoRemoveTagHandler);
 
   }
 ]);

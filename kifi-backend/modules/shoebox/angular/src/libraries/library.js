@@ -92,7 +92,7 @@ angular.module('kifi')
     // Watches and listeners.
     //
     var keepAddedHandler = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if ((libSlug === 'secret' && $scope.librarySlug === 'main') || 
+      if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
           (libSlug === 'main' && $scope.librarySlug === 'secret')) {
         var idx = _.findIndex($scope.keeps, { url: keep.url });
         if (idx > -1) {
@@ -185,7 +185,8 @@ angular.module('kifi')
       $rootScope.$emit('triggerExtensionInstall');
     };
 
-    $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
+    var loginHandler = $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
+    $scope.$on('$destroy', loginHandler);
 
     init(true);
     $rootScope.$emit('libraryUrl', $scope.library);
