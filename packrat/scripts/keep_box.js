@@ -145,6 +145,7 @@ var keepBox = keepBox || (function () {
     var $vp = $box.find('.kifi-keep-box-viewport');
     var $cart = $vp.find('.kifi-keep-box-cart');
     var $old = $cart.find('.kifi-keep-box-view').first();
+    $old.triggerHandler('kifi-hide');
 
     var vpHeightOld = $vp[0].offsetHeight;
     $vp.css('height', vpHeightOld);

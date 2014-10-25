@@ -6,6 +6,7 @@
 // @require scripts/html/keeper/libraries_intro_2.js
 
 (function () {
+  log('[libraries_intro]');
   var $2, $1 = keepBox.appendTip(render('html/keeper/libraries_intro_1', me))
     .layout().addClass('kifi-showing')
     .on('click', '.kifi-li-close', hide);
@@ -23,20 +24,23 @@
       if (view) {
         observer.disconnect();
         observer = null;
-        $(cart).on('transitionend', onKeepView);
+        $(cart).on('transitionend', $.proxy(onKeepView, null, view));
       }
     });
     observer.observe(cart, {childList: true});
   });
 
-  function onKeepView() {
+  function onKeepView(view) {
+    log('[libraries_intro:onKeepView]')
     $(this).off('transitionend', onKeepView);
+    $(view).on('kifi-hide', hide);
     $2 = $2 || keepBox.appendTip(render('html/keeper/libraries_intro_2'))
       .layout().addClass('kifi-showing')
       .on('click', '.kifi-li-close', hide);
   }
 
   function hide(e) {
+    log('[libraries_intro:hide]')
     if ($2) {
       api.port.emit('terminate_ftue', {type: 'l', action: 'close'});
     }
