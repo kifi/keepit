@@ -49,7 +49,7 @@ case class KeepInfo(
   isPrivate: Boolean, // deprecated
   createdAt: Option[DateTime] = None,
   others: Option[Int] = None, // deprecated
-  secret: Option[Boolean] = None,
+  keeps: Option[Set[KeepData]] = None,
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
@@ -192,7 +192,7 @@ class KeepsCommander @Inject() (
           case Some(afterKeep) => uriIds.takeWhile(_ != afterKeep.uriId)
         }
       }
-      if (count > 0) after.take(count) else after
+      after
     }
 
     val keepIdsF = selector match {
@@ -203,7 +203,8 @@ class KeepsCommander @Inject() (
       val keeps = db.readOnlyReplica { implicit session =>
         val keepUriIds = filter(counts)
         val km = keepRepo.bulkGetByUserAndUriIds(userId, keepUriIds.toSet)
-        km.valuesIterator.toList.sortBy(_.id).reverse
+        val sorted = km.valuesIterator.toList.sortBy(_.id).reverse
+        if (count > 0) sorted.take(count) else sorted
       }
 
       // Fetch counts
@@ -240,6 +241,29 @@ class KeepsCommander @Inject() (
     }
   }
 
+  // todo(Léo): factored out of PageCommander, need to be optimized for fewer database queries
+  def getUserKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[KeepData]] = {
+    db.readOnlyMaster { implicit session =>
+      uriIds.map { uriId =>
+        val userKeeps = keepRepo.getAllByUriAndUser(uriId, userId).toSet.map { keep: Keep =>
+          val keeperId = keep.userId
+          val mine = userId == keeperId
+          val libraryId = keep.libraryId.get
+          val lib = libraryRepo.get(libraryId)
+          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
+          KeepData(
+            id = keep.externalId,
+            mine = mine,
+            removable = removable,
+            secret = lib.visibility == LibraryVisibility.SECRET,
+            libraryId = Library.publicId(lib.id.get)
+          )
+        }
+        uriId -> userKeeps
+      }
+    }.toMap
+  }
+
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], keeps: Seq[Keep], idealImageSize: ImageSize = KeepImageSize.Large.idealSize): Future[Seq[KeepInfo]] = {
     val augmentationFuture = {
       val items = keeps.map { keep => AugmentableItem(keep.uriId) }
@@ -254,6 +278,8 @@ class KeepsCommander @Inject() (
         keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       }
     }.map(collectionCommander.getBasicCollections)
+
+    val allMyKeeps = perspectiveUserIdOpt.map { userId => getUserKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[KeepData]]
 
     for {
       augmentationInfos <- augmentationFuture
@@ -285,7 +311,7 @@ class KeepsCommander @Inject() (
             isPrivate = keep.isPrivate,
             createdAt = Some(keep.createdAt),
             others = Some(others),
-            secret = augmentationInfoForKeep.secret,
+            keeps = allMyKeeps.get(keep.uriId),
             keepers = Some(keepers.map(idToBasicUser)),
             keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
             keepersTotal = Some(augmentationInfoForKeep.keepersTotal),

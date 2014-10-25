@@ -259,7 +259,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
           uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -309,7 +310,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
             "others":1,
-            "secret":false,
+            "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
             "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
             "keepersOmitted": 0,
             "keepersTotal": 3,
@@ -329,7 +330,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
             "others":0,
-            "secret":false,
+            "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
             "keepers":[],
             "keepersOmitted": 0,
             "keepersTotal": 1,
@@ -353,7 +354,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       implicit val context = HeimdalContext.empty
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
-      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+      val (u1: User, u2: User, _, keeps1: Seq[Keep], _, _) = helpRankSetup(heimdal, db)
 
       val keeps = db.readOnlyMaster { implicit s =>
         keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -390,7 +391,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
-                      "secret":false,
+                      "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, ${if (keeps1(1).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
                       "keepersTotal": 3,
@@ -413,7 +414,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":0,
-                      "secret":false,
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, ${if (keeps1(0).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[],
                       "keepersOmitted": 0,
                       "keepersTotal": 1,
@@ -442,7 +443,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       implicit val context = HeimdalContext.empty
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
 
-      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+      val (u1: User, u2: User, _, keeps1: Seq[Keep], _, _) = helpRankSetup(heimdal, db)
 
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
       path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
@@ -472,7 +473,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
-                      "secret":false,
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, ${if (keeps1(0).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
                       "keepersTotal": 3,
@@ -520,7 +521,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
           uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -568,7 +570,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "isPrivate":false,
                 "createdAt":"2013-02-16T23:59:00.000Z",
                 "others":0,
-                "secret":false,
+                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,

@@ -28,8 +28,16 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, description: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, tags: Seq[String], firstName: String, lastName: String) {
+case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) {
+
+  def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
+
+  val title = clean(unsafeTitle)
+  val description = clean(unsafeDescription)
+  val tags = unsafeTags.distinct.filter(_.length > 1).take(100).map(clean)
+  val firstName = clean(unsafeFirstName)
+  val lastName = clean(unsafeLastName)
 
   def tagList = tags.mkString(",")
 
@@ -42,12 +50,11 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
        """.stripMargin
     } mkString ("\n")
 
-    def twitterImageTags = images.take(4).zipWithIndex map {
-      case (image, i) =>
-        s"""
-        |<meta name="twitter:image$i" content="$image">
+    def twitterImageTags = images.headOption map { image =>
+      s"""
+        |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } mkString ("\n")
+    } getOrElse ("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
@@ -69,12 +76,12 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta property="fb:first_name" content="${firstName}" />
       |<meta property="fb:last_name" content="${lastName}" />
       |<meta property="fb:tag" content="$tagList" />
-      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310" />
+      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310,636721190" />
       |<meta name="description" content="$description">
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
       |<link rel="canonical" href="$url" />
-      |<meta name="twitter:card" content="gallery" />
+      |<meta name="twitter:card" content="summary_large_image" />
       |<meta name="twitter:site" content="@kifi" />
       |<meta name="twitter:creator" content="@kifi" />
       |<meta name="twitter:title" content="${title}">
@@ -82,10 +89,10 @@ case class PublicPageMetaTags(title: String, url: String, urlPathOnly: String, d
       |<meta name="twitter:url" content="$url" />
       |<meta name="twitter:app:name:iphone" content="Kifi Iphone App">
       |<meta name="twitter:app:id:iphone" content="740232575">
-      |<meta name="twitter:app:url:iphone" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:iphone" content="kifi:/$urlPathOnly">
       |<meta name="twitter:app:name:googleplay" content="Kifi Android App">
       |<meta name="twitter:app:id:googleplay" content="com.kifi">
-      |<meta name="twitter:app:url:googleplay" content="kifi://$urlPathOnly">
+      |<meta name="twitter:app:url:googleplay" content="kifi:/$urlPathOnly">
       |$twitterImageTags
       |<meta itemprop="name" content="$title">
       |<meta itemprop="description" content="$description">

@@ -90,7 +90,7 @@ angular.module('kifi')
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
       this.readTime = getKeepReadTime(this.summary);
-      this.showSocial = this.others || (this.keepers && this.keepers.length > 0) || (this.libraries &&  this.libraries.length > 0);
+      this.showSocial = this.keepersTotal || (this.keepers && this.keepers.length > 0) || (this.libraries && this.libraries.length > 0);
     }
 
     // Add properties that are specific to a really kept Keep.
