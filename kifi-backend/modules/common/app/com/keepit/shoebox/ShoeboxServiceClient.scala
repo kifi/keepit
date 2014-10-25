@@ -34,6 +34,7 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.json.TupleFormat
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -118,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -743,4 +745,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
     call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
 
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {
+      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
+        r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
+      }
+    }
+  }
 }

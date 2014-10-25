@@ -25,7 +25,6 @@ class SearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     languageCommander: LanguageCommander,
     librarySearchCommander: LibrarySearchCommander,
-    libraryIndexer: LibraryIndexer,
     userSearchCommander: UserSearchCommander,
     distributedSearchClient: DistributedSearchServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
@@ -200,8 +199,7 @@ class SearchController @Inject() (
 
     val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*)
     augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
-      val librarySearcher = libraryIndexer.getSearcher
-      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(librarySearcher, maxKeepersShown, maxLibrariesShown, maxTagsShown))
+      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
       val result = Json.toJson(infos)
       Ok(result)
     }

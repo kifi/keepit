@@ -61,8 +61,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
         email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
 
-        val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email")
-        params.map(email.htmlBody.contains(_)) === List(true, true, true)
+        val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email", "kcid=na-vf_email-kifi_invite")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
       }
     }
   }
@@ -88,7 +88,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           subAction = Some("findMoreFriendsBtn"),
           tip = Some(EmailTip.ConnectFacebook)).encode
 
-        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn"
+        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn&kcid=welcome-email-fromKifi"
           + s"&${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
@@ -373,11 +373,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
-        //        println("\n\n\n body: " + email.htmlBody)
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
-        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
-        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)

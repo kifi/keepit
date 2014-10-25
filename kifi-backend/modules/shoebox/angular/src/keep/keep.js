@@ -928,10 +928,10 @@ angular.module('kifi')
         //
         function updateKeepStatus() {
           scope.isNotKept = scope.isKeptPublic = scope.isKeptPrivate = false; // reset
-          if (scope.keep.myLibraries.length === 0) {
+          if (scope.keep.keeps.length === 0) {
             scope.isNotKept = true;
           } else {
-            if (_.all(scope.keep.myLibraries, { secret: true })) {
+            if (_.all(scope.keep.keeps, { visibility: 'secret' })) {
               scope.isKeptPrivate = true;
             } else {
               scope.isKeptPublic = true;
