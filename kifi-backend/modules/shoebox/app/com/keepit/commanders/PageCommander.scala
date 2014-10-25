@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
-import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.AugmentableItem
 
 class PageCommander @Inject() (
     db: Database,
@@ -29,6 +29,7 @@ class PageCommander @Inject() (
     userToDomainRepo: UserToDomainRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    keepsCommander: KeepsCommander,
     collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -120,35 +121,19 @@ class PageCommander @Inject() (
 
     val shown = nUriOpt.map { normUri => historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id) } getOrElse false
     nUriOpt.map { normUri =>
-      val item = AugmentableItem(normUri.id.get)
-      val request = ItemAugmentationRequest.uniform(userId, item)
 
       // get all keepers from search (read_only data)
-      val getKeepersFuture = searchClient.augmentation(request).map { response =>
-        val restrictedKeeps = response.infos(item).keeps
-        db.readOnlyMaster { implicit session =>
-          val userIdSet = restrictedKeeps.map(_.keptBy).flatten.toSet
-          basicUserRepo.loadAll(userIdSet).values.toSeq
-        }
+      val getKeepersFuture = searchClient.augment(Some(userId), Int.MaxValue, 0, 0, Seq(AugmentableItem(normUri.id.get))).map {
+        case Seq(info) =>
+          db.readOnlyMaster { implicit session =>
+            val userIdSet = info.keepers.toSet
+            basicUserRepo.loadAll(userIdSet).values.toSeq
+          }
       }
 
       // find all keeps in database (with uri) (read_write actions)
-      val keepsData = db.readOnlyMaster { implicit session =>
-        val userKeeps = keepRepo.getAllByUriAndUser(normUri.id.get, userId)
-        userKeeps.map { keep =>
-          val keeperId = keep.userId
-          val mine = userId == keeperId
-          val libraryId = keep.libraryId.get
-          val lib = libraryRepo.get(libraryId)
-          val removable = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).exists(_.canWrite)
-          KeepData(
-            id = keep.externalId,
-            mine = mine,
-            removable = removable,
-            secret = lib.visibility == LibraryVisibility.SECRET,
-            libraryId = Library.publicId(lib.id.get))
-        }
-      }
+      val keepsData = keepsCommander.getBasicKeeps(userId, Set(normUri.id.get))(normUri.id.get).toSeq.map(KeepData(_))
+
       getKeepersFuture.map { keepers =>
         KeeperPageInfo(nUriStr, position, neverOnSite, sensitive, shown, keepers, keepsData)
       }

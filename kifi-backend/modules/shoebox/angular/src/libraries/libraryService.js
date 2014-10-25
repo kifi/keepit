@@ -74,9 +74,9 @@ angular.module('kifi')
     });
 
     // TODO(yiping): figure out whether this service belongs so specifically within libraryService.
-    var contactSearchService = new Clutch(function (opt_query) {
-      return $http.get(routeService.contactSearch(opt_query)).then(function (res) {
-        return res.data;
+    var contactSearchService = new Clutch(function (libId, opt_query) {
+      return $http.get(routeService.libraryShareSuggest(libId, opt_query)).then(function (res) {
+        return res.data.members;
       });
     });
 
@@ -133,6 +133,12 @@ angular.module('kifi')
 
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
+      },
+
+      isSystemLibrary: function (libraryId) {
+        return _.some(librarySummaries, function (libSum) {
+          return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
+        });
       },
 
       fetchLibrarySummaries: function (invalidateCache) {
@@ -225,8 +231,8 @@ angular.module('kifi')
         return $http.post(routeService.modifyLibrary(opts.id), opts);
       },
 
-      getLibraryShareContacts: function (opt_query) {
-        return contactSearchService.get(opt_query || '');
+      getLibraryShareContacts: function (libId, opt_query) {
+        return contactSearchService.get(libId, opt_query || '');
       },
 
       shareLibrary: function (libraryId, opts) {

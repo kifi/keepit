@@ -30,6 +30,7 @@ package object template {
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
+    val kcid = TagLabel("kcid")
     val campaign = TagLabel("campaign")
     val channel = TagLabel("channel")
     val source = TagLabel("source")
@@ -74,6 +75,9 @@ package object template {
     def trackingParam(content: String, auxData: Option[HeimdalContext] = None) =
       Tag2(tags.trackingParam, content, auxData).toHtml
 
+    val kcid = Tag0(tags.kcid).toHtml
+    private val kcidTagStr = kcid.body
+
     val campaign = Tag0(tags.campaign).toHtml
     private val campaignTagStr = campaign.body
 
@@ -111,7 +115,7 @@ package object template {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
-      s"${url}utm_source=$sourceTagStr&utm_medium=$channelTagStr&utm_campaign=$campaignTagStr&utm_content=$content" +
+      s"${url}utm_source=$sourceTagStr&utm_medium=$channelTagStr&utm_campaign=$campaignTagStr&utm_content=$content&kcid=$kcidTagStr" +
         s"&${EmailTrackingParam.paramName}=${trackingParam(content)}&$openInAppIfMobileDirective"
     }
 

@@ -78,53 +78,66 @@ class WebsiteSearchController @Inject() (
         Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
       } else {
 
-        val futureUriSummaries = {
-          val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
-          shoeboxClient.getUriSummaries(uriIds)
+        val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
+        val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+        val futureBasicKeeps = {
+          if (userId == SearchControllerUtil.nonUser) {
+            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]])
+          } else {
+            shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
+          }
         }
 
-        val librarySearcher = libraryIndexer.getSearcher
-        augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
-          case (allSecondaryFields, userIds, libraryIds) => {
+        getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
+          val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+          val librarySearcher = libraryIndexer.getSearcher
+          val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
-            val libraryRecordsWithSecrecyById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+          val futureUsers = {
+            val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+            shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+          }
 
-            val futureUsers = {
-              val libraryOwnerIds = libraryRecordsWithSecrecyById.values.map(_._1.ownerId)
-              shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
-            }
-
-            val futureJsHits = futureUriSummaries.map { summaries =>
-              (kifiPlainResult.hits zip allSecondaryFields).map {
-                case (hit, secondaryFields) => {
-                  val primaryFields = Json.obj(
-                    "title" -> hit.title,
-                    "url" -> hit.url,
-                    "score" -> hit.finalScore,
-                    "summary" -> summaries(Id(hit.id))
-                  )
-                  json.minify(primaryFields ++ secondaryFields)
-                }
+          val futureJsHits = for {
+            summaries <- futureUriSummaries
+            basicKeeps <- futureBasicKeeps
+          } yield {
+            kifiPlainResult.hits.zipWithIndex.map {
+              case (hit, index) => {
+                val secret = augmentedItems(index).isSecret(librarySearcher)
+                val primaryFields = Json.obj(
+                  "title" -> hit.title,
+                  "url" -> hit.url,
+                  "score" -> hit.finalScore,
+                  "summary" -> summaries(Id(hit.id)),
+                  "secret" -> secret, // todo(Léo): remove secret field
+                  "keeps" -> basicKeeps(Id(hit.id))
+                )
+                val secondaryFields = allSecondaryFields(index)
+                primaryFields ++ secondaryFields
               }
             }
-            for {
-              usersById <- futureUsers
-              jsHits <- futureJsHits
-            } yield {
-              val libraries = libraryIds.map { libId =>
-                val (library, secret) = libraryRecordsWithSecrecyById(libId)
-                val owner = usersById(library.ownerId)
-                makeBasicLibrary(library, owner, secret)
-              }
-              val users = userIds.map(usersById(_))
-              (jsHits, users, libraries)
+          }
+          for {
+            usersById <- futureUsers
+            jsHits <- futureJsHits
+          } yield {
+            val libraries = libraryIds.map { libId =>
+              val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+              val owner = usersById(library.ownerId)
+              makeBasicLibrary(library, visibility, owner)
             }
+            val users = userIds.map(usersById(_))
+            (jsHits, users, libraries)
           }
         }
       }
 
       futureWebsiteSearchHits.imap {
         case (hits, users, libraries) =>
+          val librariesJson = libraries.map { library =>
+            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
+          }
           val result = Json.obj(
             "uuid" -> kifiPlainResult.uuid,
             "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter),
@@ -134,7 +147,7 @@ class WebsiteSearchController @Inject() (
             "friendsTotal" -> kifiPlainResult.friendsTotal,
             "othersTotal" -> kifiPlainResult.othersTotal,
             "hits" -> hits,
-            "libraries" -> libraries,
+            "libraries" -> librariesJson,
             "users" -> users
           )
           Ok(result)

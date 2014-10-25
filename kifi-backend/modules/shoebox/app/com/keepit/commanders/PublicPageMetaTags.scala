@@ -28,8 +28,23 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) {
+trait PublicPageMetaTags {
+  def formatOpenGraph: String
+}
+
+case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
+  def formatOpenGraph: String =
+    s"""
+      |<meta name="robots" content="noindex">
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
+      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=com.kifi">
+    """.stripMargin
+
+}
+
+case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -54,7 +69,7 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } mkString ("\n")
+    } getOrElse ("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
@@ -63,6 +78,9 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
     s"""
       |<html itemscope itemtype="http://schema.org/Product">
       |<title>${title}</title>
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
+      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=com.kifi">
       |<meta property="og:description" content="${description}" />
       |<meta property="og:title" content="${title}" />
       |<meta property="og:type" content="blog" />
@@ -73,10 +91,10 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       |<meta property="og:url" content="$url" />
       |<meta property="og:site_name" content="Kifi - Connecting People With Knowledge" />
       |<meta property="fb:app_id" content="${PublicPageMetaTags.appId}" />
-      |<meta property="og:first_name" content="${firstName}" />
-      |<meta property="og:last_name" content="${lastName}" />
-      |<meta property="og:tag" content="$tagList" />
-      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310" />
+      |<meta property="fb:first_name" content="${firstName}" />
+      |<meta property="fb:last_name" content="${lastName}" />
+      |<meta property="fb:tag" content="$tagList" />
+      |<meta property="fb:admins" content="646386018,71105121,7800404,1343280666,1367777495,575533310,636721190" />
       |<meta name="description" content="$description">
       |<meta name="keywords" content="$tagList">
       |<meta name="author" content="${firstName} ${lastName}">
