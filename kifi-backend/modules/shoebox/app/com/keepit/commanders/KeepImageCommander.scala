@@ -6,7 +6,7 @@ import java.net.URLConnection
 import java.sql.SQLException
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -33,6 +33,7 @@ trait KeepImageCommander {
 
   def getUrl(keepImage: KeepImage): String
   def getBestImageForKeep(keepId: Id[Keep], idealSize: ImageSize): Option[KeepImage]
+  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
   def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: KeepImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
@@ -70,6 +71,13 @@ class KeepImageCommanderImpl @Inject() (
     KeepImageSize.pickBest(idealSize, validKeepImages)
   }
 
+  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
+    imageInfoRepo.getLargestByUriWithPriority(nUriId).flatMap { imageInfo =>
+      val nuri = normalizedUriRepo.get(nUriId)
+      s3UriImageStore.getImageURL(imageInfo, nuri)
+    }
+  }
+
   private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](1.minute)
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean, overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
     val keep = db.readOnlyMaster { implicit session =>
@@ -78,10 +86,7 @@ class KeepImageCommanderImpl @Inject() (
     log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
       val localLookup = db.readOnlyMaster { implicit session =>
-        imageInfoRepo.getLargestByUriWithPriority(keep.uriId).flatMap { imageInfo =>
-          val nuri = normalizedUriRepo.get(keep.uriId)
-          s3UriImageStore.getImageURL(imageInfo, nuri) tap { u => log.info(s"[kic] Got image URL $u") }
-        }
+        getExistingImageUrlForKeepUri(keep.uriId)
       }
       val remoteImageF = if (localOnly) {
         Future.successful(localLookup)
