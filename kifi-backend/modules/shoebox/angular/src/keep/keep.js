@@ -904,8 +904,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['$log', 'keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
-  function ($log, keepActionService, keepDecoratorService, libraryService, tagService) {
+.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
+  function (keepActionService, keepDecoratorService, libraryService, tagService) {
     return {
       restrict: 'A',
       scope: {
@@ -920,7 +920,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.librarySelection = {};
-        scope.keptToLibraries = scope.keep.myLibraries;
+        scope.keptToLibraries = [];
 
 
         //
@@ -945,19 +945,17 @@ angular.module('kifi')
         //
         scope.clickAction = function () {
           if (scope.librarySelection.library.keptTo) {
-            var currentLibraryId = scope.keep.libraryId;
-            if (scope.librarySelection.library.id === currentLibraryId) {
-              // TODO: waiting for Leo's change to endpoint so that we can get the keep ids in other libraries.
-              keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, scope.keep.id).then(function () {
-                if (scope.librarySelection.library.id === currentLibraryId) {
-                  scope.keep.makeUnkept();
-                }
+            var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
+            keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, keepToUnkeep.id).then(function () {
+              if (scope.librarySelection.library.id === scope.keep.libraryId) {
+                scope.keep.makeUnkept();
+              } else {
+                _.remove(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
+                scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+              }
 
-                libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
-              });
-            } else {
-              $log.log('Unkeeping from other libraries is still awaiting endpoint support!');
-            }
+              libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
+            });
           } else {
             keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
               if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
@@ -1003,6 +1001,7 @@ angular.module('kifi')
         //
         // On link.
         //
+        scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
         updateKeepStatus();
       }
     };

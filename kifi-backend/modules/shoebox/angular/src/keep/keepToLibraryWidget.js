@@ -16,7 +16,7 @@ angular.module('kifi')
        *
        *  Optional properties on parent scope:
        *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
-       *   keptToLibraries - an array of library objects that are already keeping the keep.
+       *   keptToLibraries - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
