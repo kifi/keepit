@@ -41,4 +41,6 @@ class FakeRecommendationsCommander @Inject() (
 
   override def topRecos(userId: Id[User], clientType: RecommendationClientType, more: Boolean, recencyWeight: Float): Future[Seq[FullRecoInfo]] =
     Future.successful(recoInfos)
+
+  override def topPublicRecos(userId: Id[User]) = Future.successful(Seq.empty)
 }
