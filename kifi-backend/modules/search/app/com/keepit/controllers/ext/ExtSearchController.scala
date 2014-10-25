@@ -80,10 +80,10 @@ class ExtSearchController @Inject() (
       augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
         case (allSecondaryFields, userIds, libraryIds) =>
 
-          val libraryRecordsWithSecrecyById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+          val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
           val futureUsers = {
-            val libraryOwnerIds = libraryRecordsWithSecrecyById.values.map(_._1.ownerId)
+            val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
             shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
           }
 
@@ -92,11 +92,13 @@ class ExtSearchController @Inject() (
           futureUsers.map { usersById =>
             val users = userIds.map(usersById(_))
             val libraries = libraryIds.map { libId =>
-              val (library, secret) = libraryRecordsWithSecrecyById(libId)
+              val (library, visibility) = libraryRecordsAndVisibilityById(libId)
               val owner = usersById(library.ownerId)
-              makeBasicLibrary(library, owner, secret)
+              makeBasicLibrary(library, visibility, owner)
             }
-            val librariesJson = libraries.map(basicLibrary => json.minify(Json.toJson(basicLibrary)))
+            val librariesJson = libraries.map { library =>
+              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
+            }
             Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
           }
       }

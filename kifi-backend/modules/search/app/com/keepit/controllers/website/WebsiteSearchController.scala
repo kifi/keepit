@@ -92,10 +92,10 @@ class WebsiteSearchController @Inject() (
         augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
           case (allSecondaryFields, userIds, libraryIds) => {
 
-            val libraryRecordsWithSecrecyById = getLibraryRecordsWithSecrecy(librarySearcher, libraryIds.toSet)
+            val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
             val futureUsers = {
-              val libraryOwnerIds = libraryRecordsWithSecrecyById.values.map(_._1.ownerId)
+              val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
               shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
             }
 
@@ -121,9 +121,9 @@ class WebsiteSearchController @Inject() (
               jsHits <- futureJsHits
             } yield {
               val libraries = libraryIds.map { libId =>
-                val (library, secret) = libraryRecordsWithSecrecyById(libId)
+                val (library, visibility) = libraryRecordsAndVisibilityById(libId)
                 val owner = usersById(library.ownerId)
-                makeBasicLibrary(library, owner, secret)
+                makeBasicLibrary(library, visibility, owner)
               }
               val users = userIds.map(usersById(_))
               (jsHits, users, libraries)
@@ -134,6 +134,9 @@ class WebsiteSearchController @Inject() (
 
       futureWebsiteSearchHits.imap {
         case (hits, users, libraries) =>
+          val librariesJson = libraries.map { library =>
+            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret)
+          }
           val result = Json.obj(
             "uuid" -> kifiPlainResult.uuid,
             "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter),
@@ -143,7 +146,7 @@ class WebsiteSearchController @Inject() (
             "friendsTotal" -> kifiPlainResult.friendsTotal,
             "othersTotal" -> kifiPlainResult.othersTotal,
             "hits" -> hits,
-            "libraries" -> libraries,
+            "libraries" -> librariesJson,
             "users" -> users
           )
           Ok(result)

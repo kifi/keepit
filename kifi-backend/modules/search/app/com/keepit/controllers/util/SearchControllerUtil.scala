@@ -141,15 +141,15 @@ trait SearchControllerUtil {
     (augmentationFields, userIds, libraryIds)
   }
 
-  def getLibraryRecordsWithSecrecy(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, Boolean)] = {
+  def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
     libraryIds.map { libId =>
-      libId -> (LibraryIndexable.getRecord(librarySearcher, libId).get, LibraryIndexable.isSecret(librarySearcher, libId))
+      libId -> (LibraryIndexable.getRecord(librarySearcher, libId).get, LibraryIndexable.getVisibility(librarySearcher, libId).get)
     }.toMap
   }
 
-  def makeBasicLibrary(library: LibraryRecord, owner: BasicUser, secret: Boolean)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+  def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    BasicLibrary(Library.publicId(library.id), library.name, path, secret)
+    BasicLibrary(Library.publicId(library.id), library.name, path, visibility)
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {
