@@ -76,31 +76,36 @@ class ExtSearchController @Inject() (
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
-      val librarySearcher = libraryIndexer.getSearcher
-      augment(augmentationCommander, librarySearcher)(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, kifiPlainResult).flatMap {
-        case (allSecondaryFields, userIds, libraryIds) =>
+      getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
+        val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val librarySearcher = libraryIndexer.getSearcher
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
-          val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
+        val futureUsers = {
+          val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+          shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+        }
 
-          val futureUsers = {
-            val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
-            shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+        val hitsJson = allSecondaryFields.zipWithIndex.map {
+          case (secondaryFields, index) =>
+            val secret = augmentedItems(index).isSecret(librarySearcher)
+            json.minify(Json.obj("secret" -> secret) ++ secondaryFields - "librariesTotal")
+        }
+
+        futureUsers.map { usersById =>
+          val users = userIds.map(usersById(_))
+          val libraries = libraryIds.map { libId =>
+            val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+            val owner = usersById(library.ownerId)
+            makeBasicLibrary(library, visibility, owner)
           }
 
-          val hitsJson = allSecondaryFields.map(secondaryFields => json.minify(secondaryFields - "librariesTotal"))
-
-          futureUsers.map { usersById =>
-            val users = userIds.map(usersById(_))
-            val libraries = libraryIds.map { libId =>
-              val (library, visibility) = libraryRecordsAndVisibilityById(libId)
-              val owner = usersById(library.ownerId)
-              makeBasicLibrary(library, visibility, owner)
-            }
-            val librariesJson = libraries.map { library =>
-              json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
-            }
-            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
+          val librariesJson = libraries.map { library =>
+            json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
           }
+
+          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
+        }
       }
     }
 

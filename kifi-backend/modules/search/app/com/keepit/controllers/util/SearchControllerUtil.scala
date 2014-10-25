@@ -89,13 +89,7 @@ trait SearchControllerUtil {
       Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, librarySearcher: Searcher)(userId: Id[User], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, kifiPlainResult: KifiPlainResult): Future[(Seq[JsObject], Seq[Id[User]], Seq[Id[Library]])] = {
-    getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).map { augmentedItems =>
-      writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
-    }
-  }
-
-  private def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
+  def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
@@ -103,15 +97,14 @@ trait SearchControllerUtil {
     augmentationCommander.getAugmentedItems(augmentationRequest).imap { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  private def writesAugmentationFields(
-    librarySearcher: Searcher,
+  def writesAugmentationFields(
     userId: Id[User],
     maxKeepersShown: Int,
     maxLibrariesShown: Int,
     maxTagsShown: Int,
     augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Seq[Id[User]], Seq[Id[Library]]) = {
 
-    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(librarySearcher, maxKeepersShown, maxLibrariesShown, maxTagsShown))
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
 
@@ -127,7 +120,6 @@ trait SearchControllerUtil {
       val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
 
       Json.obj(
-        "secret" -> limitedInfo.secret,
         "keepers" -> keepersIndices,
         "keepersOmitted" -> limitedInfo.keepersOmitted,
         "keepersTotal" -> limitedInfo.keepersTotal,
