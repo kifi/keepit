@@ -132,7 +132,7 @@ object UserValues {
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
   val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
   val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
-  val showLibraryIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_LIBRARY_INTRO, true)
+  val showLibraryIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_LIBRARY_INTRO, false)
 
   val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showLibraryIntro).map(_.name)
 
