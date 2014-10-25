@@ -54,7 +54,7 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } getOrElse("")
+    } getOrElse ("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
