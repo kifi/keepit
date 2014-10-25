@@ -500,7 +500,7 @@ var keepBox = keepBox || (function () {
     if (keepImageUrl) {
       var img = new Image;
       img.src = keepImageUrl;
-      images.push(img);
+      images.unshift(img);
       return Q(0);
     } else if (justKept) {
       return pageImagePromise.then(function (img) {
