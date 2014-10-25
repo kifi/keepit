@@ -66,6 +66,26 @@ object Indexable {
       }
     }
   }
+
+  class DataPayloadTokenStream(termText: String, data: Array[Byte]) extends TokenStream {
+    val termAttr = addAttribute(classOf[CharTermAttribute])
+    val payloadAttr = addAttribute(classOf[PayloadAttribute])
+    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
+    var returnToken = true;
+
+    @throws(classOf[IOException])
+    override def incrementToken(): Boolean = {
+      returnToken match {
+        case true =>
+          payloadAttr.setPayload(new BytesRef(data))
+          termAttr.append(termText)
+          posIncrAttr.setPositionIncrement(1)
+          returnToken = false
+          true
+        case false => false
+      }
+    }
+  }
 }
 
 trait Indexable[T, S] extends Logging {
@@ -109,26 +129,6 @@ trait Indexable[T, S] extends Logging {
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)
-  }
-
-  class DataPayloadTokenStream(termText: String, data: Array[Byte]) extends TokenStream {
-    val termAttr = addAttribute(classOf[CharTermAttribute])
-    val payloadAttr = addAttribute(classOf[PayloadAttribute])
-    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
-    var returnToken = true;
-
-    @throws(classOf[IOException])
-    override def incrementToken(): Boolean = {
-      returnToken match {
-        case true =>
-          payloadAttr.setPayload(new BytesRef(data))
-          termAttr.append(termText)
-          posIncrAttr.setPositionIncrement(1)
-          returnToken = false
-          true
-        case false => false
-      }
-    }
   }
 
   def buildIteratorField[A](fieldName: String, iterator: Iterator[A], fieldType: FieldType = textFieldTypeNoNorm)(toToken: (A => String)) = {

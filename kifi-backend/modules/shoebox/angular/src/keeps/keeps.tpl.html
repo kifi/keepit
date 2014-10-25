@@ -1,6 +1,6 @@
-<div class="kf-main-keeps">
+<div class="kf-main-keeps" ng-show="availableKeeps.length > 0">
   <div kf-sticky max-top="52" class="kf-keep-selection-tools" ng-if="editMode.enabled">
-    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(keeps), 'sprite-checkbox-icon-partial': isMultiChecked(keeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(keeps) }" ng-click="selection.toggleSelectAll(keeps)"></div>
+    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps) }" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
         <span class="kf-keep-selected-count-number">{{selection.getSelected(keeps).length}}</span>
@@ -28,7 +28,7 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
     <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
-      keep="keep" me="me" libraries="libraries" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
+      keep="keep" library="library" me="me" libraries="libraries" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
     <div class="kf-shadow-dragged-keeps" ng-class="{ two: draggedTwo(), three: draggedThree(), more: draggedMore() }">
       <span class="kf-shadow-keep-first" ng-show="data.draggedKeeps.length >= 1">
         <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[0])" keep="data.draggedKeeps[0]" edit-mode="editMode"></div>

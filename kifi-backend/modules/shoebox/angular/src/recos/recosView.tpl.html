@@ -22,20 +22,20 @@
     <a href="javascript:" ng-click="showPopular()">See Popular Keeps on Kifi</a>
   </div>
 
-  <img class="kf-keeps-loading" ng-show="loading" src="/img/load.gif">
-
   <div class="kf-recos" ng-hide="loading">
-    <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
+    <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl" ng-class="{'kf-reco-recommended': (reco.recoData.type === 'recommended') }">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
         <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
-        <span ng-if="reco.recoData.kind === 'keep'">{{reco.recoData.type | titlecase}}</span>
+        <span ng-if="reco.recoData.kind === 'keep'" ng-class="{'kf-reco-top-title svg-reco-keep-icon': (reco.recoData.type === 'recommended')}">
+          {{reco.recoData.type | titlecase}}
+        </span>
         <span ng-if="reco.recoData.kind === 'library'">Featured</span>
       </header>
 
       <div ng-if="librariesEnabled && reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)" libraries="libraries"></div>
       <div ng-if="!librariesEnabled && reco.recoData.kind === 'keep'" kf-keep-card-deprecated keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(keep)"></div>
-  
+
       <div ng-if="reco.recoData.kind === 'library'" kf-library-card library="reco.recoLib" recommendation="true"></div>
 
       <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
@@ -67,3 +67,6 @@
     <div class="kf-keep-description-sizer kf-keep-description"></div>
   </div>
 </div>
+
+<div class="kf-reco-loading-logo kf-logo-pulse svg-small-new-logo" ng-if="loading"></div>
+

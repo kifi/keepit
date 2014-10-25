@@ -2,7 +2,7 @@
 inviterId: Id[User],
 inviteMsg: Option[String],
 libraryInfo: com.keepit.commanders.LibraryInfo,
-passPhrase: String)
+passPhrase: Option[String])
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}}
@@ -16,7 +16,9 @@ passPhrase: String)
 @libraryInfo.shortDescription.getOrElse("")
 
 @libraryUrl
-Passphrase: @passPhrase
+@{passPhrase map { phrase =>
+s"Passphrase: $phrase"
+}}
 
 Cheers!
 The Kifi team
