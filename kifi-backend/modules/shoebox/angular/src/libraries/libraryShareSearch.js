@@ -114,7 +114,7 @@ angular.module('kifi')
           }
 
           scope.showSpinner = true;
-          libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
+          libraryService.getLibraryShareContacts(scope.library.id, opt_query).then(function (contacts) {
             var newResults;
 
             if (contacts && contacts.length) {
@@ -125,7 +125,8 @@ angular.module('kifi')
               newResults.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
-                  result.isFollowing = isFollowingLibrary(result);
+                  result.isFollowing = !!result.membership;
+                  result.name = result.firstName + ' ' + result.lastName;
                 }
 
                 if (opt_query) {
@@ -186,11 +187,6 @@ angular.module('kifi')
           return libraryService.shareLibrary(scope.library.id, opts);
         }
 
-        function isFollowingLibrary(user) {
-          return _.some(scope.library.followers, function (follower) {
-            return follower.id === user.id;
-          });
-        }
 
 
         // TODO(yiping): make a directive for displaying a list of items where up and down

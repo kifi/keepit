@@ -285,7 +285,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -370,7 +370,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -419,6 +419,88 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                   "helprank":"click"
                   }
                 """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "allKeeps with helprank & count" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+
+        implicit val context = HeimdalContext.empty
+        val keepRepo = inject[KeepRepo]
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+        val db = inject[Database]
+
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByUser(u1.id.get, None, None, 100)
+        }
+        keeps.size === keeps1.size
+
+        val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click"), count = 2).toString
+        path === s"/site/keeps/all?helprank=click&count=2"
+        inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+
+        inject[FakeUserActionsHelper].setUser(u3)
+
+        val request = FakeRequest("GET", path)
+        val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 2, withPageInfo = false)(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+                                  {"collection":null,
+                                   "before":null,
+                                   "after":null,
+                                   "keeps":[
+                                    {
+                                      "id":"${keeps3(2).externalId.toString}",
+                                      "url":"${keeps3(2).url}",
+                                      "isPrivate":${keeps3(2).isPrivate},
+                                      "createdAt":"${keeps3(2).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(2).externalId}", "mine":true, "removable":true, ${if (keeps3(2).isPrivate) "\"secret\":true," else ""} "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"Facebook",
+                                      "clickCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    },
+                                    {
+                                      "id":"${keeps3(0).externalId.toString}",
+                                      "url":"${keeps3(0).url}",
+                                      "isPrivate":${keeps3(0).isPrivate},
+                                      "createdAt":"${keeps3(0).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(0).externalId}", "mine":true, "removable":true, ${if (keeps3(0).isPrivate) "\"secret\":true," else ""} "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"kifi.com",
+                                      "clickCount":1,
+                                      "rekeepCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    }
+                                  ],
+                                  "helprank":"click"
+                                  }
+                                """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }

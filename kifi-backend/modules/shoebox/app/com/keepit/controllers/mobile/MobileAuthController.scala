@@ -10,12 +10,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.time.Clock
 import com.keepit.controllers.core.{ AuthController, AuthHelper }
+import com.keepit.heimdal.{ ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model._
-import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import com.keepit.social.providers.ProviderController
+import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsValue, JsNumber, Json }
-import play.api.mvc.{ Action, Cookie, Result, Session }
+import play.api.libs.json.{ JsNumber, JsValue, Json }
+import play.api.mvc.{ Cookie, Result, Session }
 import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 import scala.concurrent.Future
@@ -30,7 +31,9 @@ class MobileAuthController @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     installationRepo: KifiInstallationRepo,
-    authHelper: AuthHelper) extends UserActions with ShoeboxServiceController with Logging {
+    authHelper: AuthHelper,
+    contextBuilderFactory: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient) extends UserActions with ShoeboxServiceController with Logging {
 
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
@@ -44,7 +47,8 @@ class MobileAuthController @Inject() (
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiIPhoneVersion((json \ "version").as[String])
     val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.IPhone)
+    val context = contextBuilderFactory.withRequestInfo(request).build
+    registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.IPhone, context)
   }
 
   def registerAndroidVersion() = UserAction(parse.tolerantJson) { request =>
@@ -52,10 +56,11 @@ class MobileAuthController @Inject() (
     val installationIdOpt = (json \ "installation").asOpt[String].map(ExternalId[KifiInstallation](_))
     val version = KifiAndroidVersion((json \ "version").as[String])
     val agent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.Android)
+    val context = contextBuilderFactory.withRequestInfo(request).build
+    registerMobileVersion(installationIdOpt, version, agent, request.userId, KifiInstallationPlatform.Android, context)
   }
 
-  private def registerMobileVersion[T <: KifiVersion with Ordered[T]](installationIdOpt: Option[ExternalId[KifiInstallation]], version: T, agent: UserAgent, userId: Id[User], platform: KifiInstallationPlatform) = {
+  private def registerMobileVersion[T <: KifiVersion with Ordered[T]](installationIdOpt: Option[ExternalId[KifiInstallation]], version: T, agent: UserAgent, userId: Id[User], platform: KifiInstallationPlatform, context: HeimdalContext) = {
     val (installation, newInstallation) = installationIdOpt map { id =>
       db.readOnlyMaster { implicit s => installationRepo.get(id) }
     } match {
@@ -90,10 +95,29 @@ class MobileAuthController @Inject() (
         (active, false)
     }
 
+    reportMobileInstallation(userId, installation, newInstallation, platform, context)
+
     Ok(Json.obj(
       "installation" -> installation.externalId.toString,
       "newInstallation" -> newInstallation
     ))
+  }
+
+  private def reportMobileInstallation(userId: Id[User], installation: KifiInstallation, isNewInstall: Boolean, platform: KifiInstallationPlatform, context: HeimdalContext): Unit = {
+    val builder = contextBuilderFactory()
+    builder.addExistingContext(context)
+    builder += ("extensionVersion", installation.version.toString)
+    builder += ("kifiInstallationId", installation.id.get.toString)
+    builder += ("device", platform.name)
+    if (isNewInstall) {
+      builder += ("action", "installedExtension")
+      val numInstallations = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length } // all platforms
+      builder += ("installation", numInstallations)
+      heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(numInstallations))
+      heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.JOINED))
+    } else {
+      heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.UPDATED_EXTENSION))
+    }
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
