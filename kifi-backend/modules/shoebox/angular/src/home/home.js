@@ -120,9 +120,10 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+    var keepAddedHandler = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
       $scope.keeps.unshift(keep);
     });
+    $scope.$on('$destroy', keepAddedHandler);
     $rootScope.$emit('libraryUrl', {});
 
 
