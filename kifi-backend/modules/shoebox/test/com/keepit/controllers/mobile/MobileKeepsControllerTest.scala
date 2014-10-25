@@ -353,7 +353,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       implicit val context = HeimdalContext.empty
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
-      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+      val (u1: User, u2: User, _, keeps1: Seq[Keep], _, _) = helpRankSetup(heimdal, db)
 
       val keeps = db.readOnlyMaster { implicit s =>
         keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -442,7 +442,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       implicit val context = HeimdalContext.empty
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
 
-      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+      val (u1: User, u2: User, _, keeps1: Seq[Keep], _, _) = helpRankSetup(heimdal, db)
 
       val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
       path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
