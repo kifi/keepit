@@ -50,7 +50,7 @@ angular.module('kifi')
         function getCommonTags() {
           var tagLists = _.compact(_.pluck(scope.getSelectedKeeps(), 'hashtags'));
           return _.uniq(_.flatten(tagLists, true));
-        };
+        }
 
         scope.$watchCollection(function () {
           if (scope.readOnlyMode()) {
@@ -67,7 +67,7 @@ angular.module('kifi')
               // the case for libraries)
               scope.tagsToShow = _.map(keeps[0].tags, decorateTag(true));
             } else {
-              scope.tagsToShow = []
+              scope.tagsToShow = [];
             }
           } else {
             scope.tagsToShow = _.map(getCommonTags(), decorateTag(false));
