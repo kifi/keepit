@@ -12,6 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
