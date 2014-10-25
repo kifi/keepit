@@ -945,10 +945,11 @@ angular.module('kifi')
         //
         scope.clickAction = function () {
           if (scope.librarySelection.library.keptTo) {
-            if (scope.librarySelection.library.id === scope.library.id) {
+            var currentLibraryId = scope.keep.libraryId;
+            if (scope.librarySelection.library.id === currentLibraryId) {
               // TODO: waiting for Leo's change to endpoint so that we can get the keep ids in other libraries.
               keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, scope.keep.id).then(function () {
-                if (scope.librarySelection.library.id === scope.library.id) {
+                if (scope.librarySelection.library.id === currentLibraryId) {
                   scope.keep.makeUnkept();
                 }
 
@@ -975,7 +976,7 @@ angular.module('kifi')
                   _.assign(scope.keep, keep);
                   scope.keptToLibraries = scope.keep.myLibraries;
 
-                  scope.$emit('keepAdded', libraryService.getSlugById(library.id), scope.keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(library.id), keep);
                 });
               }
             });

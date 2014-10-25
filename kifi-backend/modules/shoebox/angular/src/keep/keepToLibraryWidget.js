@@ -174,18 +174,23 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          scope.widgetLibraries = _.filter(scope.libraries, function (library) {
-            return !_.find(scope.excludeLibraries, { 'id': library.id });
-          });
+          libraryService.fetchLibrarySummaries(false).then(function (data) {
+            var libraries = _.filter(data.libraries, { access: 'owner' });
 
-          scope.widgetLibraries.forEach(function (library) {
-            library.keptTo = false;
-            if (scope.keptToLibraries && _.find(scope.keptToLibraries, { 'id': library.id })) {
-              library.keptTo = true;
-            }
-          });
+            libraries = _.filter(libraries, function (library) {
+              return !_.find(scope.excludeLibraries, { 'id': library.id });
+            });
 
-          scope.widgetLibraries[selectedIndex].selected = true;
+            libraries.forEach(function (library) {
+              library.keptTo = false;
+              if (scope.keptToLibraries && _.find(scope.keptToLibraries, { 'id': library.id })) {
+                library.keptTo = true;
+              }
+            });
+
+            libraries[selectedIndex].selected = true;
+            scope.widgetLibraries = libraries;
+          });
 
           // Focus on search input.
           searchInput.focus();
