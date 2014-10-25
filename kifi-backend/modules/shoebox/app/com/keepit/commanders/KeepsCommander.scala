@@ -192,7 +192,7 @@ class KeepsCommander @Inject() (
           case Some(afterKeep) => uriIds.takeWhile(_ != afterKeep.uriId)
         }
       }
-      if (count > 0) after.take(count) else after
+      after
     }
 
     val keepIdsF = selector match {
@@ -203,7 +203,8 @@ class KeepsCommander @Inject() (
       val keeps = db.readOnlyReplica { implicit session =>
         val keepUriIds = filter(counts)
         val km = keepRepo.bulkGetByUserAndUriIds(userId, keepUriIds.toSet)
-        km.valuesIterator.toList.sortBy(_.id).reverse
+        val sorted = km.valuesIterator.toList.sortBy(_.id).reverse
+        if (count > 0) sorted.take(count) else sorted
       }
 
       // Fetch counts
