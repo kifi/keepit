@@ -295,7 +295,7 @@ angular.module('kifi')
         // Internal data.
         //
         var lastSizedAt = $window.innerWidth;
-
+        scope.availableKeeps = scope.keeps;
 
         //
         // Internal methods.
@@ -326,7 +326,7 @@ angular.module('kifi')
 
         function copyToLibrary () {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
           var selectedLibrary = scope.librarySelection.library;
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
@@ -338,7 +338,7 @@ angular.module('kifi')
 
         function moveToLibrary () {
           // Moves the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.keeps);
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
           var selectedLibrary = scope.librarySelection.library;
 
           keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
@@ -349,6 +349,10 @@ angular.module('kifi')
             });
 
             libraryService.fetchLibrarySummaries(true);
+            var currentLibraryId = scope.library.id;
+            libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
           });
         }
 
@@ -421,11 +425,12 @@ angular.module('kifi')
           var selectedKeeps = scope.selection.getSelected(keeps);
 
           if (scope.librariesEnabled) {
-            var libraryId = selectedKeeps[0].libraryId;
+            var libraryId = scope.library.id;
 
             keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
               _.forEach(selectedKeeps, function (selectedKeep) {
                 selectedKeep.makeUnkept();
+                _.without(scope.availableKeeps, selectedKeep);
               });
 
               var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
@@ -436,10 +441,14 @@ angular.module('kifi')
                   selectedKeep.makeKept();
                 });
 
+                scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+                scope.selection.selectAll(selectedKeeps);
                 libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
               });
 
               libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+              scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+              scope.selection.unselectAll();
             });
           } else {
             keepActionService.unkeepMany(selectedKeeps).then(function () {
