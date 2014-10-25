@@ -126,7 +126,7 @@ angular.module('kifi')
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
                   result.isFollowing = !!result.membership;
-                  result.name = result.firstName + ' ' + result.lastName;
+                  result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
                 if (opt_query) {
