@@ -46,13 +46,13 @@ class UserExperimentRepoImpl @Inject() (
   }
 
   def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType] = {
-    userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
+    (userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
       (for (f <- rows if f.userId === userId && f.state === UserExperimentStates.ACTIVE) yield f.experimentType).list
-    } toSet
+    } :+ ExperimentType.LIBRARIES) toSet
   }
 
   def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment] = {
-    (for (f <- rows if f.userId === userId) yield f).list
+    (for (f <- rows if f.userId === userId) yield f).list :+ UserExperiment(userId = userId, experimentType = ExperimentType.LIBRARIES)
   }
 
   def getUserIdsByExperiment(experimentType: ExperimentType)(implicit session: RSession) =
@@ -60,13 +60,16 @@ class UserExperimentRepoImpl @Inject() (
 
   def get(userId: Id[User], experimentType: ExperimentType,
     excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))(implicit session: RSession): Option[UserExperiment] = {
-    (for {
+    val experiment = (for {
       f <- rows if f.userId === userId && f.experimentType === experimentType && f.state =!= excludeState.orNull
     } yield f).firstOption
+    if (experimentType == ExperimentType.LIBRARIES && experiment.isEmpty) Some(UserExperiment(userId = userId, experimentType = ExperimentType.LIBRARIES))
+    else experiment
   }
 
   def hasExperiment(userId: Id[User], experimentType: ExperimentType)(implicit session: RSession): Boolean = {
-    getUserExperiments(userId).contains(experimentType)
+    if (experimentType == ExperimentType.LIBRARIES) true
+    else getUserExperiments(userId).contains(experimentType)
   }
 
   override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
