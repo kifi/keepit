@@ -68,7 +68,7 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit s =>
       val owner = userRepo.get(library.ownerId)
       val urlPathOnly = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-      if (library.visibility == PUBLISHED) {
+      if (library.visibility != PUBLISHED) {
         PublicPageMetaPrivateTags(urlPathOnly)
       } else {
         val facebookId: Option[String] = socialUserInfoRepo.getByUser(owner.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
