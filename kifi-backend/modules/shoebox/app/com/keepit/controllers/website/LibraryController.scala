@@ -482,12 +482,18 @@ class LibraryController @Inject() (
     }
   }
 
-  def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
-    else Library.decodePublicId(pubId) match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
-      case Success(libraryId) => libraryCommander.suggestMembers(request.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+  def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
+    request match {
+      case req: UserRequest[_] => {
+        if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+        else Library.decodePublicId(pubId) match {
+          case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+        }
+      }
+      case _ => Future.successful(Forbidden)
     }
+
   }
 }
 
