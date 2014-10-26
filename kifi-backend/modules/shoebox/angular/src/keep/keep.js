@@ -982,7 +982,7 @@ angular.module('kifi')
         // Watches and listeners.
         //
         scope.$watchCollection(function () {
-          return _.pluck(scope.keep.myLibraries, 'secret');
+          return _.pluck(scope.keep.keeps, 'visibility');
         }, updateKeepStatus);
 
         scope.$watch('keep.isMyBookmark', updateKeepStatus);

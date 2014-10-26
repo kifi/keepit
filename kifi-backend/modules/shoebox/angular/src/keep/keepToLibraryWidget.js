@@ -174,6 +174,7 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
+          // May remove this fetch; awaiting discussion with Josh.
           libraryService.fetchLibrarySummaries(false).then(function (data) {
             var libraries = _.filter(data.libraries, { access: 'owner' });
 

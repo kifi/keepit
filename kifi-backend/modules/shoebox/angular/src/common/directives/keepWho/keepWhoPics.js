@@ -32,16 +32,11 @@ angular.module('kifi')
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.librariesEnabled = libraryService.isAllowed();
 
-        function updateVisibleKeepLibraries() {
-          if (scope.librariesEnabled) {
-            scope.visibleKeepLibraries = scope.keep.libraries;
-          } else {
-            scope.visibleKeepLibraries = [];
-          }
+        if (scope.librariesEnabled) {
+          scope.visibleKeepLibraries = scope.keep.libraries;
+        } else {
+          scope.visibleKeepLibraries = [];
         }
-
-        scope.$watch('keep.myLibraries.length', updateVisibleKeepLibraries);
-        updateVisibleKeepLibraries();
       }
     };
   }
