@@ -904,8 +904,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['$log', 'keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
-  function ($log, keepActionService, keepDecoratorService, libraryService, tagService) {
+.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
+  function (keepActionService, keepDecoratorService, libraryService, tagService) {
     return {
       restrict: 'A',
       scope: {
@@ -920,7 +920,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.librarySelection = {};
-        scope.keptToLibraries = scope.keep.myLibraries;
+        scope.keptToLibraries = [];
 
 
         //
@@ -945,38 +945,32 @@ angular.module('kifi')
         //
         scope.clickAction = function () {
           if (scope.librarySelection.library.keptTo) {
-            var currentLibraryId = scope.keep.libraryId;
-            if (scope.librarySelection.library.id === currentLibraryId) {
-              // TODO: waiting for Leo's change to endpoint so that we can get the keep ids in other libraries.
-              keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, scope.keep.id).then(function () {
-                if (scope.librarySelection.library.id === currentLibraryId) {
-                  scope.keep.makeUnkept();
-                }
+            var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
+            keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, keepToUnkeep.id).then(function () {
+              if (scope.librarySelection.library.id === scope.keep.libraryId) {
+                scope.keep.makeUnkept();
+              } else {
+                _.remove(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
+                scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+              }
 
-                libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
-              });
-            } else {
-              $log.log('Unkeeping from other libraries is still awaiting endpoint support!');
-            }
+              libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
+            });
           } else {
             keepActionService.keepToLibrary([scope.keep.url], scope.librarySelection.library.id).then(function (result) {
               if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                // TODO: check with Leo that this endpoint will be consistent after switching from search to database.
                 return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                  var keep = new keepDecoratorService.Keep(fullKeep);
                   libraryService.fetchLibrarySummaries(true);
                   libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
                   tagService.addToKeepCount(1);
 
-                  var library = scope.librarySelection.library;
+                  scope.keep.keeps = fullKeep.keeps;
+                  scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+
+                  var keep = new keepDecoratorService.Keep(fullKeep);
                   keep.buildKeep(keep);
                   keep.makeKept();
-
-                  // May not want to do this since this is actually a keep from a different library!
-                  _.assign(scope.keep, keep);
-                  scope.keptToLibraries = scope.keep.myLibraries;
-
-                  scope.$emit('keepAdded', libraryService.getSlugById(library.id), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
                 });
               }
             });
@@ -988,7 +982,7 @@ angular.module('kifi')
         // Watches and listeners.
         //
         scope.$watchCollection(function () {
-          return _.pluck(scope.keep.myLibraries, 'secret');
+          return _.pluck(scope.keep.keeps, 'visibility');
         }, updateKeepStatus);
 
         scope.$watch('keep.isMyBookmark', updateKeepStatus);
@@ -1003,6 +997,7 @@ angular.module('kifi')
         //
         // On link.
         //
+        scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
         updateKeepStatus();
       }
     };
