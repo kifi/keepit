@@ -247,7 +247,7 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              // If there are any libraries shown, select that library.
+              // If there are any libraries shown, select confirm the selected library.
               // Otherwise, go to the create panel.
               if (widget.find('.library-select-option').length) {
                 scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
