@@ -32,7 +32,7 @@ angular.module('kifi')
     }).when('/recommendations', {
       redirectTo: '/'
     }).when('/keeps', {
-      redirectTo: 'home/home.tpl.html',
+      templateUrl: 'home/home.tpl.html',
       controller: 'HomeCtrl'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
