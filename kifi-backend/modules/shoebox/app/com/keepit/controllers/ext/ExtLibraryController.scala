@@ -113,12 +113,15 @@ class ExtLibraryController @Inject() (
 
           val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
           val (tags, image) = if (isNewKeep) {
-            (Seq.empty, None) // optimizing the common case
+            val existingImageUri = db.readOnlyReplica { implicit session =>
+              keepImageCommander.getExistingImageUrlForKeepUri(keep.uriId)
+            }
+            (Seq.empty, existingImageUri) // optimizing the common case
           } else {
             val tags = db.readOnlyReplica { implicit s =>
               collectionRepo.getTagsByKeepId(keep.id.get)
             }
-            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize)
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize).map(keepImageCommander.getUrl)
             (tags, image)
           }
 
@@ -130,7 +133,7 @@ class ExtLibraryController @Inject() (
             libraryId = libraryPubId)
           val moarKeepData = MoarKeepData(
             title = keep.title,
-            image = image.map(keepImageCommander.getUrl),
+            image = image,
             tags = tags.map(_.tag).toSeq)
           Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>

@@ -458,6 +458,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"numKeeps":0,
                     |"numFollowers":0,
                     |"kind":"user_created",
+                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"},
                     |"access":"read_insert"
                   |}
               | ]

@@ -12,6 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -143,7 +144,8 @@ class AngularRouter @Inject() (
     "kifeeeed" -> Seq(),
     "find" -> Seq(),
     "recommendations" -> Seq(),
-    "tags/manage" -> Seq()
+    "tags/manage" -> Seq(),
+    "keeps" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "friends" -> Seq(),

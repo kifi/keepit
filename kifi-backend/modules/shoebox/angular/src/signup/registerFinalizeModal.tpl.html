@@ -23,6 +23,7 @@
             <span class="register-validation">
               <input type="email" name="email" ng-model="userData.email" placeholder="Email" class="register-full-input register-placeholder" required>
               <span ng-show="fieldHasError(regFinalizeForm.email)" class="register-help-block">Enter a valid email address</span>
+              <span ng-show="emailTaken" class="register-help-block">Someone already has this email. Did you mean to login?</span>
             </span>
           </div>
 

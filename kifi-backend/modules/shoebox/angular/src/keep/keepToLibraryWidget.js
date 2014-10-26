@@ -16,7 +16,7 @@ angular.module('kifi')
        *
        *  Optional properties on parent scope:
        *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
-       *   keptToLibraries - an array of library objects that are already keeping the keep.
+       *   keptToLibraries - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
@@ -174,18 +174,24 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          scope.widgetLibraries = _.filter(scope.libraries, function (library) {
-            return !_.find(scope.excludeLibraries, { 'id': library.id });
-          });
+          // May remove this fetch; awaiting discussion with Josh.
+          libraryService.fetchLibrarySummaries(false).then(function (data) {
+            var libraries = _.filter(data.libraries, { access: 'owner' });
 
-          scope.widgetLibraries.forEach(function (library) {
-            library.keptTo = false;
-            if (scope.keptToLibraries && _.find(scope.keptToLibraries, { 'id': library.id })) {
-              library.keptTo = true;
-            }
-          });
+            libraries = _.filter(libraries, function (library) {
+              return !_.find(scope.excludeLibraries, { 'id': library.id });
+            });
 
-          scope.widgetLibraries[selectedIndex].selected = true;
+            libraries.forEach(function (library) {
+              library.keptTo = false;
+              if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+                library.keptTo = true;
+              }
+            });
+
+            libraries[selectedIndex].selected = true;
+            scope.widgetLibraries = libraries;
+          });
 
           // Focus on search input.
           searchInput.focus();

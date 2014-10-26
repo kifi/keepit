@@ -141,9 +141,9 @@ angular.module('kifi')
               modalService.close();
               $scope.userData.method = 'social';
               registerFinalizeModal();
-            } else {
+            } else if (resp.code && resp.code === 'connect_option') {
               // todo, figure out what this could be, handle errors - andrew
-              $log.log('test#unknown_code??', resp);
+              $scope.onError({'code': 'connect_option', redirect: resp.uri});
             }
           })['catch'](function (err) {
             // Combo request failed. Would love to get logs of this.
@@ -206,9 +206,14 @@ angular.module('kifi')
           // todo: do we need to handle the return resp?
           modalService.close();
           thanksForRegisteringModal();
-        })['catch'](function () {
-          // Would love to get logs of this.
-          $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
+        })['catch'](function (resp) {
+          if (resp.data && resp.data.error === 'user_exists_failed_auth') {
+            $scope.requestActive = false;
+            $scope.emailTaken = true;
+            return;
+          } else {
+            $scope.onError({'code': 'email_fail', redirect: 'https://www.kifi.com/signup'});
+          }
         });
       }
     };
