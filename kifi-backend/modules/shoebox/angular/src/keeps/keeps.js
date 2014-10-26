@@ -297,6 +297,7 @@ angular.module('kifi')
         var lastSizedAt = $window.innerWidth;
         scope.availableKeeps = scope.keeps;
 
+
         //
         // Internal methods.
         //
@@ -502,7 +503,7 @@ angular.module('kifi')
           if (!newVal) {
             if (scope.librariesEnabled) {
               libraryService.fetchLibrarySummaries().then(function () {
-                scope.libraries = !scope.library ? [] : _.filter(libraryService.librarySummaries, function (library) {
+                scope.libraries = _.filter(libraryService.librarySummaries, function (library) {
                   return library.access !== 'read_only';
                 });
 

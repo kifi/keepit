@@ -174,24 +174,18 @@ angular.module('kifi')
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          // May remove this fetch; awaiting discussion with Josh.
-          libraryService.fetchLibrarySummaries(false).then(function (data) {
-            var libraries = _.filter(data.libraries, { access: 'owner' });
-
-            libraries = _.filter(libraries, function (library) {
-              return !_.find(scope.excludeLibraries, { 'id': library.id });
-            });
-
-            libraries.forEach(function (library) {
-              library.keptTo = false;
-              if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
-                library.keptTo = true;
-              }
-            });
-
-            libraries[selectedIndex].selected = true;
-            scope.widgetLibraries = libraries;
+          scope.widgetLibraries = _.filter(scope.libraries, function (library) {
+            return !_.find(scope.excludeLibraries, { 'id': library.id });
           });
+
+          scope.widgetLibraries.forEach(function (library) {
+            library.keptTo = false;
+            if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+              library.keptTo = true;
+            }
+          });
+
+          scope.widgetLibraries[selectedIndex].selected = true;
 
           // Focus on search input.
           searchInput.focus();
