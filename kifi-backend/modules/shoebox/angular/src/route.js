@@ -31,6 +31,9 @@ angular.module('kifi')
       templateUrl: 'recos/adhoc.tpl.html'
     }).when('/recommendations', {
       redirectTo: '/'
+    }).when('/keeps', {
+      redirectTo: 'home/home.tpl.html',
+      controller: 'HomeCtrl'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
       controller: 'SearchCtrl'
