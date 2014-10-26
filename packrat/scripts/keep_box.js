@@ -503,7 +503,7 @@ var keepBox = keepBox || (function () {
       images.unshift(img);
       return Q(true);
     } else if (justKept) {
-      return pageImagePromise.done(function (img) {
+      return pageImagePromise.then(function (img) {
         api.port.emit('save_keep_image', {libraryId: library.id, image: img.src});
         return true;
       }, function () {
