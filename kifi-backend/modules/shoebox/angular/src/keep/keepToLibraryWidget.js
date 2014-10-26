@@ -160,6 +160,11 @@ angular.module('kifi')
             var left = element.offset().left;
             widget.css({top: top + 'px', left: left + 'px'});
             widget.show();
+
+            // Wait for the widget to be shown, then focus on the search input.
+            $timeout(function () {
+              searchInput.focus();
+            }, 0);
           }, 0);
 
           // Set event handlers.
@@ -192,9 +197,6 @@ angular.module('kifi')
             libraries[selectedIndex].selected = true;
             scope.widgetLibraries = libraries;
           });
-
-          // Focus on search input.
-          searchInput.focus();
         };
 
         scope.onHover = function (library) {
@@ -245,11 +247,17 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
-              if (_.isFunction(scope.clickAction)) {
-                scope.clickAction(element);
+              // If there are any libraries shown, select that library.
+              // Otherwise, go to the create panel.
+              if (widget.find('.library-select-option').length) {
+                scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
+                if (_.isFunction(scope.clickAction)) {
+                  scope.clickAction(element);
+                }
+                removeWidget();
+              } else {
+                scope.showCreatePanel();
               }
-              removeWidget();
               break;
             case keyIndices.KEY_ESC:
               // Prevent any open modals from processing this.
@@ -272,6 +280,13 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
+          scope.search = {};
+
+          // Wait for the libraries panel to be shown, and then focus on the
+          // search input.
+          $timeout(function () {
+            searchInput.focus();
+          }, 0);
         };
 
         scope.createLibrary = function (library) {
