@@ -183,7 +183,7 @@ angular.module('kifi')
 
             libraries.forEach(function (library) {
               library.keptTo = false;
-              if (scope.keptToLibraries && _.find(scope.keptToLibraries, { 'id': library.id })) {
+              if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
                 library.keptTo = true;
               }
             });

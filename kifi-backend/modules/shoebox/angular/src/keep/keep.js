@@ -970,7 +970,6 @@ angular.module('kifi')
                   var keep = new keepDecoratorService.Keep(fullKeep);
                   keep.buildKeep(keep);
                   keep.makeKept();
-
                   scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
                 });
               }
