@@ -23,6 +23,10 @@ angular.module('kifi')
     $scope.showCallout = function () {
       return profileService.prefs.site_show_library_intro && !profileService.prefs[calloutName];
     };
+    $scope.closeCalloutOpenGuide = function () {
+      $scope.closeCallout();
+      $scope.triggerGuide(true);
+    };
     $scope.closeCallout = function () {
       var save = { 'site_show_library_intro': false };
       save[calloutName] = true;
