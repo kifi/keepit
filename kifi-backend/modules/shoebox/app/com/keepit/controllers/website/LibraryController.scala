@@ -383,8 +383,10 @@ class LibraryController @Inject() (
   }
 
   def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    println(s"[authToLibrary:1] $userStr $slug $authToken ${request.userIdOpt}")
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug)) match {
       case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
+        println(s"[authToLibrary:2] $library ${libraryCommander.canViewLibrary(request.userIdOpt, library)}")
         NoContent // Don't need to check anything, they already have access
       case Right(library) =>
         val existingCookieFields = request.session.get("library_access").flatMap(libraryCommander.getLibraryIdAndPassPhraseFromCookie)
@@ -394,6 +396,7 @@ class LibraryController @Inject() (
               // User has existing cookie auth for this library. Verify it.
               if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(cookiePassPhrase))) {
                 // existing cookie was good
+                println(s"[authToLibrary:3] $library $cookiePassPhrase ${libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(cookiePassPhrase))}")
                 Some(NoContent)
               } else {
                 None // existing cookie wasn't good, but the new form info may be okay
@@ -408,6 +411,7 @@ class LibraryController @Inject() (
             val passPhrase = HashedPassPhrase.generateHashedPhrase(unhashedPassPhrase)
             if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(passPhrase))) {
               val cookie = ("library_access", s"${Library.publicId(library.id.get).id}/${passPhrase.value}")
+              println(s"[authToLibrary:4] $cookie $passPhrase $unhashedPassPhrase")
               NoContent.addingToSession(cookie)
             } else {
               BadRequest(Json.obj("error" -> "invalid_access"))
