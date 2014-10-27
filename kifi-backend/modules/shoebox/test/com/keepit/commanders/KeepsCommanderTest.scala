@@ -48,10 +48,9 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         val site2 = "http://www.amazon.com/"
         val site3 = "http://www.kifi.com/"
 
-        db.readWrite { implicit s =>
+        val user = db.readWrite { implicit s =>
 
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
@@ -73,21 +72,18 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
           keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-
-          keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint, state = KeepStates.INACTIVE))
 
           val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("t1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
+
+          user1
         }
 
-        val keepExports = db.readOnlyMaster { implicit s => keepRepo.getKeepExports(Id[User](1)) }
-        keepExports.length === 3
-        keepExports(0) === KeepExport(title = Some("k3"), createdAt = t1.plusMinutes(6), url = site3)
-        keepExports(1) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
-        keepExports(2) === KeepExport(title = Some("k1"), createdAt = t1.plusMinutes(3), url = site1, tags = Some("t1"))
+        val keepExports = db.readOnlyMaster { implicit s => keepRepo.getKeepExports(user.id.get) }
+        keepExports.length === 2
+        keepExports(0) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
+        keepExports(1) === KeepExport(title = Some("k1"), createdAt = t1.plusMinutes(3), url = site1, tags = Some("t1"))
       }
     }
 
