@@ -5,6 +5,7 @@ import com.keepit.commanders.UsernameOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ zones, Clock }
 import com.keepit.social._
@@ -45,6 +46,7 @@ class UserRepoImpl @Inject() (
   val clock: Clock,
   val externalIdCache: UserExternalIdCache,
   val idCache: UserIdCache,
+  airbreak: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl])
@@ -79,6 +81,12 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
+    user.id foreach { id =>
+      val currentUser = get(id)
+      if (currentUser.username != user.username) {
+        airbreak.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
+      }
+    }
     super.save(toSave)
   }
 
