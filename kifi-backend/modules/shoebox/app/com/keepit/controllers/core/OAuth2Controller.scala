@@ -3,7 +3,7 @@ package com.keepit.controllers.core
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import java.net.URLEncoder
+import java.net.{ URLDecoder, URLEncoder }
 import play.api.mvc._
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
@@ -19,8 +19,7 @@ import com.keepit.model.{ ABookInfo, User, OAuth2Token }
 import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.Failure
-import scala.util.Success
+import scala.util.{ Try, Failure, Success }
 import play.api.libs.ws.WSResponse
 
 case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
@@ -165,7 +164,7 @@ class OAuth2Controller @Inject() (
     log.infoP(s"code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
     val stateTokenOpt = stateOpt flatMap { Json.parse(_).asOpt[StateToken] }
-    val stateTokenOptFromSession = stateOptFromSession flatMap { Json.parse(_).asOpt[StateToken] }
+    val stateTokenOptFromSession = stateOptFromSession flatMap { tk => OAuth2Helper.getStateToken(tk) }
 
     if (stateTokenOpt.isEmpty || stateTokenOptFromSession.isEmpty || stateTokenOpt.get.token != stateTokenOptFromSession.get.token) {
       log.warnP(s"invalid state token: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
@@ -342,4 +341,14 @@ class OAuth2Controller @Inject() (
     Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
   }
 
+}
+
+object OAuth2Helper extends Logging {
+  def getStateToken(tk: String): Option[StateToken] = {
+    val decoded = URLDecoder.decode(tk, "UTF-8")
+    log.infoP(s"tk=$tk decoded=$decoded")
+    Try {
+      Json.parse(decoded).asOpt[StateToken]
+    } getOrElse None
+  }
 }
