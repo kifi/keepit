@@ -44,6 +44,7 @@ angular.module('kifi')
           clearSelection();
           scope.search.name = '';
           scope.share.message = '';
+          scope.email = 'Send to any email';
           $document.on('click', onClick);
           show = true;
           shareMenu.show();
