@@ -15,7 +15,8 @@ import com.keepit.model.{
   LibraryRepo,
   Library,
   ExperimentType,
-  UserRepo
+  UserRepo,
+  LibraryVisibility
 }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.curator.CuratorServiceClient
@@ -238,14 +239,16 @@ class RecommendationsCommander @Inject() (
     val curatedLibs: Seq[Id[Library]] = Seq(
       25537L, 25116L, 24542L, 25345L, 25471L, 25381L, 24203L, 25370L, 25388L, 25528L, 25371L, 25350L, 25340L, 25000L, 26106L
     ).map(Id[Library])
-
     Future.sequence(db.readOnlyReplica { implicit session =>
       curatedLibs.map(libRepo.get)
     }.map { lib =>
       libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
     }).map {
       libInfosWithOwner =>
-        libInfosWithOwner.map {
+        libInfosWithOwner.filter {
+          case (ownerId, libInfo) =>
+            libInfo.visibility == LibraryVisibility.PUBLISHED
+        }.map {
           case (ownerId, libInfo) =>
             val item = LibRecoItemInfo(
               id = libInfo.id,
