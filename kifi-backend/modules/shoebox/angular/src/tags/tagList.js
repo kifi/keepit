@@ -26,7 +26,14 @@ angular.module('kifi')
         scope.shouldGiveFocus = false;
 
         scope.searchTagUrl = function (tag) {
-          return '/find?q=tag:' + encodeURIComponent(tag);
+          var tagPath;
+          var n = tag;
+          if (n.indexOf(' ') !== -1) {
+            tagPath = '"' + n + '"';
+          } else {
+            tagPath = n;
+          }
+          return '/find?q=tag:' + encodeURIComponent(tagPath);
         };
 
         scope.$watch('getSelectedKeeps', function () {
