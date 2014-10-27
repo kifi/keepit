@@ -30,7 +30,12 @@ class StringHash64(seed: Long) {
   def get = (h1 + h2)
 
   def update(str: String) {
-    str.foreach { c => update(c) }
+    val len = str.length
+    var i = 0
+    while (i < len) {
+      update(str.charAt(i))
+      i += 1
+    }
   }
 
   def update(c: Char) {
