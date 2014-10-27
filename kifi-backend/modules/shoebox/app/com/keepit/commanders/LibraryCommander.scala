@@ -27,12 +27,11 @@ import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import views.html.admin.images
-
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.util.Success
 import com.keepit.common.json
+import com.keepit.common.core._
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -120,7 +119,8 @@ class LibraryCommander @Inject() (
   }
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
-    db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
+    if (limit > 0) db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
+    else Future.successful(Seq.empty)
   }
 
   def getKeepsCount(libraryId: Id[Library]): Future[Int] = {
@@ -152,13 +152,22 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrarySummaryById(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
-    val libInfo = db.readOnlyMaster { implicit s =>
-      val lib = libraryRepo.get(id)
-      val owner = basicUserRepo.load(lib.ownerId)
-      val numKeeps = keepRepo.getCountByLibrary(id)
-      LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)
+  def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
+    db.readOnlyReplica { implicit session =>
+      val librariesById = libraryRepo.getLibraries(libraryIds.toSet)
+      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet)
+      val keepCountsByLibraryId = libraryIds.map { libId => libId -> keepRepo.getCountByLibrary(libId) }.toMap
+      libraryIds.map { libId =>
+        val library = librariesById(libId)
+        val owner = ownersById(library.ownerId)
+        val keepCount = keepCountsByLibraryId(libId)
+        LibraryInfo.fromLibraryAndOwner(library, owner, keepCount, None)
+      }
     }
+  }
+
+  def getLibrarySummaryAndAccessString(userIdOpt: Option[Id[User]], id: Id[Library]): (LibraryInfo, String) = {
+    val Seq(libInfo) = getLibrarySummaries(Seq(id))
     val accessStr = userIdOpt.flatMap(getAccessStr(_, id)) getOrElse "none"
     (libInfo, accessStr)
   }
@@ -179,41 +188,59 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], maxMembersShown: Int, maxKeepsShown: Int, libraries: Seq[Library]): Future[Seq[FullLibraryInfo]] = {
+    val futureKeepInfosByLibraryId = libraries.map { library =>
+      val keeps = db.readOnlyMaster { implicit session => keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) }
+      library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps)
+    }.toMap
+
+    val memberIdsByLibraryId = libraries.map { library =>
+      val (collaborators, followers, _) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
+      library.id.get -> (collaborators ++ followers).map(_.userId)
+    }.toMap
+
+    val usersById = {
+      val allUsersShown = libraries.flatMap { library => memberIdsByLibraryId(library.id.get) :+ library.ownerId }.toSet
+      db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
+    }
+
+    val countsByLibraryId = db.readOnlyReplica { implicit s =>
+      libraries.map { library =>
+        val collaboratorCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+        val followerCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
+        val keepCount = keepRepo.getCountByLibrary(library.id.get)
+        library.id.get -> (collaboratorCount, followerCount, keepCount)
+      }
+    }.toMap
+
+    val futureFullLibraryInfos = libraries.map { lib =>
+      futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
+        val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
+        val owner = usersById(lib.ownerId)
+        val members = memberIdsByLibraryId(lib.id.get).map(usersById(_))
+        FullLibraryInfo(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          owner = owner,
+          description = lib.description,
+          slug = lib.slug,
+          url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+          kind = lib.kind,
+          visibility = lib.visibility,
+          followers = members,
+          keeps = keepInfos,
+          numKeeps = keepCount,
+          numCollaborators = collaboratorCount,
+          numFollowers = followerCount,
+          lastKept = lib.lastKept
+        )
+      }
+    }
+    Future.sequence(futureFullLibraryInfos)
+  }
+
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], library: Library): Future[FullLibraryInfo] = {
-
-    val memberIds = {
-      val (collaborators, followers, _) = getLibraryMembers(library.id.get, 0, 10, fillInWithInvites = false)
-      (collaborators ++ followers).map(_.userId)
-    }
-
-    val (lib, owner, members, numCollabs, numFollows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
-      val usersById = basicUserRepo.loadAll(memberIds.toSet + library.ownerId)
-      val owner = usersById(library.ownerId)
-      val members = memberIds.map(usersById(_))
-      val collabCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
-      val followCount = libraryMembershipRepo.countWithLibraryIdAndAccess(library.id.get, Set(LibraryAccess.READ_ONLY))
-      val keeps = keepRepo.getByLibrary(library.id.get, 0, 10)
-      val keepCount = keepRepo.getCountByLibrary(library.id.get)
-      (library, owner, members, collabCount, followCount, keeps, keepCount)
-    }
-
-    keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps).map { keepInfos =>
-      FullLibraryInfo(
-        id = Library.publicId(lib.id.get),
-        name = lib.name,
-        owner = owner,
-        description = lib.description,
-        slug = lib.slug,
-        url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
-        kind = lib.kind,
-        visibility = lib.visibility,
-        followers = members,
-        keeps = keepInfos,
-        numKeeps = keepCount,
-        numCollaborators = numCollabs,
-        numFollowers = numFollows,
-        lastKept = lib.lastKept)
-    }
+    createFullLibraryInfos(viewerUserIdOpt, 10, 10, Seq(library)).imap { case Seq(fullLibraryInfo) => fullLibraryInfo }
   }
 
   def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]) = {
@@ -222,7 +249,7 @@ class LibraryCommander @Inject() (
     val membersAccess = collaboratorsAccess ++ followersAccess
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
-    db.readOnlyMaster { implicit session =>
+    if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess)
 
@@ -249,6 +276,7 @@ class LibraryCommander @Inject() (
       }
       (collaborators, followers, inviteesWithInvites)
     }
+    else (Seq.empty, Seq.empty, Seq.empty)
   }
 
   def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember] = {

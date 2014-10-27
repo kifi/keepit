@@ -236,37 +236,34 @@ class RecommendationsCommander @Inject() (
   }
 
   def topPublicLibraryRecos(userId: Id[User]): Future[Seq[FullRecoInfo]] = {
-    val curatedLibs: Seq[Id[Library]] = Seq(
+    val curatedLibIds: Seq[Id[Library]] = Seq(
       25537L, 25116L, 24542L, 25345L, 25471L, 25381L, 24203L, 25370L, 25388L, 25528L, 25371L, 25350L, 25340L, 25000L, 26106L
     ).map(Id[Library])
-    Future.sequence(db.readOnlyReplica { implicit session =>
-      curatedLibs.map(libRepo.get)
-    }.map { lib =>
-      libCommander.createFullLibraryInfo(Some(userId), lib).map(lib.ownerId -> _)
-    }).map {
-      libInfosWithOwner =>
-        libInfosWithOwner.filter {
-          case (ownerId, libInfo) =>
-            libInfo.visibility == LibraryVisibility.PUBLISHED
-        }.map {
-          case (ownerId, libInfo) =>
-            val item = LibRecoItemInfo(
-              id = libInfo.id,
-              name = libInfo.name,
-              url = libInfo.url,
-              description = libInfo.description,
-              owner = db.readOnlyReplica { implicit session => basicUserRepo.load(ownerId) },
-              followers = libInfo.followers,
-              numFollowers = libInfo.numFollowers,
-              numKeeps = libInfo.numKeeps)
 
-            FullRecoInfo(
-              kind = RecoKind.Library,
-              metaData = None,
-              itemInfo = item
-            )
-        }
+    val curatedLibraries = {
+      val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
+      curatedLibIds.map(libraryById(_))
+    }
+
+    libCommander.createFullLibraryInfos(Some(userId), maxMembersShown = 10, maxKeepsShown = 0, curatedLibraries).map { fullLibraryInfos =>
+      fullLibraryInfos.map { libInfo =>
+        val item = LibRecoItemInfo(
+          id = libInfo.id,
+          name = libInfo.name,
+          url = libInfo.url,
+          description = libInfo.description,
+          owner = libInfo.owner,
+          followers = libInfo.followers,
+          numFollowers = libInfo.numFollowers,
+          numKeeps = libInfo.numKeeps
+        )
+
+        FullRecoInfo(
+          kind = RecoKind.Library,
+          metaData = None,
+          itemInfo = item
+        )
+      }
     }
   }
-
 }
