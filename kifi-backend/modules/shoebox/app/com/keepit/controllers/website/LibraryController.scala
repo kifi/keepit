@@ -91,7 +91,7 @@ class LibraryController @Inject() (
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryById(request.userIdOpt, id)
+    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryAndAccessString(request.userIdOpt, id)
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
