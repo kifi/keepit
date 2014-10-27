@@ -19,7 +19,7 @@ import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, URISummary, Keep, NormalizedURI }
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ ItemAugmentationResponse, AugmentableItem, ItemAugmentationRequest }
+import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
@@ -359,27 +359,10 @@ class FeedDigestEmailSender @Inject() (
    * this method assumes that all keeps are in library
    */
   private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
-    val request = ItemAugmentationRequest.uniform(userId, keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }: _*)
-    val keepMap = keeps.map { k => (k.uriId, k.libraryId.get) -> k }.toMap
-    val augmentationsF: Future[ItemAugmentationResponse] = search.augmentation(request)
-    augmentationsF map { augmentations =>
-      val userAttributions = augmentations.infos.map {
-        case (augmentableItem, augmentationInfo) =>
-          augmentableItem.keptIn.flatMap { libId =>
-            Some((augmentableItem.uri, libId) -> seedAttributionHelper.toUserAttribution(augmentationInfo))
-          } orElse {
-            val keepOpt = keeps.find(_.uriId == augmentableItem.uri) // expected to be Some, if None then we have another problem
-            airbrake.notify(s"$augmentableItem unexpected keptIn is None for keep=$keepOpt userId=$userId")
-            None
-          }
-      }.toSeq.filter(_.isDefined).map(_.get).toMap
-
-      keepMap.map {
-        case (key, keep) =>
-          userAttributions.get(key) map { userAttribution =>
-            DigestLibraryItemCandidate(keep, Some(userAttribution))
-          } getOrElse DigestLibraryItemCandidate(keep, None)
-      }.toSeq
+    search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
+      (keeps zip infos).map { case (keep, info) =>
+        DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))
+      }
     }
   }
 
