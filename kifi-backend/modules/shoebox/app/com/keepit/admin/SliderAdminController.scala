@@ -33,6 +33,7 @@ class SliderAdminController @Inject() (
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
+  userRepo: UserRepo,
   kifiInstallationStore: KifInstallationStore,
   userValueRepo: UserValueRepo,
   domainTagImporter: DomainTagImporter,
