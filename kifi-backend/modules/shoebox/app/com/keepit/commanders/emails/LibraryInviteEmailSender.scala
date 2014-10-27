@@ -47,14 +47,15 @@ class LibraryInviteEmailSender @Inject() (
         case Left(_: Id[User]) => None
         case Right(_: EmailAddress) => Some(invite.passPhrase)
       }
+      var authToken = invite.authToken
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
         to = toRecipient,
         category = NotificationCategory.User.LIBRARY_INVITATION,
-        htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase),
-        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase)),
+        htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken),
+        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
         campaign = Some("na"),
         channel = Some("vf_email"),

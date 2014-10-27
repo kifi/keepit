@@ -2,10 +2,11 @@
 inviterId: Id[User],
 inviteMsg: Option[String],
 libraryInfo: com.keepit.commanders.LibraryInfo,
-passPhrase: Option[String])
+passPhrase: Option[String],
+authToken: String)
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
-@libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}}
+@libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}&authToken=@authToken}
 
 @fullName(inviterId) invited you to follow a library on Kifi
 @inviteMsg.map { msg =>
