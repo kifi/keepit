@@ -5,8 +5,21 @@ describe('kifi.hashtagService', function () {
   var hashtagService, $httpBackend, $q, $rootScope, keepDecoratorService;
 
   var libraryId = 'l6XWQOhPGRgg',
-      keepId = '42b043aa-e389-45f2-ab37-b7809990ee7e',
-      keep;
+      keepId = '42b043aa-e389-45f2-ab37-b7809990ee7e';
+
+  function createKeep(keepId, hashtags) {
+    hashtags = hashtags || ['foo', 'bar'];
+    // mock keep
+    var keep = new keepDecoratorService.Keep({
+      'libraryId': libraryId,
+      'id': keepId,
+      'url': 'https://www.kifi.com',
+      'hashtags': hashtags
+    });
+    keep.buildKeep(keep);
+    keep.makeKept();
+    return keep;
+  }
 
   beforeEach(module('kifi'));
 
@@ -16,16 +29,6 @@ describe('kifi.hashtagService', function () {
     $q = _$q_;
     $rootScope = _$rootScope_;
     keepDecoratorService = _keepDecoratorService_;
-
-    // mock keep
-    keep = new keepDecoratorService.Keep({
-      'libraryId': libraryId,
-      'id': keepId,
-      'url': 'https://www.kifi.com',
-      'hashtags': ['foo', 'bar']
-    });
-    keep.buildKeep(keep);
-    keep.makeKept();
   }));
 
   afterEach(function () {
@@ -35,6 +38,7 @@ describe('kifi.hashtagService', function () {
 
   describe('hashtagService', function () {
     it('suggestsTags returns suggested tags for keeps', function () {
+      var keep = createKeep(keepId);
       var p = hashtagService.suggestTags(keep, 'scala');
       p.then(function (data) {
         expect(data).toEqual([{'tag':'Scala','matches':[[0,5]]},{'tag':'Learn Scala','matches':[[6,5]]}]);
@@ -47,6 +51,7 @@ describe('kifi.hashtagService', function () {
     });
 
     it('tagKeep adds tag to keep', function () {
+      var keep = createKeep(keepId);
       expect(keep.hashtags).toEqual(['foo', 'bar']);
       var p = hashtagService.tagKeep(keep, 'Scala');
       p.then(function (data) {
@@ -57,7 +62,23 @@ describe('kifi.hashtagService', function () {
       $httpBackend.flush();
     });
 
+    it('tagKeep bulk adds tag to keeps', function () {
+      var keep0 = createKeep('00000000-0000-0000-0000-000000000000', ['foo']);
+      var keep1 = createKeep('00000000-0000-0000-0000-000000000001', ['bar']);
+      var keep2 = createKeep('00000000-0000-0000-0000-000000000002', ['baz']);
+      var p = hashtagService.tagKeeps([keep0, keep1, keep2], 'Scala');
+      p.then(function (data) {
+        expect(keep0.hashtags).toEqual(['foo', 'Scala']);
+        expect(keep1.hashtags).toEqual(['bar', 'Scala']);
+        expect(keep2.hashtags).toEqual(['baz', 'Scala']);
+      });
+      $httpBackend.expectPOST('http://server/site/tags/Scala', { 'keepIds':
+        [keep0.id, keep1.id, keep2.id] }).respond(200, '{}');
+      $httpBackend.flush();
+    });
+
     it('untagKeep removes tag from keep', function () {
+      var keep = createKeep(keepId);
       expect(keep.hashtags).toEqual(['foo', 'bar']);
       var p = hashtagService.untagKeep(keep, 'foo');
       p.then(function (data) {

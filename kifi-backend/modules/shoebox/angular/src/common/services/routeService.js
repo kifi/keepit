@@ -73,6 +73,9 @@ angular.module('kifi')
       tagKeep: function (libraryId, keepId, tag) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
       },
+      tagKeeps: function (tag) {
+        return route('/tags/' + tag);
+      },
       untagKeep: function (libraryId, keepId, tag) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
       },

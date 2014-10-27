@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService',
-  function ($document, $sce, $log, keyIndices, hashtagService) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$analytics',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $analytics) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -127,20 +127,16 @@ angular.module('kifi')
 
         scope.addTag = function (tag) {
           tag = tag || scope.tagFilter.name;
-          _.each(scope.getSelectedKeeps(), function (keep) {
-            if (!keep.hasHashtag(tag)) {
-              // add the tag immediately to provide faster feedback to the user
-              keep.addTag(tag);
-              hashtagService.tagKeep(keep, tag).then(function () {
-                // all good
-              }, function () {
-                // something failed, get that tag out of here
-                keep.removeTag(tag);
-              });
-            }
+
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'addTagToKeeps',
+            'path': $location.path()
           });
 
+          var keeps = scope.getSelectedKeeps();
+          hashtagService.tagKeeps(keeps, tag, true);
           scope.tagFilter.name = '';
+
           return scope.hideAddTagDropdown();
         };
 
@@ -300,6 +296,12 @@ angular.module('kifi')
           var keepsWithTag = scope.getSelectedKeeps().filter(function (keep) {
             return _.contains(keep.hashtags, tag);
           });
+
+          $analytics.eventTrack('user_clicked_page', {
+            'action': 'removeTagToKeeps',
+            'path': $location.path()
+          });
+
           _.each(keepsWithTag, function (keep) {
             hashtagService.untagKeep(keep, tag).then(function () {
               keep.removeTag(tag);
