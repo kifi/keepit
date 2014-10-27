@@ -346,7 +346,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
+        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"), authToken = "abcdefg")
 
         (user1, user2, lib1, invite)
       }
@@ -359,6 +359,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       html must contain("Lorem ipsum")
       html must contain("http://dev.ezkeep.com:9000/tom/football")
       html must contain("check this out!")
+      html must contain("authToken=abcdefg")
     }
 
     "sends invite to user (userId)" in {
@@ -380,7 +381,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
-        html must not contain (invite.passPhrase)
+        html must not contain invite.passPhrase
       }
     }
 
