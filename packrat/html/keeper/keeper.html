@@ -4,15 +4,5 @@
     <span class="kifi-count"{{^boxCount}} style="display:none"{{/boxCount}}>{{boxCount}}</span>
   </span>
   <span class="kifi-dock-btn kifi-dock-compose" data-tip="c"></span>
-  <span class="kifi-keep-card {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}{{#isTagged}} kifi-tagged{{/isTagged}}">
-    <span class="kifi-keep-side">
-      <span class="kifi-keep-btn"></span>
-      <span class="kifi-keep-lock"></span>
-    </span>
-    <span class="kifi-kept-side">
-      <span class="kifi-kept-btn kifi-hoverless"></span>
-      <span class="kifi-kept-lock"></span>
-      <span class="kifi-kept-tag"></span>
-    </span>
-  </span>
+  <a class="kifi-keep-btn {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}" href="javascript:"></a>
 </kifi>

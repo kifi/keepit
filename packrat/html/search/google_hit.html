@@ -1,42 +1,45 @@
 <li class="g">
   <div class="vsc">
-    <h3 class="r"><a class="kifi-res-title" href="{{bookmark.url}}">{{{titleHtml}}}</a></h3>
+    <h3 class="r"><a class="kifi-res-title" href="{{url}}">{{{titleHtml}}}</a></h3>
     <div class="s">
-      {{#tags.length}}
-      <div class="kifi-res-sub">
-        <div class="kifi-res-sub-1">
-          <cite class="kifi-res-desc">{{{descHtml}}}</cite>
-        </div>
-        <div class="kifi-res-sub-2">
-          <div class="kifi-res-tags">
-          {{#tags}}
-            <a class="kifi-res-tag" href="{{origin}}/tag/{{id}}" target="_blank">{{name}}</a>{{^last}},{{/last}}
-          {{/tags}}
-          </div>
-        </div>
-      </div>
-      {{/tags.length}}
-      {{^tags}}
       <div class="f kv">
         <cite class="kifi-res-desc">{{{descHtml}}}</cite>
       </div>
-      {{/tags}}
     </div>
-    {{#scoreText}}
-      <div class="kifi-res-score">{{scoreText}}</div>
-    {{/scoreText}}
+    {{#score}}
+      <div class="kifi-res-score">{{score}}</div>
+    {{/score}}
   </div>
   <!--n-->
-  <div class="kifi-who" data-url="{{bookmark.url}}">
-    {{#displaySelf}}
-      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{cdnBase}}/users/{{self.id}}/pics/100/{{self.pictureName}}" alt="You!" title="You! You look great!">
-    {{/displaySelf}}
-    {{#displayUsers}}
-      <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
-    {{/displayUsers}}
-    {{^displaySelf}}{{^displayUsers}}
-      <img class="kifi-globe" src="{{images}}/globe.png">
-    {{/displayUsers}}{{/displaySelf}}
-    <span class="kifi-who-text">{{{whoKeptHtml}}}</span>
+  <div class="kifi-res-why">
+    <span class="kifi-res-users"></span>
+    {{#users.length}}
+      {{#users}}
+        <a class="kifi-res-user{{#secret}} kifi-secret{{/secret}}{{#duplicate}} kifi-duplicate{{/duplicate}}" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"></a>
+      {{/users}}
+      <a class="kifi-res-users-n" href="javascript:">{{usersMore}}</a>
+      {{^libraries.length}}
+        {{^tags.length}}
+          <span class="kifi-res-users-kept-this">{{usersName}} kept this</span>
+        {{/tags.length}}
+      {{/libraries.length}}
+    {{/users.length}}
+    {{^users.length}}
+      <span class="kifi-res-users-kept-this">{{usersMore}} {{#usersPlural}}people{{/usersPlural}}{{^usersPlural}}person{{/usersPlural}} kept this</span>
+    {{/users.length}}
+    {{#libraries.length}}
+      <span class="kifi-res-libs"></span>
+      {{#libraries}}
+        <a class="kifi-res-lib{{#secret}} kifi-secret{{/secret}}" href="{{origin}}{{path}}" target="_blank" style="background-image:url({{cdnBase}}/users/{{keeper.id}}/pics/100/{{keeper.pictureName}})">{{name}}</a>
+      {{/libraries}}
+      <a class="kifi-res-libs-n" href="javascript:">{{librariesMore}}</a>
+    {{/libraries.length}}
+    {{#tags.length}}
+      <span class="kifi-res-tags"></span>
+      {{#tags}}
+        <span class="kifi-res-tag">{{.}}</span>
+      {{/tags}}
+      <a class="kifi-res-tags-n" href="javascript:">{{tagsMore}}</a>
+    {{/tags.length}}
   </div>
 </li>

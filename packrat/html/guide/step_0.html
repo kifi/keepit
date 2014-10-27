@@ -7,13 +7,11 @@
       <a class="kifi-guide-0-next" href="javascript:">Let’s get started</a>
     </div>
     <div class="kifi-guide-page kifi-guide-page-1">
-      <div class="kifi-guide-0-h1">Start by <span class="kifi-guide-em">choosing</span> an<br/>example web page</div>
-      {{#pages}}
-      <a class="kifi-guide-site-a" href="{{url}}" style="background-image:url({{thumb}})">
-        <div class="kifi-guide-site-title">{{#name}}<div class="kifi-guide-site-title-part">{{.}}</div>{{/name}}</div>
-        <div class="kifi-guide-site">{{site}}</div>
-      </a>
-      {{/pages}}
+      <div class="kifi-guide-0-h1">Let’s <span class="kifi-guide-em">try</span> Kifi<br>on a real web page</div>
+      <div class="kifi-guide-0-p">Please click the page below</div>
+      {{#page}}
+        <a class="kifi-guide-site-a" href="{{url}}" style="background-image:url({{image}});width:{{width}}px;height:{{height}}px"></a>
+      {{/page}}
     </div>
   </div>
 </kifi>

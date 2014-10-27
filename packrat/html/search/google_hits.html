@@ -1,15 +1,15 @@
-{{#results.length}}
+{{#hits.length}}
   <ol id="kifi-res-list">
-  {{#results}}
+  {{#hits}}
     {{>google_hit}}
-  {{/results}}
+  {{/hits}}
   </ol>
-{{/results.length}}
-{{^results.length}}
+{{/hits.length}}
+{{^hits.length}}
   <div id="kifi-res-list" class="kifi-res-none">
     No keeps match this {{#filter}}filter{{/filter}}{{^filter}}search query{{/filter}}.
   </div>
-{{/results.length}}
+{{/hits.length}}
 
 <div class="kifi-res-end">{{!
 }}{{#mayHaveMore}}

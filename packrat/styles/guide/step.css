@@ -145,6 +145,7 @@
 .kifi-guide-stage[kifi-step='5'] .kifi-step5 {
   display: block;
 }
+.kifi-guide-stage[kifi-step='3'] .kifi-step3.kifi-guide-next,
 .kifi-guide-stage[kifi-step='4'] .kifi-step4.kifi-guide-next,
 .kifi-guide-stage[kifi-step='5'] .kifi-step5.kifi-guide-next {
   display: inline-block;
