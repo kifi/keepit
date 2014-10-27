@@ -158,14 +158,14 @@ angular.module('kifi')
         $document.on('keydown', processKey);
         safeFocus();
 
-        var librarySummariesHandler = $rootScope.$on('librarySummariesChanged', function () {
+        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', function () {
           if (scope.librariesEnabled) {
             scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
               return lib.access !== 'read_only';
             });
           }
         });
-        scope.$on('$destroy', librarySummariesHandler);
+        scope.$on('$destroy', deregisterLibrarySummaries);
       }
     };
   }

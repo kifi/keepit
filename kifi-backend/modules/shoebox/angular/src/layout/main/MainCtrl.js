@@ -142,7 +142,7 @@ angular.module('kifi')
       }
     }
 
-    var globalModalHandler = $rootScope.$on('showGlobalModal', function (e, modal) {
+    var deregisterGlobalModal = $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
@@ -152,7 +152,7 @@ angular.module('kifi')
           break;
       }
     });
-    $scope.$on('$destroy', globalModalHandler);
+    $scope.$on('$destroy', deregisterGlobalModal);
 
     $scope.importBookmarksToLibrary = function (library) {
       $scope.forceClose = true;

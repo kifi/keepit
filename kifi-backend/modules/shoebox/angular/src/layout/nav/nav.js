@@ -87,14 +87,14 @@ angular.module('kifi')
           }
         });
 
-        var librarySummariesHandler = $rootScope.$on('librarySummariesChanged', updateNavLibs);
-        scope.$on('$destroy', librarySummariesHandler);
+        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        scope.$on('$destroy', deregisterLibrarySummaries);
 
-        var changedLibraryHandler = $rootScope.$on('changedLibrarySorting', function() {
+        var deregisterChangedLibrary = $rootScope.$on('changedLibrarySorting', function() {
           scope.sortingMenu.option = profileService.prefs.library_sorting_pref || 'last_kept';
           updateNavLibs();
         });
-        scope.$on('$destroy', changedLibraryHandler);
+        scope.$on('$destroy', deregisterChangedLibrary);
 
         scope.$watch(function () {
           return friendService.requests.length;
