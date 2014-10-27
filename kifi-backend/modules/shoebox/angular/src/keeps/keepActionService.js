@@ -3,15 +3,8 @@
 angular.module('kifi')
 
 .factory('keepActionService', [
-  '$analytics',
-  '$http',
-  '$location',
-  '$log',
-  '$q',
-  'env',
-  'routeService',
-  'Clutch',
-  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
+  '$analytics', '$http', '$location', '$log', '$q', 'env', 'libraryService', 'routeService', 'Clutch',
+  function ($analytics, $http, $location, $log, $q, env, libraryService, routeService, Clutch) {
     var limit = 10;
     var smallLimit = 4;
 
@@ -123,28 +116,6 @@ angular.module('kifi')
       });
     }
 
-    function keepUrl(keepUrls, isPrivate) {
-      var data = {
-        keeps: keepUrls.map(function (keepUrl) {
-          return {
-            url: sanitizeUrl(keepUrl),
-            isPrivate: !!isPrivate
-          };
-        })
-      };
-
-      $log.log('keepActionService.keep()', data);
-
-      var url = env.xhrBase + '/keeps/add';
-      var config = {
-        params: { separateExisting: true }
-      };
-
-      return $http.post(url, data, config).then(function (res) {
-        return res && res.data;
-      });
-    }
-
     function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
@@ -165,6 +136,8 @@ angular.module('kifi')
 
       var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });
@@ -190,6 +163,8 @@ angular.module('kifi')
 
       var url = routeService.copyKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });
@@ -215,6 +190,8 @@ angular.module('kifi')
 
       var url = routeService.moveKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });
@@ -301,7 +278,6 @@ angular.module('kifi')
       getSingleKeep: getSingleKeep,
       keepOne: keepOne,
       keepMany: keepMany,
-      keepUrl: keepUrl,
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
