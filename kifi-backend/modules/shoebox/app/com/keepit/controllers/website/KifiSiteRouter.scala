@@ -64,7 +64,7 @@ class KifiSiteRouter @Inject() (
     // Short-circuit for landing pages
     val userAgentOpt = request.userAgentOpt
     if (request.host.contains("42go")) {
-      MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
+      MovedPermanently(applicationConfig.applicationBaseUrl + "/about")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request) //[LAUNCH] drop this line and the next
     } else if (request.path == "/marketing" && request.userIdOpt.isEmpty) {
