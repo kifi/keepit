@@ -115,7 +115,7 @@ POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
-POST    /ext/pref/showSiteLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setSiteShowLibraryIntro(show: Boolean)
+POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
 # Note: /ext/user/friends is deprecated. 3.2.4 and later use /ext/contacts/search instead and do not cache friends.
@@ -627,7 +627,7 @@ POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
 POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
-POST    /admin/slider/setShowLibIntro @com.keepit.controllers.admin.SliderAdminController.setShowLibIntro()
+POST    /admin/slider/setSiteShowLibraryIntro @com.keepit.controllers.admin.SliderAdminController.setSiteShowLibraryIntro()
 
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
