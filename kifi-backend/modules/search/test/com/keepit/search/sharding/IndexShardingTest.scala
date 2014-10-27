@@ -61,7 +61,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             }
 
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-            val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField)
+            val keeps = keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet
             keeps.forall(id => shard.contains(Id[NormalizedURI](id))) === true
 
             bookmarks.filter(_.userId == userId).foreach { bookmark =>
@@ -77,7 +77,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
           val keeps = bookmarks.filter(_.userId == userId).map(_.uriId.id).toSet
           val shardedKeeps = activeShards.local.map { shard =>
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toSet
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet
           }
           shardedKeeps.foldLeft(0) { (sum, set) => sum + set.size } === keeps.size
           shardedKeeps.flatten === keeps
@@ -117,7 +117,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
         def getKeepSize(shard: Shard[NormalizedURI]) = {
           val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
-          keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toSet.size
+          keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.toSet.size
         }
         def getCollectionSize(shard: Shard[NormalizedURI]) = CollectionSearcher(collectionGraph.getIndexer(shard)).getCollectionToUriEdgeSet(collection.id.get).size
 
@@ -139,13 +139,13 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
           val collectionSearcher = CollectionSearcher(collectionGraph.getIndexer(shard))
 
           if (shard == sourceShard) {
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).contains(originalBookmark.uriId.id) === false
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.contains(originalBookmark.uriId.id) === false
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet.contains(originalBookmark.uriId) === false
 
             newKeepSizes(shard) === oldKeepSizes(shard) - 1
             newCollSizes(shard) === oldCollSizes(shard) - 1
           } else if (shard == targetShard) {
-            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).contains(migratedBookmark.uriId.id) === true
+            keepSearcher.findSecondaryIds(new Term(KeepFields.userField, userId.toString), KeepFields.uriIdField).toArray.contains(migratedBookmark.uriId.id) === true
             collectionSearcher.getCollectionToUriEdgeSet(collection.id.get).destIdSet.contains(migratedBookmark.uriId) === true
 
             newKeepSizes(shard) === oldKeepSizes(shard) + 1
