@@ -71,6 +71,13 @@ object UserValueName {
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
   val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
+
+  // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
+  // library_callout_shown tag_callout_shown guide_callout_shown
+  val LIBRARY_CALLOUT_SHOWN = UserValueName("library_callout_shown")
+  val TAG_CALLOUT_SHOWN = UserValueName("tag_callout_shown")
+  val GUIDE_CALLOUT_SHOWN = UserValueName("guide_callout_shown")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")

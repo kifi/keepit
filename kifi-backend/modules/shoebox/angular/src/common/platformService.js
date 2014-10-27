@@ -55,9 +55,7 @@ angular.module('kifi')
     };
 
     var goToMobileStore = function () {
-      if (isAndroid()) {
-        $window.location = 'market://details?id=com.google.earth';
-      } else if (isIPhone()) {
+      if (isIPhone()) {
         $window.location = 'itms://itunes.apple.com/us/app/kifi/id740232575';
       }
     };

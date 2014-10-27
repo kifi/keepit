@@ -46,6 +46,10 @@ object LibraryAccess {
   implicit def format[T]: Format[LibraryAccess] =
     Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
 
+  implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
+    def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
+  }
+
   def apply(str: String) = {
     str match {
       case READ_ONLY.value => READ_ONLY

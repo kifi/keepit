@@ -172,22 +172,24 @@ angular.module('kifi')
         var loading = false;
         function pageMembers() {
           if (loading) { return; }
-          loading = true;
-          libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
-            var members = resp.members;
-            loading = false;
-            if (members.length === 0) {
-              scope.moreMembers = false;
-            } else {
-              scope.moreMembers = true;
-              scope.offset += 1;
-              members.forEach(function (member) {
-                member.picUrl = friendService.getPictureUrlForUser(member);
-                member.status = setMemberStatus(member);
-              });
-              scope.memberList.push.apply(scope.memberList, members);
-            }
-          });
+          if (scope.library.id) {
+            loading = true;
+            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
+              var members = resp.members;
+              loading = false;
+              if (members.length === 0) {
+                scope.moreMembers = false;
+              } else {
+                scope.moreMembers = true;
+                scope.offset += 1;
+                members.forEach(function (member) {
+                  member.picUrl = friendService.getPictureUrlForUser(member);
+                  member.status = setMemberStatus(member);
+                });
+                scope.memberList.push.apply(scope.memberList, members);
+              }
+            });
+          }
         }
 
         function setMemberStatus (member) {

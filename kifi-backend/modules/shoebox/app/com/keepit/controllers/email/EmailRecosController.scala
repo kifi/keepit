@@ -48,7 +48,7 @@ class EmailRecosController @Inject() (
       curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
         clientType = Some(RecommendationClientType.Email)))
 
-      Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home())
+      Redirect(com.keepit.controllers.website.routes.HomeController.home())
     } getOrElse BadRequest
   }
 

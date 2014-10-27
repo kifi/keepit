@@ -29,7 +29,13 @@
 
     <h2 class="kf-rightcol-header">Essentials</h2>
     <ul class="kf-footer-essentials-list about-kifi">
-      <li kf-min-version="3.1" class="start-guide">
+      <li kf-min-version="3.3.0" class="start-guide">
+        <div kf-callout class="kf-callout-bubble-left kf-callout-guide" rel-pos ng-if="showCallout()">
+            <div>The new turbo charged extension allows you to create and update your libraries from any webpage. If you would like a quick tour click below.</div>
+            <div class="kf-callout-bubble-action">
+              <div class="kf-callout-decline">No thanks</div><div class="kf-callout-bubble-button" ng-click="closeCallout()">Show me</div>
+            </div>
+        </div>
         <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerGuide(true)">
           <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
         </a>

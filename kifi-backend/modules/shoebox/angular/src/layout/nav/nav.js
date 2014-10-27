@@ -60,6 +60,18 @@ angular.module('kifi')
           scope.$broadcast('refreshScroll');
         }
 
+        // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+        var calloutName = 'library_callout_shown';
+        scope.showCallout = function () {
+          return profileService.prefs.site_show_library_intro && !profileService.prefs[calloutName];
+        };
+        scope.closeCallout = function () {
+          var save = { 'site_show_library_intro': false };
+          save[calloutName] = true;
+          profileService.prefs[calloutName] = true;
+          profileService.savePrefs(save);
+        };
+
 
         //
         // Scope methods.
@@ -87,12 +99,14 @@ angular.module('kifi')
           }
         });
 
-        $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        scope.$on('$destroy', deregisterLibrarySummaries);
 
-        $rootScope.$on('changedLibrarySorting', function() {
+        var deregisterChangedLibrary = $rootScope.$on('changedLibrarySorting', function() {
           scope.sortingMenu.option = profileService.prefs.library_sorting_pref || 'last_kept';
           updateNavLibs();
         });
+        scope.$on('$destroy', deregisterChangedLibrary);
 
         scope.$watch(function () {
           return friendService.requests.length;
