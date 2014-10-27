@@ -190,13 +190,14 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""
-             |{
-             |  "site_welcomed":null,
-             |  "library_sorting_pref":"name",
-             |  "site_left_col_width":null,
-             |  "show_delighted_question":false,
-             |  "onboarding_seen":true
-             |}
+             |{"site_welcomed":null,
+             |"library_sorting_pref":"name",
+             |"site_left_col_width":null,
+             |"library_callout_shown":null,
+             |"show_delighted_question":false,
+             |"tag_callout_shown":null,
+             |"guide_callout_shown":null,
+             |"onboarding_seen":true}
            """.stripMargin
         ))
       }
