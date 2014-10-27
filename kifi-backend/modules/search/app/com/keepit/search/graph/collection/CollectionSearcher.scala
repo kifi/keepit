@@ -52,16 +52,6 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   def getExternalId(id: Long): Option[ExternalId[Collection]] = {
     searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).map { ExternalId[Collection](_) }
   }
-
-  def getName(id: Id[Collection]): Hashtag = Hashtag(getName(id.id))
-
-  def getName(id: Long): String = {
-    searcher.getDecodedDocValue[String](nameField, id)(fromByteArray).getOrElse("")
-  }
-
-  def getCollections(userId: Id[User]): Seq[(Id[Collection], Hashtag)] = {
-    getUserToCollectionEdgeSet(userId).destIdSet.iterator.map { id => (id, getName(id)) }.toSeq
-  }
 }
 
 class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, userId: Id[User]) extends CollectionSearcher(collectionIndexSearcher) {
@@ -79,6 +69,7 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, userId: Id[U
 }
 
 abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]
+
 object CollectionToUriEdgeSet {
   def apply(sourceId: Id[Collection], uriList: URIList): CollectionToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
