@@ -333,8 +333,8 @@ class UserController @Inject() (
       LIBRARY_SORTING_PREF,
       LIBRARY_CALLOUT_SHOWN,
       TAG_CALLOUT_SHOWN,
-      GUIDE_CALLOUT_SHOWN
-    )
+      GUIDE_CALLOUT_SHOWN,
+      SITE_SHOW_LIBRARY_INTRO)
   }
 
   def getPrefs() = UserAction.async { request =>

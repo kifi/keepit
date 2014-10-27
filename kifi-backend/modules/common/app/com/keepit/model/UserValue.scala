@@ -61,6 +61,7 @@ object UserValueName {
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
   val SITE_LEFT_COL_WIDTH = UserValueName("site_left_col_width")
   val SITE_WELCOMED = UserValueName("site_welcomed")
+  val SITE_SHOW_LIBRARY_INTRO = UserValueName("site_show_library_intro")
   val ONBOARDING_SEEN = UserValueName("onboarding_seen")
   val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
   val NON_USER_KIND = UserValueName("nonUserKind")
