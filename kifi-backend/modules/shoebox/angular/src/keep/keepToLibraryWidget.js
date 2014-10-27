@@ -234,12 +234,19 @@ angular.module('kifi')
             return !_.find(scope.excludeLibraries, { 'id': library.id });
           });
 
-          libraries.forEach(function (library) {
-            library.keptTo = false;
-            if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
-              library.keptTo = true;
-            }
+          // Sort libraries here.
+          var groupedLibraries = _.groupBy(libraries, function (library) {
+            return !!library.keptTo;
           });
+
+          // TODO(yiping): rename all 'keptTo' to 'keptIn' to be consistent with text in template.
+          scope.widgetKeptInLibraries = groupedLibraries[true];
+          scope.widgetMyLibraries = groupedLibraries[false];
+
+          // libraries = (groupedLibraries[true] || []).concat(groupedLibraries[false]);
+
+          // libraries[selectedIndex].selected = true;
+          // scope.widgetLibraries = libraries;
 
           libraries[selectedIndex].selected = true;
           scope.widgetLibraries = libraries;

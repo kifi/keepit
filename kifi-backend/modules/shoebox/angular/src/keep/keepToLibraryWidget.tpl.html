@@ -4,8 +4,10 @@
       <span class="keep-to-library-search-input-icon"></span>
       <input class="keep-to-library-search-input" ng-model="search.name" placeholder="Search your libraries" ng-keydown="processKeyEvent($event)">
     </div>
+
+    <div class="library-group-header kept-to-libraries-group-header">Kept In</div>
     <ul class="library-select-list">
-      <li ng-repeat="library in widgetLibraries | filter:search" class="library-select-option"
+      <li ng-repeat="library in widgetKeptInLibraries | filter:search" class="library-select-option"
         ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
         ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
         <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
@@ -23,6 +25,28 @@
         <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
       </li>
     </ul>
+
+    <div class="library-group-header my-libraries-group-header">My Libraries</div>
+    <ul class="library-select-list">
+      <li ng-repeat="library in widgetMyLibraries | filter:search" class="library-select-option"
+        ng-class="{'selected': library.selected, 'keptTo': library.keptTo}"
+        ng-mouseenter="onHover(library)" ng-mouseleave="onUnhover(library)">
+        <span ng-switch="library.kind" class="keep-to-library-lib-icon-container">
+          <span ng-switch-when="system_main" class="keep-to-library-lib-icon svg-main-library-icon"></span>
+          <span ng-switch-when="system_secret" class="keep-to-library-lib-icon svg-secret-library-icon"></span>
+          <span ng-switch-default ng-switch="library.visibility">
+            <span ng-switch-when="published" class="keep-to-library-lib-icon svg-public-library-icon"></span>
+            <span ng-switch-when="secret" class="keep-to-library-lib-icon svg-private-library-icon"></span>
+
+            <!-- TODO: remove this when we've converted all discoverable libraries to public libraries in the db. -->
+            <span ng-switch-when="discoverable" class="keep-to-library-lib-icon svg-yellow-card-with-globe"></span>
+          </span>
+        </span>
+        {{library.name}}
+        <button class="kf-keep-lib-footer-button keep-to-library-unkeep-button">Unkeep</button>
+      </li>
+    </ul>
+
     <div class="keep-to-library-create" ng-click="showCreatePanel()">
       <span class="keep-to-library-lib-icon-container">
         <span class="keep-to-library-lib-icon svg-add-a-library-icon"></span>
