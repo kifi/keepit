@@ -81,6 +81,10 @@ class HomeController @Inject() (
     MarketingSiteRouter.marketingSite(path)
   }
 
+  def moved(uri: String) = Action {
+    MovedPermanently(uri)
+  }
+
   def iPhoneAppStoreRedirect = MaybeUserAction { implicit request =>
     iPhoneAppStoreRedirectWithTracking
   }
@@ -110,10 +114,6 @@ class HomeController @Inject() (
       (parsed.name, parsed.operatingSystemFamily, parsed.operatingSystemName, parsed.typeName, parsed.userAgent, parsed.version)
     }
     Ok(res.toString)
-  }
-
-  def blog = MaybeUserAction { implicit request =>
-    MovedPermanently("http://blog.kifi.com/")
   }
 
   def kifiSiteRedirect(path: String) = Action {
