@@ -12,7 +12,6 @@
 // @require scripts/formatting.js
 // @require scripts/friend_search.js
 // @require scripts/render.js
-// @require scripts/util.js
 // @require scripts/kifi_util.js
 // @require scripts/prevent_ancestor_scroll.js
 
@@ -30,9 +29,8 @@
 var messageParticipants = this.messageParticipants = (function ($, win) {
 	'use strict';
 
-	var util = win.util,
-		kifiUtil = win.kifiUtil,
-		OVERFLOW_LENGTH = 8;
+	var kifiUtil = win.kifiUtil;
+	var OVERFLOW_LENGTH = 8;
 
 	var portHandlers = {
 		participants: function (participants) {
@@ -421,7 +419,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		sendAddParticipants: function (users) {
 			return kifiUtil.request('add_participants', {
 				threadId: this.parent.threadId,
-				ids: util.pluck(users, 'id')
+				ids: users.map(function (u) { return u.id; })
 			}, 'Could not add participants.');
 		},
 
@@ -449,16 +447,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			}
 		},
 
-		indexOfUser: function (user) {
-			return this.indexOfUserId(user && user.id);
-		},
-
-		indexOfUserId: function (userId) {
-			return userId ? util.keyOf(this.getParticipants(), function (user) {
-				return user.id === userId;
-			}) : -1;
-		},
-
 		addParticipant: function () {
 			var participants = this.getParticipants(),
 				count = 0;
@@ -466,7 +454,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			for (var i = 0, len = arguments.length, user, userId; i < len; i++) {
 				user = arguments[i];
 				userId = user && user.id;
-				if (userId && this.indexOfUser(user) === -1) {
+				if (userId && !participants.some(function (p) { return p.id === userId; })) {
 					participants.unshift(user);
 					count++;
 				}
@@ -476,24 +464,6 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 				this.updateView();
 				this.highlightFirstNParticipants(count);
 				this.highlightCount();
-			}
-		},
-
-		removeParticipant: function () {
-			var indices = [];
-			for (var i = 0, len = arguments.length, user, index; i < len; i++) {
-				user = arguments[i];
-				if (user) {
-					index = this.indexOfUser(user);
-					if (index !== -1) {
-						indices.push(index);
-					}
-				}
-			}
-
-			var removed = util.removeIndices(this.getParticipants(), indices);
-			if (removed.length) {
-				this.updateView();
 			}
 		},
 
@@ -566,5 +536,4 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 			this.$input = this.$list = this.$el = null;
 		}
 	};
-
 })(jQuery, this);

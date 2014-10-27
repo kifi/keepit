@@ -1,10 +1,8 @@
-<div class="kifi-kcard">
+<div class="kifi-kcard {{className}}">
   <div class="kifi-kcard-top">
-    <img class="kifi-kcard-pic" src="{{cdnBase}}/users/{{friend.id}}/pics/200/{{friend.pictureName}}"/>
-    <div class="kifi-kcard-info">
-      <div class="kifi-kcard-name">{{friend.firstName}} {{friend.lastName}}</div>
-      <div class="kifi-kcard-desc">Your Kifi friend</div>
-    </div>
+    <div class="kifi-kcard-pic" style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"></div>
+    <div class="kifi-kcard-name">{{firstName}} {{lastName}}</div>
+    <div class="kifi-kcard-desc">{{#self}}(You){{/self}}{{^self}}Kifi connection{{/self}}</div>
   </div>
   <div class="kifi-kcard-tri"></div>
 </div>

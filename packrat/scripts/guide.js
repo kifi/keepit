@@ -5,7 +5,7 @@ var guide = guide || {
   show: function (o) {
     'use strict';
     log('[guide.show]', o);
-    if (!o.pages) {
+    if (!o.page) {
       var ds = document.documentElement.dataset;
       if (ds.kifiExt) {
         ds.guide = '';
@@ -31,7 +31,7 @@ var guide = guide || {
           });
         var $bar = $steps.find('.kifi-gs-bar');
         var guideStep = guide['step' + o.step];
-        guideStep.show($steps, o.page >= 0 ? o.pages[o.page] : o.pages, o.page);
+        guideStep.show($steps, o.page);
         api.onEnd.push(guideStep.remove);
       });
     }

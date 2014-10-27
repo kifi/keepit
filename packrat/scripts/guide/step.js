@@ -295,9 +295,9 @@ guide.step = guide.step || function () {
     }
   }
 
-  function navTo(url, suffix) {
+  function navTo(url) {
     api.port.emit('await_deep_link', {
-      locator: '#guide/' + (opts.index + 1) + '/' + opts.pageIdx + (suffix ? '/' + suffix : ''),
+      locator: '#guide/' + (opts.index + 1),
       url: url
     });
     window.location.href = url;

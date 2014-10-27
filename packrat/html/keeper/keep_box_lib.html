@@ -1,0 +1,20 @@
+{{#keep.removable}}
+<div class="kifi-keep-box-lib-kept">
+{{/keep.removable}}
+  <a class="kifi-keep-box-lib kifi-keep-box-with-lib-icon kifi-{{visibility}}{{#system}} kifi-system{{/system}}{{#highlighted}} kifi-highlighted{{/highlighted}}" href="javascript:" tabindex="-1" data-id="{{id}}">
+    {{#shortcut}}
+      <span class="kifi-keep-box-lib-1">
+        {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
+        {{^nameHtml}}{{name}}{{/nameHtml}}
+      </span>
+      <span class="kifi-keep-box-lib-2">{{shortcut}}</span>
+    {{/shortcut}}
+    {{^shortcut}}
+      {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
+      {{^nameHtml}}{{name}}{{/nameHtml}}
+    {{/shortcut}}
+  </a>
+{{#keep.removable}}
+  <a class="kifi-keep-box-lib-unkeep kifi-keep-box-button" href="javascript:">Unkeep</a>
+</div>
+{{/keep.removable}}
