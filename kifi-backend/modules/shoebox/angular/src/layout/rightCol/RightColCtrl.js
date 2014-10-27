@@ -21,7 +21,7 @@ angular.module('kifi')
     // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
     var calloutName = 'guide_callout_shown';
     $scope.showCallout = function () {
-      return profileService.prefs.site_show_library_intro && !profileService.prefs[calloutName];
+      return profileService.prefs.site_intial_show_library_intro && !profileService.prefs[calloutName];
     };
     $scope.closeCalloutOpenGuide = function () {
       $scope.closeCallout();
