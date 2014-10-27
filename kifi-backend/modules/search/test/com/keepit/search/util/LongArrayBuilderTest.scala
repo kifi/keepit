@@ -19,7 +19,7 @@ class LongArrayBuilderTest extends Specification {
       }
 
       val rnd = new Random()
-      val expected = (0 until 40000).map(_ => rnd.nextLong()).toArray
+      val expected = (0 until 4000).map(_ => rnd.nextLong()).toArray
       builder = new LongArrayBuilder
       expected.foreach { i => builder += i }
       Arrays.equals(builder.toArray, expected) === true

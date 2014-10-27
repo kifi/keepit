@@ -19,7 +19,7 @@ class IntArrayBuilderTest extends Specification {
       }
 
       val rnd = new Random()
-      val expected = (0 until 40000).map(_ => rnd.nextInt()).toArray
+      val expected = (0 until 4000).map(_ => rnd.nextInt()).toArray
       builder = new IntArrayBuilder
       expected.foreach { i => builder += i }
       Arrays.equals(builder.toArray, expected) === true
