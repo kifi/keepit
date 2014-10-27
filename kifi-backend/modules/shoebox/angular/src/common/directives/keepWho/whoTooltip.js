@@ -19,12 +19,13 @@ angular.module('kifi')
         // The following is messy. It accounts for the case where we're using
         // this directive directly on an image element in the library card.
         // TODO(yiping): make the directive work for that case w/o this messiness.
-        // Probably needs mor research on scopes in Angular.
+        // Probably needs more research on scopes in Angular.
+
+        // If this is being used on followers in a library, do not show additional
+        // information about the follower (i.e., 'Your Kifi friend').
         if (!scope.keeper && scope.follower) {
           scope.keeper = scope.follower;
-          if (scope.followerIsMe(scope.follower)) {
-            scope.youText = 'You! You look great!';
-          }
+          scope.hideWhoInfo = true;
         }
 
         function cancelTimeout() {

@@ -180,10 +180,6 @@ angular.module('kifi')
           return library.owner && library.owner.id === profileService.me.id;
         };
 
-        scope.followerIsMe = function (follower) {
-          return follower.id === profileService.me.id;
-        };
-
         scope.canBeShared = function (library) {
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
