@@ -5,7 +5,7 @@
   <div class="library-share-menu">
     <header ng-if="!manageLibInvite" class="library-share-menu-header">Send this library</header>
     <div class="library-share-menu-content">
-      <div ng-if="!manageLibInvite" contenteditable="true" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></div>
+      <textarea ng-if="!manageLibInvite" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></textarea>
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">
         <input type="text" ng-model="search.name" class="library-share-input library-share-search-input" placeholder="Search people" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
