@@ -91,8 +91,8 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    var keepAddedHandler = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if ((libSlug === 'secret' && $scope.librarySlug === 'main') || 
+    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+      if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
           (libSlug === 'main' && $scope.librarySlug === 'secret')) {
         var idx = _.findIndex($scope.keeps, { url: keep.url });
         if (idx > -1) {
@@ -102,12 +102,12 @@ angular.module('kifi')
         $scope.keeps.unshift(keep);
       }
     });
-    $scope.$on('$destroy', keepAddedHandler);
+    $scope.$on('$destroy', deregisterKeepAdded);
 
-    var currentLibraryHandler = $rootScope.$on('getCurrentLibrary', function (e, args) {
+    var deregisterCurrentLibrary = $rootScope.$on('getCurrentLibrary', function (e, args) {
       args.callback($scope.library);
     });
-    $scope.$on('$destroy', currentLibraryHandler);
+    $scope.$on('$destroy', deregisterCurrentLibrary);
 
     var setTitle = function (lib) {
       $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
@@ -185,7 +185,8 @@ angular.module('kifi')
       $rootScope.$emit('triggerExtensionInstall');
     };
 
-    $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
+    var deregisterLogin = $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
+    $scope.$on('$destroy', deregisterLogin);
 
     init(true);
     $rootScope.$emit('libraryUrl', $scope.library);
