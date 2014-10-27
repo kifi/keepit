@@ -271,7 +271,7 @@ gulp.task('svg-sprite', function() {
     var split = filename.split('/');
     var filename = split[split.length - 1];
     var raw = filename.substr(0, filename.lastIndexOf('.'));
-    var image = code.toString().replace(/#/g, '%23').replace('<desc>Created with Avocode</desc>','');
+    var image = encodeURIComponent(code.toString().replace('<desc>Created with Avocode</desc>',''));
     var output = '.svg-' + raw + '{ background-image: url(\'data:image/svg+xml,' + image + '\'); }';
 
     return output;
