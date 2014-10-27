@@ -411,7 +411,7 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
     val sqlQuery = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
       from bookmark k left join keep_to_collection kc
-      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId}
+      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId} and k.state = '#${KeepStates.ACTIVE}'
       group by url order by k.id desc"""
     sqlQuery.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }
