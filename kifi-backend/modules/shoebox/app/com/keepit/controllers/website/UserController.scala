@@ -328,6 +328,7 @@ class UserController @Inject() (
     UserValueName.SITE_WELCOMED,
     UserValueName.ONBOARDING_SEEN,
     UserValueName.SHOW_DELIGHTED_QUESTION,
+    UserValueName.SITE_SHOW_LIBRARY_INTRO,
     UserValueName.LIBRARY_SORTING_PREF
   )
 
