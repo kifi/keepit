@@ -57,7 +57,7 @@ class AdminLibraryController @Inject() (
       }
       var page = 0
       val pageSize = 100
-      var hasMore = false
+      var hasMore = true
       val keeps = ArrayBuffer[Keep]()
       while (hasMore) {
         val from = page * pageSize
