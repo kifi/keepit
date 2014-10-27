@@ -3,15 +3,8 @@
 angular.module('kifi')
 
 .factory('keepActionService', [
-  '$analytics',
-  '$http',
-  '$location',
-  '$log',
-  '$q',
-  'env',
-  'routeService',
-  'Clutch',
-  function ($analytics, $http, $location, $log, $q, env, routeService, Clutch) {
+  '$analytics', '$http', '$location', '$log', '$q', 'env', 'libraryService', 'routeService', 'Clutch',
+  function ($analytics, $http, $location, $log, $q, env, libraryService, routeService, Clutch) {
     var limit = 10;
     var smallLimit = 4;
 
@@ -165,6 +158,8 @@ angular.module('kifi')
 
       var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });
@@ -190,6 +185,8 @@ angular.module('kifi')
 
       var url = routeService.copyKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });
@@ -215,6 +212,8 @@ angular.module('kifi')
 
       var url = routeService.moveKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
+        libraryService.addRecentLibrary(libraryId);
+
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
         });

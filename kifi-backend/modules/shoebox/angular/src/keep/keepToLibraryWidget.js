@@ -227,16 +227,32 @@ angular.module('kifi')
           scope.showCreate = false;
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
+          scope.widgetRecentLibraries = [];
+          scope.widgetOtherLibraries = [];
 
           var libraries = _.filter(libraryService.librarySummaries, { access: 'owner' });
+
+
+
+          // Sort libraries here.
+          var groupedLibraries = _.groupBy(libraries, function (library) {
+            return !!library.keptTo;
+          });
 
           libraries = _.filter(libraries, function (library) {
             return !_.find(scope.excludeLibraries, { 'id': library.id });
           });
 
-          // Sort libraries here.
-          var groupedLibraries = _.groupBy(libraries, function (library) {
-            return !!library.keptTo;
+          libraries.forEach(function (library) {
+            library.keptTo = false;
+            if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+              library.keptTo = true;
+            }
+            if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
+              scope.widgetRecentLibraries.push(library);
+            } else {
+              scope.widgetOtherLibraries.push(library);
+            }
           });
 
           // TODO(yiping): rename all 'keptTo' to 'keptIn' to be consistent with text in template.
@@ -244,12 +260,6 @@ angular.module('kifi')
           scope.widgetMyLibraries = groupedLibraries[false];
 
           // libraries = (groupedLibraries[true] || []).concat(groupedLibraries[false]);
-
-          // libraries[selectedIndex].selected = true;
-          // scope.widgetLibraries = libraries;
-
-          libraries[selectedIndex].selected = true;
-          scope.widgetLibraries = libraries;
         };
 
         scope.onHover = function (library) {
