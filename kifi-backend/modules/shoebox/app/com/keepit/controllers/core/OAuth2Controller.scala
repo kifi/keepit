@@ -163,10 +163,10 @@ class OAuth2Controller @Inject() (
     val stateOptFromSession = request.session.get("stateToken") orElse Some("")
     log.infoP(s"code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
-    val stateTokenOpt = stateOpt flatMap { Json.parse(_).asOpt[StateToken] }
+    val stateTokenOpt = stateOpt flatMap { tk => OAuth2Helper.getStateToken(tk) }
     val stateTokenOptFromSession = stateOptFromSession flatMap { tk => OAuth2Helper.getStateToken(tk) }
 
-    if (stateTokenOpt.isEmpty || stateTokenOptFromSession.isEmpty || stateTokenOpt.get.token != stateTokenOptFromSession.get.token) {
+    if (stateTokenOpt.isEmpty) { // todo(ray): validate stateFromSession
       log.warnP(s"invalid state token: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
       resolve(redirectInvite)
     } else if (codeOpt.isEmpty) {
