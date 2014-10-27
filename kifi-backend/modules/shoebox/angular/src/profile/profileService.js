@@ -10,11 +10,7 @@ angular.module('kifi')
       picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
       seqNum: 0
     };
-    var prefs = {
-      "library_callout_shown": true,
-      "tag_callout_shown": true,
-      "guide_callout_shown": true
-    };
+    var prefs = {};
     var userLoggedIn; // undefined means we don't know the status yet
 
     $rootScope.$on('social.updated', function () {
