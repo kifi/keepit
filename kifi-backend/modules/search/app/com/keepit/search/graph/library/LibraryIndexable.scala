@@ -30,6 +30,12 @@ object LibraryFields {
       case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
       case LibraryVisibility.PUBLISHED => PUBLISHED
     }
+
+    @inline def fromNumericCode(visibility: Long) = {
+      if (visibility == SECRET) LibraryVisibility.SECRET
+      else if (visibility == DISCOVERABLE) LibraryVisibility.DISCOVERABLE
+      else LibraryVisibility.PUBLISHED
+    }
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -38,6 +44,10 @@ object LibraryFields {
 object LibraryIndexable {
   def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = {
     librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).exists(_ == LibraryFields.Visibility.SECRET)
+  }
+
+  def getVisibility(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryVisibility] = {
+    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).map(LibraryFields.Visibility.fromNumericCode(_))
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {

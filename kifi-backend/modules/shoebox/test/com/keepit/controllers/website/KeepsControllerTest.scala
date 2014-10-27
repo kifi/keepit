@@ -125,7 +125,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = None).toString
         path === "/site/keeps/all"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(bookmark1.isPrivate), Seq(bookmark1.userId, user2.id.get), 3), (Some(bookmark2.isPrivate), Seq(bookmark2.userId), 1))
+        inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId, user2.id.get), 3), (Seq(bookmark2.userId), 1))
 
         inject[FakeUserActionsHelper].setUser(user1)
 
@@ -146,7 +146,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
               "others":1,
-              "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
+              "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
               "keepersOmitted": 0,
               "keepersTotal": 3,
@@ -166,7 +166,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
               "others":0,
-              "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
+              "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
               "keepers":[],
               "keepersOmitted": 0,
               "keepersTotal": 1,
@@ -236,7 +236,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
         inject[FakeUserActionsHelper].setUser(user1)
 
-        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(bookmark1.isPrivate), Seq(bookmark1.userId), 1), (Some(bookmark2.isPrivate), Seq(bookmark2.userId), 1))
+        inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId), 1), (Seq(bookmark2.userId), 1))
 
         val request = FakeRequest("GET", s"/site/keeps/all?after=${bookmark1.externalId.toString}")
         val result = inject[KeepsController].allKeeps(before = None, after = Some(bookmark1.externalId.toString), collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
@@ -256,7 +256,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "isPrivate":false,
                 "createdAt":"2013-02-16T23:59:00.000Z",
                 "others":0,
-                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "libraryId":"lzmfsKLJyou6"}],
+                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -285,7 +285,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -295,7 +295,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).toString
         path === "/site/keeps/all?helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keeps1(1).isPrivate), Seq(keeps1(1).userId, u2.id.get), 3), (Some(keeps1(0).isPrivate), Seq(keeps1(0).userId), 1))
+        inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3), (Seq(keeps1(0).userId), 1))
 
         inject[FakeUserActionsHelper].setUser(u1)
 
@@ -315,7 +315,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, ${if (keeps1(1).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
+                      "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(1).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
                       "keepersTotal": 3,
@@ -338,7 +338,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":0,
-                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, ${if (keeps1(0).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[],
                       "keepersOmitted": 0,
                       "keepersTotal": 1,
@@ -370,7 +370,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -380,7 +380,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
         path === s"/site/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keeps1(1).isPrivate), Seq(keeps1(1).userId, u2.id.get), 3))
+        inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3))
 
         inject[FakeUserActionsHelper].setUser(u1)
 
@@ -400,7 +400,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, ${if (keeps1(0).isPrivate) "\"secret\":true," else ""} "libraryId":"l7jlKlnA36Su"}],
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
                       "keepersTotal": 3,
@@ -419,6 +419,88 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                   "helprank":"click"
                   }
                 """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "allKeeps with helprank & count" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+
+        implicit val context = HeimdalContext.empty
+        val keepRepo = inject[KeepRepo]
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+        val db = inject[Database]
+
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByUser(u1.id.get, None, None, 100)
+        }
+        keeps.size === keeps1.size
+
+        val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click"), count = 2).toString
+        path === s"/site/keeps/all?helprank=click&count=2"
+        inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+
+        inject[FakeUserActionsHelper].setUser(u3)
+
+        val request = FakeRequest("GET", path)
+        val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 2, withPageInfo = false)(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+                                  {"collection":null,
+                                   "before":null,
+                                   "after":null,
+                                   "keeps":[
+                                    {
+                                      "id":"${keeps3(2).externalId.toString}",
+                                      "url":"${keeps3(2).url}",
+                                      "isPrivate":${keeps3(2).isPrivate},
+                                      "createdAt":"${keeps3(2).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(2).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(2).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"Facebook",
+                                      "clickCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    },
+                                    {
+                                      "id":"${keeps3(0).externalId.toString}",
+                                      "url":"${keeps3(0).url}",
+                                      "isPrivate":${keeps3(0).isPrivate},
+                                      "createdAt":"${keeps3(0).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(0).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"kifi.com",
+                                      "clickCount":1,
+                                      "rekeepCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    }
+                                  ],
+                                  "helprank":"click"
+                                  }
+                                """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }

@@ -12,7 +12,7 @@ angular.module('kifi')
         'getSelectedKeeps': '&',
         'addingTag': '=',
         'isShown': '&',
-        'deprecated': '='
+        'readOnlyMode': '&'
       },
       replace: true,
       restrict: 'A',
@@ -35,21 +35,43 @@ angular.module('kifi')
           scope.hideAddTagDropdown();
         });
 
+        function decorateTag(readOnly) {
+          return function (name) {
+            return { 'name': name, 'readOnly': readOnly };
+          };
+        }
+
         scope.$watch('addingTag.enabled', function () {
           if (scope.addingTag && scope.addingTag.enabled) {
             scope.shouldGiveFocus = true;
           }
         });
 
-        scope.getCommonTags = function () {
+        function getCommonTags() {
           var tagLists = _.compact(_.pluck(scope.getSelectedKeeps(), 'hashtags'));
           return _.uniq(_.flatten(tagLists, true));
-        };
+        }
 
         scope.$watchCollection(function () {
-          return _.flatten(_.pluck(scope.getSelectedKeeps(), 'hashtags'));
+          if (scope.readOnlyMode()) {
+            return _.flatten(_.pluck(scope.getSelectedKeeps(), 'tags'));
+          } else {
+            return _.flatten(_.pluck(scope.getSelectedKeeps(), 'hashtags'));
+          }
         }, function () {
-          scope.commonTags = scope.getCommonTags();
+          if (scope.readOnlyMode()) {
+            var keeps = scope.getSelectedKeeps() || [];
+            if (keeps.length === 1 && keeps[0].tags && _.all(keeps[0].tags, _.isString)) {
+              // since kthe keep objects come from different places (search, recos, libraries)
+              // the above condition is to ensure that all tags are strings and not objects (which was
+              // the case for libraries)
+              scope.tagsToShow = _.map(keeps[0].tags, decorateTag(true));
+            } else {
+              scope.tagsToShow = [];
+            }
+          } else {
+            scope.tagsToShow = _.map(getCommonTags(), decorateTag(false));
+          }
         });
 
         function indexOfTag(tag) {
@@ -92,7 +114,7 @@ angular.module('kifi')
               typeAheadResults = _.filter(typeAheadResults, function (tag) {
                 return !_.contains(keep.hashtags, tag.name);
               });
-              
+
               scope.tagTypeAheadResults = _.take(typeAheadResults, dropdownSuggestionCount);
               if (scope.tagTypeAheadResults.length > 0) {
                 scope.highlightFirst();
@@ -117,7 +139,7 @@ angular.module('kifi')
               });
             }
           });
-          
+
           scope.tagFilter.name = '';
           return scope.hideAddTagDropdown();
         };
@@ -226,7 +248,7 @@ angular.module('kifi')
         };
 
         scope.hasTags = function () {
-          return scope.commonTags && scope.commonTags.length > 0;
+          return scope.tagsToShow && scope.tagsToShow.length > 0;
         };
 
         scope.showAddTagDropdown = function () {
@@ -320,8 +342,7 @@ angular.module('kifi')
       scope: {
         'getSelectedKeeps': '&',
         'addingTag': '=',
-        'isShown': '&',
-        'deprecated': '='
+        'isShown': '&'
       },
       replace: true,
       restrict: 'A',

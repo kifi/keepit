@@ -107,7 +107,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 3
+  override val version = 4
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -182,14 +182,14 @@ object LibraryView {
   implicit val format = Json.format[LibraryView]
 }
 
-case class BasicLibrary(id: PublicId[Library], name: String, path: String, secret: Boolean)
+case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility) {
+  def isSecret = (visibility == LibraryVisibility.SECRET)
+}
 
 object BasicLibrary {
-  implicit val writes = Writes[BasicLibrary] { library =>
-    Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.secret)
-  }
+
   def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
-    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility == LibraryVisibility.SECRET)
+    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
   }
 }

@@ -133,9 +133,10 @@ angular.module('kifi')
           }
 
           promise.then(function (invitedSummaries) {
-            if (_.find(invitedSummaries, { 'id' : scope.library.id })) {
+            var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
+            if (maybeLib) {
               scope.library.invite = {
-                inviterName: scope.library.owner.firstName + ' ' + scope.library.owner.lastName,
+                inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
                 actedOn: false
               };
             }

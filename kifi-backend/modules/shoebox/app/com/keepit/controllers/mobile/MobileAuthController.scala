@@ -95,7 +95,7 @@ class MobileAuthController @Inject() (
         (active, false)
     }
 
-    reportMobileInstallation(userId, installation, newInstallation, context)
+    reportMobileInstallation(userId, installation, newInstallation, platform, context)
 
     Ok(Json.obj(
       "installation" -> installation.externalId.toString,
@@ -103,11 +103,12 @@ class MobileAuthController @Inject() (
     ))
   }
 
-  private def reportMobileInstallation(userId: Id[User], installation: KifiInstallation, isNewInstall: Boolean, context: HeimdalContext): Unit = {
+  private def reportMobileInstallation(userId: Id[User], installation: KifiInstallation, isNewInstall: Boolean, platform: KifiInstallationPlatform, context: HeimdalContext): Unit = {
     val builder = contextBuilderFactory()
     builder.addExistingContext(context)
     builder += ("extensionVersion", installation.version.toString)
     builder += ("kifiInstallationId", installation.id.get.toString)
+    builder += ("device", platform.name)
     if (isNewInstall) {
       builder += ("action", "installedExtension")
       val numInstallations = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length } // all platforms

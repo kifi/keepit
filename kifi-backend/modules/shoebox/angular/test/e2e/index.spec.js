@@ -14,7 +14,7 @@ describe('kifi angular sanity suite', function () {
     });
 
     it('should have the correct title', function () {
-      expect(browser.getTitle()).toEqual('Kifi • Your Keeps');
+      expect(browser.getTitle()).toEqual('Kifi • Your Recommendation List');
     });
 
     it('should display the friends module', function () {

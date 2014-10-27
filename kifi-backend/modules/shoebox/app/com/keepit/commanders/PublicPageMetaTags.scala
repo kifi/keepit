@@ -28,8 +28,23 @@ import com.keepit.common.time.ISO_8601_DAY_FORMAT
  * Notes:
  * For twitter:creator we should use the creator twitter handle
  */
-case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
-    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) {
+trait PublicPageMetaTags {
+  def formatOpenGraph: String
+}
+
+case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
+  def formatOpenGraph: String =
+    s"""
+      |<meta name="robots" content="noindex">
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
+      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=com.kifi">
+    """.stripMargin
+
+}
+
+case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeTags: Seq[String], unsafeFirstName: String, unsafeLastName: String) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -54,7 +69,7 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
       s"""
         |<meta name="twitter:image:src" content="$image">
        """.stripMargin
-    } getOrElse("")
+    } getOrElse ("")
 
     def facebookIdTag = facebookId.map { id =>
       s"""<meta property="article:author" content="$id"/>"""
@@ -63,6 +78,9 @@ case class PublicPageMetaTags(unsafeTitle: String, url: String, urlPathOnly: Str
     s"""
       |<html itemscope itemtype="http://schema.org/Product">
       |<title>${title}</title>
+      |<meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:$urlPathOnly"/>
+      |<meta name="apple-mobile-web-app-capable" content="no"/>
+      |<meta name="google-play-app" content="app-id=com.kifi">
       |<meta property="og:description" content="${description}" />
       |<meta property="og:title" content="${title}" />
       |<meta property="og:type" content="blog" />

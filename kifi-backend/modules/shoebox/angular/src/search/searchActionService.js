@@ -45,12 +45,8 @@ angular.module('kifi')
         var user;
         if (idxUser !== -1) {
           user = users[idxUser];
-          decompressedLibraries.push({
-            id: lib.id,
-            name: lib.name,
-            keeperPic: friendService.getPictureUrlForUser(user),
-            path: lib.path
-          });
+          lib.keeperPic = friendService.getPictureUrlForUser(user);
+          decompressedLibraries.push(lib);
           libUsers[idxUser] = true;
         } else {
           user = profileService.me;

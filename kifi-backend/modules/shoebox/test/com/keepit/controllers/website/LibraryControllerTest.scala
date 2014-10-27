@@ -458,6 +458,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"numKeeps":0,
                     |"numFollowers":0,
                     |"kind":"user_created",
+                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"},
                     |"access":"read_insert"
                   |}
               | ]
@@ -663,7 +664,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (user1, library1, keep1, keep2)
         }
 
-        inject[FakeSearchServiceClient].setSecrecyAndKeepers((Some(keep1.isPrivate), Seq(keep1.userId), 1), (Some(keep2.isPrivate), Seq(keep2.userId), 1))
+        inject[FakeSearchServiceClient].setKeepers((Seq(keep1.userId), 1), (Seq(keep2.userId), 1))
 
         val pubId1 = Library.publicId(lib1.id.get)
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 0, 10).url
@@ -684,7 +685,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "createdAt": "${keep2.createdAt}",
                 "others":0,
-                "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "libraryId":"l7jlKlnA36Su"}],
+                "keeps":[{"id":"${keep2.externalId}", "mine":true, "removable":true, "visibility":"${keep2.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,
@@ -705,7 +706,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "isPrivate": false,
                 "createdAt": "${keep1.createdAt}",
                 "others":0,
-                "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "libraryId":"l7jlKlnA36Su"}],
+                "keeps":[{"id":"${keep1.externalId}", "mine":true, "removable":true, "visibility":"${keep1.visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                 "keepers":[],
                 "keepersOmitted": 0,
                 "keepersTotal": 1,

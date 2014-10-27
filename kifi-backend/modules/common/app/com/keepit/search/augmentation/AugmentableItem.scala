@@ -83,7 +83,6 @@ object ItemAugmentationResponse {
 }
 
 case class LimitedAugmentationInfo(
-  secret: Option[Boolean],
   keepers: Seq[Id[User]],
   keepersOmitted: Int,
   keepersTotal: Int,
@@ -99,5 +98,5 @@ object LimitedAugmentationInfo {
     Json.format[LimitedAugmentationInfo]
   }
 
-  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
+  val empty = LimitedAugmentationInfo(Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }

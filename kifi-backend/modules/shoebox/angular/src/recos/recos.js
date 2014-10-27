@@ -117,7 +117,7 @@ angular.module('kifi')
     // Otherwise, load the recommendations we have previously shown.
     if ($scope.recos.length > 0) {
       _.remove($scope.recos, function (reco) {
-        return reco.recoKeep.isMyBookmark;
+        return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
       });
     } else {
       $scope.loading = true;
