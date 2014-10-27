@@ -2,7 +2,7 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-var me, tags = [];
+var me;
 var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
@@ -58,7 +58,6 @@ var tile = tile || function() {  // idempotent for Chrome
       } else {
         tile.removeAttribute('data-kept');
       }
-      tags = o.tags || [];
       window.addEventListener('resize', onResize);
       onResize.bound = true;
       api.require(['styles/insulate.css', 'styles/keeper/tile.css'], function() {
@@ -102,17 +101,19 @@ var tile = tile || function() {  // idempotent for Chrome
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.isTrusted !== false) {  // ⌘-shift-[key], ctrl-shift-[key]; tolerating alt
       switch (e.keyCode) {
       case 75: // k
-        var now = Date.now();
+        var now = Date.now(), kept;
         if (now - tLastK > 400) {
           tLastK = now;
           if (me === undefined) {  // not yet initialized
             whenMeKnown.push(onKeyDown.bind(this, e));
           } else if (!me) {
             toggleLoginDialog();
-          } else if (tile && tile.dataset.kept) {
-            api.port.emit('unkeep', withUrls({}));
+          } else if (window.keepBox && keepBox.showing()) {
+            keepBox.keep(e.altKey);
+          } else if (tile && (kept = tile.dataset.kept) && (kept === 'private') === e.altKey) {
+            loadAndDo('keeper', 'showKeepBox');
           } else {
-            api.port.emit('keep', withUrls({title: authoredTitle(), how: e.altKey ? 'private' : 'public'}));
+            api.port.emit('keep', withUrls({title: authoredTitle(), secret: e.altKey}));
           }
           e.preventDefault();
         }
@@ -215,7 +216,7 @@ var tile = tile || function() {  // idempotent for Chrome
       var child = tileParent.lastElementChild;
       if (child !== tile && !document.documentElement.hasAttribute('kifi-pane-parent')) {
         while (child !== tile) {
-          if (!child.classList.contains('kifi-root') && child.tagName.toLowerCase() !== 'script') {
+          if (!child.classList.contains('kifi-root') && !/^(?:script|style)$/i.test(child.tagName) && child.style.display !== 'none') {
             tileParent.appendChild(tile);
             break;
           }

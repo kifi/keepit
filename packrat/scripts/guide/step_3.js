@@ -62,13 +62,12 @@ guide.step3 = guide.step3 || function () {
     }
   };
 
-  function show($guide, page, pageIdx) {
+  function show($guide, page) {
     if (!step) {
       tile.style.display = '';
       step = guide.step(steps, {
         $guide: $guide,
         page: page,
-        pageIdx: pageIdx,
         index: 3,
         done: .2,
         anchor: 'br',
@@ -134,7 +133,7 @@ guide.step3 = guide.step3 || function () {
     if (stepIdx === 4) {
       step.show(5);
     } else {
-      step.nav('https://www.kifi.com');
+      step.nav(e.target.href);
     }
   }
 

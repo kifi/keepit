@@ -24,12 +24,11 @@ guide.step2 = guide.step2 || function () {
     }
   };
 
-  function show($guide, page, pageIdx) {
+  function show($guide, page) {
     if (!step) {
       step = guide.step(steps, {
         $guide: $guide,
         page: page,
-        pageIdx: pageIdx,
         index: 2,
         done: .5,
         anchor: 'tl',

@@ -603,6 +603,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
           libraryRepo.get(libShield.id.get).memberCount === 1 //owner
         }
+
+        // Proving that accepting a lesser invite doesn't destroy current access
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+
+          libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
+          libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
+        }
+        1 === 1
       }
     }
 

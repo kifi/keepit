@@ -33,6 +33,7 @@ class SliderAdminController @Inject() (
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
+  userRepo: UserRepo,
   kifiInstallationStore: KifInstallationStore,
   userValueRepo: UserValueRepo,
   domainTagImporter: DomainTagImporter,
@@ -222,15 +223,15 @@ class SliderAdminController @Inject() (
   }
 
   // for run when we launch libraries (10/2014)
-  def setShowLibIntro() = AdminUserAction { implicit request =>
+  def setSiteShowLibIntro() = AdminUserAction { implicit request =>
     val userIds = db.readOnlyReplica { implicit session =>
-      kifiInstallationRepo.getExtensionUserIdsUpdatedSince(clock.now.minusMonths(4)) filter { userId =>
-        userValueRepo.getUserValue(userId, UserValueName.EXT_SHOW_LIBRARY_INTRO).isEmpty
+      userRepo.getRecentActiveUsers(clock.now.minusYears(4)) filter { userId =>
+        userValueRepo.getUserValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO).isEmpty
       }
     }
     db.readWrite { implicit s =>
       userIds foreach { userId =>
-        userValueRepo.setValue(userId, UserValueName.EXT_SHOW_LIBRARY_INTRO, true)
+        userValueRepo.setValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO, true)
       }
     }
     Ok(Json.arr(userIds))

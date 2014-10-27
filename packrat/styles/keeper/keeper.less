@@ -8,12 +8,13 @@
   display: none;
 }
 
-@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%D" d="M6,3.7L6,3.7L5.9,2.5C5.9,1.2,4.7,0,3.4,0S0.8,1.2,0.8,2.5v1.3H0.7C0.3,3.7,0,4,0,4.5v3.6C0,8.6,0.4,9,0.8,9h5.1c0.4,0,0.8-0.4,0.8-0.9V4.5C6.7,4,6.5,3.7,6,3.7z M1.7,2.5c0-0.7,0.7-1.6,1.7-1.6s1.7,0.9,1.7,1.6v1.3H1.7V2.5z"/></svg>';
-@svgTagDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill="%D" d="M8.7,5l-5-5h-3C0.3,0,0,0.3,0,0.7v3l5,5C5.3,9,5.7,9,6,8.7L8.7,6C9,5.7,9,5.3,8.7,5z M2,2.6C1.7,2.6,1.5,2.3,1.5,2c0-0.3,0.2-0.6,0.6-0.6c0.3,0,0.6,0.2,0.6,0.6C2.6,2.3,2.3,2.6,2,2.6z"/></svg>';
 @svgHomeDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.5 12"><path fill="%D" d="M13.5,6.7L7,0.1c-0.2-0.2-0.4-0.2-0.6,0L0,6.7h1.5c0,0,0,0,0,0v4.2c0,0.6,0.3,1.1,0.9,1.1h2.5c0.2,0,0.3-0.2,0.3-0.4V8.6c0-0.2,0.2-0.4,0.4-0.4h2.2c0.2,0,0.4,0.2,0.4,0.4v2.9c0,0.2,0.2,0.4,0.4,0.4h2.4c0.6,0,0.9-0.5,0.9-1.1V6.7c0,0,0,0,0,0H13.5z"/></svg>';
 @svgMailDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 10.5"><path fill="%D" d="M10.3,0H1.7C0.7,0,0,0.8,0,1.9v0.7l5.6,4.3C5.8,7,6.2,7,6.4,6.8L12,2.5V1.9C12,0.8,11.3,0,10.3,0z M5.6,8.3L0,3.9v4.7c0,1,0.7,1.9,1.7,1.9h8.5c1,0,1.7-0.8,1.7-1.9V3.9L6.4,8.3C6.2,8.5,5.8,8.5,5.6,8.3z"/></svg>';
 @svgSendDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.7 10.5"><path fill="%D" d="M10.8,0H1.9C0.9,0,0,0.8,0,1.9l0,6.8c0,1,0.9,1.9,1.9,1.9h8.9c1.1,0,1.9-0.8,1.9-1.9V1.9C12.7,0.8,11.9,0,10.8,0z M8.2,6.7c0,0,0-0.8,0-1.9C5.7,4.5,4,7.3,4,7.3c0.5-4.9,4.2-4.4,4.2-4.4v0c0-1,0-1.9,0-1.9l3.5,3.1L8.2,6.7z"/></svg>';
+@svgKeepDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 9.7"><path fill="%D" d="M6,3.3c0-4.4-6-4.5-6,0c0,4.5,6,6.4,6,6.4s6-2,6-6.4C12-1.1,6-1.1,6,3.3z"/></svg>';
+@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 7.5 10.5"><path fill="%D" d="M6.9,4.6V3.3C6.9,1.5,5.5,0,3.8,0S0.6,1.5,0.6,3.3v1.3C0.3,4.6,0,4.9,0,5.2v4.6c0,0.4,0.3,0.7,0.6,0.7h6.2c0.3,0,0.6-0.3,0.6-0.7V5.2C7.5,4.9,7.2,4.6,6.9,4.6z M5.6,4.6H1.9V3.3c0-1.1,0.8-2,1.9-2s1.9,0.9,1.9,2V4.6z"/></svg>';
 
+@keeper-transition-duration: .2s;
 @keeper-side-border-width: 7px;
 .kifi-keeper {
   position: absolute;
@@ -36,11 +37,11 @@
   width: 330px;
   height: 67px;
   border-radius: 24px 0 0 24px !important;
-  transition: opacity 200ms ease-out;
-}
-.kifi-tile>.kifi-keeper.kifi-hidden {
-  opacity: 0;
-  transition: opacity 200ms ease-in;
+  transition: opacity @keeper-transition-duration ease-out;
+  &.kifi-hidden {
+    opacity: 0;
+    transition-timing-function: ease-in;
+  }
 }
 .kifi-pane>.kifi-keeper {
   margin: 0;
@@ -104,19 +105,27 @@
   transition-duration: 50ms;
 }
 
-.kifi-keep-card {
+@btn-hover-color: #3f9f65;
+@draggable-box-shadow: 0 8px 7px -4px rgba(0,0,0,.6);
+@draggable-box-shadow-transition: box-shadow .2s;
+
+.kifi-keep-btn,
+.kifi-dock-btn {
+  border: 3px solid rgba(0,0,0,.3);
+  border-radius: 24.5px !important;
+  background-clip: padding-box;
+}
+.kifi-keep-btn {
   position: absolute;
   bottom: 0;
   right: 0;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
-  width: 155px;
-  height: 49px;
-  -webkit-perspective: 200px;
-  perspective: 200px;
-  transition: width 200ms ease-out;
+  width: 149px;
+  height: 43px;
+  transition: width @keeper-transition-duration ease-out;
   .kifi-hidden>& {
-    width: 49px;
+    width: 43px;
   }
   [kifi-pane-parent] & {
     left: 168px;
@@ -124,234 +133,88 @@
     transition: width .25s ease-in-out;
   }
   [kifi-with-pane] & {
-    width: 126px;
+    width: 118px;
   }
   .kifi-pane & {
-    left: 153px;
-  }
-}
-.kifi-keep-side,
-.kifi-kept-side {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100%;
-  height: 100%;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
-  transition: transform .25s ease-in-out, z-index .25s linear;
-}
-.kifi-keep-card.kifi-private .kifi-keep-side,
-.kifi-keep-card.kifi-public .kifi-keep-side {
-  -webkit-transform: rotateX(-180deg);
-  transform: rotateX(-180deg);
-}
-.kifi-keep-card.kifi-unkept .kifi-kept-side {
-  -webkit-transform: rotateX(180deg);
-  transform: rotateX(180deg);
-}
-.kifi-keep-card.kifi-private .kifi-kept-side,
-.kifi-keep-card.kifi-public .kifi-kept-side,
-.kifi-keep-card.kifi-unkept .kifi-keep-side {
-  z-index: 100;
-}
-.kifi-keep-btn,
-.kifi-kept-btn,
-.kifi-dock-btn {
-  border: 3px solid rgba(0,0,0,.3);
-  border-radius: 24.5px !important;
-  background-clip: content-box;
-}
-
-@draggable-box-shadow: 0 8px 7px -4px rgba(0,0,0,.6);
-@draggable-box-shadow-transition: box-shadow .2s;
-
-.kifi-keep-btn,
-.kifi-kept-btn {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  line-height: 43px;
-  color: #333;
-  font-weight: 500;
-  text-align: center;
-  cursor: pointer;
-  .kifi-pane & {
+    left: 155px;
     border-width: 1px;
-    top: 2px;
-    left: 2px;
-    right: 2px;
     bottom: 2px;
   }
-  transition: @draggable-box-shadow-transition;
+  line-height: 43px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  background-image: linear-gradient(#fff, #f3f3f3);
+  .kifi-tile.ui-draggable &,
+  .kifi-dragged>& {
+    transition: @draggable-box-shadow-transition;
+  }
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
-}
-.kifi-keep-btn {
-  background-image: linear-gradient(#fff, #f3f3f3);
-  &:hover,
-  &:focus {
-    color: #3f9f65;
-  }
-  &:active {
+  &:hover:active,
+  &:focus:active {
     background-image: none;
     background-color: #f3f3f3;
   }
   &::before {
-    content: 'Keep it';
-    padding-left: 16px;
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 12px;
+    margin-right: 7px;
+    vertical-align: -2px;
+    background-size: 16px 12px;
+    background-repeat: no-repeat;
   }
-}
-.kifi-kept-btn {
-  @bg-color: #4daf7c;
-  background-color: @bg-color;
-  color: #fff;
-  font-weight: 500;
-  text-shadow: 0 0 2px rgba(0,0,0,.3);
-  &:hover,
-  &:focus {
-    background-color: tint(@bg-color, 6%);
-  }
-  &:active {
-    background-color: shade(@bg-color, 4%);
-  }
-  &::before {
-    content: 'Kept';
-  }
-  &:not(.kifi-hoverless):hover::before {
-    content: 'Unkeep';
-  }
-  .kifi-private &:not(:hover)::before,
-  .kifi-private &.kifi-hoverless::before {
-    display: block;
-    line-height: 32px;
-  }
-  .kifi-private &:not(:hover)::after,
-  .kifi-private &.kifi-hoverless::after {
-    content: '(private)';
-    display: block;
-    margin-top: -5px;
-    font-size: 9px;
-    line-height: 0;
-  }
-}
-.kifi-keep-lock,
-.kifi-kept-lock,
-.kifi-kept-tag {
-  position: absolute;
-  border: 1px solid rgba(51,51,51,.3);
-  border-radius: 50% !important;
-  cursor: pointer;
-  background-clip: content-box;
-  background-color: inherit;
-  background-repeat: no-repeat;
-  top: 9px;
-  width: 29px;
-  height: 29px;
-}
-.kifi-keep-lock,
-.kifi-kept-lock {
-  left: 9px;
-  @url: %(@svgLockDataUrl, #464646);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  background-size: 9px 12px, auto;
-  background-position: center 8px, 0;
-}
-.kifi-keep-lock:hover,
-.kifi-keep-lock:focus,
-.kifi-kept-lock:hover,
-.kifi-kept-lock:focus {
-  @url: %(@svgLockDataUrl, #e65b45);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-keep-lock:active,
-.kifi-kept-lock:active {
-  @url: %(@svgLockDataUrl, #e65b45);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-private .kifi-kept-lock {
-  top: 8px;
-  left: 8px;
-  @bg-color: #e65b45;
-  @url: %(@svgLockDataUrl, #fff);
-  background-color: @bg-color;
-  background-image: url(@url);
-  border-color: #d13a22;
-  border-width: 2px;
-  &:hover,
-  &:focus {
-    background-color: tint(@bg-color, 6%);
-  }
-  &:active {
-    background-color: shade(@bg-color, 4%);
-  }
-}
-.kifi-kept-tag {
-  right: 9px;
-  @url: %(@svgTagDataUrl, #464646);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  background-size: 12px 12px, auto;
-  background-position: 9px center, 0;
-  &:hover,
-  &:focus {
-    @url: %(@svgTagDataUrl, #6fa6ef);
-    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-  }
-  &:active {
-    @url: %(@svgTagDataUrl, #6fa6ef);
-    background-image: url(@url);
-    background-color: #f3f3f3;
-  }
-  .kifi-tagged & {
-    top: 8px;
-    right: 8px;
-    @bg-color: #6fa6ef;
-    @url: %(@svgTagDataUrl, #fff);
-    background-image: url(@url);
-    background-color: @bg-color;
-    border-color: #5490df;
-    border-width: 2px;
-    &:hover,
-    &:focus {
-      background-color: tint(@bg-color, 6%);
+  &.kifi-unkept {
+    color: #333 !important;
+    &::before {
+      @url: %(@svgKeepDataUrl, #464646);
+      background-image: url(@url);
     }
-    &:active {
-      background-color: shade(@bg-color, 4%);
+    &::after {
+      content: 'Keep it';
+    }
+  }
+  &.kifi-public {
+    color: #4daf7c !important;
+    &::before {
+      @url: %(@svgKeepDataUrl, #4daf7c);
+      background-image: url(@url);
+    }
+    &::after {
+      content: 'Kept';
+    }
+  }
+  &.kifi-private {
+    color: #ed7160 !important;
+    &::before {
+      @url: %(@svgLockDataUrl, #ed7160);
+      background-image: url(@url);
+      width: 10px;
+      height: 13px;
+      margin-right: 7px;
+      vertical-align: -1px;
+      background-size: 10px 13px;
+    }
+    &::after {
+      content: 'Kept Private';
     }
   }
 }
-
-/* ::after for invisible expansion */
-.kifi-keep-lock::after,
-.kifi-kept-lock::after,
-.kifi-kept-tag::after {
-  content: '';
-  display: block;
-  height: 100%;
-  margin: -10px;
-  border: 10px solid transparent;
+.kifi-pulse-before::before {
+  -webkit-animation: kifi-pulse .4s 1;
+  animation: kifi-pulse .4s 1;
 }
-.kifi-keep-lock::after,
-.kifi-kept-lock::after {
-  border-radius: 24.5px 0 0 24.5px !important;
-  border-right-width: 0;
-  margin-right: 0;
-}
-.kifi-kept-tag::after {
-  border-radius: 0 24.5px 24.5px 0 !important;
-  border-left-width: 0;
-  margin-left: 0;
-}
-.kifi-tag-tip::before {
-  left: auto;
-  right: 19px;
+@keyframes kifi-pulse { .kifi-pulse-keyframes }
+@-moz-keyframes kifi-pulse { .kifi-pulse-keyframes }
+@-webkit-keyframes kifi-pulse { .kifi-pulse-keyframes }
+.kifi-pulse-keyframes () {
+  0% {-webkit-transform: scale(.4)}
+  50% {-webkit-transform: scale(1.6)}
+  100% {-webkit-transform: scale(1)}
 }
 
 .kifi-keepers-box {
@@ -594,18 +457,18 @@
   background-position: center 13px, 0;
   -webkit-transform: translate(-259px);
   transform: translate(-259px);
-  transition: -webkit-transform 200ms ease-out 20ms, @draggable-box-shadow-transition;
-  transition: transform 200ms ease-out 20ms, @draggable-box-shadow-transition;
+  transition: -webkit-transform @keeper-transition-duration ease-out 20ms, @draggable-box-shadow-transition;
+  transition: transform @keeper-transition-duration ease-out 20ms, @draggable-box-shadow-transition;
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
   &:hover,
   &:focus {
-    @url: %(@svgHomeDataUrl, #3f9f65);
+    @url: %(@svgHomeDataUrl, @btn-hover-color);
     background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   }
   &:active {
-    @url: %(@svgHomeDataUrl, #3f9f65);
+    @url: %(@svgHomeDataUrl, @btn-hover-color);
     background-image: url(@url);
     background-color: #f3f3f3;
   }
@@ -621,18 +484,18 @@
   background-position: center;
   -webkit-transform: translate(-208px);
   transform: translate(-208px);
-  transition: -webkit-transform 200ms ease-out 40ms, @draggable-box-shadow-transition;
-  transition: transform 200ms ease-out 40ms, @draggable-box-shadow-transition;
+  transition: -webkit-transform @keeper-transition-duration ease-out 40ms, @draggable-box-shadow-transition;
+  transition: transform @keeper-transition-duration ease-out 40ms, @draggable-box-shadow-transition;
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
   &:hover,
   &:focus {
-    @url: %(@svgMailDataUrl, #3f9f65);
+    @url: %(@svgMailDataUrl, @btn-hover-color);
     background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   }
   &:active {
-    @url: %(@svgMailDataUrl, #3f9f65);
+    @url: %(@svgMailDataUrl, @btn-hover-color);
     background-image: url(@url);
     background-color: #f3f3f3;
   }
@@ -648,18 +511,18 @@
   background-position: center;
   -webkit-transform: translate(-157px);
   transform: translate(-157px);
-  transition: -webkit-transform 200ms ease-out 60ms, @draggable-box-shadow-transition;
-  transition: transform 200ms ease-out 60ms, @draggable-box-shadow-transition;
+  transition: -webkit-transform @keeper-transition-duration ease-out 60ms, @draggable-box-shadow-transition;
+  transition: transform @keeper-transition-duration ease-out 60ms, @draggable-box-shadow-transition;
   .kifi-tile.ui-draggable & {
     box-shadow: @draggable-box-shadow;
   }
   &:hover,
   &:focus {
-    @url: %(@svgSendDataUrl, #3f9f65);
+    @url: %(@svgSendDataUrl, @btn-hover-color);
     background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   }
   &:active {
-    @url: %(@svgSendDataUrl, #3f9f65);
+    @url: %(@svgSendDataUrl, @btn-hover-color);
     background-image: url(@url);
     background-color: #f3f3f3;
   }

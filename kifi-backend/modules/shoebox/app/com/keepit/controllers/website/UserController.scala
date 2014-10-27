@@ -323,13 +323,19 @@ class UserController @Inject() (
     }
   }
 
-  private val SitePrefNames = Set(
-    UserValueName.SITE_LEFT_COL_WIDTH,
-    UserValueName.SITE_WELCOMED,
-    UserValueName.ONBOARDING_SEEN,
-    UserValueName.SHOW_DELIGHTED_QUESTION,
-    UserValueName.LIBRARY_SORTING_PREF
-  )
+  private val SitePrefNames = {
+    import UserValueName._
+    Set(
+      SITE_LEFT_COL_WIDTH,
+      SITE_WELCOMED,
+      ONBOARDING_SEEN,
+      SHOW_DELIGHTED_QUESTION,
+      LIBRARY_SORTING_PREF,
+      LIBRARY_CALLOUT_SHOWN,
+      TAG_CALLOUT_SHOWN,
+      GUIDE_CALLOUT_SHOWN,
+      SITE_SHOW_LIBRARY_INTRO)
+  }
 
   def getPrefs() = UserAction.async { request =>
     // The prefs endpoint is used as an indicator that the user is active

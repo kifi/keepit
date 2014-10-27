@@ -3,44 +3,36 @@
 
 guide.step1 = guide.step1 || function () {
   'use strict';
-  var step, observer, tagId;
+  var step, observer;
   var steps = [
     {
       lit: '.kifi-tile-card',
       pad: [20, 40],
       arrow: {dx: 121, dy: 87, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -70, gap: 10}},
-      allow: {type: 'mouseover', target: '.kifi-tile-keep'}
+      allow: {type: 'mouseover', target: '.kifi-tile-keep,.kifi-tile-kept'}
     },
     {
       substep: true,
-      afterTransition: '.kifi-keep-card',
+      afterTransition: '.kifi-keep-btn',
       lit: {bottom: 8, right: 7, width: 155, height: 49},
       pad: [10, 20, 50, 20],
-      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10, sel: '.kifi-keep-card'}},
-      allow: {type: 'click', target: '.kifi-keep-btn', proceed: true}
+      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10, sel: '.kifi-keep-btn'}},
+      allow: {type: 'click', target: '.kifi-keep-btn'}
     },
     {
-      afterTransition: '.kifi-kept-side',
-      lit: '.kifi-kept-tag',
-      pad: [20, 20, 0, 120],
-      arrow: {dx: 136, dy: 78, from: {angle: 0, gap: 10}, to: {angle: -75, gap: 10, along: [.5, 0], sel: '.kifi-kept-tag'}},
-      allow: {type: 'click', target: '.kifi-kept-tag'}
-    },
-    {
-      substep: true,
-      lit: '.kifi-tagbox',
-      pad: [0, 10, 20],
-      arrow: {dx: 100, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 16, sel: '.kifi-tagbox-input'}},
+      afterTransition: '.kifi-keep-box',
+      pad: [0],
+      arrow: {dx: 150, dy: 0, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: 0, gap: 5, sel: '.kifi-keep-box-lib.kifi-system.kifi-discoverable'}},
       allow: [
-        {type: /^key/, target: '.kifi-tagbox-input', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: /^(?:mouse|click$)/, target: '.kifi-tagbox-suggestion,.kifi-tagbox-new'}
+        {type: /^key/, target: '.kifi-keep-box-lib-input', unless: function (e) {return e.keyCode === 27}},  // esc
+        {type: /^(?:mouse|click$)/, target: '.kifi-keep-box-lib'}
       ]
     },
     {
-      afterTransition: '.kifi-tagbox-tagged-wrapper',
-      lit: '.kifi-tagbox',
-      litFor: 1000,
-      pad: [0, 20, 30, 0],
+      afterTransition: '.kifi-keep-box-cart',
+      lit: '.kifi-keep-box',
+      litFor: 3000,
+      pad: [0],
       pos: {bottom: 280, right: 480},  // TODO: position relative to spotlight
       transition: 'opacity'
     },
@@ -49,7 +41,6 @@ guide.step1 = guide.step1 || function () {
       transition: 'opacity'
     }
   ];
-  var origSteps3ArrowToSel = steps[3].arrow.to.sel;
   return {
     show: show,
     remove: function () {
@@ -59,14 +50,12 @@ guide.step1 = guide.step1 || function () {
     }
   };
 
-  function show($guide, page, pageIdx) {
+  function show($guide, page) {
     if (!step) {
       tile.style.display = '';
-      steps[3].arrow.to.sel = origSteps3ArrowToSel.replace('{{tag}}', page.tag);
       step = guide.step(steps, {
         $guide: $guide,
         page: page,
-        pageIdx: pageIdx,
         index: 1,
         done: .3,
         anchor: 'br',
@@ -81,14 +70,44 @@ guide.step1 = guide.step1 || function () {
   function onStep(stepIdx) {
     switch (stepIdx) {
       case 0:
-        observer = new MutationObserver(onTileChildChange);
+        observer = new MutationObserver(function (records) {
+          if (elementAdded(records, 'kifi-keeper')) {
+            observer.disconnect();
+            observer = null;
+            step.show(1);
+          }
+        });
         observer.observe(tile, {childList: true});
         break;
-      case 4:
-        var el = document.querySelector('.kifi-tagbox-tag');
-        tagId = el && el.dataset.id;
+      case 1:
+        observer = new MutationObserver(function (records) {
+          var box = elementAdded(records, 'kifi-keep-box');
+          if (box) {
+            observer.disconnect();
+            observer = null;
+            var r = box.parentNode.getBoundingClientRect();
+            step.show(2, getTransitionDurationMs(window.getComputedStyle(box)), {
+              left: r.left + box.offsetLeft,
+              top: r.top + box.offsetTop,
+              width: box.offsetWidth,
+              height: box.offsetHeight
+            });
+          }
+        });
+        observer.observe(tile.querySelector('.kifi-keeper'), {childList: true});
         break;
-      case 5:
+      case 2:
+        observer = new MutationObserver(function (records) {
+          var view = elementAdded(records, 'kifi-keep-box-view-keep');
+          if (view) {
+            observer.disconnect();
+            observer = null;
+            step.show(3);
+          }
+        });
+        observer.observe(tile.querySelector('.kifi-keep-box-cart'), {childList: true});
+        break;
+      case 4:
         api.port.emit('prime_search', 'g');
         break;
     }
@@ -103,52 +122,11 @@ guide.step1 = guide.step1 || function () {
   }
 
   function onClickNext(e, stepIdx) {
-    if (stepIdx === 4) {
+    if (stepIdx === 3) {
       e.closeKeeper = true;
-      step.show(5);
+      step.show(4);
     } else {
-      step.nav(e.target.href, tagId);
-    }
-  }
-
-  function onTileChildChange(records) {
-    var tagbox;
-    if (elementAdded(records, 'kifi-keeper')) {
-      step.show(1);
-    } else if ((tagbox = elementAdded(records, 'kifi-tagbox'))) {
-      var r1 = tagbox.getBoundingClientRect();
-      var cs = window.getComputedStyle(tagbox);
-      var bp = getBorderPlusPadding(cs);
-      var w = bp.left + parseFloat(cs.width) + bp.right;
-      var h = bp.top + parseFloat(cs.height) + bp.bottom;
-      var r2 = {left: r1.right - w, top: r1.bottom - h, width: w, height: h};
-      var elTo = tagbox.querySelector(steps[3].arrow.to.sel);
-      var elToTop = r2.top + bp.top + elTo.offsetTop;
-      var elToLeft = r2.left + bp.left + elTo.offsetLeft;
-      step.show(3, getTransitionDurationMs(cs), r2, {
-        top: elToTop,
-        left: elToLeft,
-        right: elToLeft + elTo.offsetWidth,
-        bottom: elToTop + elTo.offsetHeight
-      });
-
-      observer.disconnect();
-      observer = new MutationObserver(onTagboxClassChange);
-      observer.observe(tagbox, {attributes: true, attributeFilter: ['class'], attributeOldValue: true});
-    }
-  }
-
-  function onTagboxClassChange(records) {
-    var tagbox;
-    if ((tagbox = classAdded(records, 'kifi-tagged'))) {
-      var el = tagbox.querySelector(steps[4].afterTransition);
-      var cs = window.getComputedStyle(el);
-      var h = 180;//getDeclaredHeight(cs);
-      var ms = getTransitionDurationMs(cs);
-      var r = tagbox.getBoundingClientRect();
-      step.show(4, ms, {left: r.left, top: r.top - h, width: r.width, height: r.height + h});
-      observer.disconnect();
-      observer = null;
+      step.nav(e.target.href);
     }
   }
 
@@ -162,24 +140,6 @@ guide.step1 = guide.step1 || function () {
         }
       }
     }
-  }
-
-  function classAdded(records, cssClass) {
-    for (var i = 0; i < records.length; i++) {
-      var rec = records[i];
-      if (rec.target.classList.contains(cssClass) && rec.oldValue.split(' ').indexOf(cssClass) < 0) {
-        return rec.target;
-      }
-    }
-  }
-
-  function getBorderPlusPadding(cs) {
-    return {
-      top: parseFloat(cs.borderTopWidth) + parseFloat(cs.paddingTop),
-      left: parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft),
-      right: parseFloat(cs.borderRightWidth) + parseFloat(cs.paddingRight),
-      bottom: parseFloat(cs.borderBottomWidth) + parseFloat(cs.paddingBottom)
-    };
   }
 
   function getTransitionDurationMs(cs) {

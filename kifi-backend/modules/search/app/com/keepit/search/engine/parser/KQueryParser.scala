@@ -88,6 +88,6 @@ class KQueryParser(
     val future = phraseDetectionConsolidator((queryText, lang)) { _ =>
       Future.successful { phraseDetector.detectAll(phStemmedTerms) }
     }
-    Await.result(future, 10 millisecond)
+    Await.result(future, 100 millisecond)
   }
 }

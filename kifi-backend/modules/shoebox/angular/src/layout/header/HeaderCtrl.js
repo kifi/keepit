@@ -25,10 +25,22 @@ angular.module('kifi')
     $scope.search = { text: '', showName: false };
     $scope.stayInLibraryPath = '';
 
+    // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+    var calloutName = 'tag_callout_shown';
+    $scope.showCallout = function () {
+      return profileService.prefs.site_show_library_intro && !profileService.prefs[calloutName];
+    };
+    $scope.closeCallout = function () {
+      var save = { 'site_show_library_intro': false };
+      save[calloutName] = true;
+      profileService.prefs[calloutName] = true;
+      profileService.savePrefs(save);
+    };
+
     //
     // Watchers & Listeners
     //
-    $rootScope.$on('libraryUrl', function (e, library) {
+    var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
       $scope.search.text = '';
       if ($scope.library.id) {
@@ -38,6 +50,7 @@ angular.module('kifi')
         $scope.clearLibraryName();
       }
     });
+    $scope.$on('$destroy', deregisterLibraryChip);
 
     $scope.$on('$routeChangeSuccess', function (event, current) {
       if (current.params.q) {
@@ -45,9 +58,10 @@ angular.module('kifi')
       }
     });
 
-    $rootScope.$on('triggerAddKeep', function () {
+    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
       $scope.addKeeps();
     });
+    $scope.$on('$destroy', deregisterAddKeep);
 
     $scope.focusInput = function () {
       $scope.isFocused = true;
