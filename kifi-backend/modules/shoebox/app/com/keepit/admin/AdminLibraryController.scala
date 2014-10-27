@@ -12,6 +12,8 @@ import com.keepit.model._
 import play.api.mvc.AnyContent
 import views.html
 
+import scala.collection.mutable.ArrayBuffer
+
 case class LibraryStatistic(
   library: Library,
   owner: User,
@@ -38,6 +40,29 @@ class AdminLibraryController @Inject() (
     userRepo: UserRepo,
     db: Database,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
+
+  def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
+    db.readWrite { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      if (lib.ownerId != fromUserId) throw new Exception(s"orig user $fromUserId is not matching current library owner $lib")
+      val newOwnerLib = lib.copy(ownerId = toUserId)
+      libraryRepo.save(newOwnerLib)
+      var page = 0
+      val pageSize = 100
+      var hasMore = false
+      val keeps = ArrayBuffer[Keep]()
+      while (hasMore) {
+        val from = page * pageSize
+        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, None) map { keep =>
+          keepRepo.save(keep.copy(userId = toUserId))
+        }
+        hasMore = chunk.size >= pageSize
+        keeps.appendAll(chunk)
+        page += 1
+      }
+      Ok(s"keep count = ${keeps.size} for library: $newOwnerLib")
+    }
+  }
 
   def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30
