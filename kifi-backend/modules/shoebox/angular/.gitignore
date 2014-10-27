@@ -5,6 +5,7 @@
 /.angular.sublime-workspace
 /cdn/
 /index_cdn.html
+/play-refs/ng/index_cdn.html
 /.awspublish-*
 img/sprites.png
 src/common/spritesClasses.styl
