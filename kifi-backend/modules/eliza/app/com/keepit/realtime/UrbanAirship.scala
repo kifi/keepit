@@ -12,7 +12,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.{ NonOKResponseException, HttpClient, DirectUrl }
+import com.keepit.common.net.{ClientResponse, NonOKResponseException, HttpClient, DirectUrl}
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
@@ -187,7 +187,7 @@ class UrbanAirshipImpl @Inject() (
     } else Future.successful(device)
   }
 
-  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Future[ClientResponse] = {
     val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
@@ -222,16 +222,7 @@ class UrbanAirshipImpl @Inject() (
         }
       }
     )
-    res.onSuccess {
-      case res =>
-        log.info(s"got good response for device = $device: ${res.body}")
-    }
-    res.onFailure {
-      case t =>
-        val message = s"got bad response from urbanairship. First message = $firstMessage device = $device notification = $notification retry = $retry"
-        log.error(message, t)
-        airbreak.notify(message, t)
-    }
+    res
   }
 
   private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
@@ -286,4 +277,9 @@ class UrbanAirshipImpl @Inject() (
         postAndroid(firstMessage, device, notification)
     }
   }
+
+  private def checkResponse(res: Future[ClientResponse]): Unit = {
+    
+  }
+
 }
