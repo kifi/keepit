@@ -83,7 +83,7 @@ object UserExperimentStates extends States[UserExperiment] {
 }
 
 case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[ExperimentType]] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_experiment_user_id"
   def toKey(): String = userId.id.toString
 }
@@ -92,7 +92,7 @@ class UserExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExperimentUserIdKey, Seq[ExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[ExperimentType])
 
 case object AllFakeUsersKey extends Key[Set[Id[User]]] {
-  override val version = 1
+  override val version = 2
   val namespace = "fake_users"
   def toKey(): String = "all"
 }

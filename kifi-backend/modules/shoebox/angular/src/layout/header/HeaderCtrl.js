@@ -25,6 +25,18 @@ angular.module('kifi')
     $scope.search = { text: '', showName: false };
     $scope.stayInLibraryPath = '';
 
+    // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+    var calloutName = 'tag_callout_shown';
+    $scope.showCallout = function () {
+      return !profileService.prefs[calloutName];
+    };
+    $scope.closeCallout = function () {
+      var save = {};
+      save[calloutName] = true;
+      profileService.prefs[calloutName] = true;
+      profileService.savePrefs(save);
+    };
+
     //
     // Watchers & Listeners
     //

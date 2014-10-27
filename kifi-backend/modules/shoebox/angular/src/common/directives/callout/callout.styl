@@ -1,0 +1,111 @@
+
+.kf-callout-bubble
+  position: absolute
+  background-color: #4DAF7C
+  border-radius: 15px
+  padding: 35px 55px 27px
+  color: #fff
+  width: 266px
+  box-shadow: 2.5px 4.3px 24.8px 2.2px rgba(0, 0, 0, 0.43)
+  line-height: 17px
+  text-align: left
+  z-index: 100
+  font-size: 15px
+  -webkit-font-smoothing: antialiased
+
+  .kf-callout-bubble-body
+    margin-bottom: 22px
+
+  .kf-callout-bubble-action
+    font-size: 13px
+    display: block
+    margin: 30px auto 0
+    text-align: center
+
+  .kf-callout-decline
+    display: inline-block
+    font-size: 11px
+    text-decoration: underline
+    cursor: pointer
+    margin-right: 30px
+
+  .kf-callout-bubble-button
+    user-select: none
+    padding: 10px 20px
+    border: 1px solid #FFF
+    border-radius: 19px
+    font-size: 13px
+    display: inline-block
+    text-align: center
+    width: 140px
+    cursor: pointer
+
+    &:hover
+      background-color: lighten(#4DAF7C, 10%)
+
+.kf-callout-bubble.kf-callout-bubble-right
+  left: 90%
+
+  &::before
+    content: ''
+    position: absolute
+    border-style: solid
+    border-width: 10px 15px 10px 0
+    border-color: transparent #4DAF7C
+    display: block
+    width: 0
+    z-index: 1
+    left: -15px
+    top: 27px
+
+.kf-callout-bubble.kf-callout-bubble-left
+  right: 110%
+
+  &::before
+    content: ''
+    position: absolute
+    border-style: solid
+    border-width: 10px 0 10px 15px
+    border-color: transparent #4DAF7C
+    display: block
+    width: 0
+    z-index: 1
+    right: -15px
+    top: 27px
+
+
+.kf-callout-bubble.kf-callout-bubble-bottom
+  top: 110%
+
+  &::before
+    content: ''
+    position: absolute
+    border-style: solid
+    border-width: 0 10px 15px
+    border-color: #4DAF7C transparent
+    display: block
+    width: 0
+    z-index: 1
+    top: -15px
+    left: 100px
+
+// Specific callout styles
+
+.kf-callout-tags
+  width: 200px
+
+.kf-callout-tags-button
+  box-shadow: 0px 0px 15px 5px rgba(255, 255, 255, .75)
+  border-radius: 100%
+
+.kf-callout-guide
+  top: -15px
+  width: 340px
+
+  .kf-callout-decline
+    float: left
+    position: relative
+    top: 10px
+
+  .kf-callout-bubble-button
+    float: right

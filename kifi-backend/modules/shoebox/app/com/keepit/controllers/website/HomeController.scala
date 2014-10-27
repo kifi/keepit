@@ -9,7 +9,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.controllers.core.AuthController
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
@@ -23,7 +22,6 @@ import play.api.mvc._
 import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
 
-import scala.concurrent.Future
 import KifiSession._
 
 class HomeController @Inject() (
@@ -60,12 +58,12 @@ class HomeController @Inject() (
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
-  def home = Action { implicit request =>
+  def home = MaybeUserAction { implicit request =>
     request match {
-      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
-        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-      case _ =>
+      case r: NonUserRequest[_] =>
         MarketingSiteRouter.marketingSite()
+      case userRequest: UserRequest[_] =>
+        AngularDistAssets.angularApp()
     }
   }
 
@@ -83,73 +81,6 @@ class HomeController @Inject() (
     MarketingSiteRouter.marketingSite(path)
   }
 
-  def about = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        aboutHandler(isLoggedIn = true)
-      case _ =>
-        aboutHandler(isLoggedIn = false)
-    }
-  }
-
-  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (!agent.screenCanFitWebApp) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else None
-    }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
-  }
-
-  def termsOfService = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        termsHandler(isLoggedIn = true)
-      case _ =>
-        termsHandler(isLoggedIn = false)
-    }
-  }
-
-  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        None
-      } else if (!agent.screenCanFitWebApp) {
-        Some(true)
-      } else {
-        Some(false)
-      }
-    }.getOrElse(Some(false)).map { hideHeader =>
-      Ok(views.html.marketing.terms(isLoggedIn, hideHeader))
-    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-  }
-
-  def privacyPolicy = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        privacyHandler(isLoggedIn = true)
-      case _ =>
-        privacyHandler(isLoggedIn = false)
-    }
-  }
-  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        None
-      } else if (!agent.screenCanFitWebApp) {
-        Some(true)
-      } else {
-        Some(false)
-      }
-    }.getOrElse(Some(false)).map { hideHeader =>
-      Ok(views.html.marketing.privacy(isLoggedIn, hideHeader))
-    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-  }
-
   def iPhoneAppStoreRedirect = MaybeUserAction { implicit request =>
     iPhoneAppStoreRedirectWithTracking
   }
@@ -161,17 +92,6 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
     }
     Ok(views.html.mobile.iPhoneRedirect(request.uri))
-  }
-
-  def mobileLanding = MaybeUserAction { implicit request =>
-    mobileLandingHandler
-  }
-  private def mobileLandingHandler(implicit request: Request[_]): Result = {
-    if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
-      iPhoneAppStoreRedirectWithTracking
-    } else {
-      Ok(views.html.marketing.mobileLanding(""))
-    }
   }
 
   def unsupported = Action {
@@ -213,10 +133,9 @@ class HomeController @Inject() (
     request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (!agent.screenCanFitWebApp) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else if (!agent.canRunExtensionIfUpToDate) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+
+      if (!agent.canRunExtensionIfUpToDate) {
+        Some(AngularDistAssets.angularApp())
       } else None
     }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
   }
