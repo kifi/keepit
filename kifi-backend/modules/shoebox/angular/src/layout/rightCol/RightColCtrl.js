@@ -18,6 +18,18 @@ angular.module('kifi')
       friendsReady = true;
     }, 1200);
 
+    // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+    var calloutName = 'guide_callout_shown';
+    $scope.showCallout = function () {
+      return !profileService.prefs[calloutName];
+    };
+    $scope.closeCallout = function () {
+      var save = {};
+      save[calloutName] = true;
+      profileService.prefs[calloutName] = true;
+      profileService.savePrefs(save);
+    };
+
     $scope.readyToDraw = function () {
       return profileService.userLoggedIn() === true && profileService.me.seqNum > 0 && friendsReady;
     };
