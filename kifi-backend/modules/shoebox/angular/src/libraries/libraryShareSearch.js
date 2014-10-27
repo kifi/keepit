@@ -87,6 +87,7 @@ angular.module('kifi')
         }
 
         function emphasizeMatchedPrefix (text, prefix) {
+          prefix = prefix || '';
           if (util.startsWithCaseInsensitive(text, prefix)) {
             return '<b>' + text.substr(0, prefix.length) + '</b>' + text.substr(prefix.length);
           }
@@ -130,13 +131,12 @@ angular.module('kifi')
                   result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
-                if (opt_query) {
-                  if (result.name) {
-                    result.name = emphasizeMatchedNames(result.name, opt_query);
-                  }
-                  if (result.email) {
-                    result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
-                  }
+                if (result.name) {
+                  result.name = emphasizeMatchedNames(result.name, opt_query);
+                }
+
+                if (result.email) {
+                  result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
                 }
               });
 
