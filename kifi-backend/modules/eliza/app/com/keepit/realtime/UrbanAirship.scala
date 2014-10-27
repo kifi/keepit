@@ -2,6 +2,8 @@ package com.keepit.realtime
 
 import java.util.concurrent.TimeoutException
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
 import scala.concurrent.{ Future, future }
 
 import org.joda.time.{ Days, DateTime }
@@ -112,6 +114,7 @@ class UrbanAirshipImpl @Inject() (
     client: HttpClient,
     config: UrbanAirshipConfig,
     deviceRepo: DeviceRepo,
+    airbreak: AirbrakeNotifier,
     db: Database,
     clock: Clock) extends UrbanAirship with Logging {
 
@@ -203,7 +206,7 @@ class UrbanAirshipImpl @Inject() (
         "id" -> notification.id.id
       )
     }
-    client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
+    val res = client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
           case e: TimeoutException =>
@@ -219,6 +222,16 @@ class UrbanAirshipImpl @Inject() (
         }
       }
     )
+    res.onSuccess {
+      case res =>
+        log.info(s"got good response for device = $device: ${res.body}")
+    }
+    res.onFailure {
+      case t =>
+        val message = s"got bad response from urbanairship. First message = $firstMessage device = $device notification = $notification retry = $retry"
+        log.error(message, t)
+        airbreak.notify(message, t)
+    }
   }
 
   private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
