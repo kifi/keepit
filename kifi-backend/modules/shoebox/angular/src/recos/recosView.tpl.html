@@ -27,7 +27,7 @@
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
         <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
-        <span ng-if="reco.recoData.kind === 'keep'" ng-class="{'kf-reco-top-title svg-reco-keep-icon': (reco.recoData.type === 'recommended')}">
+        <span ng-if="reco.recoData.kind === 'keep'" class="kf-reco-top-title">
           {{reco.recoData.type | titlecase}}
         </span>
         <span ng-if="reco.recoData.kind === 'library'">Featured</span>
