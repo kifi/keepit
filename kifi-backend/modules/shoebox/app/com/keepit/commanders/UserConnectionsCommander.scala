@@ -245,43 +245,47 @@ class UserConnectionsCommander @Inject() (
   def friend(myUserId: Id[User], friendUserId: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(friendUserId) map { recipient =>
-        val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
+        val alreadyConnected = userConnectionRepo.getConnectionOpt(myUserId, recipient.id.get).exists(_.state == UserConnectionStates.ACTIVE)
+        if (alreadyConnected) (true, "alreadyConnected")
+        else {
+          val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
 
-        if (openFriendRequests.size > 40) {
-          (false, "tooManySent")
-        } else if (friendRequestRepo.getBySenderAndRecipient(myUserId, recipient.id.get).isDefined) {
-          (true, "alreadySent")
-        } else {
-          friendRequestRepo.getBySenderAndRecipient(recipient.id.get, myUserId) map { friendReq =>
-            for {
-              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-            } yield {
-              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                case Some(sc) =>
-                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                case None =>
-                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+          if (openFriendRequests.size > 40) {
+            (false, "tooManySent")
+          } else if (friendRequestRepo.getBySenderAndRecipient(myUserId, recipient.id.get).isDefined) {
+            (true, "alreadySent")
+          } else {
+            friendRequestRepo.getBySenderAndRecipient(recipient.id.get, myUserId) map { friendReq =>
+              for {
+                su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+                su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+              } yield {
+                socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                  case Some(sc) =>
+                    socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                  case None =>
+                    socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
+                }
               }
-            }
-            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
+              userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
 
-            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
-            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-            s.onTransactionSuccess {
-              Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
-                socialUserTypeahead.refresh(id)
-                kifiUserTypeahead.refresh(id)
+              elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+              elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+              s.onTransactionSuccess {
+                Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
+                  socialUserTypeahead.refresh(id)
+                  kifiUserTypeahead.refresh(id)
+                }
               }
+              log.info("just made a friend! updating user graph index now.")
+              searchClient.updateUserGraph()
+              sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
+              (true, "acceptedRequest")
+            } getOrElse {
+              val request = friendRequestRepo.save(FriendRequest(senderId = myUserId, recipientId = recipient.id.get, messageHandle = None))
+              sendingFriendRequestEmailAndNotification(request, myUserId, recipient)
+              (true, "sentRequest")
             }
-            log.info("just made a friend! updating user graph index now.")
-            searchClient.updateUserGraph()
-            sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
-            (true, "acceptedRequest")
-          } getOrElse {
-            val request = friendRequestRepo.save(FriendRequest(senderId = myUserId, recipientId = recipient.id.get, messageHandle = None))
-            sendingFriendRequestEmailAndNotification(request, myUserId, recipient)
-            (true, "sentRequest")
           }
         }
       } getOrElse {
