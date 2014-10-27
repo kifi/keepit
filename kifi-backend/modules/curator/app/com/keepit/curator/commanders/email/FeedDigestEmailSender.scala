@@ -248,12 +248,13 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestItems(toUser = userId, recommendations = digestRecos, newLibraryItems = newLibraryItems, isFacebookConnected = isFacebookConnected)
 
+    val htmlBody = views.html.email.feedDigest(emailData)
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.headOption.getOrElse(newLibraryItems.head).title}",
       to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplate = views.html.email.feedDigest(emailData),
+      htmlTemplate = htmlBody,
       textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
@@ -264,10 +265,14 @@ class FeedDigestEmailSender @Inject() (
     shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, true))
+          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
           curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationClientType.Email))
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
+      } else {
+        val recoIds = digestRecos.map(_.uri.id.get).mkString(",")
+        val libKeepIds = newLibraryItems.map(_.uri.id.get).mkString(",")
+        log.warn(s"sendToUser failed to send digest email to userId=$userId htmlBodySize=${htmlBody.body.size} recos=$recoIds libraryKeeps=$libKeepIds")
       }
       DigestMail(userId = userId, mailSent = sent, recommendations = digestRecos, newKeeps = newLibraryItems)
     }
