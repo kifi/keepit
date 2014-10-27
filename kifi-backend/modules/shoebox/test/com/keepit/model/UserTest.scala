@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.commanders.UsernameOps
+import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 
 import scala.util.Try
 
@@ -27,6 +28,18 @@ class UserTest extends Specification with ShoeboxTestInjector {
   }
 
   "UserRepo" should {
+    "Update username" in {
+      withDb() { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+        }
+        inject[FakeAirbrakeNotifier].errorCount() === 0
+        db.readWrite { implicit session =>
+          userRepo.save(user.copy(username = Username("foobar")))
+        }
+        inject[FakeAirbrakeNotifier].errorCount() === 1
+      }
+    }
     "Use the cache" in {
       withDb() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
