@@ -223,7 +223,7 @@ class SliderAdminController @Inject() (
   }
 
   // for run when we launch libraries (10/2014)
-  def setSiteShowLibIntro() = AdminUserAction { implicit request =>
+  def setSiteShowLibraryIntro() = AdminUserAction { implicit request =>
     val userIds = db.readOnlyReplica { implicit session =>
       userRepo.getRecentActiveUsers(clock.now.minusYears(4)) filter { userId =>
         userValueRepo.getUserValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO).isEmpty
