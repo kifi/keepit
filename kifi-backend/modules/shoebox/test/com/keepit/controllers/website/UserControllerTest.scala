@@ -197,7 +197,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
              |"show_delighted_question":false,
              |"tag_callout_shown":null,
              |"guide_callout_shown":null,
-             |"onboarding_seen":true}
+             |"onboarding_seen":true,
+             |"site_show_library_intro":null}
            """.stripMargin
         ))
       }
