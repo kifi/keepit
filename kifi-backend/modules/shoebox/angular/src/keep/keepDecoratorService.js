@@ -99,11 +99,13 @@ angular.module('kifi')
       this.tagList = this.tagList || [];
       this.collections = this.collections || [];
 
+      // deprecated: user addHashtag
       this.addTag = function (tag) {
         this.tagList.push(tag);
         this.collections.push(tag.id);
       };
 
+      // deprecated: user removeHashtag
       this.removeTag = function (tagId) {
         var idx1 = _.findIndex(this.tagList, function (tag) {
           return tag.id === tagId;
@@ -125,10 +127,12 @@ angular.module('kifi')
       };
 
       this.addHashtag = function (hashtag) {
+        this.addTag(hashtag); // to maintain backwards compatibility; eventually to be removed
         this.hashtags.push(hashtag);
       };
 
       this.removeHashtag = function (hashtag) {
+        this.removeTag(hashtag); // to maintain backwards compatibility; eventually to be removed
         var idx = _.findIndex(this.hashtags, function (tag) {
           return tag === hashtag;
         });

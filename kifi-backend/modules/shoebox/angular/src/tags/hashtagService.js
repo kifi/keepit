@@ -35,6 +35,41 @@ angular.module('kifi')
       return deferred.promise;
     };
 
+    api.tagKeeps = function (keeps, tag, beOptimistic) {
+      function addTagToKeeps() {
+        _.each(keeps, function (keep) {
+          keep.addHashtag(tag);
+        });
+      }
+
+      function removeTagFromKeeps() {
+        _.each(keeps, function (keep) {
+          keeps.removeHashtag(tag);
+        });
+      }
+
+      var keepIds = _.map(keeps, function (keep) { return keep.id; });
+      var deferred = $q.defer();
+      var promise = $http.post(routeService.tagKeeps(tag), { 'keepIds': keepIds });
+
+      if (beOptimistic) {
+        addTagToKeeps(keeps);
+      }
+
+      promise.then(function (res) {
+        suggestTagsCache.expireAll();
+        if (!beOptimistic) {
+          addTagToKeeps(keeps);
+        }
+        deferred.resolve(res.data);
+      }, function () {
+        if (beOptimistic) {
+          removeTagFromKeeps();
+        }
+      });
+      return deferred.promise;
+    }
+
     api.untagKeep = function (keep, tag) {
       var promise = $http['delete'](routeService.untagKeep(keep.libraryId, keep.id, tag));
       var deferred = $q.defer();
