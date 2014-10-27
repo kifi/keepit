@@ -44,7 +44,7 @@ angular.module('kifi')
 
       function removeTagFromKeeps() {
         _.each(keeps, function (keep) {
-          keeps.removeHashtag(tag);
+          keep.removeHashtag(tag);
         });
       }
 
@@ -68,7 +68,7 @@ angular.module('kifi')
         }
       });
       return deferred.promise;
-    }
+    };
 
     api.untagKeep = function (keep, tag) {
       var promise = $http['delete'](routeService.untagKeep(keep.libraryId, keep.id, tag));

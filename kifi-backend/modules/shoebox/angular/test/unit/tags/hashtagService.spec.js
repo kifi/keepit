@@ -67,7 +67,7 @@ describe('kifi.hashtagService', function () {
       var keep1 = createKeep('00000000-0000-0000-0000-000000000001', ['bar']);
       var keep2 = createKeep('00000000-0000-0000-0000-000000000002', ['baz']);
       var p = hashtagService.tagKeeps([keep0, keep1, keep2], 'Scala');
-      p.then(function (data) {
+      p.then(function () {
         expect(keep0.hashtags).toEqual(['foo', 'Scala']);
         expect(keep1.hashtags).toEqual(['bar', 'Scala']);
         expect(keep2.hashtags).toEqual(['baz', 'Scala']);
