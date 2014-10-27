@@ -47,7 +47,7 @@ class LibraryInviteEmailSender @Inject() (
         case Left(_: Id[User]) => None
         case Right(_: EmailAddress) => Some(invite.passPhrase)
       }
-      var authToken = invite.authToken
+      val authToken = invite.authToken
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,

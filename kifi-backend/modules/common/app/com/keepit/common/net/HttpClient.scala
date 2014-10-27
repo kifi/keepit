@@ -27,7 +27,7 @@ import com.keepit.common.util.TrackingId
 import play.api.Play.current
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n", " ")}]") {
+    extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(1000).replaceAll("\n", " ")}]") {
   override def toString(): String = getMessage
 }
 
