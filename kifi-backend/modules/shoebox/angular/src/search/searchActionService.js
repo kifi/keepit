@@ -132,11 +132,11 @@ angular.module('kifi')
           }
         };
 
-      $log.log('searchActionService.find() req', reqData);
+      //$log.log('searchActionService.find() req', reqData);
 
       return $http.get(url, reqData).then(function (res) {
         var resData = res.data;
-        $log.log('searchActionService.find() res', resData);
+        //$log.log('searchActionService.find() res', resData);
 
         var hits = resData.hits || [];
         _.forEach(hits, function (hit) {
