@@ -234,7 +234,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "username":"${basicUser1.username.value}"
              |  },
              |"followers":[],
-             |"members":[],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -243,11 +242,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |"membership":"owner"
           }""".stripMargin))
 
-        val (user2, basicUser2) = db.readWrite { implicit s =>
+        val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
           libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
-          val basicUser2 = basicUserRepo.load(user2.id.get)
-          (user2, basicUser2)
+          user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
         val request2 = FakeRequest("GET", testPath)
@@ -271,15 +269,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "username":"${basicUser1.username.value}"
              |},
              |"followers":[],
-             |"members":[{
-             |            "id":"${basicUser2.externalId}",
-             |            "firstName":"${basicUser2.firstName}",
-             |            "lastName":"${basicUser2.lastName}",
-             |            "pictureName":"${basicUser2.pictureName}",
-             |            "username":"${basicUser2.username.value}",
-             |            "membership":"read_only",
-             |            "lastInvitedAt":${Json.toJson(t1.plusMinutes(3))}
-             |            }],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -361,7 +350,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "username":"${basicUser1.username.value}"
                |  },
                |"followers":[],
-               |"members":[],
                |"keeps":[],
                |"numKeeps":0,
                |"numCollaborators":0,

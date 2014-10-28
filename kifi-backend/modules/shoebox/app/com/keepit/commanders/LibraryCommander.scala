@@ -199,11 +199,6 @@ class LibraryCommander @Inject() (
       library.id.get -> (collaborators ++ followers).map(_.userId)
     }.toMap
 
-    val membersByLibraryId = libraries.map { library =>
-      val (collaborators, followers, invitees) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = true)
-      library.id.get -> buildMaybeLibraryMembers(collaborators, followers, invitees)
-    }.toMap
-
     val usersById = {
       val allUsersShown = libraries.flatMap { library => followerIdsByLibraryId(library.id.get) :+ library.ownerId }.toSet
       db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
@@ -223,7 +218,6 @@ class LibraryCommander @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
         val followers = followerIdsByLibraryId(lib.id.get).map(usersById(_))
-        val members = membersByLibraryId(lib.id.get)
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -234,7 +228,6 @@ class LibraryCommander @Inject() (
           kind = lib.kind,
           visibility = lib.visibility,
           followers = followers,
-          members = members,
           keeps = keepInfos,
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
@@ -1096,8 +1089,7 @@ case class FullLibraryInfo(
   kind: LibraryKind,
   lastKept: Option[DateTime],
   owner: BasicUser,
-  followers: Seq[BasicUser], // deprecated
-  members: Seq[MaybeLibraryMember],
+  followers: Seq[BasicUser],
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,
