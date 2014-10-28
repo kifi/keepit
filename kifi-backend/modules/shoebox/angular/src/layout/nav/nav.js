@@ -128,7 +128,9 @@ angular.module('kifi')
           if (scope.sortingMenu.option) {
             scope.changeList();
             scope.turnDropdownOff();
-            profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
+            if (scope.sortingMenu.option !== profileService.prefs.library_sorting_pref) {
+              profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
+            }
           }
         });
 

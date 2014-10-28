@@ -244,7 +244,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
           user2
         }
         inject[FakeUserActionsHelper].setUser(user2)

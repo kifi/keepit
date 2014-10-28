@@ -298,8 +298,23 @@ angular.module('kifi')
           library.visibility = library.visibility || 'published';
 
           libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
+            libraryService.fetchLibrarySummaries(true).then(function (data) {
               scope.$evalAsync(function () {
+                var libraries = _.filter(data.libraries, { access: 'owner' });
+
+                libraries = _.filter(libraries, function (library) {
+                  return !_.find(scope.excludeLibraries, { 'id': library.id });
+                });
+
+                libraries.forEach(function (library) {
+                  library.keptTo = false;
+                  if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+                    library.keptTo = true;
+                  }
+                });
+
+                libraries[selectedIndex].selected = true;
+                scope.widgetLibraries = libraries;
                 scope.librarySelection.library = _.find(scope.widgetLibraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
                   scope.clickAction(element);

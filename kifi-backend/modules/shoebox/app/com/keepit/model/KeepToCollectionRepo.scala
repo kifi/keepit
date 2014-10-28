@@ -11,7 +11,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 @ImplementedBy(classOf[KeepToCollectionRepoImpl])
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]]
-  def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]]
   def getKeepsForTag(collectionId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]]
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime]
@@ -29,6 +28,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 class KeepToCollectionRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
   collectionsForKeepCache: CollectionsForKeepCache,
+  collectionRepoProvider: Provider[CollectionRepoImpl],
   keepRepoProvider: Provider[KeepRepoImpl],
   val db: DataBaseComponent,
   val clock: Clock)
@@ -37,12 +37,9 @@ class KeepToCollectionRepoImpl @Inject() (
   import db.Driver.simple._
 
   private lazy val keepRepo = keepRepoProvider.get
+  private lazy val collectionRepo = collectionRepoProvider.get
 
-  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForKeepCache.set(CollectionsForKeepKey(ktc.keepId),
-      (for (c <- rows if c.bookmarkId === ktc.keepId && c.state === KeepToCollectionStates.ACTIVE)
-        yield c.collectionId).list)
-  }
+  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = deleteCache(ktc)
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForKeepCache.remove(CollectionsForKeepKey(ktc.keepId))
@@ -59,38 +56,41 @@ class KeepToCollectionRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToCollectionTable(tag)
   initTable()
 
-  def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] =
+  def getCollectionsForKeep(bookmarkId: Id[Keep])(implicit session: RSession): Seq[Id[Collection]] = {
     collectionsForKeepCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
-      (for (c <- rows if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
-        yield c).sortBy(c => c.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
-    }
+      val query = for {
+        kc <- rows if kc.bookmarkId === bookmarkId && kc.state === KeepToCollectionStates.ACTIVE
+        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+      } yield kc
 
-  def getKeepsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Keep]] =
-    (for (c <- rows if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)
-      yield c.bookmarkId).list
+      query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
+    }
+  }
 
   def getKeepsForTag(collectionId: Id[Collection], excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]] = {
     val q = for {
       kc <- rows if kc.collectionId === collectionId && kc.state =!= excludeState.orNull
-      k <- keepRepoProvider.get.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
-    } yield (k.id)
+      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+    } yield k.id
     q.list
   }
 
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection] =
-    (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.getOrElse(null)) yield c).list
+    (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.orNull) yield c).list
 
   def getByCollection(collId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection] =
-    (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
+    (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.orNull) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
     import keepRepo.db.Driver.simple._
     Query((for {
-      c <- this.rows
-      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collId &&
-        b.state === KeepStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
+      kc <- rows if kc.collectionId === collId && kc.state === KeepToCollectionStates.ACTIVE
+      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
 
@@ -107,12 +107,13 @@ class KeepToCollectionRepoImpl @Inject() (
 
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime] = {
     import keepRepo.db.Driver.simple._
-    val res = (for {
-      c <- this.rows
-      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collectionId &&
-        b.state === KeepStates.ACTIVE &&
-        c.state === KeepToCollectionStates.ACTIVE
-    } yield (b.uriId, b.createdAt)) list;
+    val res = (
+      for {
+        kc <- rows if kc.collectionId === collectionId && kc.state === KeepToCollectionStates.ACTIVE
+        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+      } yield (k.uriId, k.createdAt)
+    ).list
 
     res map { r => KeepUriAndTime(r._1, r._2) }
   }
