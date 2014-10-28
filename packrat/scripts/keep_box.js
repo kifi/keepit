@@ -564,7 +564,7 @@ var keepBox = keepBox || (function () {
     swipeTo($view);
   }
 
-  // Returns a promise the resolves with the first suitable image identified (an IMG element).
+  // Returns a promise that resolves with the first suitable image identified (an IMG element).
   // Additional images may be appended later.
   function findImages(images) {
     var srcs = {};
@@ -631,7 +631,11 @@ var keepBox = keepBox || (function () {
   }
 
   function appendBgImagesInStylesheet(arr, ss) {
-    var rules = ss.rules;
+    var rules;
+    try {
+      rules = ss.cssRules;
+    } catch (e) {  // SecurityError
+    }
     if (rules && rules.length) {
       var baseUrl = ss.href;
       if (!baseUrl || baseUrl.lastIndexOf('http', 0) === 0) {  // no extension resource: stylesheets
