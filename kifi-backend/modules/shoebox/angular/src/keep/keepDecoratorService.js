@@ -23,7 +23,6 @@ angular.module('kifi')
         });
 
         item.libraries = cleanedLibraries;
-        item.keepers = [];
       }
     }
 
@@ -86,8 +85,13 @@ angular.module('kifi')
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
       this.readTime = getKeepReadTime(this.summary);
-      this.others = this.keepersTotal - this.keepers.length - this.keepersOmitted;
       this.showSocial = this.keepersTotal || (this.keepers && this.keepers.length > 0) || (this.libraries && this.libraries.length > 0);
+
+      // "others" is the number of Kifi users who kept a keep besides the user and the user's Kifi friends.
+      this.others = this.keepersTotal - this.keepers.length - this.keepersOmitted;
+      if (this.keeps.length) {
+        this.others--;
+      }
     }
 
     // Add properties that are specific to a really kept Keep.

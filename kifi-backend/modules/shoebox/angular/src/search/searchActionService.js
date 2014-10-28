@@ -17,8 +17,13 @@ angular.module('kifi')
       _.extend(hit, hit.bookmark); //still need this??
 
       hit.isPrivate = hit.secret || false;
-      hit.others = hit.keepersTotal - hit.keepers.length - hit.keepersOmitted;
       hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
+
+      // "others" is the number of Kifi users who kept a keep besides the user and the user's Kifi friends.
+      hit.others = hit.keepersTotal - hit.keepers.length - hit.keepersOmitted;
+      if (hit.keeps.length) {
+        hit.others--;
+      }
     }
 
     function copy(obj) {
