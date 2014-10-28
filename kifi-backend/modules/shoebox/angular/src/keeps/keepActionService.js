@@ -145,7 +145,7 @@ angular.module('kifi')
       });
     }
 
-    function keepToLibrary(keepUrls, libraryId) {
+    function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
         // for keeping to library?
@@ -154,10 +154,17 @@ angular.module('kifi')
       });
 
       var data = {
-        keeps: keepUrls.map(function (keepUrl) {
-          return {
-            url: sanitizeUrl(keepUrl)
-          };
+        keeps: keepInfos.map(function (keep) {
+          if (keep.title) {
+            return {
+              title: keep.title,
+              url: sanitizeUrl(keep.url)
+            };
+          } else {
+            return {
+              url: sanitizeUrl(keep.url)
+            };
+          }
         })
       };
 
