@@ -83,7 +83,7 @@ class UserRepoImpl @Inject() (
     val toSave = user.copy(seq = sequence.incrementAndGet())
     user.id foreach { id =>
       val currentUser = get(id)
-      if (currentUser.username != user.username) {
+      if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
         airbreak.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
       }
     }
