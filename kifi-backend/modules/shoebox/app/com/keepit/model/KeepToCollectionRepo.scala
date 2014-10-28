@@ -28,7 +28,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 class KeepToCollectionRepoImpl @Inject() (
   airbrake: AirbrakeNotifier,
   collectionsForKeepCache: CollectionsForKeepCache,
-  collectionsRepoProvider: Provider[CollectionRepoImpl],
+  collectionRepoProvider: Provider[CollectionRepoImpl],
   keepRepoProvider: Provider[KeepRepoImpl],
   val db: DataBaseComponent,
   val clock: Clock)
@@ -37,6 +37,7 @@ class KeepToCollectionRepoImpl @Inject() (
   import db.Driver.simple._
 
   private lazy val keepRepo = keepRepoProvider.get
+  private lazy val collectionRepo = collectionRepoProvider.get
 
   override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = deleteCache(ktc)
 
@@ -59,8 +60,8 @@ class KeepToCollectionRepoImpl @Inject() (
     collectionsForKeepCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       val query = for {
         kc <- rows if kc.bookmarkId === bookmarkId && kc.state === KeepToCollectionStates.ACTIVE
-        c <- collectionsRepoProvider.get.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-        k <- keepRepoProvider.get.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
       } yield kc
 
       query.sortBy(_.updatedAt).map(_.collectionId).list // todo(martin): we should add a column for explicit ordering of tags
@@ -70,26 +71,26 @@ class KeepToCollectionRepoImpl @Inject() (
   def getKeepsForTag(collectionId: Id[Collection], excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit seesion: RSession): Seq[Id[Keep]] = {
     val q = for {
       kc <- rows if kc.collectionId === collectionId && kc.state =!= excludeState.orNull
-      c <- collectionsRepoProvider.get.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
-      k <- keepRepoProvider.get.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
     } yield k.id
     q.list
   }
 
   def getByKeep(keepId: Id[Keep],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection] =
-    (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.getOrElse(null)) yield c).list
+    (for (c <- rows if c.bookmarkId === keepId && c.state =!= excludeState.orNull) yield c).list
 
   def getByCollection(collId: Id[Collection],
     excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))(implicit session: RSession): Seq[KeepToCollection] =
-    (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
+    (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.orNull) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
     import keepRepo.db.Driver.simple._
     Query((for {
-      c <- this.rows
-      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collId &&
-        b.state === KeepStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
+      kc <- rows if kc.collectionId === collId && kc.state === KeepToCollectionStates.ACTIVE
+      c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+      k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
     } yield c).length).firstOption.getOrElse(0)
   }
 
@@ -106,12 +107,13 @@ class KeepToCollectionRepoImpl @Inject() (
 
   def getUriIdsInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[KeepUriAndTime] = {
     import keepRepo.db.Driver.simple._
-    val res = (for {
-      c <- this.rows
-      b <- keepRepo.rows if b.id === c.bookmarkId && c.collectionId === collectionId &&
-        b.state === KeepStates.ACTIVE &&
-        c.state === KeepToCollectionStates.ACTIVE
-    } yield (b.uriId, b.createdAt)) list;
+    val res = (
+      for {
+        kc <- rows if kc.collectionId === collectionId && kc.state === KeepToCollectionStates.ACTIVE
+        c <- collectionRepo.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
+        k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
+      } yield (k.uriId, k.createdAt)
+    ).list
 
     res map { r => KeepUriAndTime(r._1, r._2) }
   }
