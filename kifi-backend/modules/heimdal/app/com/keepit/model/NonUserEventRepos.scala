@@ -36,8 +36,8 @@ trait NonUserEventDescriptorRepo extends EventDescriptorRepo[NonUserEvent]
 object NonUserIdentifierAugmentor extends EventAugmentor[NonUserEvent] {
   def isDefinedAt(nonUserEvent: NonUserEvent) = true
   def apply(nonUserEvent: NonUserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq(
-    UserValueName.NON_USER_IDENTIFIER.name -> ContextStringData(nonUserEvent.identifier),
-    UserValueName.NON_USER_KIND.name -> ContextStringData(nonUserEvent.kind.name)
+    "nonUserIdentifier" -> ContextStringData(nonUserEvent.identifier),
+    "nonUserKind" -> ContextStringData(nonUserEvent.kind.name)
   ))
 }
 

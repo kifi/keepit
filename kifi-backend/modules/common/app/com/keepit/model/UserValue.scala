@@ -61,8 +61,6 @@ object UserValueName {
   val SITE_WELCOMED = UserValueName("site_welcomed")
   val SITE_SHOW_LIBRARY_INTRO = UserValueName("site_show_library_intro")
   val ONBOARDING_SEEN = UserValueName("onboarding_seen")
-  val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
-  val NON_USER_KIND = UserValueName("nonUserKind")
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
