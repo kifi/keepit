@@ -944,7 +944,7 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.clickAction = function () {
-          if (scope.librarySelection.library.keptTo) {
+          if (scope.librarySelection.library && scope.librarySelection.library.keptTo) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
             keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, keepToUnkeep.id).then(function () {
               if (scope.librarySelection.library.id === scope.keep.libraryId) {
