@@ -410,7 +410,6 @@
   @border-width: 1px;
   @switch-diam: 32px;
   @slide-dist: 30px;
-  @hint-dist: 4px;
   display: inline-block;
   vertical-align: middle;
   height: @switch-diam + 2 * @border-width;
@@ -458,20 +457,6 @@
     background-color: #fff;
     transition: -webkit-transform @duration;
     transition: transform @duration;
-  }
-  &:hover:active::before,
-  &:focus:active::before,
-  &:hover:active::after,
-  &:focus:active::after {
-    -webkit-transform: translate(-@hint-dist);
-    transform: translate(-@hint-dist);
-  }
-  .kifi-secret>&:hover:active::before,
-  .kifi-secret>&:focus:active::before,
-  .kifi-secret>&:hover:active::after,
-  .kifi-secret>&:focus:active::after {
-    -webkit-transform: translate(-@slide-dist + @hint-dist);
-    transform: translate(-@slide-dist + @hint-dist);
   }
   .kifi-secret>&::before,
   .kifi-secret>&::after {

@@ -362,7 +362,10 @@ var keepBox = keepBox || (function () {
       }
     });
     $view
-    .on('click', '.kifi-keep-box-new-lib-secret', function (e) {
+    .on('blur', '.kifi-keep-box-new-lib-name', function (e) {
+      this.value = this.value.trim();
+    })
+    .on('mousedown', '.kifi-keep-box-new-lib-secret', function (e) {
       $(this).on('transitionend', function end() {
         $(this).off('transitionend', end).removeClass('kifi-transition');
       }).addClass('kifi-transition');
@@ -371,7 +374,7 @@ var keepBox = keepBox || (function () {
     })
     .on('keydown', '.kifi-keep-box-new-lib-secret', function (e) {
       if (e.keyCode === 32 && !e.isDefaultPrevented() && e.originalEvent.isTrusted !== false) {
-        $(this).click();
+        $(this).mousedown();
         e.preventDefault();
       }
     });
