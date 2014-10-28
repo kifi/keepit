@@ -103,7 +103,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         // add new library
         status(createLibrary(user1, Json.obj("name" -> "Lib 1", "visibility" -> "secret"))) === OK
         db.readOnlyMaster { implicit s =>
-          val lib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("lib1"))
+          val lib = libraryRepo.getBySlugAndUserId(user1.id.get, LibrarySlug("lib-1"))
           lib.get.name === "Lib 1"
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib.get.id.get, user1.id.get).get.access === LibraryAccess.OWNER
         }
