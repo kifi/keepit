@@ -1,5 +1,7 @@
 package com.keepit.search.index
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.actor._
 import akka.util.Timeout
 import com.keepit.common.akka.FortyTwoActor
@@ -45,8 +47,18 @@ trait IndexManager[S, I <: Indexer[_, S, I]] {
 }
 
 class IndexUpdateTaskManager[S, I <: Indexer[_, S, I]](indexer: IndexManager[S, I], airbrake: AirbrakeNotifier) extends RecurringTaskManager {
-  override def doTask(): Unit = { indexer.update() }
-  override def onError(e: Throwable): Unit = { airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e) }
+  private[this] val errorCount = new AtomicInteger(0)
+
+  override def doTask(): Unit = {
+    indexer.update()
+    errorCount.set(0)
+  }
+
+  override def onError(e: Throwable): Unit = {
+    if (errorCount.getAndIncrement() > 0) { // ignore the first error (shoebox deployment may be going on)
+      airbrake.notify(s"Error in indexing [${indexer.getClass.toString}]", e)
+    }
+  }
 }
 
 trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
@@ -179,13 +191,18 @@ abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
 
   private def endUpdate(): Unit = { updating = false }
 
+  private[this] val errorCount = new AtomicInteger(0)
+
   override def receive() = {
     case UpdateIndex => if (!updating) { startUpdate() }
     case FailedUpdate(ex) => {
-      airbrake.notify(s"Failed to update index $indexer", ex)
+      if (errorCount.getAndIncrement() > 0) { // ignore the first error (shoebox deployment may be going on)
+        airbrake.notify(s"Failed to update index $indexer", ex)
+      }
       endUpdate()
     }
     case SuccessfulUpdate(done) => {
+      errorCount.set(0)
       if (done) { endUpdate() }
       else { startUpdate() }
     }
