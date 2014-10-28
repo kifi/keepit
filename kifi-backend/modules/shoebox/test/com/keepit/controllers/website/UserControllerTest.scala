@@ -10,7 +10,7 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 
-import play.api.libs.json.{ JsArray, Json }
+import play.api.libs.json.{ JsArray, Json, JsNull }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
@@ -159,26 +159,18 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
         }
 
-        inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
+        inject[FakeUserActionsHelper].setUser(user)
         val userController = inject[UserController]
         val path = routes.UserController.savePrefs().url
 
         val inputJson1 = Json.obj(
           "library_sorting_pref" -> "name",
-          "onboarding_seen" -> true
-        )
+          "show_delighted_question" -> false)
         val request1 = FakeRequest("POST", path).withBody(inputJson1)
         val result1: Future[Result] = userController.savePrefs()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
-          s"""
-             |{
-             |  "library_sorting_pref": "name",
-             |  "onboarding_seen": true
-             |}
-           """.stripMargin
-        ))
+        Json.parse(contentAsString(result1)) === inputJson1
 
         db.readOnlyMaster { implicit s =>
           inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.LIBRARY_SORTING_PREF) === Some("name")
@@ -188,19 +180,13 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result2: Future[Result] = userController.getPrefs()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-             |{"site_welcomed":null,
-             |"library_sorting_pref":"name",
-             |"site_left_col_width":null,
-             |"library_callout_shown":null,
-             |"show_delighted_question":false,
-             |"tag_callout_shown":null,
-             |"guide_callout_shown":null,
-             |"onboarding_seen":true,
-             |"site_show_library_intro":null}
-           """.stripMargin
-        ))
+        Json.parse(contentAsString(result2)) === Json.obj(
+          "library_sorting_pref" -> "name",
+          "show_delighted_question" -> false,
+          "library_callout_shown" -> JsNull,
+          "tag_callout_shown" -> JsNull,
+          "guide_callout_shown" -> JsNull,
+          "site_show_library_intro" -> JsNull)
       }
     }
 
