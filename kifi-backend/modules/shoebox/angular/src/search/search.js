@@ -18,7 +18,6 @@ angular.module('kifi')
     // Scope data.
     //
     $scope.resultKeeps = [];
-
     $scope.resultTotals = {
       myTotal: 0,
       friendsTotal: 0,
