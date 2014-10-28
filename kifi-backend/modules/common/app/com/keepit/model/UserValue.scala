@@ -48,8 +48,6 @@ object UserValueName {
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
-  val USER_SEGMENT = UserValueName("userSegment")
-  val EXTENSION_VERSION = UserValueName("extensionVersion")
   val USER_COLLECTION_ORDERING = UserValueName("user_collection_ordering")
   val BOOKMARK_IMPORT_LAST_START = UserValueName("bookmark_import_last_start")
   val BOOKMARK_IMPORT_DONE = UserValueName("bookmark_import_done")
