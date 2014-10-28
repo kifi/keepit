@@ -53,9 +53,7 @@ angular.module('kifi')
     $scope.$on('$destroy', deregisterLibraryChip);
 
     $scope.$on('$routeUpdate', function (event, current) {
-      console.log('called6')
       if (current.params.q) {
-        console.log('called7')
         $scope.search.text = current.params.q;
       }
     });
@@ -80,13 +78,9 @@ angular.module('kifi')
 
     $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
-      console.log('called1')
       if ($scope.search.text === '') {
-        // todo!!! DO NOT COMMIT WITHOUT FIXING
-        console.log('called2')
         if ($scope.stayInLibraryPath !== '') {
           $timeout(function() {
-            console.log('called3')
             $location.url($scope.stayInLibraryPath);
           }, 0);
         }

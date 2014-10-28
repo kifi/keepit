@@ -29,7 +29,7 @@ angular.module('kifi')
         return;
       }
       query = $routeParams.q || '';
-      filter = $routeParams.f || 'm'
+      filter = $routeParams.f || 'm';
       if (!query) { // No query or blank query.
         $location.path('/');
       }
@@ -81,7 +81,7 @@ angular.module('kifi')
       var searchedQuery = query;
 
       searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
-        if (searchedQuery !== query) {
+        if (searchedQuery !== query) { // query was updated
           return;
         }
         if (resetExistingResults) {
@@ -92,7 +92,6 @@ angular.module('kifi')
         }
 
         var hits = result.hits;
-        var resultKeeps = [];
 
         hits.forEach(function (hit) {
           var searchKeep = new keepDecoratorService.Keep(hit);
