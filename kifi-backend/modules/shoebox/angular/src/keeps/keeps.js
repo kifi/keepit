@@ -435,7 +435,11 @@ angular.module('kifi')
 
               var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
               undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-                keepActionService.keepToLibrary(_.pluck(selectedKeeps, 'url'), libraryId);
+                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                  var keepData = { url: keep.url };
+                  if (keep.title) { keepData.title = keep.title; }
+                  return keepData;
+                }), libraryId);
 
                 _.forEach(selectedKeeps, function (selectedKeep) {
                   selectedKeep.makeKept();
