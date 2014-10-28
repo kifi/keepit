@@ -283,7 +283,7 @@ class FeedDigestEmailSender @Inject() (
     // with an attempt to maintain the same look and feel, of the original email w/o revealing the real users
 
     // the email template requires real userIds since they used by the EmailTemplateSender to fetch attributes for that user
-    val userIds = Seq(1, 3, 9, 48, 61, 100, 567, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
+    val userIds = Seq(1, 3, 9, 48, 61, 100, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
     val myFakeUserId = userIds.head
     val otherUserIds = userIds.tail
 
