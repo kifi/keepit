@@ -77,7 +77,7 @@
                 <div class="manage-lib-member-email-image svg-envelope"></div>
                 <div class="manage-lib-member-name">{{member.email}}</div>
               </div>
-              <div class="manage-lib-member-status" ng-class="{'follower': member.status=='Following', 'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
+              <div class="manage-lib-member-status" ng-class="{'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
             </li>
           </ul>
         </div>
