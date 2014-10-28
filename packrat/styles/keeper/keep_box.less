@@ -30,13 +30,14 @@
   display: inline-block;
   vertical-align: top;
   margin-left: 6px;
-  width: 220px;
+  width: 224px;
+  height: 37px;
   line-height: 37px;
   position: relative;
 }
 .kifi-keep-box-title {
-  display: inline-block;
-  vertical-align: top;
+  position: absolute;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -46,7 +47,6 @@
   letter-spacing: .3px;
   transition: opacity @view-swipe-duration;
   &:not(:last-child) {
-    position: absolute;
     opacity: 0;
   }
 }
