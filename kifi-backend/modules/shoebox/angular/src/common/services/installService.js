@@ -50,7 +50,7 @@ angular.module('kifi')
             }, 10000);
           });
         } else if (isFirefox && supported) {
-          $window.location.href = '//www.kifi.com/assets/plugins/kifi.xpi';
+          $window.location.href = '//www.kifi.com/extensions/firefox/kifi.xpi';
         } else {
           $window.location.href = '//www.kifi.com/unsupported';
         }

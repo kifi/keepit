@@ -24,7 +24,7 @@ $(function () {
         }
       })
     } else if ($doc.hasClass('firefox')) {
-      window.location = 'https://www.kifi.com/assets/plugins/kifi.xpi';
+      window.location = 'https://www.kifi.com/extensions/firefox/kifi.xpi';
       setTimeout(troubleshootFirefox.bind(null, $a), 8000);
     }
   });
