@@ -48,6 +48,7 @@ angular.module('kifi')
           $document.on('click', onClick);
           show = true;
           shareMenu.show();
+          contactList.scrollTop(0);
 
           if (!scope.manageLibInvite) {
             // When we test this conditional, Angular thinks that we're trying to
