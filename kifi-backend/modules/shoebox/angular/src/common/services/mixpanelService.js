@@ -68,7 +68,7 @@
         experiments: getExperiments()
       });
       $log.log('mixpanelService.eventTrack(' + action + ')', props);
-      if (profileService.me) {
+      if (profileService.me && profileService.me.id) {
         trackEventThroughProxy(action, props);
       } else {
         mixpanel.track(action, props);
