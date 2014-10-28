@@ -10,17 +10,9 @@ angular.module('kifi')
     var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
 
     if (isChrome && supported) {
-      var elem = $window.document.createElement('link');
-      elem.rel = 'chrome-webstore-item';
-      elem.href = 'https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin';
-      var other = $window.document.getElementsByTagName('link')[0];
-      other.parentNode.insertBefore(elem, other);
+      $window.document.head.insertAdjacentHTML(
+        'beforeend', '<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">');
     }
-
-    var detectIfIsInstalled = function () {
-      var kifiAttr = $window.document.children[0].attributes['data-kifi-ext'];
-      return !!(kifiAttr && kifiAttr.value);
-    };
 
     function installedVersion() {
       return angular.element(document.documentElement).attr('data-kifi-ext');
@@ -58,7 +50,6 @@ angular.module('kifi')
       canInstall: supported,
       installInProgress: false,
       installed: false,
-      detectIfIsInstalled: detectIfIsInstalled,
       error: false,
       installedVersion: installedVersion,
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
