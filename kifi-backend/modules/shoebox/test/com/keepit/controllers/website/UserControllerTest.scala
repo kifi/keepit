@@ -181,6 +181,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) === Json.obj(
+          "auto_show_guide" -> JsNull,
           "library_sorting_pref" -> "name",
           "show_delighted_question" -> false,
           "library_callout_shown" -> JsNull,

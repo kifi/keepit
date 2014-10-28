@@ -326,6 +326,7 @@ class UserController @Inject() (
   private val SitePrefNames = {
     import UserValueName._
     Set(
+      AUTO_SHOW_GUIDE,
       SHOW_DELIGHTED_QUESTION,
       LIBRARY_SORTING_PREF,
       LIBRARY_CALLOUT_SHOWN,

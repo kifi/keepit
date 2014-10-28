@@ -7,15 +7,21 @@ angular.module('kifi')
     var isChrome = $window.chrome && $window.chrome.webstore && $window.chrome.webstore.install;
     var isFirefox = !isChrome && ('MozBoxSizing' in $window.document.documentElement.style) || ($window.navigator.userAgent.indexOf('Firefox') > -1);
     var majorVersion = +($window.navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [null, 999])[1];
-    var supported = isChrome && majorVersion >= 26 || isFirefox && majorVersion >= 20;
+    var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20;
 
-    if (isChrome && supported) {
-      $window.document.head.insertAdjacentHTML(
-        'beforeend', '<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">');
-    }
-
-    function installedVersion() {
-      return angular.element(document.documentElement).attr('data-kifi-ext');
+    if (supported) {
+      if (isChrome) {
+        $window.document.head.insertAdjacentHTML(
+          'beforeend', '<link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">');
+      }
+      $window.addEventListener('message', function (e) {
+        var data = e.data || {};
+        if (data.type === 'kifi_ext_listening') {
+          $rootScope.$apply(function () {
+            api.installedVersion = data.version;
+          });
+        }
+      });
     }
 
     var api = {
@@ -51,9 +57,9 @@ angular.module('kifi')
       installInProgress: false,
       installed: false,
       error: false,
-      installedVersion: installedVersion,
+      installedVersion: angular.element(document.documentElement).attr('data-kifi-ext'),
       hasMinimumVersion: function (minVersion, minCanaryVersion) {
-        var version = installedVersion();
+        var version = api.installedVersion;
         if (!version) {
           return false;
         }

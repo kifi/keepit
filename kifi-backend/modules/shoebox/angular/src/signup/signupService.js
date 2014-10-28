@@ -221,7 +221,7 @@ angular.module('kifi')
     // 3rd confirm modal
     var thanksForRegisteringModal = function () {
       $scope.requestActive = false;
-      if (!installService.installedVersion()) {
+      if (!installService.installedVersion) {
         if (installService.canInstall) {
           if (installService.isValidChrome) {
             $scope.platformName = 'Chrome';

@@ -3,10 +3,10 @@
 // @asap
 
 (function (v) {
-  document.documentElement.dataset.kifiExt = v;
-  document.dispatchEvent(new CustomEvent('kifi:installed', {version: v}));
+  var origin = window.location.origin;
 
-  var origin = location.origin;
+  document.documentElement.dataset.kifiExt = v;
+  window.postMessage({type: 'kifi_ext_listening', version: v}, origin);
 
   api.port.on({
     post_message: function (data) {
@@ -17,6 +17,7 @@
   window.addEventListener('message', onMessageEvent);
   api.onEnd.push(function () {
     window.removeEventListener('message', onMessageEvent);
+    delete document.documentElement.dataset.kifiExt;
   });
 
   function onMessageEvent(event) {
