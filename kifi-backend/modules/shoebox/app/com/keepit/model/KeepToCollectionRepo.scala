@@ -38,11 +38,7 @@ class KeepToCollectionRepoImpl @Inject() (
 
   private lazy val keepRepo = keepRepoProvider.get
 
-  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
-    collectionsForKeepCache.set(CollectionsForKeepKey(ktc.keepId),
-      (for (c <- rows if c.bookmarkId === ktc.keepId && c.state === KeepToCollectionStates.ACTIVE)
-        yield c.collectionId).list)
-  }
+  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): Unit = deleteCache(ktc)
 
   override def deleteCache(ktc: KeepToCollection)(implicit session: RSession): Unit = {
     collectionsForKeepCache.remove(CollectionsForKeepKey(ktc.keepId))
@@ -63,6 +59,7 @@ class KeepToCollectionRepoImpl @Inject() (
     collectionsForKeepCache.getOrElse(CollectionsForKeepKey(bookmarkId)) {
       val query = for {
         kc <- rows if kc.bookmarkId === bookmarkId && kc.state === KeepToCollectionStates.ACTIVE
+        c <- collectionsRepoProvider.get.rows if c.id === kc.collectionId && c.state === CollectionStates.ACTIVE
         k <- keepRepoProvider.get.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
       } yield kc
 

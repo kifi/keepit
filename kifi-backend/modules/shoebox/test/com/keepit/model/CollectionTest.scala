@@ -123,7 +123,9 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
 
         db.readWrite { implicit s =>
-          keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_, inactivateIfEmpty = false))
+          keepToCollectionRepo.getByKeep(bookmark1.id.get).groupBy(_.collectionId).foreach {
+            case (collectionId, _) => collectionRepo.collectionChanged(collectionId, inactivateIfEmpty = false)
+          }
         }
         db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCount(coll1.id.get) === 1
@@ -176,9 +178,13 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll2.id.get))
+          collectionRepo.save(coll4.copy(state = CollectionStates.INACTIVE))
+        }
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).toSet ===
             Set(coll1.id.get, coll2.id.get, coll3.id.get)
         }
