@@ -41,6 +41,7 @@ angular.module('kifi')
     // Watchers & Listeners
     //
     var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
+      console.log('deregistered!', e, library);
       $scope.library = library;
       $scope.search.text = '';
       if ($scope.library.id) {
@@ -52,11 +53,21 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
+    var searchLocationLimiterOn = false;
+    var locationFuse = function () {
+      searchLocationLimiterOn = true;
+      $timeout(function () {
+        searchLocationLimiterOn = false;
+      }, 500);
+    };
+
     $scope.$on('$routeChangeSuccess', function (event, current) {
-      if (current.params.q) {
+      if (current.params.q && !searchLocationLimiterOn) {
+        console.log(current.params.q === $scope.search.text, current.params.q, $scope.search.text);
         $scope.search.text = current.params.q;
       }
     });
+
 
     var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
       $scope.addKeeps();
@@ -75,7 +86,7 @@ angular.module('kifi')
       $scope.stayInLibraryPath = '';
     };
 
-    var query = $routeParams.q || '';
+    var query = $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       if ($scope.search.text === '') {
         if ($scope.stayInLibraryPath !== '') {
@@ -86,9 +97,10 @@ angular.module('kifi')
         $scope.clearInput();
       } else {
         query = $scope.search.text;
+        locationFuse();
         $timeout(function() {
           $location.url('/find?q=' + query + '&f=' + 'm');
-        }, 0);
+        });
       }
     }, 200);
 

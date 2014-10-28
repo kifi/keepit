@@ -5,6 +5,7 @@ angular.module('kifi')
 .controller('SearchCtrl', [
   '$scope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService',
   function ($scope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
+    console.log('load');
     //
     // Internal data.
     //
