@@ -102,7 +102,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 2, coll2.id.get -> 0, coll3.id.get -> 1)
         }
         db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
@@ -144,12 +144,12 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll3.id.get))
           collectionRepo.getByUserAndName(user1.id.get, Hashtag("Scala")).get.id.get === coll3.id.get
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Scala")).get.id.get === coll4.id.get
-          keepToCollectionRepo.getKeepsInCollection(coll3.id.get).length === 1
+          keepToCollectionRepo.getKeepsForTag(coll3.id.get).length === 1
           keepToCollectionRepo.getUriIdsInCollection(coll3.id.get).length === 1
-          keepToCollectionRepo.getKeepsInCollection(coll4.id.get).length === 0
+          keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 0
           keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 0
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll4.id.get))
-          keepToCollectionRepo.getKeepsInCollection(coll4.id.get).length === 1
+          keepToCollectionRepo.getKeepsForTag(coll4.id.get).length === 1
           keepToCollectionRepo.getUriIdsInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, Hashtag("Cooking")) must beNone
         }
@@ -163,10 +163,10 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
-          keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark2.id.get)
+          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
         }
