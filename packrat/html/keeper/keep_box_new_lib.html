@@ -1,6 +1,7 @@
 <div class="kifi-keep-box-view kifi-keep-box-view-new-lib" data-box-title="Keep to a new library">
   <div class="kifi-keep-box-new-lib-head">Name your library</div>
-  <input class="kifi-keep-box-new-lib-name" name="lib_name" type="text" value="{{name}}" placeholder="Inspiring videos, Recipes I love..."/>
+  <input class="kifi-keep-box-new-lib-name" name="lib_name" type="text" value="{{name}}" maxlength="200" placeholder="Inspiring videos, Recipes I love..."/>
+  <div class="kifi-keep-box-new-lib-name-error"></div>
   <div class="kifi-keep-box-new-lib-head">Who can see this library?</div>
   <div class="kifi-keep-box-new-lib-visibility{{#secret}} kifi-secret{{/secret}}">
     <a class="kifi-keep-box-new-lib-secret" href="javascript:"></a>
