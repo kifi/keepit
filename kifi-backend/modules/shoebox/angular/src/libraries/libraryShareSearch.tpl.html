@@ -39,12 +39,15 @@
             <div ng-show="result.sent" class="library-share-sent">Sent!</div>
           </div>
           <!-- Send to any email -->
-          <div ng-if="result.custom === 'email'" ng-click="shareLibraryNewEmail(result)" class="library-share-contact-container library-share-new-email">
+          <div ng-if="result.custom === 'email'" class="library-share-contact-container library-share-new-email">
             <div class="library-share-contact-new-email-icon"></div>
             <div class="library-share-contact-summary">
               <div class="library-share-contact-name">{{email}}</div>
               <div class="library-share-contact-network">{{emailHelp}}</div>
             </div>
+            <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="library-share-contact-button">
+              <span class="kf-keep-lib-footer-button-icon svg-envelope"></span>Send
+            </button>
             <div ng-show="result.sent" class="library-share-sent">Sent!</div>
           </div>
           <!-- Import from Gmail -->

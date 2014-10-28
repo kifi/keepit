@@ -148,19 +148,20 @@ angular.module('kifi')
               }
 
               if (contacts.length < 5) {
-                newResults.push({ custom: 'email' });
+                newResults.push({ custom: 'email', hideButton: true });
               }
 
             } else {
               newResults = [
-                { custom: 'email' },
+                { custom: 'email', hideButton: true },
                 { custom: 'importGmail', actionable: true}
               ];
 
-              if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
+              if (opt_query && util.validateEmail(opt_query)) {
+                // Valid email? Select and show button.
                 resultIndex = 0;
                 newResults[resultIndex].selected = true;
-                newResults[resultIndex].actionable = true;
+                newResults[resultIndex].hideButton = false;
               }
             }
 
