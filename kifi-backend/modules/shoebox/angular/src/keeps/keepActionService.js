@@ -154,17 +154,10 @@ angular.module('kifi')
       });
 
       var data = {
-        keeps: keepInfos.map(function (keep) {
-          if (keep.title) {
-            return {
-              title: keep.title,
-              url: sanitizeUrl(keep.url)
-            };
-          } else {
-            return {
-              url: sanitizeUrl(keep.url)
-            };
-          }
+        keeps: keepInfos.map(function(keep) {
+          var keepData = { url: keep.url };
+          if (keep.title) { keepData.title = keep.title; }
+          return keepData;
         })
       };
 
