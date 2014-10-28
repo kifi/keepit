@@ -17,7 +17,7 @@ angular.module('kifi')
       _.extend(hit, hit.bookmark); //still need this??
 
       hit.isPrivate = hit.secret || false;
-      hit.others = hit.keepersTotal - hit.keepers.length;
+      hit.others = hit.keepersTotal - hit.keepers.length - hit.keepersOmitted;
       hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
     }
 
@@ -36,8 +36,6 @@ angular.module('kifi')
       hit.keepers = hit.keepers || [];
       hit.libraries = hit.libraries || [];
 
-
-
       for (var i=0; i<hit.libraries.length; i=i+2) {
         var idxLib = hit.libraries[i];
         var idxUser = hit.libraries[i+1];
@@ -55,7 +53,6 @@ angular.module('kifi')
             decompressedLibraries.push(lib);
           }
           myLibraries.push(lib);
-
         }
       }
 
