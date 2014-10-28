@@ -629,8 +629,10 @@ api.port.on({
   create_library: function (data, respond) {
     ajax('POST', '/ext/libraries', data, function (library) {
       loadLibraries(function (libraries) {
-        libraries.push(library);
-        storeLibraries(libraries);
+        if (!libraries.some(idIs(library.id))) {
+          libraries.push(library);
+          storeLibraries(libraries);
+        }
       });
       respond(library);
       notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
