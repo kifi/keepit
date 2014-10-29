@@ -957,10 +957,9 @@ angular.module('kifi')
               libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
             });
           } else {
-            var keepInfo = { title: scope.keep.title, url: scope.keep.url };
-            keepActionService.keepToLibrary([keepInfo], scope.librarySelection.library.id).then(function (result) {
-              if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
+            keepActionService.copyToLibrary([scope.keep.id], scope.librarySelection.library.id).then(function (result) {
+              if (result.successes > 0) {
+                return keepActionService.fetchFullKeepInfo(scope.keep).then(function (fullKeep) {
                   libraryService.fetchLibrarySummaries(true);
                   libraryService.addToLibraryCount(scope.librarySelection.library.id, 1);
                   tagService.addToKeepCount(1);
