@@ -12,6 +12,7 @@ angular.module('kifi')
     var filter = $routeParams.f || 'm';
     var lastResult = null;
     var selectedCount = 0;
+    var hitCounter = 0;
 
     $scope.resultKeeps = [];
     $scope.resultTotals = {
@@ -91,6 +92,9 @@ angular.module('kifi')
         var hits = result.hits;
 
         hits.forEach(function (hit) {
+          // hack a unique ID for each "hit" (URI) used in bulk edit for the hit (result) doesn't have one
+          hit.id = hit.id || 'h-' + (++hitCounter);
+
           var searchKeep = new keepDecoratorService.Keep(hit);
           if (!!searchKeep.id) {
             searchKeep.buildKeep(searchKeep);
@@ -161,6 +165,13 @@ angular.module('kifi')
 
     $scope.updateSelectedCount = function (numSelected) {
       selectedCount = numSelected;
+    };
+
+    $scope.editOptions = {
+      draggable: false,
+      actions: {
+        copyToLibrary: true
+      }
     };
 
 
