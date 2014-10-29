@@ -118,11 +118,14 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
-  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log) {
+  '$scope', 'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log', 'platformService', '$rootElement',
+  function ($scope, profileService, $window, $rootScope, friendService, $timeout, $log, platformService, $rootElement) {
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
+      if (platformService.isSupportedMobilePlatform()) {
+        $rootElement.find('html').addClass('kf-mobile');
+      }
       $timeout(function () {
         profileService.fetchMe().then(function () {
           if ($rootScope.userLoggedIn) {
