@@ -5,6 +5,7 @@ angular.module('kifi')
 .factory('profileService', [
   '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch', '$rootElement',
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
+    var initialized = false;
 
     var me = {
       picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
@@ -20,7 +21,13 @@ angular.module('kifi')
     function updateLoginState(meObj) {
       $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
       $rootScope.userLoggedIn = userLoggedIn = !!meObj;
-      $rootScope.$broadcast('userLoggedInStateChange', meObj);
+
+      // Do not broadcast 'userLoggedInStateChange' on the first call.
+      if (initialized) {
+        $rootScope.$broadcast('userLoggedInStateChange', meObj);
+      }
+
+      initialized = true;
     }
 
     var meService = new Clutch(function () {
