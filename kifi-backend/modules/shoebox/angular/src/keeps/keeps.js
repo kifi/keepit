@@ -287,7 +287,8 @@ angular.module('kifi')
         editMode: '=',
         editOptions: '&',
         toggleEdit: '=',
-        updateSelectedCount: '&'
+        updateSelectedCount: '&',
+        selectedKeepsFilter: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -325,9 +326,15 @@ angular.module('kifi')
           }
         }
 
+        function getSelectedKeeps() {
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var filter = scope.selectedKeepsFilter();
+          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
+        }
+
         function copyToLibrary () {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedKeeps = getSelectedKeeps();
           var selectedLibrary = scope.librarySelection.library;
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {

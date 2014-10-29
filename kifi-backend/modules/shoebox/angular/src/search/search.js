@@ -70,6 +70,10 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+    $scope.selectedKeepsFilter = function (hits) {
+      return _.flatten(_.pluck(hits, 'keeps'));
+    };
+
     $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading) {
         return;
@@ -92,9 +96,6 @@ angular.module('kifi')
         var hits = result.hits;
 
         hits.forEach(function (hit) {
-          // hack a unique ID for each "hit" (URI) used in bulk edit for the hit (result) doesn't have one
-          hit.id = hit.id || 'h-' + (++hitCounter);
-
           var searchKeep = new keepDecoratorService.Keep(hit);
           if (!!searchKeep.id) {
             searchKeep.buildKeep(searchKeep);
