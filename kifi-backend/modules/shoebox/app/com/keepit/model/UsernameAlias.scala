@@ -9,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.commanders.UsernameOps
 import com.amazonaws.services.redshift.model.UnauthorizedOperationException
+import scala.util.{ Failure, Success, Try }
 
 case class ReservedUsernameException(alias: UsernameAlias)
   extends UnauthorizedOperationException(s"Username ${alias.username} is reserved for user ${alias.userId}")
@@ -17,6 +18,7 @@ case class UsernameAlias(
     id: Option[Id[UsernameAlias]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
+    lastActivatedAt: DateTime = currentDateTime,
     state: State[UsernameAlias] = UsernameAliasStates.ACTIVE,
     username: Username, // normalized
     userId: Id[User]) extends ModelWithState[UsernameAlias] {
@@ -32,7 +34,7 @@ object UsernameAliasStates extends States[UsernameAlias] {
 @ImplementedBy(classOf[UsernameAliasRepoImpl])
 trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
-  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): UsernameAlias
+  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): Try[UsernameAlias]
   def release(username: Username)(implicit session: RWSession): Boolean
 }
 
@@ -46,9 +48,10 @@ class UsernameAliasRepoImpl @Inject() (
 
   type RepoImpl = UsernameAliasTable
   class UsernameAliasTable(tag: Tag) extends RepoTable[UsernameAlias](db, tag, "username_alias") {
+    def lastActivatedAt = column[DateTime]("last_activated_at", O.NotNull)
     def username = column[Username]("username", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, username, userId) <> ((UsernameAlias.apply _).tupled, UsernameAlias.unapply _)
+    def * = (id.?, createdAt, updatedAt, lastActivatedAt, state, username, userId) <> ((UsernameAlias.apply _).tupled, UsernameAlias.unapply _)
   }
 
   def table(tag: Tag) = new UsernameAliasTable(tag)
@@ -74,21 +77,17 @@ class UsernameAliasRepoImpl @Inject() (
     getByNormalizedUsername(normalize(username), excludeState)
   }
 
-  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): UsernameAlias = {
-    val normalizedUsername = normalize(username)
-    val requestedState = if (reserve) RESERVED else ACTIVE
-    getByNormalizedUsername(normalizedUsername, excludeState = None) match {
-      case Some(alias) if alias.isReserved => if (alias.userId == userId) alias else throw ReservedUsernameException(alias) // reserved aliases must be explicitly released
-      case Some(availableAlias) if availableAlias.state == INACTIVE => {
-        val requestedAlias = availableAlias.copy(createdAt = clock.now, updatedAt = clock.now, state = requestedState, username = normalizedUsername, userId = userId)
-        save(requestedAlias)
+  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): Try[UsernameAlias] = {
+    val requestedAlias = {
+      val normalizedUsername = normalize(username)
+      val requestedState = if (reserve) RESERVED else ACTIVE
+      getByNormalizedUsername(normalizedUsername, excludeState = None) match { // reserved aliases must be explicitly released
+        case Some(alias) if alias.isReserved => if (alias.userId == userId) Success(alias) else Failure(ReservedUsernameException(alias))
+        case Some(availableAlias) => Success(availableAlias.copy(state = requestedState, userId = userId))
+        case None => Success(UsernameAlias(state = requestedState, username = normalizedUsername, userId = userId))
       }
-      case Some(activeAvailableAlias) => {
-        val requestedAlias = activeAvailableAlias.copy(userId = userId, state = requestedState)
-        if (requestedAlias == activeAvailableAlias) requestedAlias else save(requestedAlias)
-      }
-      case None => save(UsernameAlias(username = normalizedUsername, userId = userId, state = requestedState))
     }
+    requestedAlias.map(alias => save(alias.copy(lastActivatedAt = clock.now)))
   }
 
   def release(username: Username)(implicit session: RWSession): Boolean = {
