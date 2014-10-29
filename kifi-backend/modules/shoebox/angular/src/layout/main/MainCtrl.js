@@ -26,7 +26,8 @@ angular.module('kifi')
           return lib.access !== 'read_only';
         });
         $scope.librarySelection = {};
-        $scope.libSelectTopOffset = 220;
+        $scope.libSelectDownOffset = 0;
+        $scope.libSelectMaxUpOffset = 220;
       });
     }
 

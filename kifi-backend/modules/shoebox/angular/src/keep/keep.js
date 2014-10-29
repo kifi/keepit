@@ -921,6 +921,9 @@ angular.module('kifi')
         //
         scope.librarySelection = {};
         scope.keptToLibraries = [];
+        scope.libSelectDownOffset = 100;
+        scope.libSelectMaxUpOffset = 500;
+        scope.libSelectLeftOffset = 190;
 
 
         //
@@ -974,6 +977,7 @@ angular.module('kifi')
                   var keep = new keepDecoratorService.Keep(fullKeep);
                   keep.buildKeep(keep);
                   keep.makeKept();
+
                   scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep, scope.librarySelection.library);
                 });
               }
