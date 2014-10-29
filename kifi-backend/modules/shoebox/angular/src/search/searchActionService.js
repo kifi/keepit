@@ -122,12 +122,13 @@ angular.module('kifi')
     //
     // Exposed API methods.
     //
-    function find(query, filter, context) {
+    function find(query, filter, library, context) {
       var url = routeService.search,
         reqData = {
           params: {
             q: query || void 0,
             f: filter || 'm',
+            l: library || void 0,
             maxHits: 10,
             context: context || void 0,
             withUriSummary: true
