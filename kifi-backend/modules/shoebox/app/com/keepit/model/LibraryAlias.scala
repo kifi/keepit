@@ -26,7 +26,7 @@ object LibraryAliasStates extends States[LibraryAlias]
 @ImplementedBy(classOf[LibraryAliasRepoImpl])
 trait LibraryAliasRepo extends Repo[LibraryAlias] {
   def getByOwnerIdAndSlug(ownerId: Id[User], slug: LibrarySlug, excludeState: Option[State[LibraryAlias]] = Some(LibraryAliasStates.INACTIVE))(implicit session: RSession): Option[LibraryAlias]
-  def intern(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias
+  def alias(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias
 }
 
 @Singleton
@@ -59,14 +59,17 @@ class LibraryAliasRepoImpl @Inject() (
     compiledGetByUserIdAndSlug(ownerId, slug, excludeState).firstOption
   }
 
-  def intern(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias = {
+  def alias(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias = {
     getByOwnerIdAndSlug(ownerId, slug, excludeState = None) match {
       case None => save(LibraryAlias(ownerId = ownerId, slug = slug, libraryId = libraryId))
-      case Some(inactiveAlias) if inactiveAlias.state == LibraryAliasStates.INACTIVE => {
-        save(inactiveAlias.copy(createdAt = clock.now, updatedAt = clock.now, state = LibraryAliasStates.ACTIVE, libraryId = libraryId))
+      case Some(alias) if alias.state == LibraryAliasStates.INACTIVE => {
+        val requestedAlias = alias.copy(createdAt = clock.now, updatedAt = clock.now, state = LibraryAliasStates.ACTIVE, slug = slug, libraryId = libraryId)
+        save(requestedAlias)
       }
-      case Some(validAlias) if validAlias.libraryId == libraryId => validAlias
-      case Some(invalidAlias) => save(invalidAlias.copy(libraryId = libraryId))
+      case Some(activeAlias) => {
+        val requestedAlias = activeAlias.copy(slug = slug, libraryId = libraryId)
+        if (requestedAlias == activeAlias) requestedAlias else save(requestedAlias)
+      }
     }
   }
 

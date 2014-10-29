@@ -26,14 +26,13 @@ case class UsernameAlias(
 }
 
 object UsernameAliasStates extends States[UsernameAlias] {
-  val RESERVED = State[UsernameAlias]("reserved")
+  val RESERVED = State[UsernameAlias]("reserved") // while an 'active' alias can be claimed by another user (soft alias), a 'reserved' alias cannot (hard alias)
 }
 
 @ImplementedBy(classOf[UsernameAliasRepoImpl])
 trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
-  def intern(username: Username, userId: Id[User])(implicit session: RWSession): UsernameAlias
-  def reserve(username: Username, userId: Id[User])(implicit session: RWSession): Unit
+  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): UsernameAlias
   def release(username: Username)(implicit session: RWSession): Boolean
 }
 
@@ -42,6 +41,7 @@ class UsernameAliasRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[UsernameAlias] with UsernameAliasRepo with Logging {
 
+  import UsernameAliasStates._
   import db.Driver.simple._
 
   type RepoImpl = UsernameAliasTable
@@ -70,26 +70,25 @@ class UsernameAliasRepoImpl @Inject() (
     Username(UsernameOps.normalize(username.value))
   }
 
-  def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias] = {
+  def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(INACTIVE))(implicit session: RSession): Option[UsernameAlias] = {
     getByNormalizedUsername(normalize(username), excludeState)
   }
 
-  def intern(username: Username, userId: Id[User])(implicit session: RWSession): UsernameAlias = {
+  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): UsernameAlias = {
     val normalizedUsername = normalize(username)
+    val requestedState = if (reserve) RESERVED else ACTIVE
     getByNormalizedUsername(normalizedUsername, excludeState = None) match {
-      case None => save(UsernameAlias(username = normalizedUsername, userId = userId))
-      case Some(inactiveAlias) if inactiveAlias.state == UsernameAliasStates.INACTIVE => {
-        save(inactiveAlias.copy(createdAt = clock.now, updatedAt = clock.now, state = UsernameAliasStates.ACTIVE, username = normalizedUsername, userId = userId))
+      case Some(alias) if alias.isReserved => if (alias.userId == userId) alias else throw ReservedUsernameException(alias) // reserved aliases must be explicitly released
+      case Some(availableAlias) if availableAlias.state == INACTIVE => {
+        val requestedAlias = availableAlias.copy(createdAt = clock.now, updatedAt = clock.now, state = requestedState, username = normalizedUsername, userId = userId)
+        save(requestedAlias)
       }
-      case Some(validAlias) if validAlias.userId == userId => validAlias
-      case Some(reservedAlias) if reservedAlias.isReserved => throw ReservedUsernameException(reservedAlias)
-      case Some(unreservedAlias) => save(unreservedAlias.copy(userId = userId))
+      case Some(activeAvailableAlias) => {
+        val requestedAlias = activeAvailableAlias.copy(userId = userId, state = requestedState)
+        if (requestedAlias == activeAvailableAlias) requestedAlias else save(requestedAlias)
+      }
+      case None => save(UsernameAlias(username = normalizedUsername, userId = userId, state = requestedState))
     }
-  }
-
-  def reserve(username: Username, userId: Id[User])(implicit session: RWSession): Unit = {
-    val alias = intern(username, userId)
-    if (!alias.isReserved) { save(alias.copy(state = UsernameAliasStates.RESERVED)) }
   }
 
   def release(username: Username)(implicit session: RWSession): Boolean = {

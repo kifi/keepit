@@ -20,19 +20,19 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
 
     withDb() { implicit injector =>
 
-      "intern aliases by owner id and library slug" in {
+      "alias an owner id and a library slug to a single library" in {
 
         // first user
 
-        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.intern(firstUser, theBest, theBestLibraryId) }
+        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) }
         theBestFromFirstUserAlias.ownerId === firstUser
         theBestFromFirstUserAlias.slug === theBest
         theBestFromFirstUserAlias.libraryId == theBestLibraryId
         theBestFromFirstUserAlias.state === LibraryAliasStates.ACTIVE
 
         val betterBestFromFirstUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.intern(firstUser, theBest, theBestLibraryId) === theBestFromFirstUserAlias
-          libraryAliasRepo.intern(firstUser, theBest, theBetterBestLibraryId)
+          libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) === theBestFromFirstUserAlias
+          libraryAliasRepo.alias(firstUser, theBest, theBetterBestLibraryId)
         }
 
         betterBestFromFirstUserAlias.id.get === theBestFromFirstUserAlias.id.get
@@ -41,7 +41,7 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
         // second user
 
         val theBestFromSecondUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.intern(secondUser, theBest, theNotSoGreatBestLibraryId)
+          libraryAliasRepo.alias(secondUser, theBest, theNotSoGreatBestLibraryId)
         }
 
         theBestFromSecondUserAlias.id.get !== theBestFromFirstUserAlias.id.get
@@ -51,7 +51,7 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
         theBestFromSecondUserAlias.state === LibraryAliasStates.ACTIVE
 
         val theWorstFromSecondUserAlias = db.readWrite { implicit session =>
-          libraryAliasRepo.intern(secondUser, theWorst, theNotSoGreatBestLibraryId)
+          libraryAliasRepo.alias(secondUser, theWorst, theNotSoGreatBestLibraryId)
         }
 
         theWorstFromSecondUserAlias.id.get !== theBestFromSecondUserAlias.id.get
@@ -62,9 +62,9 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get aliases by owner id and library slug" in {
+    "get active aliases by owner id and library slug" in {
       withDb() { implicit injector =>
-        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.intern(firstUser, theBest, theBestLibraryId) }
+        val theBestFromFirstUserAlias = db.readWrite { implicit session => libraryAliasRepo.alias(firstUser, theBest, theBestLibraryId) }
         db.readOnlyMaster { implicit session =>
           libraryAliasRepo.getByOwnerIdAndSlug(firstUser, theBest) === Some(theBestFromFirstUserAlias)
         }

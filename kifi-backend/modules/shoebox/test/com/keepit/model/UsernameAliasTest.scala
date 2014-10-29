@@ -12,23 +12,23 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
 
   "UsernameAliasRepo" should {
 
-    "intern aliases by normalized username" in {
+    "alias a normalized username to a single user" in {
       withDb() { implicit injector =>
 
-        val leoAlias = db.readWrite { implicit session => usernameAliasRepo.intern(léo, firstUserId) }
+        val leoAlias = db.readWrite { implicit session => usernameAliasRepo.alias(léo, firstUserId) }
         leoAlias.username.value === "leo"
         leoAlias.userId === firstUserId
         leoAlias.state === UsernameAliasStates.ACTIVE
 
         db.readWrite { implicit session =>
-          usernameAliasRepo.intern(léo, firstUserId) === leoAlias
-          usernameAliasRepo.intern(Username("leo"), firstUserId) === leoAlias
-          usernameAliasRepo.intern(Username("Leo"), firstUserId) === leoAlias
-          usernameAliasRepo.intern(Username("Leo"), firstUserId) === leoAlias
+          usernameAliasRepo.alias(léo, firstUserId) === leoAlias
+          usernameAliasRepo.alias(Username("leo"), firstUserId) === leoAlias
+          usernameAliasRepo.alias(Username("Leo"), firstUserId) === leoAlias
+          usernameAliasRepo.alias(Username("Leo"), firstUserId) === leoAlias
         }
 
         val updatedAlias = db.readWrite { implicit session =>
-          usernameAliasRepo.intern(léo, secondUserId)
+          usernameAliasRepo.alias(léo, secondUserId)
         }
 
         updatedAlias.id.get === leoAlias.id.get
@@ -38,7 +38,7 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
 
     "get active aliases by normalized username" in {
       withDb() { implicit injector =>
-        val leoAlias = db.readWrite { implicit session => usernameAliasRepo.intern(léo, firstUserId) }
+        val leoAlias = db.readWrite { implicit session => usernameAliasRepo.alias(léo, firstUserId) }
         db.readOnlyMaster { implicit session =>
           usernameAliasRepo.getByUsername(léo) === Some(leoAlias)
           usernameAliasRepo.getByUsername(Username("leo")) === Some(leoAlias)
@@ -56,26 +56,46 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "reserve and release aliases" in {
-      withDb() { implicit injector =>
+    withDb() { implicit injector =>
 
-        val reservedAlias = db.readWrite { implicit session =>
-          usernameAliasRepo.reserve(léo, firstUserId)
-          usernameAliasRepo.getByUsername(léo).get
+      "reserve an alias" in {
+        db.readWrite { implicit session =>
+          val reservedAlias = usernameAliasRepo.alias(léo, firstUserId, reserve = true)
+          reservedAlias.userId === firstUserId
+          reservedAlias.isReserved === true
         }
-        reservedAlias.userId === firstUserId
-        reservedAlias.isReserved === true
+      }
 
-        val releasedAlias = db.readWrite { implicit session =>
-          usernameAliasRepo.intern(léo, secondUserId) should throwA(ReservedUsernameException(reservedAlias))
-          usernameAliasRepo.reserve(léo, secondUserId) should throwA(ReservedUsernameException(reservedAlias))
+      "not release a reserved alias implicitly" in {
+        db.readWrite { implicit session =>
+          val reservedAlias = usernameAliasRepo.getByUsername(léo).get
+          usernameAliasRepo.alias(léo, firstUserId, reserve = false) === reservedAlias
+        }
+      }
+
+      "protect a reserved alias" in {
+        db.readWrite { implicit session =>
+          val reservedAlias = usernameAliasRepo.getByUsername(léo).get
+          usernameAliasRepo.alias(léo, secondUserId, reserve = false) should throwA(ReservedUsernameException(reservedAlias))
+          usernameAliasRepo.alias(léo, secondUserId, reserve = true) should throwA(ReservedUsernameException(reservedAlias)) /// a reserved alias must be explicitly released before it can be reserved by someone else
+        }
+      }
+
+      "release a reserved alias" in {
+        db.readWrite { implicit session =>
+          val reservedAlias = usernameAliasRepo.getByUsername(léo).get
+
           usernameAliasRepo.release(léo) === true
-          usernameAliasRepo.getByUsername(léo).get.isReserved === false
-          usernameAliasRepo.intern(léo, secondUserId)
-        }
+          usernameAliasRepo.release(léo) === false
 
-        releasedAlias.id.get === reservedAlias.id.get
-        releasedAlias.userId === secondUserId
+          val releasedAlias = usernameAliasRepo.getByUsername(léo).get
+          releasedAlias.id.get === reservedAlias.id.get
+          releasedAlias.isReserved === false
+
+          val updatedAlias = usernameAliasRepo.alias(léo, secondUserId)
+          updatedAlias.id.get === releasedAlias.id.get
+          updatedAlias.userId === secondUserId
+        }
       }
     }
   }
