@@ -283,7 +283,7 @@ class AuthCommander @Inject() (
 
   private def exchangeFBToken(oauth2Info: OAuth2Info, config: OAuth2ProviderConfiguration): Future[OAuth2Info] = {
     import play.api.Play.current
-    val resF = WS.url(config.exchangeTokenUrl.get).withQueryString(
+    val resF = WS.url(config.exchangeTokenUrl.get.toString).withQueryString(
       "grant_type" -> "fb_exchange_token",
       "client_id" -> config.clientId,
       "client_secret" -> config.clientSecret,

@@ -1,5 +1,7 @@
 package com.keepit.common.oauth2
 
+import java.net.URL
+
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.util.Configuration
 import net.codingwell.scalaguice.ScalaModule
@@ -14,15 +16,15 @@ object OAuth2Providers {
 
   val fbConfigBuilder = OAuth2Configuration.build(
     name = FB,
-    authUrl = "https://www.facebook.com/dialog/oauth",
-    accessTokenUrl = "https://graph.facebook.com/oauth/access_token",
+    authUrl = new URL("https://www.facebook.com/dialog/oauth"),
+    accessTokenUrl = new URL("https://graph.facebook.com/oauth/access_token"),
     scope = "email"
   )
 
   val googConfigBuilder = OAuth2Configuration.build(
     name = GOOG,
-    authUrl = "https://accounts.google.com/o/oauth2/auth",
-    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
+    authUrl = new URL("https://accounts.google.com/o/oauth2/auth"),
+    accessTokenUrl = new URL("https://accounts.google.com/o/oauth2/token"),
     scope = "email https://www.googleapis.com/auth/contacts.readonly"
   )
 

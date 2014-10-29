@@ -126,9 +126,9 @@ class OAuth2Controller @Inject() (
           "login_hint" -> "email address",
           "approval_prompt" -> approvalPromptOpt.getOrElse(oauth2CommonConfig.approvalPrompt)
         )
-        val url = authUrl + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
+        val url = authUrl.toString + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
         log.infoP(s"REDIRECT to: $url with params: $params")
-        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2))))
+        Redirect(authUrl.toString, params.map(kv => (kv._1, Seq(kv._2))))
     }
   }
 
@@ -167,7 +167,7 @@ class OAuth2Controller @Inject() (
         "redirect_uri" -> redirectUri,
         "grant_type" -> "authorization_code"
       )
-      val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2))))
+      val call = WS.url(providerConfig.accessTokenUrl.toString).post(params.map(kv => (kv._1, Seq(kv._2))))
       log.infoP(s"POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
       val tokenRespOptF = call.map { resp: WSResponse =>
@@ -288,7 +288,7 @@ class OAuth2Controller @Inject() (
                 "refresh_token" -> refreshTk,
                 "grant_type" -> "refresh_token"
               )
-              val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
+              val call = WS.url(providerConfig.accessTokenUrl.toString).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
               val tokenRespOptF = call map { resp =>
                 if (resp.status == OK) {
                   val tokenResp = resp.json.asOpt[OAuth2AccessTokenResponse]
