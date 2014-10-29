@@ -62,13 +62,9 @@ class LibraryAliasRepoImpl @Inject() (
   def alias(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias = {
     getByOwnerIdAndSlug(ownerId, slug, excludeState = None) match {
       case None => save(LibraryAlias(ownerId = ownerId, slug = slug, libraryId = libraryId))
-      case Some(alias) if alias.state == LibraryAliasStates.INACTIVE => {
-        val requestedAlias = alias.copy(createdAt = clock.now, updatedAt = clock.now, state = LibraryAliasStates.ACTIVE, slug = slug, libraryId = libraryId)
-        save(requestedAlias)
-      }
-      case Some(activeAlias) => {
-        val requestedAlias = activeAlias.copy(slug = slug, libraryId = libraryId)
-        if (requestedAlias == activeAlias) requestedAlias else save(requestedAlias)
+      case Some(existingAlias) => {
+        val requestedAlias = existingAlias.copy(state = LibraryAliasStates.ACTIVE, slug = slug, libraryId = libraryId)
+        if (requestedAlias == existingAlias) requestedAlias else save(requestedAlias)
       }
     }
   }
