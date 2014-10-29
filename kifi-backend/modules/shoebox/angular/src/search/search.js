@@ -12,7 +12,6 @@ angular.module('kifi')
     var filter = $routeParams.f || 'm';
     var lastResult = null;
     var selectedCount = 0;
-    var hitCounter = 0;
 
     $scope.resultKeeps = [];
     $scope.resultTotals = {
