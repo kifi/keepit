@@ -19,7 +19,13 @@ angular.module('kifi')
        *   keptToLibraries - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
-       *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
+       *   exitAction() - a function that is called once the widget exits (includes when the widget exits after an action).
+       *
+       *   Positioning properties:
+       *   ----------------------
+       *   libSelectDownOffset - shift the bottom of the widget this much below the element.
+       *   libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
+       *   libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -68,6 +74,10 @@ angular.module('kifi')
 
           if (widget) {
             widget.remove();
+          }
+
+          if (_.isFunction(scope.exitAction)) {
+            scope.exitAction();
           }
         }
 
@@ -139,25 +149,64 @@ angular.module('kifi')
           $rootElement.find('html').append(widget);
           $compile(widget)(scope);
 
-          // Set position.
-          // By default, if there is enough room at the bottom, drop the widget down.
-          // If there isn't enough room, scoot up just enough to fit the widget.
-          // If scope.libSelectTopOffset is set, that overrides the default position.
+          //
+          // Position widget.
+          //
           widget.hide();
+
+          var desiredShiftDownDistance = scope.libSelectDownOffset || 0;
+          var desiredMaxUpDistance = scope.libSelectMaxUpOffset || 1000;
+          var desiredShiftLeftDistance = scope.libSelectLeftOffset || 0;
+
           var scrollTop = angular.element($window).scrollTop();
-          var elementOffset = element.offset().top;
-          var distanceFromBottom = $window.innerHeight - elementOffset + scrollTop;
+          var elementOffsetTop = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffsetTop + scrollTop;
+          var distanceFromTop = elementOffsetTop - scrollTop;
+
+          var scrollLeft = angular.element($window).scrollLeft();
+          var elementOffsetLeft = element.offset().left;
+          var distanceFromRight = $window.innerWidth - elementOffsetLeft + scrollLeft;
 
           // Wait for Angular to render the widget so we can grab its height.
           $timeout(function () {
+            // Shift the widget left based on passed in desired shift left distance.
+            // If the widget is cut off on the right, shift left some more so that the widget's
+            // width is entirely visible.
+            var widgetWidth = widget.width();
+            var shiftLeftDistance = (distanceFromRight - widgetWidth + desiredShiftLeftDistance > 0) ?
+              desiredShiftLeftDistance :
+              widgetWidth - distanceFromRight;
+
+            var left = element.offset().left - shiftLeftDistance;
+
+            // Shift the widget up or down.
+            var shiftUpDistance ;
             var widgetHeight = widget.height();
 
-            // If there is enough room at the bottom, drop the widget down.
-            // Otherwise, scoot up just enough to fit the widget.
-            var widgetOffset = (distanceFromBottom - widgetHeight > 0) ? 0 : widgetHeight - distanceFromBottom;
+            // First, shift the widget down based on the passed in desired shift down distance.
+            // After that, if the widget's top exceeds the passed in maximum top distance,
+            // then shift the widget down enough so that the maximum top distance is not exceeded.
+            if (widgetHeight - desiredShiftDownDistance <= desiredMaxUpDistance) {
+              shiftUpDistance = widgetHeight - desiredShiftDownDistance;
+            } else {
+              shiftUpDistance = desiredMaxUpDistance;
+            }
 
-            var top = element.offset().top - (scope.libSelectTopOffset || widgetOffset);
-            var left = element.offset().left;
+            // Second, check that the widget is not cut off on the bottom. If it's cut off,
+            // shift it up enough so that the widget's bottom is visible.
+            shiftUpDistance = (distanceFromBottom - widgetHeight + shiftUpDistance > 0) ?
+              shiftUpDistance :
+              widgetHeight - distanceFromBottom;
+
+            // Third, check that the widget is not cut off on the top. If it's cut off,
+            // shift it down enough so that the widget's top is visible.
+            shiftUpDistance = (distanceFromTop - shiftUpDistance > 0) ?
+              shiftUpDistance :
+              distanceFromTop;
+
+            var top = element.offset().top - shiftUpDistance;
+
+            // Set the widget's position based on the left and top offsets calculated above.
             widget.css({top: top + 'px', left: left + 'px'});
             widget.show();
 

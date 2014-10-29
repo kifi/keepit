@@ -922,6 +922,9 @@ angular.module('kifi')
         //
         scope.librarySelection = {};
         scope.keptToLibraries = [];
+        scope.libSelectDownOffset = 100;
+        scope.libSelectMaxUpOffset = 500;
+        scope.libSelectLeftOffset = 190;
 
 
         //
@@ -984,7 +987,7 @@ angular.module('kifi')
                 }
               });
             } else {
-              // used for keeping recommendations
+              // When there is no id on the keep object (e.g., recommendations), use the keep's url instead.
               var keepInfo = { title: scope.keep.title, url: scope.keep.url };
               keepToLibrary = keepActionService.keepToLibrary([keepInfo], scope.librarySelection.library.id).then(function (result) {
                 if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
