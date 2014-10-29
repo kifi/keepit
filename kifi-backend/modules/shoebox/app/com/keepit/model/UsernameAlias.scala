@@ -61,12 +61,20 @@ class UsernameAliasRepoImpl @Inject() (
 
   override def deleteCache(usernameAlias: UsernameAlias)(implicit session: RSession): Unit = {}
 
-  private def compiledGetByNormalizedUsername(normalizedUsername: Username, excludeState: Option[State[UsernameAlias]]) = Compiled {
-    for (row <- rows if row.username === normalizedUsername && row.state =!= excludeState.orNull) yield row
+  private val compiledGetByNormalizedUsername = Compiled { (normalizedUsername: Column[Username]) =>
+    for (row <- rows if row.username === normalizedUsername) yield row
+  }
+
+  private val compiledGetByNormalizedUsernameAndExcludedState = Compiled { (normalizedUsername: Column[Username], excludedState: Column[State[UsernameAlias]]) =>
+    for (row <- rows if row.username === normalizedUsername && row.state =!= excludedState) yield row
   }
 
   private def getByNormalizedUsername(normalizedUsername: Username, excludeState: Option[State[UsernameAlias]])(implicit session: RSession) = {
-    compiledGetByNormalizedUsername(normalizedUsername, excludeState).firstOption
+    val q = excludeState match {
+      case Some(state) => compiledGetByNormalizedUsernameAndExcludedState(normalizedUsername, state)
+      case None => compiledGetByNormalizedUsername(normalizedUsername)
+    }
+    q.firstOption
   }
 
   private def normalize(username: Username): Username = {

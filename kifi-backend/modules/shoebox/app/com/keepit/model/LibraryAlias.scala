@@ -51,12 +51,22 @@ class LibraryAliasRepoImpl @Inject() (
 
   override def deleteCache(slugAlias: LibraryAlias)(implicit session: RSession): Unit = {}
 
-  private def compiledGetByUserIdAndSlug(ownerId: Id[User], slug: LibrarySlug, excludeState: Option[State[LibraryAlias]]) = Compiled {
-    for (row <- rows if row.ownerId === ownerId && row.slug === slug && row.state =!= excludeState.orNull) yield row
+  private val compiledGetByUserIdAndSlug = Compiled {
+    (ownerId: Column[Id[User]], slug: Column[LibrarySlug]) =>
+      for (row <- rows if row.ownerId === ownerId && row.slug === slug) yield row
+  }
+
+  private val compiledGetByUserIdAndSlugAndExcludedState = Compiled {
+    (ownerId: Column[Id[User]], slug: Column[LibrarySlug], excludedState: Column[State[LibraryAlias]]) =>
+      for (row <- rows if row.ownerId === ownerId && row.slug === slug && row.state =!= excludedState) yield row
   }
 
   def getByOwnerIdAndSlug(ownerId: Id[User], slug: LibrarySlug, excludeState: Option[State[LibraryAlias]] = Some(LibraryAliasStates.INACTIVE))(implicit session: RSession): Option[LibraryAlias] = {
-    compiledGetByUserIdAndSlug(ownerId, slug, excludeState).firstOption
+    val q = excludeState match {
+      case Some(state) => compiledGetByUserIdAndSlugAndExcludedState(ownerId, slug, state)
+      case None => compiledGetByUserIdAndSlug(ownerId, slug)
+    }
+    q.firstOption
   }
 
   def alias(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias = {
