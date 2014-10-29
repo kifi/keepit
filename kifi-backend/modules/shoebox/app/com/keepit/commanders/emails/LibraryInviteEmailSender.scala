@@ -7,12 +7,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ PostOffice, EmailAddress, SystemEmailAddress, ElectronicMail }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.model.{ NotificationCategory, User, LibraryInvite, LibraryRepo, KeepRepo }
+import com.keepit.model.{ UserEmailAddressRepo, UserRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, KeepRepo }
+import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
@@ -22,6 +23,7 @@ class LibraryInviteEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -43,6 +45,7 @@ class LibraryInviteEmailSender @Inject() (
 
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
+      val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
       val passPhrase = toRecipient match {
         case Left(_: Id[User]) => None
         case Right(_: EmailAddress) => Some(invite.passPhrase)
@@ -57,6 +60,7 @@ class LibraryInviteEmailSender @Inject() (
         htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken),
         textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),
         channel = Some("vf_email"),
         source = Some("library_invite")

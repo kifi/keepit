@@ -131,6 +131,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           abook.addFriendRecommendationsExpectations(toUser.id.get, Seq.empty)
 
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.FRIEND_ACCEPTED)
+          email.from === SystemEmailAddress.NOTIFICATIONS
+          email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === SystemEmailAddress.SUPPORT.address
+
           val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your Kifi friend request"
           html must contain("Billy Madison accepted your Kifi")
@@ -373,6 +376,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
         email.subject === "Tom Brady invited you to follow Football!"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
