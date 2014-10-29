@@ -904,8 +904,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService',
-  function (keepActionService, keepDecoratorService, libraryService, tagService) {
+.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService', 'modalService',
+  function (keepActionService, keepDecoratorService, libraryService, tagService, modalService) {
     return {
       restrict: 'A',
       scope: {
@@ -973,6 +973,10 @@ angular.module('kifi')
                   scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
                 });
               }
+            })['catch'](function () {
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html'
+              });
             });
           }
         };

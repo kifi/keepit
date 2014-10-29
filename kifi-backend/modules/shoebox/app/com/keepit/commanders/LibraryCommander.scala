@@ -841,17 +841,27 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
-          keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
+
+          val currentKeepOpt = if (toLibrary.isDisjoint)
+            keepRepo.getPrimaryInDisjointByUriAndUser(k.uriId, userId)
+          else
+            keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+
+          currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = k.userId, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+                userId = userId, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
               combineTags(k.id.get, newKeep.id.get)
               Right()
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
+              keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+                inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
               Right()
             case Some(existingKeep) =>
+              if (existingKeep.inDisjointLib)
+                keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+                  inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
               Left(LibraryError.AlreadyExistsInDest)
           }
@@ -872,18 +882,29 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
           implicit val session = s
-          keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId) match {
+
+          val currentKeepOpt = if (toLibrary.isDisjoint)
+            keepRepo.getPrimaryInDisjointByUriAndUser(k.uriId, userId)
+          else
+            keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibraryId)
+
+          currentKeepOpt match {
             case None =>
-              keepRepo.save(k.copy(visibility = toLibrary.visibility, libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
+              keepRepo.save(k.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+                inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
               Right()
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              keepRepo.save(existingKeep.copy(state = KeepStates.ACTIVE))
+              keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+                inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
               keepRepo.save(k.copy(state = KeepStates.INACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
               Right()
             case Some(existingKeep) =>
               if (toLibraryId != k.libraryId.get) {
-                keepRepo.save(k.copy(state = KeepStates.INACTIVE))
+                if (existingKeep.inDisjointLib)
+                  keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility, inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
+                else
+                  keepRepo.save(k.copy(state = KeepStates.INACTIVE))
                 combineTags(k.id.get, existingKeep.id.get)
               }
               Left(LibraryError.AlreadyExistsInDest)
