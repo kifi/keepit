@@ -10,6 +10,8 @@ angular.module('kifi')
     //
     var query;
     var filter = $routeParams.f || 'm';
+    var library = $routeParams.l || '';
+
     var lastResult = null;
     var selectedCount = 0;
 
@@ -25,11 +27,9 @@ angular.module('kifi')
     // Scope data.
     //
     function init() {
-      if (query === $routeParams.q || '') {
-        return;
-      }
       query = $routeParams.q || '';
       filter = $routeParams.f || 'm';
+      library = $routeParams.l || '';
       if (!query) { // No query or blank query.
         $location.path('/');
       }
@@ -51,7 +51,6 @@ angular.module('kifi')
     });
 
     $scope.$on('$routeUpdate', newSearch);
-
 
 
     //
@@ -80,7 +79,7 @@ angular.module('kifi')
       $scope.loading = true;
       var searchedQuery = query;
 
-      searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
+      searchActionService.find(query, filter, library, lastResult && lastResult.context).then (function (result) {
         if (searchedQuery !== query) { // query was updated
           return;
         }
@@ -115,7 +114,7 @@ angular.module('kifi')
       if ($scope.isEnabled(type)) {
         var count = getFilterCount(type);
         if (count) {
-          return '/find?q=' + query + '&f=' + type;
+          return '/find?q=' + query + '&f=' + type + (library?('&l=' + library):'');
         }
       }
       return '';
