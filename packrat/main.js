@@ -1736,7 +1736,7 @@ function pimpSearchHit(hits, libs, hit, i) {
 function kifify(tab) {
   log('[kifify]', tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session');
   if (!tab.icon) {
-    api.icon.set(tab, 'icons/k_gray' + (silence ? '.paused' : '') + '.png');
+    api.icon.set(tab, 'icons/url_gray' + (silence ? '_II' : '') + '.png');
   } else {
     updateIconSilence(tab);
   }
@@ -1800,7 +1800,7 @@ function stashTabByNormUri(tab, uri) {
 
 function kififyWithPageData(tab, d) {
   log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '');
-  setIcon(!!d.howKept(), tab);
+  setIcon(d.howKept(), tab);
   if (silence) return;
 
   var hide = d.neverOnSite || !enabled('keeper') || d.sensitive && enabled('sensitive');
@@ -1920,21 +1920,21 @@ function updateTabsWithKeptState() {
   var args = Array.prototype.slice.call(arguments);
   var howKept = args.pop();
   args.push(function (tab) {
-    setIcon(!!howKept, tab);
+    setIcon(howKept, tab);
     api.tabs.emit(tab, 'kept', {kept: howKept});
   });
   forEachTabAt.apply(null, args);
 }
 
-function setIcon(kept, tab) {
-  log('[setIcon] tab:', tab.id, 'kept:', kept);
-  api.icon.set(tab, (kept ? 'icons/k_blue' : 'icons/k_dark') + (silence ? '.paused' : '') + '.png');
+function setIcon(howKept, tab) {
+  log('[setIcon] tab:', tab.id, 'how:', howKept);
+  api.icon.set(tab, (howKept ? (howKept === 'private' ? 'icons/url_red' : 'icons/url_green') : 'icons/url_dark') + (silence ? '_II' : '') + '.png');
 }
 
 function updateIconSilence(tab) {
   log('[updateIconSilence] tab:', tab.id, 'silent:', !!silence);
-  if (tab.icon && tab.icon.indexOf('.paused') < 0 !== !silence) {
-    api.icon.set(tab, tab.icon.substr(0, tab.icon.indexOf('.')) + (silence ? '.paused' : '') + '.png');
+  if (tab.icon && tab.icon.indexOf('_II') < 0 !== !silence) {
+    api.icon.set(tab, tab.icon.replace(/(?:_II)?\.png/, (silence ? '_II' : '') + '.png'));
   }
 }
 
@@ -2496,7 +2496,7 @@ function clearSession() {
     unstore('recent_libraries');
     unstore('user_id');
     api.tabs.each(function (tab) {
-      api.icon.set(tab, 'icons/k_gray.png');
+      api.icon.set(tab, 'icons/url_gray.png');
       api.tabs.emit(tab, 'me_change', null);
       delete tab.nUri;
       delete tab.count;
