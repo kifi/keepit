@@ -285,8 +285,10 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         editMode: '=',
+        editOptions: '&',
         toggleEdit: '=',
-        updateSelectedCount: '&'
+        updateSelectedCount: '&',
+        selectedKeepsFilter: '&'
       },
       controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
@@ -324,9 +326,15 @@ angular.module('kifi')
           }
         }
 
+        function getSelectedKeeps() {
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var filter = scope.selectedKeepsFilter();
+          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
+        }
+
         function copyToLibrary () {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedKeeps = getSelectedKeeps();
           var selectedLibrary = scope.librarySelection.library;
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
@@ -374,6 +382,20 @@ angular.module('kifi')
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
+
+        // set default edit-mode options if it's not set by parent
+        scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
+          return {
+            // TODO draggable can be default to true when that is fixed
+            draggable: false,
+            actions: {
+              bulkUnkeep: true,
+              copyToLibrary: true,
+              moveToLibrary: true,
+              editTags: true
+            }
+          };
+        };
 
 
         //

@@ -45,6 +45,7 @@ angular.module('kifi')
         library: '=',
         libraries: '=',
         editMode: '=',
+        editOptions: '&',
         toggleSelect: '&',
         isSelected: '&',
         keepCallback: '&',

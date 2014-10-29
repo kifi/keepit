@@ -9,15 +9,15 @@
       <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || selection.getSelected(keeps).length === 0}">
         <div ng-if="!librariesEnabled" class="kf-keep-selection-option"><span ng-click="togglePrivate(keeps)">Make {{selectionPrivacyState(keeps)}}</span></div>
 
-        <div ng-if="librariesEnabled" class="kf-keep-selection-option copy-to-library">
+        <div ng-if="librariesEnabled && editOptions().actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
           <span kf-keep-to-library-widget ng-click="showWidget()">Copy to library</span>
         </div>
-        <div ng-if="librariesEnabled" class="kf-keep-selection-option move-to-library">
+        <div ng-if="librariesEnabled && editOptions().actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
           <span kf-keep-to-library-widget ng-click="showWidget()">Move to library</span>
         </div>
 
-        <div class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
-        <div class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
+        <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
+        <div ng-if="editOptions().actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>
       </div>
       <div class="kf-keep-selection-tags" ng-if="editingTags">
@@ -28,10 +28,10 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
     <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
-      keep="keep" library="library" me="me" libraries="libraries" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode"></div>
+      keep="keep" library="library" me="me" libraries="libraries" toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)" drag-keeps="dragKeeps(keep, event, mouseX, mouseY, selection)" stop-dragging-keeps="stopDraggingKeeps()" edit-mode="editMode" edit-options="editOptions()"></div>
     <div class="kf-shadow-dragged-keeps" ng-class="{ two: draggedTwo(), three: draggedThree(), more: draggedMore() }">
       <span class="kf-shadow-keep-first" ng-show="data.draggedKeeps.length >= 1">
-        <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[0])" keep="data.draggedKeeps[0]" edit-mode="editMode"></div>
+        <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[0])" keep="data.draggedKeeps[0]" edit-mode="editMode" edit-options="editOptions()"></div>
       </span>
       <span class="kf-shadow-keep-second" ng-show="data.draggedKeeps.length === 3">
         <div kf-keep-card is-selected="!!selection.isSelected(data.draggedKeeps[1])" keep="data.draggedKeeps[1]" edit-mode="editMode"></div>

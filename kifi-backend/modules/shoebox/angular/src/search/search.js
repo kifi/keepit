@@ -12,6 +12,7 @@ angular.module('kifi')
     var filter = $routeParams.f || 'm';
     var lastResult = null;
     var selectedCount = 0;
+    var hitCounter = 0;
 
     $scope.resultKeeps = [];
     $scope.resultTotals = {
@@ -69,6 +70,10 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+    $scope.selectedKeepsFilter = function (hits) {
+      return _.flatten(_.pluck(hits, 'keeps'));
+    };
+
     $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading) {
         return;
@@ -161,6 +166,13 @@ angular.module('kifi')
 
     $scope.updateSelectedCount = function (numSelected) {
       selectedCount = numSelected;
+    };
+
+    $scope.editOptions = {
+      draggable: false,
+      actions: {
+        copyToLibrary: true
+      }
     };
 
 
