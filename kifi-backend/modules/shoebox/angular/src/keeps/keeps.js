@@ -333,6 +333,10 @@ angular.module('kifi')
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
             libraryService.fetchLibrarySummaries(true);
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
@@ -353,6 +357,10 @@ angular.module('kifi')
             libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             scope.selection.unselectAll();
+          })['catch'](function () {
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html'
+            });
           });
         }
 
