@@ -89,6 +89,6 @@ class KifiSearchNonUserImpl(
 
     engine.explain(uriId.id, collector, keepScoreSource, articleScoreSource)
 
-    Explanation(query, labels, collector.getDetails(), collector.getBoostValues())
+    Explanation(query, labels, collector.rawScore, collector.getDetails(), collector.getBoostValues())
   }
 }
