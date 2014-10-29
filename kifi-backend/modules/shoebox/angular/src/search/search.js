@@ -25,9 +25,6 @@ angular.module('kifi')
     // Scope data.
     //
     function init() {
-      if (query === $routeParams.q || '') {
-        return;
-      }
       query = $routeParams.q || '';
       filter = $routeParams.f || 'm';
       if (!query) { // No query or blank query.
