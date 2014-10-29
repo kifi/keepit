@@ -70,26 +70,25 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       }
     }
     "validate library names" in {
-      val name1 = "asdf1234"
-      val name2 = "q@#$%^&*().,/][:;\"~`--___+= "
-      val name3 = ""
-      Library.isValidName(name1) === true
-      Library.isValidName(name2) === false
-      Library.isValidName(name3) === false
+      Library.isValidName("asdf1234") === true
+      Library.isValidName("q@#$%^&*().,/][:;\"~`--___+= ") === false
+      Library.isValidName("") === false
     }
 
     "validate library slugs" in {
-      val str1 = "asdf1234"
-      val str2 = "asdf+qwer"
-      val str3 = "asdf 1234"
-      val str4 = ""
-      LibrarySlug.isValidSlug(str1) === true
-      LibrarySlug.isValidSlug(str2) === true
-      LibrarySlug.isValidSlug(str3) === false
-      LibrarySlug.isValidSlug(str4) === false
+      LibrarySlug.isValidSlug("asdf1234") === true
+      LibrarySlug.isValidSlug("asdf+qwer") === true
+      LibrarySlug.isValidSlug("asdf 1234") === false
+      LibrarySlug.isValidSlug("") === false
+    }
 
-      val slug1 = LibrarySlug(str1)
-      slug1.value === str1
+    "generate valid library slugs" in {
+      val slug1 = LibrarySlug.generateFromName("-- Foo, Bar & Baz! --")
+      slug1 === "foo-bar-baz"
+      LibrarySlug.isValidSlug(slug1) === true
+      val slug2 = LibrarySlug.generateFromName("A Super Long Library Name That Surely Never Would Be Actually Chosen")
+      slug2 === "a-super-long-library-name-that-surely-never-would"
+      LibrarySlug.isValidSlug(slug2) === true
     }
 
     "reflect latest display naming scheme" in {

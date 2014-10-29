@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 
 import scala.concurrent.duration._
@@ -320,4 +321,9 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def userHashtagTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserHashtagTypeaheadCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def StateTokenCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new StateTokenCache(stats, accessLog, (outerRepo, 2 hours))
+
 }

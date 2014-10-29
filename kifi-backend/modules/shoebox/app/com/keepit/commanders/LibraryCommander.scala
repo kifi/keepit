@@ -194,13 +194,13 @@ class LibraryCommander @Inject() (
       library.id.get -> keepsCommanderProvider.get.decorateKeepsIntoKeepInfos(viewerUserIdOpt, keeps)
     }.toMap
 
-    val memberIdsByLibraryId = libraries.map { library =>
+    val followerIdsByLibraryId = libraries.map { library =>
       val (collaborators, followers, _) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
       library.id.get -> (collaborators ++ followers).map(_.userId)
     }.toMap
 
     val usersById = {
-      val allUsersShown = libraries.flatMap { library => memberIdsByLibraryId(library.id.get) :+ library.ownerId }.toSet
+      val allUsersShown = libraries.flatMap { library => followerIdsByLibraryId(library.id.get) :+ library.ownerId }.toSet
       db.readOnlyReplica { implicit s => basicUserRepo.loadAll(allUsersShown) }
     }
 
@@ -217,7 +217,7 @@ class LibraryCommander @Inject() (
       futureKeepInfosByLibraryId(lib.id.get).map { keepInfos =>
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(lib.id.get)
         val owner = usersById(lib.ownerId)
-        val members = memberIdsByLibraryId(lib.id.get).map(usersById(_))
+        val followers = followerIdsByLibraryId(lib.id.get).map(usersById(_))
         FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -227,7 +227,7 @@ class LibraryCommander @Inject() (
           url = Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
           kind = lib.kind,
           visibility = lib.visibility,
-          followers = members,
+          followers = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,

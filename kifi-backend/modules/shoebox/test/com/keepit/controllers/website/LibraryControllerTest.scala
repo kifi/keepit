@@ -244,7 +244,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
           user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
@@ -475,8 +475,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
 
         val (user1, user2, user3, lib1, lib2) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("aaron@kifi.com"))))
+          val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("test"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("bulba@yahoo.com"))))
           val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))

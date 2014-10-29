@@ -629,8 +629,10 @@ api.port.on({
   create_library: function (data, respond) {
     ajax('POST', '/ext/libraries', data, function (library) {
       loadLibraries(function (libraries) {
-        libraries.push(library);
-        storeLibraries(libraries);
+        if (!libraries.some(idIs(library.id))) {
+          libraries.push(library);
+          storeLibraries(libraries);
+        }
       });
       respond(library);
       notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
@@ -2532,13 +2534,10 @@ api.errors.wrap(authenticate.bind(null, function() {
     log('[main] fresh install');
     var baseUri = webBaseUri();
     var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
-    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: baseUri});
     if (tab) {
       api.tabs.select(tab.id);
-      api.tabs.navigate(tab.id, baseUri);
-      timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
     } else {
-      api.tabs.open(baseUri, await);
+      api.tabs.open(baseUri);
     }
   }
 }, 3000))();

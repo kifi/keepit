@@ -1,8 +1,8 @@
 package com.keepit.search.engine;
 
-import com.keepit.search.util.join.Joiner;
+import com.keepit.search.util.join.AggregationContext;
 
-abstract public class ScoreContextBase extends Joiner {
+abstract public class ScoreContextBase extends AggregationContext {
   // This class is defined so that we can avoid the accessor method generation by Scala compiler for fields below.
   public int visibility = 0;
   public long secondaryId = -1; // secondary id (keep id for kifi search)

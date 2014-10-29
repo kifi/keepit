@@ -84,9 +84,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime]
   )(Library.apply, unlift(Library.unapply))
 
-  val maxNameLength = 200
   def isValidName(name: String): Boolean = {
-    (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
+    name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
   def formatLibraryPath(ownerUsername: Username, ownerExternalId: ExternalId[User], slug: LibrarySlug): String = {
@@ -122,13 +121,13 @@ object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
 
-  val maxSlugLength = 50
+  val MaxLength = 50
   def isValidSlug(slug: String): Boolean = {
-    slug != "" && !slug.contains(' ') && slug.length < maxSlugLength
+    slug != "" && !slug.contains(' ') && slug.length <= MaxLength
   }
 
   def generateFromName(name: String): String = {
-    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "").replaceAll("^-", "") // taken from generateSlug() in  manageLibrary.js
+    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "-").replaceAll("^-", "").take(MaxLength).replaceAll("-$", "") // taken from generateSlug() in  manageLibrary.js
   }
 }
 
