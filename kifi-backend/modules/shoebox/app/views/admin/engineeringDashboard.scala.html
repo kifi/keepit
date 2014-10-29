@@ -61,10 +61,11 @@
   };
 
   var baseTargets = ['alias(drawAsInfinite(stats.counters.search.deploys.count),"Search Deploys")','alias(drawAsInfinite(stats.counters.shoebox.deploys.count),"Shoebox Deploys")', 'alias(drawAsInfinite(stats.counters.eliza.deploys.count),"Eliza Deploys")'];
+  var searchBaseTargets = ['alias(drawAsInfinite(stats.counters.search.deploys.count),"Search Deploys")'];
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat('alias(summarize(stats.counters.search.extSearch.total.count,"1h"),"Searches per Hour")').concat(['alias(secondYAxis(stats.timers.search.routes.search.get.mean_99),"99% Mean Time (ms) S")', 'alias(secondYAxis(stats.timers.shoebox.routes.tsearch.get.mean_99),"99% Mean Time (ms) T")']);
+  var searchTargets = searchBaseTargets.concat('alias(summarize(scale(stats.counters.search.extSearch.total.count, 10),"1h"),"Searches per Hour")').concat('alias(secondYAxis(stats.timers.search.routes.search.get.mean_99),"99% Mean Time (ms)")');
   options.target = searchTargets;
   options.title = "Searches per Hour vs 99% Mean Time in Milliseconds";
   options.yMinRight = 0;

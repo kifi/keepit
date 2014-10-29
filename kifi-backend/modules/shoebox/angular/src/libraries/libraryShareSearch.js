@@ -128,7 +128,8 @@ angular.module('kifi')
               newResults.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
-                  result.isFollowing = !!result.membership;
+                  result.isInvited = !!result.lastInvitedAt;
+                  result.isFollowing = !!result.membership && !result.isInvited;
                   result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 

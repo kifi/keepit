@@ -30,13 +30,14 @@
   display: inline-block;
   vertical-align: top;
   margin-left: 6px;
-  width: 220px;
+  width: 224px;
+  height: 37px;
   line-height: 37px;
   position: relative;
 }
 .kifi-keep-box-title {
-  display: inline-block;
-  vertical-align: top;
+  position: absolute;
+  width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -46,7 +47,6 @@
   letter-spacing: .3px;
   transition: opacity @view-swipe-duration;
   &:not(:last-child) {
-    position: absolute;
     opacity: 0;
   }
 }
@@ -393,6 +393,35 @@
   padding: 20px 0;
   text-indent: 24px;
   color: @lib-color !important;
+}
+.kifi-keep-box-new-lib-name-error {
+  @bg-color: #f08382;
+  position: absolute;
+  margin: -7px 0 0 7px;
+  background: @bg-color;
+  padding: 6px 9px;
+  color: #fff;
+  border-radius: 4px;
+  transition: opacity .12s, -webkit-transform .12s;
+  transition: opacity .12s, transform .12s;
+  &:not(.kifi-showing) {
+    opacity: 0;
+    -webkit-transform: translate(0, -3px) scale(.8);
+    transform: translate(0, -3px) scale(.8);
+    transition-duration: .3s;
+  }
+  &:empty {
+    display: none;
+  }
+  &::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 24px;
+    border-color: transparent transparent @bg-color;
+    border-style: solid;
+    border-width: 0 6px 6px;
+  }
 }
 .kifi-keep-box-new-lib-visibility {
   padding: 16px 24px;

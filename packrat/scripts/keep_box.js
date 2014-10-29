@@ -564,7 +564,7 @@ var keepBox = keepBox || (function () {
     swipeTo($view);
   }
 
-  // Returns a promise the resolves with the first suitable image identified (an IMG element).
+  // Returns a promise that resolves with the first suitable image identified (an IMG element).
   // Additional images may be appended later.
   function findImages(images) {
     var srcs = {};
@@ -631,7 +631,11 @@ var keepBox = keepBox || (function () {
   }
 
   function appendBgImagesInStylesheet(arr, ss) {
-    var rules = ss.rules;
+    var rules;
+    try {
+      rules = ss.cssRules;
+    } catch (e) {  // SecurityError
+    }
     if (rules && rules.length) {
       var baseUrl = ss.href;
       if (!baseUrl || baseUrl.lastIndexOf('http', 0) === 0) {  // no extension resource: stylesheets
@@ -882,7 +886,11 @@ var keepBox = keepBox || (function () {
     var $name = $view.find('.kifi-keep-box-new-lib-name');
     var $vis = $view.find('.kifi-keep-box-new-lib-visibility');
     var name = $name.val().trim();
-    if (name) {
+    if (!name) {
+      showError('Please type a name for your new library');
+    } else if (/[\/"]/.test(name)) {
+      showError('No slashes or quotes, please');
+    } else {
       $name.prop('disabled', true);
       $btn.removeAttr('href');
       var deferred = Q.defer();
@@ -905,8 +913,20 @@ var keepBox = keepBox || (function () {
       });
       progress($vis, deferred.promise).done(function (library) {
         showKeep(library, true);
+      }, function (reason) {
+        $name.prop('disabled', false).focus().select();
+        $btn.prop('href', 'javascript:');
+        showError('Hrm, maybe try a different name?');
       });
-    } else {
+    }
+
+    function showError(text) {
+      var $err = $view.find('.kifi-keep-box-new-lib-name-error').off('transitionend');
+      clearTimeout($err.data('t'));
+      $err.text(text).layout().addClass('kifi-showing');
+      $err.data('t', setTimeout(function () {
+        $err.one('transitionend', $.fn.text.bind($err, '')).removeClass('kifi-showing');
+      }, 2000));
       $name.focus().select();
     }
   }
