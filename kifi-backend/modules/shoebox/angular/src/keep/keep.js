@@ -957,7 +957,6 @@ angular.module('kifi')
               libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
             });
           } else {
-            var keepInfo = { title: scope.keep.title, url: scope.keep.url };
             keepActionService.copyToLibrary([scope.keep.id], scope.librarySelection.library.id).then(function (result) {
               if (result.successes > 0) {
                 return keepActionService.fetchFullKeepInfo(scope.keep).then(function (fullKeep) {
