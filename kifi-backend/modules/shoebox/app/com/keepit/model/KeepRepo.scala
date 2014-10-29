@@ -50,9 +50,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
-  // Do not use:
-  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
+  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
 }
 
 @Singleton
@@ -129,17 +128,6 @@ class KeepRepoImpl @Inject() (
 
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel.clean())
-  }
-
-  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep = {
-    val target = getCompiled(model.id.get)
-    val count = target.update(model)
-    invalidateCache(model)
-    if (count != 1) {
-      deleteCache(model)
-      throw new IllegalStateException(s"Updating $count models of [${model.toString}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
-    }
-    model
   }
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
@@ -442,5 +430,10 @@ class KeepRepoImpl @Inject() (
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.createdAt > since) yield b).sortBy(_.createdAt asc).take(max).list
+  }
+
+  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
+    import StaticQuery.interpolation
+    sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.created_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 }

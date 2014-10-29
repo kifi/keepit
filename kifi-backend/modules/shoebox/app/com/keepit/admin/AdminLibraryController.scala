@@ -5,12 +5,13 @@ import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
 import com.keepit.model._
 import play.api.mvc.AnyContent
 import views.html
+import com.keepit.common.time._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -23,6 +24,8 @@ case class LibraryStatistic(
 
 case class LibraryPageInfo(
   libraryStats: Seq[LibraryStatistic],
+  topDailyFollower: Seq[(Int, LibraryStatistic)],
+  topDailyKeeps: Seq[(Int, LibraryStatistic)],
   libraryCount: Int,
   page: Int,
   pageSize: Int)
@@ -39,6 +42,7 @@ class AdminLibraryController @Inject() (
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
     db: Database,
+    clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
@@ -72,19 +76,38 @@ class AdminLibraryController @Inject() (
     }
   }
 
+  private def buildLibStatistic(library: Library)(implicit session: RSession): LibraryStatistic = {
+    val owner = userRepo.get(library.ownerId)
+    val keepsCount = keepRepo.getCountByLibrary(library.id.get)
+    val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
+    val invites = libraryInviteRepo.getWithLibraryId(library.id.get)
+    LibraryStatistic(library, owner, keepsCount, memberships.length, invites.length)
+  }
+
   def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30
-    val (stats, totalCount) = db.readOnlyReplica { implicit session =>
-      val stats = libraryRepo.page(page, size = pageSize).filter(_.visibility != LibraryVisibility.SECRET).map { lib =>
-        val owner = userRepo.get(lib.ownerId)
-        val keepsCount = keepRepo.getCountByLibrary(lib.id.get)
-        val memberships = libraryMembershipRepo.getWithLibraryId(lib.id.get)
-        val invites = libraryInviteRepo.getWithLibraryId(lib.id.get)
-        LibraryStatistic(lib, owner, keepsCount, memberships.length, invites.length)
-      }
-      (stats, libraryRepo.count)
+    val topListSize = 15
+    val (stats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
+      val topDailyFollower = if (page == 0) {
+        libraryMembershipRepo.mostMembersSince(topListSize, clock.now().minusHours(24)).map {
+          case (libId, count) =>
+            val stat = buildLibStatistic(libraryRepo.get(libId))
+            (count, stat)
+        }
+      } else Seq()
+
+      val topDailyKeeps = if (page == 0) {
+        keepRepo.librariesWithMostKeepsSince(topListSize, clock.now().minusHours(24)).map {
+          case (libId, count) =>
+            val stat = buildLibStatistic(libraryRepo.get(libId))
+            (count, stat)
+        }
+      } else Seq()
+
+      val stats = libraryRepo.pagePublished(page, size = pageSize).map(buildLibStatistic)
+      (stats, topDailyFollower, topDailyKeeps, libraryRepo.countPublished)
     }
-    val info = LibraryPageInfo(libraryStats = stats, libraryCount = totalCount, page = page, pageSize = pageSize)
+    val info = LibraryPageInfo(libraryStats = stats, topDailyFollower = topDailyFollower, topDailyKeeps = topDailyKeeps, libraryCount = totalPublishedCount, page = page, pageSize = pageSize)
     Ok(html.admin.libraries(info))
   }
 
@@ -194,40 +217,6 @@ class AdminLibraryController @Inject() (
     }
     log.info("updating changed users")
     Redirect(request.request.referer)
-  }
-
-  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminUserPage { implicit request =>
-    val PAGE_SIZE = 200
-    for (page <- startPage to endPage) {
-      db.readWrite { implicit session =>
-        val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
-        keeps.groupBy(_.userId).foreach {
-          case (userId, keepsAllFromOneUser) =>
-            val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
-            keepsAllFromOneUser.map { keep =>
-              if (keep.isPrivate && (keep.visibility != secret.visibility || keep.libraryId != Some(secret.id.get))) {
-                log.info(s"[lib-migrate:priv] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
-                if (!readOnly) {
-                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(secret.id.get), visibility = secret.visibility))
-                }
-              } else if (!keep.isPrivate && (keep.visibility != main.visibility || keep.libraryId != Some(main.id.get))) {
-                log.info(s"[lib-migrate:publ] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
-                if (!readOnly) {
-                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
-                }
-              } else if (keep.isPrivate != keep.isPrivate) {
-                log.info(s"[lib-migrate:erro] something wrong ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
-              } else {
-                log.info(s"[lib-migrate:okay] It's good ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
-              }
-            }
-            log.info(s"[lib-migrate] Updated batch of ${keepsAllFromOneUser.length} keeps for userId $userId")
-        }
-      }
-    }
-
-    Ok
-
   }
 
 }
