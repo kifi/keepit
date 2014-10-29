@@ -10,9 +10,23 @@ trait OAuth2ConfigurationModule extends ScalaModule {
 object OAuth2Providers {
   // fb only for now; more work required
   val FB = "facebook"
-  val fbAuthUrl = "https://www.facebook.com/dialog/oauth"
-  val fbAccessTokenUrl = "https://graph.facebook.com/oauth/access_token"
-  val fbScope = "email"
+  val GOOG = "google"
+
+  val fbConfigBuilder = OAuth2Configuration.build(
+    name = FB,
+    authUrl = "https://www.facebook.com/dialog/oauth",
+    accessTokenUrl = "https://graph.facebook.com/oauth/access_token",
+    scope = "email"
+  )
+
+  val googConfigBuilder = OAuth2Configuration.build(
+    name = GOOG,
+    authUrl = "https://accounts.google.com/o/oauth2/auth",
+    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
+    scope = "email https://www.googleapis.com/auth/contacts.readonly"
+  )
+
+  val SUPPORTED = Seq(FB, GOOG)
 }
 
 import OAuth2Providers._
@@ -24,16 +38,8 @@ case class DevOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
   @Singleton
   def getOAuth2Configuration(config: Configuration): OAuth2Configuration = {
     val providerMap = Map(
-      FB ->
-        OAuth2ProviderConfiguration(
-          name = FB,
-          authUrl = fbAuthUrl,
-          accessTokenUrl = fbAccessTokenUrl,
-          exchangeTokenUrl = Some(fbAccessTokenUrl),
-          clientId = "530357056981814",
-          clientSecret = "cdb2939941a1147a4b88b6c8f3902745",
-          scope = fbScope
-        )
+      FB -> fbConfigBuilder("530357056981814", "cdb2939941a1147a4b88b6c8f3902745"),
+      GOOG -> googConfigBuilder("991651710157.apps.googleusercontent.com", "vt9BrxsxM6iIG4EQNkm18L-m")
     )
     OAuth2Configuration(providerMap)
   }
@@ -47,16 +53,8 @@ case class ProdOAuth2ConfigurationModule() extends OAuth2ConfigurationModule {
   @Singleton
   def getOAuth2Configuration(config: Configuration): OAuth2Configuration = {
     val providerMap = Map(
-      FB ->
-        OAuth2ProviderConfiguration(
-          name = FB,
-          authUrl = fbAuthUrl,
-          accessTokenUrl = fbAccessTokenUrl,
-          exchangeTokenUrl = Some(fbAccessTokenUrl),
-          clientId = "104629159695560",
-          clientSecret = "352415703e40e9bb1b0329273fdb76a9",
-          scope = fbScope
-        )
+      FB -> fbConfigBuilder("104629159695560", "352415703e40e9bb1b0329273fdb76a9"),
+      GOOG -> googConfigBuilder("572465886361.apps.googleusercontent.com", "heYhp5R2Q0lH26VkrJ1NAMZr")
     )
     OAuth2Configuration(providerMap)
   }

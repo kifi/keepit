@@ -5,6 +5,7 @@ import com.keepit.common.cache._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
 import java.net.{ URLDecoder, URLEncoder }
+import com.keepit.common.oauth2.{ OAuth2Configuration }
 import com.kifi.macros.json
 import play.api.mvc._
 import play.api.libs.ws.WS
@@ -26,29 +27,7 @@ import scala.util.{ Try, Failure, Success }
 import play.api.libs.ws.WSResponse
 import Logging._
 
-case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
-
 case class OAuth2CommonConfig(approvalPrompt: String)
-
-object OAuth2Providers { // TODO: wire-in (securesocial) config
-  val GOOGLE = OAuth2Config(
-    provider = "google",
-    authUrl = "https://accounts.google.com/o/oauth2/auth",
-    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
-    clientId = "572465886361.apps.googleusercontent.com",
-    clientSecret = "heYhp5R2Q0lH26VkrJ1NAMZr",
-    scope = "email https://www.googleapis.com/auth/contacts.readonly"
-  )
-  val FACEBOOK = OAuth2Config(
-    provider = "facebook",
-    authUrl = "https://www.facebook.com/dialog/oauth",
-    accessTokenUrl = "https://graph.facebook.com/oauth/access_token",
-    clientId = "186718368182474",
-    clientSecret = "36e9faa11e215e9b595bf82459288a41",
-    scope = "email"
-  )
-  val SUPPORTED = Map("google" -> GOOGLE, "facebook" -> FACEBOOK)
-}
 
 case class OAuth2AccessTokenRequest(
   clientId: String,
@@ -97,7 +76,6 @@ class StateTokenCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlu
   extends JsonCacheImpl[StateTokenKey, StateToken](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object OAuth2AccessTokenResponse {
-
   val EMPTY = OAuth2AccessTokenResponse("")
 
   implicit val format = (
@@ -119,16 +97,18 @@ object OAuth2Controller {
 class OAuth2Controller @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
+    val userActionsHelper: UserActionsHelper,
     stateTokenCache: StateTokenCache,
     abookServiceClient: ABookServiceClient,
-    val userActionsHelper: UserActionsHelper,
+    oauth2Config: OAuth2Configuration,
     oauth2CommonConfig: OAuth2CommonConfig) extends UserActions with ShoeboxServiceController with Logging {
 
-  import OAuth2Providers._
   def start(provider: String, stateTokenOpt: Option[String], approvalPromptOpt: Option[String]) = UserAction { implicit request =>
     implicit val prefix = LogPrefix(s"oauth2.start(${request.userId},$provider,$stateTokenOpt,$approvalPromptOpt)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
-    val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE) // may enforce stricter check
+    val providerConfig = oauth2Config.getProviderConfig(provider).getOrElse {
+      throw new IllegalArgumentException(s"[OAuth2Controller.start] provider=$provider not supported")
+    }
     val authUrl = providerConfig.authUrl
     stateTokenOpt match {
       case None =>
@@ -159,7 +139,9 @@ class OAuth2Controller @Inject() (
     val redirectHome = Redirect(com.keepit.controllers.website.routes.HomeController.home)
     val redirectInvite = Redirect("/invite")
 
-    val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
+    val providerConfig = oauth2Config.getProviderConfig(provider) getOrElse {
+      throw new IllegalArgumentException(s"[OAuth2Controller.callback] provider=$provider not supported")
+    }
     val stateOpt = request.queryString.get("state").flatMap(_.headOption)
     val codeOpt = request.queryString.get("code").flatMap(_.headOption)
 
@@ -261,7 +243,9 @@ class OAuth2Controller @Inject() (
 
   def accessTokenCallback(provider: String) = Action(parse.tolerantJson) { implicit request =>
     log.info(s"[oauth2.accessTokenCallback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
-    val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
+    val providerConfig = oauth2Config.getProviderConfig(provider) getOrElse {
+      throw new IllegalArgumentException(s"[OAuth2Controller.accessTokenCallback] provider=$provider not supported")
+    }
     val json = request.body
     log.info(s"[oauth2.accessTokenCallback] provider=$provider json=$json")
     // TODO: persist
@@ -295,14 +279,16 @@ class OAuth2Controller @Inject() (
               resolve(None)
             }
             case Some(refreshTk) => {
-              val providerConfig = OAuth2Providers.SUPPORTED.get("google").get
+              val providerConfig = oauth2Config.getProviderConfig(provider.get).getOrElse {
+                throw new IllegalArgumentException(s"[OAuth2Controller.refreshContactsHelper] provider=$provider not supported")
+              }
               val params = Map(
                 "client_id" -> providerConfig.clientId,
                 "client_secret" -> providerConfig.clientSecret,
                 "refresh_token" -> refreshTk,
                 "grant_type" -> "refresh_token"
               )
-              val call = WS.url(GOOGLE.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
+              val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
               val tokenRespOptF = call map { resp =>
                 if (resp.status == OK) {
                   val tokenResp = resp.json.asOpt[OAuth2AccessTokenResponse]

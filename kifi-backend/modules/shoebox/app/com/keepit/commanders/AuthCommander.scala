@@ -15,7 +15,7 @@ import com.keepit.common.performance.timing
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.core.{ OAuth2Providers, AuthHelper }
+import com.keepit.controllers.core.{ AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
