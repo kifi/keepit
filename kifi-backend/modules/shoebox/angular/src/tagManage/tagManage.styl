@@ -14,7 +14,7 @@
   padding: 18px 32px 20px 32px
 
 .manage-tag-container
-  background-color: #ffffff
+  background-color: #fff
   box-shadow: defaultBoxShadow
   border: defaultBorder
   border-radius: 3px
@@ -42,7 +42,7 @@
   box-sizing: border-box
   border: 1px solid #e6e6e6
   border-radius: 4px
-  background: #eeeeee
+  background: #eee
   font-weight: 200
   cursor: text
   transition: all .16s
@@ -97,7 +97,7 @@
   width: 85px
   border: 1px solid #c1c1c1
   border-radius: 4px
-  background-color: #ffffff
+  background-color: #fff
   border-color: #c1c1c1
   font-weight: 200
   font-size: 12px
@@ -106,8 +106,8 @@
   cursor: pointer
 
   &.on
-    background-color: #333333
-    border-color: #333333
+    background-color: #333
+    border-color: #333
 
 
 ////// ROWS OF TAGS //////
@@ -126,8 +126,11 @@
   display: inline-block
   width: 50%
 
-.manage-tag-row-name-section a
-  color: #333333
+.manage-tag-row-name
+  color: #333
+
+  &.selected-tag
+    background-color: #eee
 
 .manage-tag-row-name
   float: left
@@ -144,8 +147,8 @@
   cursor: pointer
 
 .manage-tag-row-name:hover
-  background-color: #eeeeee
-  border-color: #333333
+  background-color: #eee
+  border-color: #333
 
 .manage-tag-row-num-keeps-section
   position: relative
