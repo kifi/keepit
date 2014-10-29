@@ -944,6 +944,7 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.clickAction = function () {
+          // Unkeep.
           if (scope.librarySelection.library && scope.librarySelection.library.keptTo) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
             keepActionService.unkeepFromLibrary(scope.librarySelection.library.id, keepToUnkeep.id).then(function () {
@@ -955,7 +956,10 @@ angular.module('kifi')
               }
 
               libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
+              scope.$emit('keepRemoved', { url: scope.keep.url }, scope.librarySelection.library);
             });
+
+          // Keep.
           } else {
             keepActionService.copyToLibrary([scope.keep.id], scope.librarySelection.library.id).then(function (result) {
               if (result.successes > 0) {
@@ -970,7 +974,7 @@ angular.module('kifi')
                   var keep = new keepDecoratorService.Keep(fullKeep);
                   keep.buildKeep(keep);
                   keep.makeKept();
-                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep);
+                  scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep, scope.librarySelection.library);
                 });
               }
             });
