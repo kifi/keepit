@@ -280,7 +280,8 @@ class UrbanAirshipImpl @Inject() (
   private def checkResponse(res: Future[ClientResponse], device: Device, notification: PushNotification): Unit = {
     res.onSuccess {
       case clientRes =>
-        log.info(s"successfuly sent notification ${notification.id} to $device: ${clientRes.body}")
+        if (clientRes.status != 200) airbreak.notify(s"(on thread success) failure to send notification $notification to device $device: ${clientRes.body}")
+        else log.info(s"successfully sent notification ${notification.id} to $device: ${clientRes.body}")
     }
     res.onFailure {
       case error =>
