@@ -1,5 +1,6 @@
 @(indexInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], com.keepit.search.ReadableIndexInfo)],
-  totalSizeInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], String, String)])
+  totalSizeInfos: Seq[(Option[com.keepit.controllers.admin.ClusterMemberInfo], String, String)]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Index Infos") {
 
@@ -23,7 +24,7 @@
     }
   </table>
   <br><br>
-  
+
   <table class="table table-condensed table-striped">
     <thead>
       <th> ZK Id</th>

@@ -1,4 +1,4 @@
-@(tags: Seq[com.keepit.classify.DomainTag])
+@(tags: Seq[com.keepit.classify.DomainTag])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Domain Tags", stylesheets = List("admin_slider")) {
 <form class="domain-tags" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveDomainTags" method="POST">

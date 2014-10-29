@@ -1,4 +1,4 @@
-@(events: Seq[com.keepit.controllers.admin.ImportEvent])
+@(events: Seq[com.keepit.controllers.admin.ImportEvent])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Domain Import Events", stylesheets = List("admin_slider")) {
 <table class="table table-condensed table-striped">

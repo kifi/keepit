@@ -1,4 +1,4 @@
-@(electronicMails: Seq[com.keepit.common.mail.ElectronicMail], page: Int, count: Long, pageCount: Int)
+@(electronicMails: Seq[com.keepit.common.mail.ElectronicMail], page: Int, count: Long, pageCount: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>

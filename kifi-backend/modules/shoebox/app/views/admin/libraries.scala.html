@@ -1,4 +1,4 @@
-@(libraryData: com.keepit.controllers.admin.LibraryPageInfo)
+@(libraryData: com.keepit.controllers.admin.LibraryPageInfo)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.controllers.admin.routes
 
 @otherPagesRoute(page: Int) = {

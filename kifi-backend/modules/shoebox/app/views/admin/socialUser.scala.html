@@ -1,4 +1,4 @@
-@(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserBasicInfo], rawInfo: Option[SocialUserRawInfo])
+@(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserBasicInfo], rawInfo: Option[SocialUserRawInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @userWithSocialDisplay = {
   <span style="margin:2px">

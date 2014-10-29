@@ -1,4 +1,4 @@
-@(articles: Seq[(NormalizedURI, Option[com.keepit.search.Article])])
+@(articles: Seq[(NormalizedURI, Option[com.keepit.search.Article])])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 
 @scrapedArticle(uri: NormalizedURI) = {

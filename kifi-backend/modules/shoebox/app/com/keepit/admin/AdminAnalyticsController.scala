@@ -171,14 +171,14 @@ class AdminAnalyticsController @Inject() (
     promise.future
   }
 
-  def index() = AdminUserPage.async { request =>
+  def index() = AdminUserPage.async { implicit request =>
     heimdal.updateMetrics()
     userMetricData.map { dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     }
   }
 
-  def getEventDescriptors() = AdminUserPage.async { request =>
+  def getEventDescriptors() = AdminUserPage.async { implicit request =>
     Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
       heimdal.getEventDescriptors(companion).map { descriptors =>
         companion.typeCode -> descriptors

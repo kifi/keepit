@@ -1,6 +1,6 @@
 @(user: User,
   libraryList: Seq[(LibraryAccess, Library)]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <br/>

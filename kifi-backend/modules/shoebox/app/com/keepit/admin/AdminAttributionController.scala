@@ -26,7 +26,7 @@ class AdminAttributionController @Inject() (
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo) extends AdminUserActions {
 
-  def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminUserPage.async { request =>
+  def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminUserPage.async { implicit request =>
     val countF = heimdalClient.getDiscoveryCount()
     val pagedF = heimdalClient.getPagedKeepDiscoveries(page, size)
     val resF = for {
@@ -54,7 +54,7 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def rekeepsView(page: Int, size: Int, showImage: Boolean) = AdminUserPage.async { request =>
+  def rekeepsView(page: Int, size: Int, showImage: Boolean) = AdminUserPage.async { implicit request =>
     val countF = heimdalClient.getReKeepCount()
     val pagedF = heimdalClient.getPagedReKeeps(page, size)
     val resF = for {
@@ -93,7 +93,7 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def keepInfos(userId: Id[User]) = AdminUserPage { request =>
+  def keepInfos(userId: Id[User]) = AdminUserPage { implicit request =>
     val (u, clicks, rekeeps, rekepts) = getKeepInfos(userId)
     Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
@@ -124,21 +124,21 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def reKeepInfos(userId: Id[User]) = AdminUserPage.async { request =>
+  def reKeepInfos(userId: Id[User]) = AdminUserPage.async { implicit request =>
     getReKeepInfos(userId) map {
       case (u, n, rekeeps, users, counts) =>
         Ok(html.admin.myReKeeps(u, n, users zip counts map { case ((keep, users), counts) => (keep, counts._1, counts._2, users) })) // sanity check
     }
   }
 
-  def myReKeeps() = AdminUserPage.async { request =>
+  def myReKeeps() = AdminUserPage.async { implicit request =>
     getReKeepInfos(request.userId) map {
       case (u, n, rekeeps, users, counts) =>
         Ok(html.admin.myReKeeps(u, n, users map { case (keep, users) => (keep, users(1).size, users.flatten.length - 1, users) }))
     }
   }
 
-  def myKeepInfos() = AdminUserPage { request =>
+  def myKeepInfos() = AdminUserPage { implicit request =>
     val (u, clicks, rekeeps, rekepts) = getKeepInfos(request.userId)
     Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
@@ -173,7 +173,7 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def topReKeeps(degree: Int) = AdminUserPage.async { request =>
+  def topReKeeps(degree: Int) = AdminUserPage.async { implicit request =>
     getTopReKeeps(degree) map { grouped =>
       Ok(html.admin.topReKeeps(degree, grouped))
     }
