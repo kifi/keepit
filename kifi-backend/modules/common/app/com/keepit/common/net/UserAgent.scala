@@ -35,6 +35,7 @@ object UserAgent extends Logging {
   private val MAX_USER_AGENT_LENGTH = 512
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
   lazy val iosAppRe = """^(iKeefee)/(\d+\.\d+)(\.\d+) \(Device-Type: (.+), OS: (iOS) (.+)\)$""".r("appName", "appVersion", "buildSuffix", "device", "os", "osVersion")
+  lazy val androidAppRe = """(\w+)\/\d+\.\d+\.\d+ \(Linux; U; (Android) (\d+\.\d+\.\d+); (.+)? Build\/.+\)""".r("appName", "os", "osVersion", "device")
 
   private def normalize(str: String): String = if (str == "unknown") "" else str
   private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
@@ -46,6 +47,8 @@ object UserAgent extends Logging {
     userAgent match {
       case iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
+      case androidAppRe(appName, os, osVersion, device) =>
+        UserAgent(userAgent, appName, os, os, typeName = "Android", version = "unknown")
       case _ =>
         val agent: SFUserAgent = parser.parse(userAgent)
         UserAgent(trim(userAgent),
