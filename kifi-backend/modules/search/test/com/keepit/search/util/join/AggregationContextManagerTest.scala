@@ -4,24 +4,24 @@ import org.specs2.mutable._
 import scala.util.Random
 import scala.collection.mutable
 
-class JoinerManagerTest extends Specification {
+class AggregationContextManagerTest extends Specification {
 
-  class TstJoiner(result: mutable.HashSet[Long]) extends Joiner {
+  class TstAggregationContext(result: mutable.HashSet[Long]) extends AggregationContext {
     def join(reader: DataBufferReader): Unit = {}
     def flush(): Unit = { result += id }
     def clear(): Unit = {}
   }
 
-  class TstJoinerManager(initialCapacity: Int) extends JoinerManager(initialCapacity) {
+  class TstAggregationContextManager(initialCapacity: Int) extends AggregationContextManager(initialCapacity) {
     val result = new mutable.HashSet[Long]
     var numCreated = 0
-    def create(): Joiner = {
+    def create(): AggregationContext = {
       numCreated += 1
-      new TstJoiner(result)
+      new TstAggregationContext(result)
     }
   }
 
-  private def loadAndFlush(mgr: TstJoinerManager, numGets: Int, maxId: Int = Int.MaxValue): mutable.HashSet[Long] = {
+  private def loadAndFlush(mgr: TstAggregationContextManager, numGets: Int, maxId: Int = Int.MaxValue): mutable.HashSet[Long] = {
     val ids = new mutable.HashSet[Long]
     for (i <- 0 until numGets) {
       val id = rand.nextInt(maxId).toLong
@@ -34,39 +34,39 @@ class JoinerManagerTest extends Specification {
 
   val rand = new Random
 
-  "JoinerManager" should {
+  "AggregationManager" should {
 
-    "manage mapping from ids to joiners (small initial capacity, sparse ids)" in {
-      val mgr = new TstJoinerManager(0)
+    "manage mapping from ids to aggregation contexts (small initial capacity, sparse ids)" in {
+      val mgr = new TstAggregationContextManager(0)
       val ids = loadAndFlush(mgr, 100)
       mgr.numCreated == ids.size
       mgr.result === ids
     }
 
-    "manage mapping from ids to joiners (large initial capacity, sparse ids)" in {
-      val mgr = new TstJoinerManager(1000)
+    "manage mapping from ids to aggregation contexts (large initial capacity, sparse ids)" in {
+      val mgr = new TstAggregationContextManager(1000)
       val ids = loadAndFlush(mgr, 100)
       mgr.numCreated == ids.size
       mgr.result === ids
     }
 
-    "manage mapping from ids to joiners (small initial capacity, dense ids)" in {
-      val mgr = new TstJoinerManager(0)
+    "manage mapping from ids to aggregation contexts (small initial capacity, dense ids)" in {
+      val mgr = new TstAggregationContextManager(0)
       val ids = loadAndFlush(mgr, 100, 50)
       mgr.numCreated == ids.size
       mgr.result === ids
     }
 
-    "manage mapping from ids to joiners (large initial capacity, dense ids)" in {
-      val mgr = new TstJoinerManager(1000)
+    "manage mapping from ids to aggregation contexts (large initial capacity, dense ids)" in {
+      val mgr = new TstAggregationContextManager(1000)
       val ids = loadAndFlush(mgr, 100, 50)
       mgr.numCreated == ids.size
       mgr.result === ids
     }
 
-    "reuse joiners" in {
+    "reuse aggregation contexts" in {
       val ids = new mutable.HashSet[Long]
-      val mgr = new TstJoinerManager(0)
+      val mgr = new TstAggregationContextManager(0)
 
       for (j <- 0 until 10) {
         for (i <- 0 until 20) {
