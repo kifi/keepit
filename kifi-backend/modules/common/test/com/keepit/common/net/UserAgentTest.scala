@@ -186,5 +186,19 @@ class UserAgentTest extends Specification {
       agent.screenCanFitWebApp === false // TODO: make true
       agent.isOldIE === false
     }
+
+    "parse from android app" in {
+      val str = "Dalvik/1.6.0 (Linux; U; Android 4.4.2; SGH-I337M Build/KOT49H)"
+      val agent = UserAgent(str)
+      agent === UserAgent(str, "Dalvik", "Android", "Android", "Android", "unknown")
+      agent.isMobile === true
+      agent.canRunExtensionIfUpToDate === false
+      agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === true
+      agent.isIphone === false
+      agent.isAndroid === true
+      agent.screenCanFitWebApp === false
+      agent.isOldIE === false
+    }
   }
 }
