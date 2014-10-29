@@ -202,8 +202,12 @@ class KeepInterner @Inject() (
     val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
-        if (bookmark.isActive && bookmark.inDisjointLib) // invalidate if keep URI is active in a system library
+        if (bookmark.isActive && bookmark.inDisjointLib && bookmark.libraryId.get != library.id.get) {
+          // invalidate if keep URI is active in a system library
           countByLibraryCache.remove(CountByLibraryKey(bookmark.libraryId.get))
+          countByLibraryCache.remove(CountByLibraryKey(library.id.get))
+        }
+
         val savedKeep = bookmark.copy(
           title = title orElse bookmark.title orElse uri.title,
           state = KeepStates.ACTIVE,
