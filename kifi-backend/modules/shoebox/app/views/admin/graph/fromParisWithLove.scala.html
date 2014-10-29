@@ -1,7 +1,7 @@
 @(user: com.keepit.model.User,
   timing: scala.util.Try[Long],
   uris: Seq[(com.keepit.model.NormalizedURI, Int)]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import scala.util.{Success, Failure}
 

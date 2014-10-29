@@ -1,4 +1,4 @@
-@(domain: Option[String], tags: Seq[(String, Option[Boolean])])
+@(domain: Option[String], tags: Seq[(String, Option[Boolean])])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Domain Classifications", stylesheets = List("admin_slider")) {
   <form action="" method="get">

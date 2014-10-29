@@ -2,7 +2,9 @@
   currentVersion: com.keepit.common.service.ServiceVersion,
   compilationTime: String, started: String, errorCount: Int,
   recentErrors: Seq[com.keepit.common.healthcheck.AirbrakeError],
-  cacheStats: Seq[(String, Int, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)
+  cacheStats: Seq[(String, Int, Int, Int, Int)],
+  totalHits: Int, totalMisses: Int, totalSets: Int
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(currentService + " service") {
    <table class="table table-bordered">

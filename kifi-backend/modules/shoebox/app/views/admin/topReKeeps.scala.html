@@ -1,4 +1,4 @@
-@(n:Int, grouped:Seq[(NormalizedURI, Seq[(Keep, Seq[Seq[User]])])])
+@(n:Int, grouped:Seq[(NormalizedURI, Seq[(Keep, Seq[Seq[User]])])])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Top ReKeeps") {
 

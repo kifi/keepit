@@ -1,4 +1,4 @@
-@(tuples:Seq[(NormalizedURI, Option[String], Option[String])])
+@(tuples:Seq[(NormalizedURI, Option[String], Option[String])])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Screenshot/Image Comparison") {
   <table class="table table-striped">

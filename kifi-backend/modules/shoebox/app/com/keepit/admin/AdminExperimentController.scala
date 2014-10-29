@@ -26,7 +26,7 @@ class AdminExperimentController @Inject() (
     db: Database,
     generatorRepo: ProbabilisticExperimentGeneratorRepo) extends AdminUserActions {
 
-  def overview = AdminUserPage { request =>
+  def overview = AdminUserPage { implicit request =>
     val (totalUserCount, experimentsWithCount) = db.readOnlyMaster { implicit session =>
       (userRepo.countIncluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED),
         experimentRepo.getDistinctExperimentsWithCounts().toMap)

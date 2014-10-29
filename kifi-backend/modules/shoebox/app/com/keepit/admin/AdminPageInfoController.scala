@@ -15,14 +15,14 @@ class AdminPageInfoController @Inject() (val userActionsHelper: UserActionsHelpe
   uriRepo: NormalizedURIRepo)
     extends AdminUserActions {
 
-  def pageInfo(id: Id[PageInfo]) = AdminUserPage { request =>
+  def pageInfo(id: Id[PageInfo]) = AdminUserPage { implicit request =>
     val pageInfo = db.readOnlyReplica { implicit ro =>
       pageInfoRepo.get(id)
     }
     Ok(html.admin.pageInfo(pageInfo))
   }
 
-  def pageInfos(page: Int, size: Int) = AdminUserPage { request =>
+  def pageInfos(page: Int, size: Int) = AdminUserPage { implicit request =>
     val pageInfos = db.readOnlyReplica { implicit ro =>
       pageInfoRepo.page(page, size).sortBy(_.id.get.id)
     }

@@ -1,4 +1,4 @@
-@(patterns: Seq[URLPattern])
+@(patterns: Seq[URLPattern])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Keeper Do-Not-Engage Patterns", stylesheets = List("admin_slider")) {
 <h3>URLs at which the Keeper Should Not Auto-Engage (Friends Who Kept)</h3>

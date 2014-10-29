@@ -1,4 +1,4 @@
-@(title: String, scripts: List[String] = Nil, stylesheets: List[String] = Nil)(content: Html)
+@(title: String, scripts: List[String] = Nil, stylesheets: List[String] = Nil)(content: Html)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
   <br>
@@ -30,45 +30,44 @@
     }
   </head>
   <body>
-		<a id="scrlTop" title="Top" href="#" style="position: fixed; top: 100px; right: 20px;"><i class="icon-chevron-up"></i></a>
-		<a id="scrlBotm" title="Bottom" href="#" style="position: fixed; top: 133px; right: 20px;"><i class="icon-chevron-down"></i></a>
-		<div class="navbar navbar-inverse navbar-fixed-top">
-		  <div class="navbar-inner">
-		    <ul class="nav">
-
-		      <li class="dropdown">
-		        <a class="dropdown-toggle" data-toggle="dropdown" >Dashboards</a>
-		        <ul class="dropdown-menu" role="menu">
-		          <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Product</a>
-		          <li><a href="@com.keepit.controllers.admin.routes.AdminEngineeringDashboardController.overview">Engineering</a>
-		          <li><a href="@com.keepit.controllers.admin.routes.AdminEngineeringDashboardController.seyren">Seyren Alerts</a>
-		        </ul>
-		      </li>
+    <a id="scrlTop" title="Top" href="javascript:" style="position: fixed; top: 100px; right: 20px;"><i class="icon-chevron-up"></i></a>
+    <a id="scrlBotm" title="Bottom" href="javascript:" style="position: fixed; top: 133px; right: 20px;"><i class="icon-chevron-down"></i></a>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <ul class="nav">
 
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics</a>
+            <a class="dropdown-toggle" data-toggle="dropdown" >Dashboards</a>
+            <ul class="dropdown-menu" role="menu">
+              <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Product</a>
+              <li><a href="@com.keepit.controllers.admin.routes.AdminEngineeringDashboardController.overview">Engineering</a>
+              <li><a href="@com.keepit.controllers.admin.routes.AdminEngineeringDashboardController.seyren">Seyren Alerts</a>
+            </ul>
+          </li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Analytics</a>
             <ul class="dropdown-menu" role="menu">
               <li><a href="@com.keepit.controllers.admin.routes.AdminExperimentController.overview">Experiments</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminAnalyticsController.getEventDescriptors">All Events</a>
             </ul>
 
-
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" >Keeps</a>
+              <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Keeps</a>
               <ul class="dropdown-menu" role="menu">
-                <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Bookmarks</a>
-                <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksKeywordsPageView(0)">Bookmarks Keywords</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminLibraryController.index(0)">Libraries</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksKeywordsPageView(0)">Keep Keywords</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.whoKeptMyKeeps()">Who Kept My Keeps</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(0, 50, false)">Keep Discoveries Timeline</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(0, 50, false)">Rekeeps Timeline</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminAttributionController.topReKeeps()">Top ReKeeps</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0, false)">Sensitive URIs</a>
-                  <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0, true)">Sensitive Public URIs</a>
+                <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.pornUrisView(0, true)">Sensitive Public URIs</a>
             </ul>
 
-
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Users</a>
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Users</a>
             <ul class="dropdown-menu" role="menu">
               <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersView(0)">All Users</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.registeredUsersView(0)">Registered Users</a>
@@ -79,28 +78,27 @@
               <li><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.ripestFruitView(0,0)">Ripest Fruit</a>
               <li><a href="@com.keepit.controllers.admin.routes.AdminLDAController.peopleLikeYou(20)">People Like You</a>
             </ul>
-          <li><a href = "@com.keepit.controllers.admin.routes.AdminLibraryController.index(0)">Libraries</a>
-		      <li><a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(0)">Emails</a>
-		      <li class="divider-vertical">
+
+          <li><a href="@com.keepit.controllers.admin.routes.ElectronicMailController.electronicMailsView(0)">Emails</a>
+
           <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Keeper</a>
+            <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Keeper</a>
             <ul class="dropdown-menu" role="menu">
+              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getVersionForm">Keeper Versions</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getPatterns">Automatic Engagement</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getDomainTags">Domain Tags</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getDomainOverrides">Domain Overrides</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getImportEvents">Domain Import Events</a>
               <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getClassifications(None)">Domain Classifications</a>
-              <li><a href="@com.keepit.controllers.admin.routes.SliderAdminController.getVersionForm">Hasten Update</a>
             </ul>
 
-              <li><a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments">Search Experiments</a>
-
                <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" >Search Lab</a>
+                <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Search</a>
                 <ul class="dropdown-menu" role="menu">
-                   <li><a href="@com.keepit.controllers.admin.routes.AdminSearchController.blindTestPage">Search Blind Test</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments">Search Experiments</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.AdminSearchController.blindTestPage">Search Blind Test</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminSearchController.searchComparisonPage">Search Comparison</a>
-                   <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
+                    <li><a href="@com.keepit.controllers.admin.routes.PhraseController.displayPhrases()">Phrases</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.userBookmarkKeywords">User Keywords</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.index">Porn Detector</a>
                     <li><a href="@com.keepit.controllers.admin.routes.AdminWord2VecController.index">Word2Vec</a>
@@ -109,9 +107,8 @@
                 </ul>
                </li>
 
-
               <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown"  href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Service</a>
+                <a class="dropdown-toggle" data-toggle="dropdown" href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Service</a>
                 <ul class="dropdown-menu" role="menu">
                   <li><a href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">General Health</a>
                   <li><a href="@com.keepit.controllers.admin.routes.AdminBenchmarkController.benchmarks">Benchmarks</a>
@@ -127,16 +124,15 @@
               </li>
 
                 <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown"  href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Data Integrity</a>
+                    <a class="dropdown-toggle" data-toggle="dropdown" href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Data Integrity</a>
                     <ul class="dropdown-menu" role="menu">
-                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">Normalization</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.normalizationView(0)">URL Normalization</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.urlRenormalizeConsole">URL Renormalization Console</a>
                         <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalizationView(0)">Renormalization</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">Url Pattern Rules</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.UrlController.getPatterns()">URL Pattern Rules</a>
                         <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.searchScraper">Scraper</a>
                         <li><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getProxies">Proxies</a>
                     </ul>
-
                 </li>
 
                 <li class="dropdown">
@@ -145,28 +141,33 @@
                         <li><a href="@com.keepit.controllers.admin.routes.GraphAdminController.statistics()">Graph Statistics</a>
                         <li><a href="@com.keepit.controllers.admin.routes.WanderingAdminController.wander()">Hopeful Wanderer</a>
                         <li><a href="@com.keepit.controllers.admin.routes.WanderingAdminController.fromParisWithLove()">Palais de la Découverte</a>
-                        <li><a href="@com.keepit.controllers.admin.routes.WanderingAdminController.uriWandering()">uri wandering</a>
+                        <li><a href="@com.keepit.controllers.admin.routes.WanderingAdminController.uriWandering()">URI Wandering</a>
                     </ul>
-
                 </li>
 
-		    </ul>
-		  </div>
-		</div>
-		<header class="admin-head" id="overview">
-		  <div class="container">
-		    <h1>@title</h1>
-		  </div>
-		</header>
-		<div class="container">
-	    @content
-	    @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
-		</div>
-    <div class="integrity-reminder">
-      <img src="/assets/images/halo.png" class="BXNQgdvtxmc">
-      When accessing private information, make sure you follow the <a href="/assets/conduct.html">FortyTwo Code of Conduct</a>.
-      <img src="/assets/images/halo.png" class="BXNQgdvtxmc">
-      <span class="prod-issues">Serious Production Problem and no-one around? Email <a href="mailto:email-alert@@fortytwo.pagerduty.com">email-alert@@fortytwo.pagerduty.com</a></span>
+        </ul>
+      </div>
+    </div>
+    <header class="admin-head" id="overview">
+      <div class="container">
+        <h1>@title</h1>
+      </div>
+    </header>
+    <div class="container">
+      @content
+      @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
+    </div>
+    <!--div class="integrity-reminder" style="background-image:url(/assets/images/halo.png),url(//djty7jcqog9qu.cloudfront.net/users/@{request.user.externalId}/pics/100/@{request.user.pictureName}.jpg)"-->
+    <div class="integrity-reminder" style="background-image:url(//djty7jcqog9qu.cloudfront.net/users/9bd96afd-7a43-4c3b-8e84-341d19d19f62/pics/100/trPho.jpg)">
+      <img class="integrity-halo" src="/assets/images/halo.png">
+      <div class="integrity-hover">
+        @request.user.firstName, when accessing private information, make sure<br>you follow the <a href="/assets/conduct.html">FortyTwo Code of Conduct</a>.
+      </div>
+    </div>
+    <div class="prod-issues">
+      <div class="prod-hover">
+        Serious Production Problem and no-one around?<br>Email <a href="mailto:email-alert@@fortytwo.pagerduty.com">email-alert@@fortytwo.pagerduty.com</a>.
+      </div>
     </div>
     <script>
     $(function() {

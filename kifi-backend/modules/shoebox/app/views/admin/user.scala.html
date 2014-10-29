@@ -10,7 +10,7 @@
   econtactCount: Int,
   contacts: Seq[com.keepit.abook.model.RichContact],
   invitedBy: Seq[User]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>

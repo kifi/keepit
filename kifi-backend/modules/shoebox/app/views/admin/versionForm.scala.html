@@ -1,8 +1,8 @@
-@(versions: Seq[(KifiExtVersion, org.joda.time.DateTime, Int)], details: com.keepit.common.store.KifiInstallationDetails)
+@(versions: Seq[(KifiExtVersion, org.joda.time.DateTime, Int)], details: com.keepit.common.store.KifiInstallationDetails)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import com.keepit.common.store._
 
-@admin("Latest Kifi Extension Version", stylesheets = List("admin_slider")) {
+@admin("Latest Kifi Extension Versions", stylesheets = List("admin_slider")) {
   <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
 
 <style>
@@ -92,7 +92,7 @@ td.old-version {
 </style>
 
 <div class="row">
-  <table class="kifi-versions table table-bordered span6">
+  <table class="kifi-versions table table-bordered" style="width:640px">
   <thead>
     <tr>
       <th>Version</th>

@@ -1,4 +1,4 @@
-@(content: Option[String], topicId: Option[String])
+@(content: Option[String], topicId: Option[String])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Document Topic") {
   <form action = "com.keepit.controllers.admin.routes.TopicModelController.inferTopic" method = "POST">

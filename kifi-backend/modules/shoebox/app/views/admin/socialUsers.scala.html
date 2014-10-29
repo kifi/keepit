@@ -1,4 +1,4 @@
-@(socialUserInfos: Seq[SocialUserInfo], page: Int)
+@(socialUserInfos: Seq[SocialUserInfo], page: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.commanders.BasicSocialUser
 
     @pagination(page: Int, pageCount: Int) = {

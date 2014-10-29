@@ -4,7 +4,7 @@
   socialConnections: Seq[SocialUserBasicInfo],
   abookInfos: Seq[ABookInfo],
   contacts: Seq[com.keepit.abook.model.RichContact]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName) {
   <h2>User details </h2>

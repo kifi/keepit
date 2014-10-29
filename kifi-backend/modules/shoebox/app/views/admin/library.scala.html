@@ -4,7 +4,7 @@
   contributors: Seq[User],
   followers: Seq[User],
   publicId: com.keepit.common.crypto.PublicId[Library]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
   <table class="library-summary table table-bordered">

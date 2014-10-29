@@ -1,4 +1,4 @@
-@(richWhoKeptMyKeeps: Seq[com.keepit.commanders.RichWhoKeptMyKeeps], since: org.joda.time.DateTime, userCount: Int)
+@(richWhoKeptMyKeeps: Seq[com.keepit.commanders.RichWhoKeptMyKeeps], since: org.joda.time.DateTime, userCount: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(userCount + " people kept your keeps on KiFi") {
   <h2>Showing @richWhoKeptMyKeeps.size keeps since @adminHelper.dateDisplay(since)</h2>

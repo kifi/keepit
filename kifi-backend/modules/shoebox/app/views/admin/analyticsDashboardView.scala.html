@@ -1,4 +1,4 @@
-@(data: Map[String, String])
+@(data: Map[String, String])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Analytics Overview - Being deprecated, do not trust this data."){
   <h2>Users</h2>

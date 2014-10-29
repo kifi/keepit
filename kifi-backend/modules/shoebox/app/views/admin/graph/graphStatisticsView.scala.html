@@ -1,7 +1,7 @@
 @(allInstances: Seq[com.keepit.common.amazon.AmazonInstanceId],
   statistics: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphStatistics],
   states: Map[com.keepit.common.amazon.AmazonInstanceId, com.keepit.graph.manager.PrettyGraphState]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @views.html.admin.admin("Graph Statistics") {
 

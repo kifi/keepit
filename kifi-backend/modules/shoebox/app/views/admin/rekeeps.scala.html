@@ -1,4 +1,4 @@
-@(rekeeps:Seq[(com.keepit.model.RichReKeep, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, rekeepsCount:Int, pageSize:Int)
+@(rekeeps:Seq[(com.keepit.model.RichReKeep, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, rekeepsCount:Int, pageSize:Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(page, pageSize, showImage)}
 

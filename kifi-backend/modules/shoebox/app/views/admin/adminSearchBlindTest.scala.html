@@ -1,4 +1,4 @@
-@(configs: Seq[SearchConfigExperiment])
+@(configs: Seq[SearchConfigExperiment])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Search BlindTest",
 			stylesheets = List("search_blind_test") ){
