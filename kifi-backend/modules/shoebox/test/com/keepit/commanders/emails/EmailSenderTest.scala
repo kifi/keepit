@@ -50,7 +50,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val toAddress = EmailAddress("taco@gmail.com")
         val inviteId = ExternalId[Invitation]()
         val fromUser = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
         }
         val email = Await.result(sender(toAddress, fromUser.id.get, inviteId), Duration(5, "seconds"))
         outbox.size === 1
@@ -60,6 +60,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.from === SystemEmailAddress.INVITATION
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.INVITATION)
         email.extraHeaders.get.apply(PostOffice.Headers.REPLY_TO) === fromUser.primaryEmail.get.address
+
+        val params = List("utm_campaign=na", "utm_source=kifi_invite", "utm_medium=vf_email", "kcid=na-vf_email-kifi_invite")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
       }
     }
   }
@@ -70,7 +73,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val outbox = inject[FakeOutbox]
         val sender = inject[WelcomeEmailSender]
         val toUser = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
         }
         val email = Await.result(sender.sendToUser(toUser.id.get), Duration(5, "seconds"))
         outbox.size === 1
@@ -85,7 +88,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           subAction = Some("findMoreFriendsBtn"),
           tip = Some(EmailTip.ConnectFacebook)).encode
 
-        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn"
+        html must contain("utm_source=fromKifi&utm_medium=email&utm_campaign=welcome&utm_content=findMoreFriendsBtn&kcid=welcome-email-fromKifi"
           + s"&${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
@@ -99,7 +102,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       val outbox = inject[FakeOutbox]
       val sender = inject[FriendConnectionMadeEmailSender]
       val friendUser = db.readWrite { implicit rw =>
-        inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
+        inject[UserRepo].save(
+          User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")),
+            username = Username("test"), normalizedUsername = "test"))
       }
 
       val email = Await.result(sender.sendToUser(toUser.id.get, friendUser.id.get, category, network), Duration(5, "seconds"))
@@ -119,7 +124,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       "sends email" in {
         withDb(modules: _*) { implicit injector =>
           val toUser = db.readWrite { implicit rw =>
-            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
           }
 
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -145,7 +150,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           case (network, networkName) => withDb(modules: _*) { implicit injector =>
             val (toUser, friends) = db.readWrite { implicit rw =>
               (
-                inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
+                inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test")),
                 inject[ShoeboxTestFactory].createUsers()
               )
             }
@@ -174,7 +179,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (toUser, friends) = db.readWrite { implicit rw =>
             (
-              inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")))),
+              inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test")),
               inject[ShoeboxTestFactory].createUsers()
             )
           }
@@ -205,8 +210,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val (toUser, fromUser) = db.readWrite { implicit rw =>
           val saveUser = inject[UserRepo].save _
           (
-            saveUser(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")))),
-            saveUser(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+            saveUser(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test")),
+            saveUser(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
           )
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
@@ -238,8 +243,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val sender = inject[ContactJoinedEmailSender]
         val (toUser, fromUser) = db.readWrite { implicit rw =>
           (
-            inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")))),
-            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com"))))
+            inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test")),
+            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
           )
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
@@ -273,7 +278,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val passwordResetRepo = inject[PasswordResetRepo]
         val resetSender = inject[ResetPasswordEmailSender]
         val user = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com"))))
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
         }
         val email = Await.result(resetSender.sendToUser(user.id.get, user.primaryEmail.get), Duration(5, "seconds"))
         outbox.size === 1
@@ -286,12 +291,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val html = email.htmlBody.value
         html must contain("Hi Billy,")
-        html must contain(s"TEST_MODE/password/$token")
+        html must contain(s"http://dev.ezkeep.com:9000/password/$token")
         html must contain("utm_campaign=passwordReset")
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
-        text must contain(s"TEST_MODE/password/$token")
+        text must contain(s"http://dev.ezkeep.com:9000/password/$token")
       }
     }
 
@@ -329,8 +334,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       val uriRepo = inject[NormalizedURIRepo]
 
       db.readWrite { implicit rw =>
-        val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Some(Username("tom")), primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
-        val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Some(Username("aaron")), primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
+        val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Username("tom"), normalizedUsername = "b", primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
+        val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Username("aaron"), normalizedUsername = "a", primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
         val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
           visibility = LibraryVisibility.PUBLISHED, memberCount = 1, description = Some("Lorem ipsum")))
 
@@ -341,7 +346,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-        val invite = LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"))
+        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"), authToken = "abcdefg")
 
         (user1, user2, lib1, invite)
       }
@@ -352,8 +357,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       html must contain("Tom invited you to")
       html must contain("Tom Brady")
       html must contain("Lorem ipsum")
-      html must contain("TEST_MODE/tom/football")
+      html must contain("http://dev.ezkeep.com:9000/tom/football")
       html must contain("check this out!")
+      html must contain("authToken=abcdefg")
     }
 
     "sends invite to user (userId)" in {
@@ -368,9 +374,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.subject === "Tom Brady invited you to follow Football!"
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
+        html must not contain invite.passPhrase
       }
     }
 
@@ -387,6 +398,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.subject === "Tom Brady invited you to follow Football!"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         val html = email.htmlBody.value
         testHtml(html)
         html must contain(invite.passPhrase)

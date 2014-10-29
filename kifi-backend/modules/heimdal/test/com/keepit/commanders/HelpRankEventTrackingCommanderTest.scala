@@ -53,9 +53,9 @@ class HelpRankEventTrackingCommanderTest extends Specification with HeimdalTestI
     "track reco click event" in {
       withDb(modules: _*) { implicit injector =>
         val ts = currentDateTime
-        val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Key", lastName = "Fei")
-        val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar")
-        val u3 = User(id = Some(Id[User](3)), createdAt = ts, updatedAt = ts, firstName = "Ping", lastName = "Pong")
+        val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Key", lastName = "Fei", username = Username("test"), normalizedUsername = "test")
+        val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test")
+        val u3 = User(id = Some(Id[User](3)), createdAt = ts, updatedAt = ts, firstName = "Ping", lastName = "Pong", username = Username("test"), normalizedUsername = "test")
 
         val uri42 = mkURI("http://42go.com")
         val uriKifi = mkURI("http://kifi.com")

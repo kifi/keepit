@@ -34,8 +34,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/", nuri2.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get)) // to be splitted, to be pointing to
 
-            val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
-            val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
+            val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+            val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"))
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
@@ -135,7 +135,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
              *
              * */
 
-            val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
+            val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
 
             val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com", Some("Google")))
             val uri0better = uriRepo.save(NormalizedURI.withHash("http://google.com", Some("Google")))
@@ -182,8 +182,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             keepToCollectionRepo.save(KeepToCollection(keepId = bm1better.id.get, collectionId = c1.id.get))
             keepToCollectionRepo.save(KeepToCollection(keepId = bm2better.id.get, collectionId = c1.id.get))
 
-            collectionRepo.collectionChanged(c0.id.get, true)
-            collectionRepo.collectionChanged(c1.id.get, true)
+            collectionRepo.collectionChanged(c0.id.get, true, false)
+            collectionRepo.collectionChanged(c1.id.get, true, false)
 
             (Array(uri0, uri1, uri2), Array(uri0better, uri1better, uri2better), Array(bm0, bm1, bm2), Array(bm0better, bm1better, bm2better))
           }

@@ -24,25 +24,19 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
 
   val fakeSearch = new FakeSearchServiceClient() {
 
-    private def genAugmentationInfo(uriId: Id[NormalizedURI]): AugmentationInfo = {
+    private def genAugmentationInfo(uriId: Id[NormalizedURI]): LimitedAugmentationInfo = {
       val n = uriId.id.toInt
-      if (n > 5) return AugmentationInfo(Seq(), 0, 0)
+      if (n > 5) return LimitedAugmentationInfo.empty
 
-      val keepInfo = (1 to n) map { i =>
-        val extId = ExternalId.apply[Keep]()
-        val lib = if (i % 2 == 1) Some(Id[Library](i)) else None // half of the users have associated lib
-        val user = Some(Id[User](i))
-        RestrictedKeepInfo(extId, lib, user, Set())
-      }
-      val otherPublishedKeeps = n
-      val otherDiscoverableKeeps = n
-      AugmentationInfo(keepInfo, otherPublishedKeeps, otherDiscoverableKeeps)
+      val keepers = (1 to n) map { i => Id[User](i) }
+      val keepersTotal = 3 * n
+      val libraries = keepers.collect { case userId if userId.id % 2 == 1 => (Id[Library](userId.id), userId) } // half of the users have associated lib})
+      val librariesTotal = 3 * n
+      LimitedAugmentationInfo(keepers, 0, keepersTotal, libraries, 0, librariesTotal, Seq.empty, 0)
     }
 
-    override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
-      val augs = request.items.map { case item => (item, genAugmentationInfo(item.uri)) }.toMap
-      val scores = AugmentationScores(Map(), Map(), Map())
-      Future.successful(ItemAugmentationResponse(augs, scores))
+    override def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+      Future.successful(items.map(item => genAugmentationInfo(item.uri)))
     }
   }
 

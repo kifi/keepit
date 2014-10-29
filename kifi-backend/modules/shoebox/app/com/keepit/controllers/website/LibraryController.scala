@@ -35,6 +35,7 @@ class LibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   keepsCommander: KeepsCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  collectionRepo: CollectionRepo,
   clock: Clock,
   val libraryCommander: LibraryCommander,
   val userActionsHelper: UserActionsHelper,
@@ -68,7 +69,7 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> fail.message))
       case Right(lib) =>
         val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(id)) }
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
     }
   }
 
@@ -81,17 +82,6 @@ class LibraryController @Inject() (
     }
   }
 
-  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
-    val hashtag = Hashtag(tag)
-    val id = Library.decodePublicId(libraryId).get
-    SafeFuture {
-      libraryCommander.copyKeepsFromCollectionToLibrary(id, hashtag) match {
-        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-        case Right(success) => Ok(JsString("success"))
-      }
-    }
-  }
-
   def getLibraryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val id = Library.decodePublicId(pubId).get
     libraryCommander.getLibraryById(request.userIdOpt, id) map {
@@ -101,7 +91,7 @@ class LibraryController @Inject() (
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryById(request.userIdOpt, id)
+    val (libInfo, accessStr) = libraryCommander.getLibrarySummaryAndAccessString(request.userIdOpt, id)
     Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
   }
 
@@ -137,15 +127,19 @@ class LibraryController @Inject() (
       val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
         (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
-      val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
+      val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
       Json.toJson(info).as[JsObject] ++ memInfo
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
-      val info = LibraryInfo.fromLibraryAndOwner(lib, inviteOwner, numKeeps)
+      val (libOwner, inviter, numKeeps) = db.readOnlyMaster { implicit s =>
+        (basicUserRepo.load(lib.ownerId),
+          basicUserRepo.load(invite.inviterId),
+          keepRepo.getCountByLibrary(lib.id.get))
+      }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, libOwner, numKeeps, Some(inviter))
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
@@ -200,7 +194,7 @@ class LibraryController @Inject() (
             BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
         }
     }
   }
@@ -229,32 +223,82 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, count: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
-      case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val limit = Math.min(count, 30)
         val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
           numKeeps <- numKeepsF
         } yield {
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(limit, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))
         }
     }
   }
 
   def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
-    val libraryId = Library.decodePublicId(pubId).get
-    if (limit > 30) {
-      BadRequest(Json.obj("error" -> "invalid_limit"))
-    } else {
-      val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
-      val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
-      Ok(Json.obj("members" -> maybeMembers))
+    if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(libraryId) =>
+        val (collaborators, followers, inviteesWithInvites) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = true)
+        val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
+        Ok(Json.obj("members" -> maybeMembers))
+    }
+  }
+
+  def copyKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
+    val hashtag = Hashtag(tag)
+    val id = Library.decodePublicId(libraryId).get
+    SafeFuture {
+      libraryCommander.copyKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right((goodKeeps, badKeeps)) =>
+          val errors = badKeeps.map {
+            case (keep, error) =>
+              Json.obj(
+                "keep" -> KeepInfo.fromKeep(keep),
+                "error" -> error.message
+              )
+          }
+          if (errors.nonEmpty) {
+            Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete or partial failure
+          } else {
+            Ok(Json.obj("successes" -> goodKeeps.length))
+          }
+      }
+    }
+  }
+
+  def moveKeepsFromCollectionToLibrary(libraryId: PublicId[Library], tag: String) = (UserAction andThen LibraryWriteAction(libraryId)).async { request =>
+    val hashtag = Hashtag(tag)
+    val id = Library.decodePublicId(libraryId).get
+    SafeFuture {
+      libraryCommander.moveKeepsFromCollectionToLibrary(request.userId, id, hashtag) match {
+        case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+        case Right((goodKeeps, badKeeps)) =>
+          val errors = badKeeps.map {
+            case (keep, error) =>
+              Json.obj(
+                "keep" -> KeepInfo.fromKeep(keep),
+                "error" -> error.message
+              )
+          }
+          val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+            case (libId, keeps) =>
+              val pubId = Library.publicId(libId.get)
+              val numKeepsMoved = keeps.length
+              Json.obj("library" -> pubId, "numMoved" -> numKeepsMoved)
+          }
+          if (errors.nonEmpty) {
+            Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete or partial failure
+          } else {
+            Ok(Json.obj("successes" -> mapLibrary))
+          }
+      }
     }
   }
 
@@ -267,7 +311,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
-        val badKeeps = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
+        val (goodKeeps, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps, Some(KeepSource.userCopied))
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
@@ -276,13 +320,9 @@ class LibraryController @Inject() (
             )
         }
         if (errors.nonEmpty) {
-          if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
-          } else {
-            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
-          }
+          Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete or partial failure
         } else {
-          Ok(Json.obj("success" -> true))
+          Ok(Json.obj("successes" -> goodKeeps.length))
         }
     }
   }
@@ -296,7 +336,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
-        val badKeeps = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
+        val (goodKeeps, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
@@ -304,14 +344,16 @@ class LibraryController @Inject() (
               "error" -> error.message
             )
         }
+        val mapLibrary = goodKeeps.groupBy(_.libraryId).map {
+          case (libId, keeps) =>
+            val pubId = Library.publicId(libId.get)
+            val numKeepsMoved = keeps.length
+            Json.obj("library" -> pubId, "numMoved" -> numKeepsMoved)
+        }
         if (errors.nonEmpty) {
-          if (errors.length == targetKeepsExt.length) {
-            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
-          } else {
-            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
-          }
+          Ok(Json.obj("successes" -> mapLibrary, "failures" -> errors)) // complete or partial failure
         } else {
-          Ok(Json.obj("success" -> true))
+          Ok(Json.obj("successes" -> mapLibrary))
         }
     }
   }
@@ -398,13 +440,44 @@ class LibraryController @Inject() (
     }
   }
 
-  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    val futureTagsAndMatches = if (query.trim.isEmpty) {
-      val libraryId = Library.decodePublicId(pubId).get
-      val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
-      keepsCommander.suggestTags(request.userId, libraryId, uriId, limit).map(_.map((_, Seq.empty[(Int, Int)])))
-    } else {
-      keepsCommander.searchTags(request.userId, query, limit).map(_.map(hit => (hit.tag, hit.matches)))
+  def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
+    val libraryId = Library.decodePublicId(libraryPubId).get;
+
+    keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+      case Right(keep) =>
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+        val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
+        keepsCommander.addToCollection(coll.id.get, Seq(keep))
+        Ok(Json.obj("tag" -> coll.name))
+      case Left((status, code)) =>
+        Status(status)(Json.obj("error" -> code))
+    }
+  }
+
+  def untagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
+    val libraryId = Library.decodePublicId(libraryPubId).get
+    keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
+      case Right(keep) =>
+        db.readOnlyReplica { implicit s =>
+          collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) // TODO: library ID, not user ID
+        } foreach { coll =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
+          keepsCommander.removeFromCollection(coll, Seq(keep))
+        }
+        NoContent
+      case Left((status, code)) =>
+        Status(status)(Json.obj("error" -> code))
+    }
+  }
+
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None => {
+        val libraryId = Library.decodePublicId(pubId).get
+        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      }
     }
     futureTagsAndMatches.imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
@@ -413,6 +486,19 @@ class LibraryController @Inject() (
     }
   }
 
+  def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
+    request match {
+      case req: UserRequest[_] => {
+        if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+        else Library.decodePublicId(pubId) match {
+          case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+        }
+      }
+      case _ => Future.successful(Forbidden)
+    }
+
+  }
 }
 
 private object ImplicitHelper {

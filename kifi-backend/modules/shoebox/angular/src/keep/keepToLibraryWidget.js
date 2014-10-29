@@ -3,22 +3,23 @@
 angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
-  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout',
+  '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
   'keyIndices', 'libraryService', 'util',
-  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout,
+  function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
     keyIndices, libraryService, util) {
     return {
       restrict: 'A',
       /*
        * Relies on parent scope to have:
        *  libraries - an array of library objects to select from.
-       *  selection - an object whose 'library' property will be the selected library.
+       *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   clickAction() - a function that can be called once a library is selected
+       *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
+       *   keptToLibraries - an array of library ids that are already keeping the keep.
+       *   clickAction() - a function that can be called once a library is selected;
+       *                   called with the element that this widget is on.
        *   libSelectTopOffset - amount to shift up relative to the element that has this directive as an attribute.
-       *
-       *  // todo (yiping): Try to turn this into isolated scope
        */
       link: function (scope, element/*, attrs*/) {
         //
@@ -41,6 +42,9 @@ angular.module('kifi')
         scope.search = {};
         scope.showCreate = false;
         scope.newLibrary = {};
+        scope.widgetLibraries = [];
+        scope.excludeLibraries = scope.excludeLibraries || [];
+        scope.keptToLibraries = scope.keptToLibraries || [];
 
 
         //
@@ -52,7 +56,7 @@ angular.module('kifi')
         }
 
         function clearSelection () {
-          scope.libraries.forEach(function (library) {
+          scope.widgetLibraries.forEach(function (library) {
             library.selected = false;
           });
         }
@@ -80,7 +84,7 @@ angular.module('kifi')
           if (angular.element(event.target).closest('.library-select-option').length) {
             removeTimeout = $timeout(removeWidget, 200);
             if (_.isFunction(scope.clickAction)) {
-              scope.clickAction();
+              scope.clickAction(element);
             }
             return;
           }
@@ -136,9 +140,32 @@ angular.module('kifi')
           $compile(widget)(scope);
 
           // Set position.
-          var top = element.offset().top - (scope.libSelectTopOffset || 0);
-          var left = element.offset().left;
-          widget.css({top: top + 'px', left: left + 'px'});
+          // By default, if there is enough room at the bottom, drop the widget down.
+          // If there isn't enough room, scoot up just enough to fit the widget.
+          // If scope.libSelectTopOffset is set, that overrides the default position.
+          widget.hide();
+          var scrollTop = angular.element($window).scrollTop();
+          var elementOffset = element.offset().top;
+          var distanceFromBottom = $window.innerHeight - elementOffset + scrollTop;
+
+          // Wait for Angular to render the widget so we can grab its height.
+          $timeout(function () {
+            var widgetHeight = widget.height();
+
+            // If there is enough room at the bottom, drop the widget down.
+            // Otherwise, scoot up just enough to fit the widget.
+            var widgetOffset = (distanceFromBottom - widgetHeight > 0) ? 0 : widgetHeight - distanceFromBottom;
+
+            var top = element.offset().top - (scope.libSelectTopOffset || widgetOffset);
+            var left = element.offset().left;
+            widget.css({top: top + 'px', left: left + 'px'});
+            widget.show();
+
+            // Wait for the widget to be shown, then focus on the search input.
+            $timeout(function () {
+              searchInput.focus();
+            }, 0);
+          }, 0);
 
           // Set event handlers.
           $document.on('mousedown', onClick);
@@ -146,15 +173,30 @@ angular.module('kifi')
           // Initialize state.
           scope.search = {};
           selectedIndex = 0;
-          scope.libraries[selectedIndex].selected = true;
           libraryList = widget.find('.library-select-list');
           searchInput = widget.find('.keep-to-library-search-input');
           scope.showCreate = false;
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
-          // Focus on search input.
-          searchInput.focus();
+          // May remove this fetch; awaiting discussion with Josh.
+          libraryService.fetchLibrarySummaries(false).then(function (data) {
+            var libraries = _.filter(data.libraries, { access: 'owner' });
+
+            libraries = _.filter(libraries, function (library) {
+              return !_.find(scope.excludeLibraries, { 'id': library.id });
+            });
+
+            libraries.forEach(function (library) {
+              library.keptTo = false;
+              if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+                library.keptTo = true;
+              }
+            });
+
+            libraries[selectedIndex].selected = true;
+            scope.widgetLibraries = libraries;
+          });
         };
 
         scope.onHover = function (library) {
@@ -163,8 +205,8 @@ angular.module('kifi')
           } else {
             clearSelection();
             library.selected = true;
-            scope.selection.library = library;
-            selectedIndex = _.indexOf(scope.libraries, library);
+            scope.librarySelection.library = library;
+            selectedIndex = _.indexOf(scope.widgetLibraries, library);
           }
         };
 
@@ -175,7 +217,7 @@ angular.module('kifi')
         scope.processKeyEvent = function ($event) {
           function getNextIndex(index, direction) {
             var nextIndex = index + direction;
-            return (nextIndex < 0 || nextIndex > scope.libraries.length - 1) ? index : nextIndex;
+            return (nextIndex < 0 || nextIndex > scope.widgetLibraries.length - 1) ? index : nextIndex;
           }
 
           switch ($event.keyCode) {
@@ -185,7 +227,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, -1);
-              scope.libraries[selectedIndex].selected = true;
+              scope.widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -196,7 +238,7 @@ angular.module('kifi')
 
               clearSelection();
               selectedIndex = getNextIndex(selectedIndex, 1);
-              scope.libraries[selectedIndex].selected = true;
+              scope.widgetLibraries[selectedIndex].selected = true;
 
               adjustScroll(selectedIndex);
 
@@ -205,11 +247,17 @@ angular.module('kifi')
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
-              scope.selection.library = scope.libraries[selectedIndex];
-              if (_.isFunction(scope.clickAction)) {
-                scope.clickAction();
+              // If there are any libraries shown, select confirm the selected library.
+              // Otherwise, go to the create panel.
+              if (widget.find('.library-select-option').length) {
+                scope.librarySelection.library = scope.widgetLibraries[selectedIndex];
+                if (_.isFunction(scope.clickAction)) {
+                  scope.clickAction(element);
+                }
+                removeWidget();
+              } else {
+                scope.showCreatePanel();
               }
-              removeWidget();
               break;
             case keyIndices.KEY_ESC:
               // Prevent any open modals from processing this.
@@ -232,6 +280,13 @@ angular.module('kifi')
 
         scope.hideCreatePanel = function () {
           scope.showCreate = false;
+          scope.search = {};
+
+          // Wait for the libraries panel to be shown, and then focus on the
+          // search input.
+          $timeout(function () {
+            searchInput.focus();
+          }, 0);
         };
 
         scope.createLibrary = function (library) {
@@ -243,13 +298,26 @@ angular.module('kifi')
           library.visibility = library.visibility || 'published';
 
           libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-
+            libraryService.fetchLibrarySummaries(true).then(function (data) {
               scope.$evalAsync(function () {
-                scope.selection.library = _.find(scope.libraries, { 'name': library.name });
+                var libraries = _.filter(data.libraries, { access: 'owner' });
+
+                libraries = _.filter(libraries, function (library) {
+                  return !_.find(scope.excludeLibraries, { 'id': library.id });
+                });
+
+                libraries.forEach(function (library) {
+                  library.keptTo = false;
+                  if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+                    library.keptTo = true;
+                  }
+                });
+
+                libraries[selectedIndex].selected = true;
+                scope.widgetLibraries = libraries;
+                scope.librarySelection.library = _.find(scope.widgetLibraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
-                  scope.clickAction();
+                  scope.clickAction(element);
                 }
                 removeWidget();
               });
@@ -258,6 +326,7 @@ angular.module('kifi')
             submitting = false;
           });
         };
+
 
         //
         // Clean up.

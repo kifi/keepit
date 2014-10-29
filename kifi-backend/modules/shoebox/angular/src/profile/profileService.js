@@ -7,6 +7,7 @@ angular.module('kifi')
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
 
     var me = {
+      picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
       seqNum: 0
     };
     var prefs = {};
@@ -17,7 +18,7 @@ angular.module('kifi')
     });
 
     function updateLoginState(meObj) {
-      $rootElement.find('html').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
+      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
       $rootScope.userLoggedIn = userLoggedIn = !!meObj;
       $rootScope.$broadcast('userLoggedInStateChange', meObj);
     }
@@ -226,9 +227,23 @@ angular.module('kifi')
 
     function fetchPrefs() {
       return $http.get(routeService.prefs).then(function (p) {
+        var oldPrefs = _.clone(prefs);
         util.replaceObjectInPlace(prefs, p.data);
+        prefs.site_intial_show_library_intro = !!prefs.site_show_library_intro;
+        if (prefs.library_sorting_pref !== oldPrefs.library_sorting_pref) {
+          $rootScope.$emit('changedLibrarySorting');
+        }
         return p.data;
       });
+    }
+
+    function savePrefs(newPrefObject) {
+      if (!_.isEmpty(newPrefObject)) {
+        return $http.post(routeService.prefs, newPrefObject).then(function (p) {
+          _.assign(prefs, p.data);
+          return p.data;
+        });
+      }
     }
 
     function logout() {
@@ -265,8 +280,9 @@ angular.module('kifi')
       getMe: getMe,
       postMe: postMe,
       logout: logout,
-      fetchPrefs: fetchPrefs,
       prefs: prefs,
+      fetchPrefs: fetchPrefs,
+      savePrefs: savePrefs,
       setNewName: setNewName,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,

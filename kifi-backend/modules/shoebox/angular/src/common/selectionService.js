@@ -10,16 +10,16 @@ angular.module('kifi')
     }
 
     Selection.prototype.select = function (keep) {
-      if (keep && keep.id) {
-        this.selected[keep.id] = keep;
+      if (keep && keep.url) {
+        this.selected[keep.url] = keep;
         return true;
       }
       return false;
     };
 
     Selection.prototype.unselect = function (keep) {
-      if (keep && keep.id) {
-        delete this.selected[keep.id];
+      if (keep && keep.url) {
+        delete this.selected[keep.url];
         return true;
       }
       return false;
@@ -27,8 +27,8 @@ angular.module('kifi')
 
     Selection.prototype.selectAll = function (keeps) {
       this.selected = _.reduce(keeps, function (map, keep) {
-        if (keep && keep.id) {
-          map[keep.id] = true;
+        if (keep && keep.url) {
+          map[keep.url] = true;
         }
         return map;
       }, {});
@@ -39,7 +39,7 @@ angular.module('kifi')
     };
 
     Selection.prototype.isSelected = function (keep) {
-      return !!keep && keep.id && !!this.selected[keep.id];
+      return !!keep && keep.url && !!this.selected[keep.url];
     };
 
     Selection.prototype.isSelectedAll = function (keeps) {
@@ -70,7 +70,7 @@ angular.module('kifi')
       var selected = this.selected;
 
       return keeps.filter(function (keep) {
-        return keep.id in selected;
+        return keep.url in selected;
       });
     };
 

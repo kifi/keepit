@@ -16,8 +16,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepWhoPics', [
-  'keepWhoService', 'profileService',
-  function (keepWhoService, profileService) {
+  'keepWhoService', 'profileService', 'libraryService',
+  function (keepWhoService, profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
@@ -30,6 +30,13 @@ angular.module('kifi')
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
+        scope.librariesEnabled = libraryService.isAllowed();
+
+        if (scope.librariesEnabled) {
+          scope.visibleKeepLibraries = scope.keep.libraries;
+        } else {
+          scope.visibleKeepLibraries = [];
+        }
       }
     };
   }

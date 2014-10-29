@@ -76,7 +76,7 @@ trait KQueryExpansion extends QueryParser {
     }
 
     def addSiteQuery(baseQuery: KTextQuery, queryText: String) {
-      if (Domain.isValid(queryText)) baseQuery.addQuery(KSiteQuery(queryText), siteBoost)
+      if (Domain.isValid(queryText)) baseQuery.addQuery(new TermQuery(new Term("site", queryText)), siteBoost)
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {
@@ -168,7 +168,13 @@ trait KQueryExpansion extends QueryParser {
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
       query match {
         case Some(query) =>
-          clauses += new BooleanClause(query, spec.occur)
+          query match {
+            case filterQuery: KFilterQuery =>
+              val occur = if (spec.occur == SHOULD) MUST else spec.occur
+              clauses += new BooleanClause(filterQuery, occur)
+            case _ =>
+              clauses += new BooleanClause(query, spec.occur)
+          }
           query match {
             case textQuery: KTextQuery => queries += ((spec, textQuery))
             case _ => queries += ((spec, null))

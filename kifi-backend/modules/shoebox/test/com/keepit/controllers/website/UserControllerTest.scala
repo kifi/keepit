@@ -10,7 +10,7 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 
-import play.api.libs.json.{ JsArray, Json }
+import play.api.libs.json.{ JsArray, Json, JsNull }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
@@ -51,12 +51,12 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "get currentUser" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
+          val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
 
-        val path = com.keepit.controllers.website.routes.UserController.currentUser().toString
+        val path = routes.UserController.currentUser().url
         path === "/site/user/me"
 
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
@@ -72,9 +72,10 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "firstName":"Shanee",
               "lastName":"Smith",
               "pictureName":"0.jpg",
+              "username":"test",
               "emails":[],
               "notAuthed":[],
-              "experiments":["admin"],
+              "experiments":["admin", "libraries"],
               "uniqueKeepsClicked":0,
               "totalKeepsClicked":0,
               "clickCount":0,
@@ -90,11 +91,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "update username" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+          val user = inject[UserRepo].save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
           user
         }
-        val path = com.keepit.controllers.website.routes.UserController.updateUsername().url
+        val path = routes.UserController.updateUsername().url
         path === "/site/user/me/username"
 
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
@@ -114,11 +115,11 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     "update user info" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
         }
         val userController = inject[UserController]
-        val pathName = com.keepit.controllers.website.routes.UserController.updateName().url
-        val pathDescription = com.keepit.controllers.website.routes.UserController.updateDescription().url
+        val pathName = routes.UserController.updateName().url
+        val pathDescription = routes.UserController.updateDescription().url
         pathName === "/site/user/me/name"
         pathDescription === "/site/user/me/description"
 
@@ -152,14 +153,52 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "update user preferences" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Username("GeorgeWash"), normalizedUsername = "foo"))
+        }
+
+        inject[FakeUserActionsHelper].setUser(user)
+        val userController = inject[UserController]
+        val path = routes.UserController.savePrefs().url
+
+        val inputJson1 = Json.obj(
+          "library_sorting_pref" -> "name",
+          "show_delighted_question" -> false)
+        val request1 = FakeRequest("POST", path).withBody(inputJson1)
+        val result1: Future[Result] = userController.savePrefs()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        Json.parse(contentAsString(result1)) === inputJson1
+
+        db.readOnlyMaster { implicit s =>
+          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.LIBRARY_SORTING_PREF) === Some("name")
+        }
+
+        val request2 = FakeRequest("GET", path)
+        val result2: Future[Result] = userController.getPrefs()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) === Json.obj(
+          "auto_show_guide" -> JsNull,
+          "library_sorting_pref" -> "name",
+          "show_delighted_question" -> false,
+          "library_callout_shown" -> JsNull,
+          "tag_callout_shown" -> JsNull,
+          "guide_callout_shown" -> JsNull,
+          "site_show_library_intro" -> JsNull)
+      }
+    }
+
     "handling emails" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("AbeLincoln"), normalizedUsername = "foo"))
         }
         val userController = inject[UserController]
         val userValueRepo = inject[UserValueRepo]
-        val path = com.keepit.controllers.website.routes.UserController.addEmail().url
+        val path = routes.UserController.addEmail().url
         path === "/site/user/me/email"
 
         val address1 = "vampireXslayer@gmail.com"
@@ -226,7 +265,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
 
           val user = inject[Database].readWrite { implicit rw =>
-            inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump"))
+            inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump", username = Username("test"), normalizedUsername = "test"))
           }
 
           inject[FakeUserActionsHelper].setUser(user)

@@ -1,0 +1,28 @@
+<div class="kifi-keep-box-libs{{#query}} kifi-filtered{{/query}}">
+  <div class="kifi-scroll-inner">
+    {{#query}}
+      {{#libs}}{{>keep_box_lib}}{{/libs}}
+      <a class="kifi-keep-box-lib kifi-keep-box-with-lib-icon kifi-create kifi-query{{^libs.length}} kifi-highlighted{{/libs.length}}" href="javascript:" tabindex="-1">
+        <span class="kifi-keep-box-lib-1">{{query}}</span>
+        <span class="kifi-keep-box-lib-2">Create New Library</span>
+      </a>
+    {{/query}}
+    {{^query}}
+      {{#inLibs.length}}
+        <div class="kifi-keep-box-lib-head kifi-already">Kept In</div>
+        {{#inLibs}}{{>keep_box_lib}}{{/inLibs}}
+      {{/inLibs.length}}
+      {{#recentLibs.length}}
+        <div class="kifi-keep-box-lib-head">Recent Libraries</div>
+        {{#recentLibs}}{{>keep_box_lib}}{{/recentLibs}}
+        <div class="kifi-keep-box-lib-head">Other Libraries</div>
+      {{/recentLibs.length}}
+      {{^recentLibs.length}}
+        {{#showMyLibrariesHeading}}
+          <div class="kifi-keep-box-lib-head">My Libraries</div>
+        {{/showMyLibrariesHeading}}
+      {{/recentLibs.length}}
+      {{#otherLibs}}{{>keep_box_lib}}{{/otherLibs}}
+    {{/query}}
+  </div>
+</div>

@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.logging.Logging
-import com.keepit.controllers.util.SearchControllerUtil
+import com.keepit.controllers.util.{ SearchControllerUtil }
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.graph.library.LibraryIndexer
@@ -14,7 +14,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
 
 object ExtSearchController {
@@ -76,23 +76,35 @@ class ExtSearchController @Inject() (
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
-      augment(augmentationCommander, userId, kifiPlainResult).flatMap { augmentedItems =>
+      getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
+        val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
         val librarySearcher = libraryIndexer.getSearcher
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
-        val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val futureUsers = {
+          val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+          shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+        }
 
-        val futureUsers = shoeboxClient.getBasicUsers(userIds)
-
-        val hitsJson = allSecondaryFields.map(json.minify)
-
-        val libraries = {
-          val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
-          libraryIds.map(libraryById(_))
+        val hitsJson = allSecondaryFields.zipWithIndex.map {
+          case (secondaryFields, index) =>
+            val secret = augmentedItems(index).isSecret(librarySearcher)
+            json.minify(Json.obj("secret" -> secret) ++ secondaryFields - "librariesTotal")
         }
 
         futureUsers.map { usersById =>
           val users = userIds.map(usersById(_))
-          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> libraries)
+          val libraries = libraryIds.map { libId =>
+            val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+            val owner = usersById(library.ownerId)
+            makeBasicLibrary(library, visibility, owner)
+          }
+
+          val librariesJson = libraries.map { library =>
+            json.minify(Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "secret" -> library.isSecret))
+          }
+
+          Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
         }
       }
     }

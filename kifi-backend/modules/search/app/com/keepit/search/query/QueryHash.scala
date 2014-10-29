@@ -30,7 +30,12 @@ class StringHash64(seed: Long) {
   def get = (h1 + h2)
 
   def update(str: String) {
-    str.foreach { c => update(c) }
+    val len = str.length
+    var i = 0
+    while (i < len) {
+      update(str.charAt(i))
+      i += 1
+    }
   }
 
   def update(c: Char) {
@@ -42,7 +47,7 @@ class StringHash64(seed: Long) {
     var x = v
     x = (((x & 0xAAAAAAAAAAAAAAAAL) >>> 1) | ((x & 0x5555555555555555L) << 1))
     x = (((x & 0xCCCCCCCCCCCCCCCCL) >>> 2) | ((x & 0x3333333333333333L) << 2))
-    x = (((x & 0xF0F0F0F0F0F0F0F0L) >>> 4) | ((x & 0X0F0F0F0F0F0F0F0FL) << 4))
+    x = (((x & 0xF0F0F0F0F0F0F0F0L) >>> 4) | ((x & 0x0F0F0F0F0F0F0F0FL) << 4))
     x = (((x & 0xFF00FF00FF00FF00L) >>> 8) | ((x & 0x00FF00FF00FF00FFL) << 8))
     x = (((x & 0xFFFF0000FFFF0000L) >>> 16) | ((x & 0x0000FFFF0000FFFFL) << 16))
     ((x >>> 32) | (x << 32))

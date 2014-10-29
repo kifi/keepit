@@ -44,8 +44,8 @@ class AndroidAppStoreParamsControllerTest extends Specification with ShoeboxTest
   "processAppStoreParams" in {
     withDb(controllerTestModules: _*) { implicit injector =>
       val (user1, user2) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C"))
-        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S"))
+        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test1"), normalizedUsername = "test1"))
+        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", username = Username("test"), normalizedUsername = "test"))
         inject[UserValueRepo].getValueStringOpt(user1.id.get, UserValueName.KIFI_CAMPAIGN_ID).isDefined === false
         (user1, user2)
       }

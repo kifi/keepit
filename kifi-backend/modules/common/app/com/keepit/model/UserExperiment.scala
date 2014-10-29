@@ -57,7 +57,6 @@ object ExperimentType {
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SHOW_DISCUSSIONS = ExperimentType("show_discussions")
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
-  val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
   val SPECIAL_CURATOR = ExperimentType("special_curator")
   val LIBRARIES = ExperimentType("libraries")
@@ -66,7 +65,7 @@ object ExperimentType {
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: GRAPH_BASED_PEOPLE_TO_INVITE :: Nil
+    MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH :: GRAPH_BASED_PEOPLE_TO_INVITE :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 
@@ -84,7 +83,7 @@ object UserExperimentStates extends States[UserExperiment] {
 }
 
 case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[ExperimentType]] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_experiment_user_id"
   def toKey(): String = userId.id.toString
 }
@@ -93,7 +92,7 @@ class UserExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExperimentUserIdKey, Seq[ExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[ExperimentType])
 
 case object AllFakeUsersKey extends Key[Set[Id[User]]] {
-  override val version = 1
+  override val version = 2
   val namespace = "fake_users"
   def toKey(): String = "all"
 }

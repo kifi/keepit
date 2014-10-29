@@ -1,0 +1,46 @@
+<div kf-modal class="kf-register-modal" ng-class="{'register-active-request': requestActive}">
+  <div class="kf-register-modal-loading">
+    <div class="kf-logo-pulse svg-small-new-logo"></div>
+  </div>
+  <div class="register-modal-wrap">
+      <div class="dialog-body">
+        <div class="kf-register-header">Almost there! Create your account</div>
+
+        <form name="regFinalizeForm" ng-submit="registerFinalizeSubmit(regFinalizeForm)" novalidate>
+          <div class="register-field-wrap register-first-block">
+            <span class="register-validation">
+              <input type="text" name="firstName" ng-model="userData.firstName" placeholder="First Name" class="register-name-box right-space register-placeholder" required>
+              <span ng-show="fieldHasError(regFinalizeForm.firstName)" class="register-help-block">Enter your first name</span>
+            </span>
+
+            <span class="register-validation">
+              <input type="text" name="lastName" ng-model="userData.lastName" placeholder="Last Name" class="register-name-box register-placeholder" required>
+              <span ng-show="fieldHasError(regFinalizeForm.lastName)" class="register-help-block">Enter your last name</span>
+            </span>
+          </div>
+
+          <div class="register-field-wrap">
+            <span class="register-validation">
+              <input type="email" name="email" ng-model="userData.email" placeholder="Email" class="register-full-input register-placeholder" required>
+              <span ng-show="fieldHasError(regFinalizeForm.email)" class="register-help-block">Enter a valid email address</span>
+              <span ng-show="emailTaken" class="register-help-block">Someone already has this email. Did you mean to login?</span>
+            </span>
+          </div>
+
+          <div class="register-field-wrap">
+            <span class="register-validation">
+              <input type="password" name="password" ng-model="userData.password" placeholder="Password" class="register-full-input register-placeholder" required ng-minlength="7">
+              <span ng-show="fieldHasError(regFinalizeForm.password)" class="register-help-block">Passwords must be at least 7 characters long. Be safe!</span>
+            </span>
+          </div>
+
+          <div class="register-field-submit-wrap">
+            <input type="submit" value="Sign Up" class="register-submit">
+          </div>
+        </form>
+
+        <div class="register-tagline-login">By creating an account, you accept Kifi's <a href="https://www.kifi.com/terms" target="_self">terms of service</a>.</div>
+
+      </div>
+  </div>
+</div>

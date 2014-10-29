@@ -55,7 +55,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
   }
 
   val leaderPriority = new RoutingStrategy {
-    def nextInstance = serviceCluster.leader orElse serviceCluster.nextService getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
+    def nextInstance = serviceCluster.leader.filter(_.isUp) orElse serviceCluster.nextService getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
   }
 
   private def nextInstance(): ServiceInstance =

@@ -18,6 +18,22 @@ angular.module('kifi')
       friendsReady = true;
     }, 1200);
 
+    // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+    var calloutName = 'guide_callout_shown';
+    $scope.showCallout = function () {
+      return profileService.prefs.site_intial_show_library_intro && !profileService.prefs[calloutName];
+    };
+    $scope.closeCalloutOpenGuide = function () {
+      $scope.closeCallout();
+      $scope.triggerGuide(true);
+    };
+    $scope.closeCallout = function () {
+      var save = { 'site_show_library_intro': false };
+      save[calloutName] = true;
+      profileService.prefs[calloutName] = true;
+      profileService.savePrefs(save);
+    };
+
     $scope.readyToDraw = function () {
       return profileService.userLoggedIn() === true && profileService.me.seqNum > 0 && friendsReady;
     };
@@ -115,6 +131,7 @@ angular.module('kifi')
           name: ['Steve Jobs:','How to Live','Before You Die'],
           site: 'ted.com',
           thumb: '/img/guide/before_you_die.jpg',
+          image: ['/img/guide/ted_jobs.jpg', 480, 425],
           noun: 'video',
           tag: 'Inspiration',
           query: 'steve+jobs',
@@ -129,11 +146,16 @@ angular.module('kifi')
           'path': $location.path()
         });
       }
-      $window.document.documentElement.removeAttribute('data-guide');
     };
-    if ($window.document.documentElement.getAttribute('data-guide')) {
-      $scope.triggerGuide();
-    }
+
+    $scope.$watch(function () {
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+    }, function (show) {
+      if (show) {
+        $scope.triggerGuide();
+        profileService.savePrefs({auto_show_guide: null});
+      }
+    });
 
     $scope.importBookmarks = function () {
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
@@ -182,6 +204,11 @@ angular.module('kifi')
         }
       });
     });
+
+    var deregisterInstallExt = $rootScope.$on('triggerExtensionInstall', function() {
+      $scope.triggerInstall();
+    });
+    $scope.$on('$destroy', deregisterInstallExt);
 
     $scope.logout = function () {
       profileService.logout();

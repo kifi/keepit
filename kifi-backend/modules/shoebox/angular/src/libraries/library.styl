@@ -1,12 +1,114 @@
 // TODO(yiping): move library card styles to its own .styl file
+
+// Library card colors
+invite-header-orange = #ff7c3c
+
 .kf-library-card-header
   padding: 0 25px 0 30px
   margin-bottom: 10px
 
+  .kf-logged-out &
+    margin-bottom: -30px
+
 .delighted-visible ~ div .kf-library-card-header
   margin-top: 10px
 
+// For library cards that are displayed when there
+// is no logged in user.
+.library-card.loggedOutUser
+  border: none
+  box-shadow: none
+  padding-bottom: 20px
+
+  &::before
+    content: ' '
+    position: absolute
+    width: 99999px
+    left: 100%
+    top: 0
+    bottom: 0
+    background-color: #fff
+
+  &::after
+    content: ' '
+    position: absolute
+    width: 99999px
+    right: 100%
+    top: 0
+    bottom: 0
+    background-color: #fff
+
+  .kf-keep-lib-name-container
+    width: 100%
+    height: auto
+    padding-top: 20px
+
+  .kf-keep-lib-name
+    text-align: center
+    display: inline-block
+    width: calc(100% - 30px)
+    font-size: 42px
+    line-height: 1.23em
+    font-weight: bold
+    vertical-align: middle
+    font-family: Merriweather, Lato, Helvetica, Arial, sans-serif
+
+  .kf-keep-lib-info
+    margin: 36px 40px 0
+
+.public-library-empty-explain
+  font-size: 18px
+  margin: 0
+  color: #666
+
+
 .library-card
+  // Do not display text on buttons when the card is very narrow
+  @media screen and (max-width: 1250px)
+    .library-button-with-icon
+      padding: 0
+      width: 41px
+      height: 32px
+      font-size: 0
+
+    .kf-keep-lib-footer-share-link-text
+      display: none
+
+    .library-share-menu
+      left: -44px
+
+  .library-card-invite-header
+    padding: 10px 32px
+    max-height: 200px
+    background-color: invite-header-orange
+    opacity: 1
+
+    &.ng-hide
+      transition: opacity .4s, max-height .4s .4s
+      max-height: 0
+      opacity: 0
+
+  .library-card-invite-header-info
+    font-size: 13px
+    color: #fff
+    line-height: 25px
+
+  .library-card-invite-header-button
+    float: right
+    margin-left: 10px
+    border: 1px solid #fff
+    border-radius: 5px
+    padding: 5px 15px
+    font-size: 11px
+
+    &.library-card-invite-header-accept
+      background: #fff
+      color: invite-header-orange
+
+    &.library-card-invite-header-ignore
+      background: invite-header-orange
+      color: #fff
+
   .kf-keep-lib-header
     padding-top: 20px
 
@@ -20,11 +122,17 @@
     height: 77px
     background-repeat: no-repeat
 
+    @media screen and (max-width: 800px)
+      display: none
+
   .kf-keep-lib-name-container
     display: inline-block
     width: calc(100% - 80px)
-    height: 77px
+    height: 60px
+    margin-top: 8px
+    margin-bottom: 9px
     vertical-align: top
+    overflow: hidden
 
     &::before
       content: '';
@@ -34,7 +142,7 @@
 
   .kf-keep-lib-name
     display: inline-block
-    width: calc(100% - 10px)
+    width: calc(100% - 30px)
     font-size: 26px
     font-weight: bold
     vertical-align: middle
@@ -43,6 +151,9 @@
     margin: 0 25px 10px 80px
     color: kifiBlack
     vertical-align: top
+
+    @media screen and (max-width: 800px)
+      margin: 0 8px
 
   .kf-keep-lib-owner
     padding-bottom: 10px
@@ -66,8 +177,12 @@
   .kf-keep-lib-description-container
     padding-bottom: 5px
 
+    .kf-desc-more
+      font-size: 11px
+
   .kf-keep-lib-description
     margin: 10px 0
+    line-height: 23px
 
   .kf-keep-lib-stats-and-followers
     border-top: 1px solid #dadae2
@@ -119,6 +234,9 @@
     padding: 15px 20px
     background-color: #fff
 
+  .kf-library-share-search
+    vertical-align: top
+
   .kf-keep-lib-footer-button-right
     float: right
     margin-right: 0
@@ -144,26 +262,38 @@
     margin-right: 15px
     padding-left: 15px
 
+  .kf-keep-lib-image
+    width: 100%
+
 // This should be in common; it's so messy right now.
 .kf-keep-lib-footer-button
   display: inline-block
   position: relative
+  vertical-align: top
   margin-right: 15px
   border: 1px solid #bbb
   border-radius: 5px
   padding: 8px 15px 8px 40px
   background: linear-gradient(to top, #f3f3f3, #fff)
-  font-family: Helvetica, Arial, sans-serif
+  font-family: Lato, Helvetica, Arial, sans-serif
   font-size: 13px
   color: #666
 
-  a
+  .kf-keep-lib-footer-share-link
     color: #666
+
+  &.kf-keep-lib-footer-twitter-button
+    padding: 0
+
+    .kf-keep-lib-footer-share-link
+      display: block
+      height: 16px
+      padding: 8px 15px 8px 40px
 
 .kf-keep-lib-footer-button-icon
   position: absolute
-  top: 6px
-  left: 13px
+  top: 7px
+  left: 12px
   width: 18px
   height: 18px
   background-repeat: no-repeat
@@ -209,6 +339,8 @@
 
     &.library-share-message-input
       min-height: 50px
+      resize: none
+      border-width: 1px 0px
 
     .manage-lib-invite &
       padding-left: 35px
@@ -248,9 +380,8 @@
     content: ''
 
 .library-share-contact-list
-  overflow-y: scroll
-  overflow-x: hidden
-  max-height: 268px
+  max-height: 285px
+  overflow-y: auto
 
 .library-share-contact
   box-sizing: border-box
@@ -278,10 +409,10 @@
   color: green  // TODO(yiping): break out following into its own color
 
 .library-share-sent
-  right: 20px
+  right: 28px
 
 .library-share-following
-  right: 10px
+  right: 22px
 
 .library-share-contact-container
   position: relative
@@ -350,16 +481,100 @@
     display: inline-block
     position: absolute
     top: 5px
-    padding: 7px 10px 5px 30px
+    padding: 5px 10px 5px 30px
     font-size: 12px
 
     .kf-keep-lib-footer-button-icon
+      top: 5px
       left: 10px
       width: 15px
       height: 15px
 
+.kf-lib-passphrase-message
+  margin-left: 30px
+
+.kf-lib-passphrase-header
+  color: #3DA9F5
+  font-size: 18px
+  font-weight: 600
+
+.kf-lib-passphrase-directions
+  color: #687A8D
+  font-size: 16px
+  font-weight: 400
+  line-height: 24px
+
+.passphrase-lock-icon
+  position: relative
+  top: -2px
+  left: -1px
+  width: 15px
+  height: 20px
+  margin: 0px 10px
+
+.kf-lib-passphrase-input-box
+  float: left
+  border: 2px solid #ff3e45
+  background-color: #ff3e45
+  border-radius: 6px
+  color: #3DA9F5
+
+  ::-webkit-input-placeholder
+    color: #3DA9F5
+  :-moz-placeholder
+    color: #3DA9F5
+  ::-moz-placeholder
+    color: #3DA9F5
+  :-ms-input-placeholder
+    color: #3DA9F5
+
+  input
+    position: relative
+    margin-left: 0px
+    padding-left: 10px
+    height: 35px
+    width: 200px
+    font-size: 15px
+    color: #3DA9F5
+    background-color: white
+    border-radius: 0 5px 5px 0
+
+
+.kf-lib-passphrase-button
+  display: inline-block
+  padding: 6px 25px 8px 15px
+  margin-left: 10px
+  background-color: #3DA9F5
+  border: none
+  border-radius: 6px
+  color: #fff
+  font-size: 16px
+  font-weight: 200
+  cursor: pointer
+
+  &:hover
+    background-color: #54B3F6
+
+.passphrase-key-icon
+  position: relative
+  top: 7px
+  display: inline-block
+  width: 25px
+  height: 25px
+  margin-right: 5px
+
+.passphrase-key-text
+  position: relative
+  top: 2px
+
+.kf-lib-passphrase-example
+  margin-top: 10px
+  color: #687A8D
+  font-size: 12px
+  font-weight: 400
+
 .kf-lib-access-error
-  background: #FFCACA
   padding: 25px
   border-radius: 5px
   margin-top: 20px
+  background: #FFCACA

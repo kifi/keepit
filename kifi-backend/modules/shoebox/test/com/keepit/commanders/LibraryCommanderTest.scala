@@ -46,10 +46,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Some(Username("ironman"))))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Some(Username("captainamerica"))))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Some(Username("agentfury"))))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Some(Username("incrediblehulk"))))
+      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Username("ironman"), normalizedUsername = "foo1"))
+      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Username("captainamerica"), normalizedUsername = "foo2"))
+      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Username("agentfury"), normalizedUsername = "foo3"))
+      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Username("incrediblehulk"), normalizedUsername = "foo4"))
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
@@ -99,12 +99,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val t1 = new DateTime(2014, 8, 1, 2, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       // Everybody loves Murica! Follow Captain America's library
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
 
       // Ironman invites the Hulk to contribute to 'Science & Stuff'
-      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
 
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
@@ -233,7 +233,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           val allInvites = libraryInviteRepo.all
           allInvites.length === 4
-          val invitePairs = for (i <- allInvites) yield (i.ownerId, i.userId.get)
+          val invitePairs = for (i <- allInvites) yield (i.inviterId, i.userId.get)
 
           invitePairs === (userCaptain.id.get, userIron.id.get) ::
             (userCaptain.id.get, userAgent.id.get) ::
@@ -412,7 +412,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val userWidow = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Some(Username("blackwidow")), primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Username("blackwidow"), normalizedUsername = "bar", primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
           user
         }
@@ -427,7 +427,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === false
 
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
             authToken = "token", passPhrase = "blarg bob fred"))
         }
         // test can view if user has invite
@@ -482,7 +482,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val secret = ironSysLibs.find(_.kind == LibraryKind.SYSTEM_SECRET).get
 
           main.state === LibraryStates.ACTIVE
-          main.name === "Main Library"
+          main.name === Library.SYSTEM_MAIN_DISPLAY_NAME
           main.slug === LibrarySlug("main")
           main.id.get === Id[Library](4)
           secret.state === LibraryStates.ACTIVE
@@ -573,8 +573,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
         }
 
         db.readOnlyMaster { implicit s =>
@@ -603,6 +603,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.get(libScience.id.get).memberCount === 2 //owner + Hulk
           libraryRepo.get(libShield.id.get).memberCount === 1 //owner
         }
+
+        // Proving that accepting a lesser invite doesn't destroy current access
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+
+          libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
+          libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
+        }
+        1 === 1
       }
     }
 
@@ -650,53 +659,68 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
 
-        // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
-        val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
+        // Ironman has read-only to Murica, and read-write to libRW, and owns 2 libraries: libOwn & Science
+        val (libRW, libOwn, keepsInMurica) = db.readWrite { implicit s =>
+          val libRW = libraryRepo.save(Library(name = "B", slug = LibrarySlug("b"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val libOwn = libraryRepo.save(Library(name = "C", slug = LibrarySlug("c"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
-          (libFreedom, libIronMurica, keepsInMurica)
+          (libRW, libOwn, keepsInMurica)
         }
 
-        // Ironman copies 3 keeps from Murica to IronMurica (tests RO -> RW)
-        val copy1 = libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        copy1.size === 0
-
-        val keepsInIronMurica = db.readOnlyMaster { implicit s =>
+        // Ironman copies 3 keeps from Murica to libOwn (tests RO -> RW)
+        val copy1 = libraryCommander.copyKeeps(userIron.id.get, libOwn.id.get, keepsInMurica, None)
+        copy1._1.size === 3
+        copy1._2.size === 0
+        val keeps2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
           keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20)
+        }
+        keeps2.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+
+        // Ironman attempts to copy from libOwn to Murica (but only has read_only access to Murica) (tests RW -> RO)
+        val copy2 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, keeps2.slice(0, 2), None)
+        copy2._1.size === 0
+        copy2._2.size === 2
+        copy2._2.head._2 === LibraryError.DestPermissionDenied
+
+        // Ironman copies 2 keeps from libOwn to libRW (tests RW -> RW)
+        val copy3 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps2.slice(0, 2), None)
+        copy3._1.size === 2
+        copy3._2.size === 0
+
+        val keeps3 = db.readOnlyMaster { implicit s =>
+          keepRepo.count === 8
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libRW.id.get, 0, 20)
+        }
+        keeps3.map(_.title.get) === Seq("Freedom", "Reddit")
+        db.readWrite { implicit s =>
+          keepRepo.save(keeps3(1).copy(state = KeepStates.INACTIVE)) // Reddit is now inactive keep
         }
 
-        // Ironman attempts to copy from IronMurica to Murica (but only has read_only access to Murica) (tests RW -> RO)
-        val copy2 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, keepsInIronMurica.slice(0, 2))
-        copy2.size === 2
-        copy2.head._2 === LibraryError.DestPermissionDenied
-        // Ironman copies 2 keeps from IronMurica to Freedom (tests RW -> RW)
-        val copy3 = libraryCommander.copyKeeps(userIron.id.get, libFreedom.id.get, keepsInIronMurica.slice(0, 2))
-        copy3.size === 0
+        // Ironman copies from Murica to libRW (libRW already has existing active URI)
+        val copy4 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(0, 1), None)
+        copy4._1.size === 0
+        copy4._2.size === 1
+        copy4._2.head._2 === LibraryError.AlreadyExistsInDest
+
+        // Ironman copies from Murica to libRW (libRW already has existing inactive URI)
+        val copy5 = libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps3.slice(1, 2), None)
+        copy5._1.size === 1
+        copy5._2.size === 0
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
           keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Freedom", "Reddit")
-        }
-
-        // Ironman copies duplicates from Murica to Freedom
-        val copy4 = libraryCommander.copyKeeps(userIron.id.get, libFreedom.id.get, keepsInMurica)
-        copy4.size === 2
-        copy4.head._2 === LibraryError.AlreadyExistsInDest
-
-        db.readOnlyMaster { implicit s =>
-          keepRepo.count === 9
-          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("Freedom", "Reddit")
         }
       }
     }
@@ -707,68 +731,80 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
 
-        // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
-        val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
+        // Ironman has read-only to Murica, and read-write to libRW, and owns 2 libraries: libOwn & Science
+        val (libRW, libOwn, keepsInMurica) = db.readWrite { implicit s =>
+          val libRW = libraryRepo.save(Library(name = "B", slug = LibrarySlug("b"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libRW.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val libOwn = libraryRepo.save(Library(name = "C", slug = LibrarySlug("c"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libOwn.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 0, 20)
-          (libFreedom, libIronMurica, keepsInMurica)
+          (libRW, libOwn, keepsInMurica)
         }
 
-        // Ironman attempts to move keeps from Murica to IronMurica (tests RO -> RW)
-        val move1 = libraryCommander.moveKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        move1.size === 3
-        move1.head._2 === LibraryError.SourcePermissionDenied
+        // Ironman attempts to move keeps from Murica to libRW (tests RO -> RW)
+        val move1 = libraryCommander.moveKeeps(userIron.id.get, libRW.id.get, keepsInMurica)
+        move1._1.size === 0
+        move1._2.size === 3
+        move1._2.head._2 === LibraryError.SourcePermissionDenied
 
-        libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        val keepsInMyMurica = db.readOnlyMaster { implicit s =>
+        // prepare to test moving keeps among libraries with RW access
+        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica, None)
+        val keeps2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
+          keepRepo.getByLibrary(libRW.id.get, 0, 20)
         }
+        keeps2.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
 
-        // Ironman moves 2 keeps from IronMurica to Freedom (tests RW -> RW)
-        val move2 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica.slice(0, 2))
-        move2.size === 0
+        // Ironman moves 2 keeps from libRW to libOwn (tests RW -> RW)
+        val move2 = libraryCommander.moveKeeps(userIron.id.get, libOwn.id.get, keeps2.slice(0, 2))
+        move2._1.size === 2
+        move2._2.size === 0
 
-        val keepsInFreedom = db.readOnlyMaster { implicit s =>
+        val keeps3 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom")
-          keepRepo.getByLibrary(libFreedom.id.get, 0, 20)
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("McDonalds")
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20)
+        }
+        keeps3.map(_.title.get) === Seq("Reddit", "Freedom")
+
+        // Ironman attempts to move keeps from libOwn to Murica (tests RW -> RO)
+        val move3 = libraryCommander.moveKeeps(userIron.id.get, libMurica.id.get, keeps3)
+        move3._1.size === 0
+        move3._2.size === 2
+
+        // prepare to test moving duplicates
+        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keepsInMurica, None)
+        db.readWrite { implicit s =>
+          val copiedKeeps = keepRepo.getByLibrary(libRW.id.get, 0, 20)
+          keepRepo.save(copiedKeeps(1).copy(state = KeepStates.INACTIVE)) // Freedom is now inactive keep
+
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "McDonalds")
         }
 
-        // Ironman attempts to move keeps from IronMurica to Murica (tests RW -> RO)
-        val move3 = libraryCommander.moveKeeps(userIron.id.get, libMurica.id.get, keepsInFreedom)
-        move3.size === 2
-        move3.head._2 === LibraryError.DestPermissionDenied
+        // Ironman moves from libOwn to libRW (libRW already has existing active URI)
+        val move5 = libraryCommander.moveKeeps(userIron.id.get, libRW.id.get, keeps3.slice(0, 1)) // move Reddit from libOwn to libRW (already has Reddit)
+        move5._1.size === 0
+        move5._2.size === 1
+        move5._2.head._2 === LibraryError.AlreadyExistsInDest
 
-        libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
-          keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20)
-        }
-
-        // move duplicates (Reddit) IronMurica -> Freedom
-        val move6 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica2.slice(1, 3))
-        move6.size === 1
-        move6.head._2 === LibraryError.AlreadyExistsInDest
-
+        // Ironman moves from libOwn to libRW (libRW already has existing inactive URI)
+        val move6 = libraryCommander.moveKeeps(userIron.id.get, libRW.id.get, keeps3.slice(1, 2)) // move Freedom from libOwn to libRW (Freedom is inactive)
+        move6._1.size === 1
+        move6._2.size === 0
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
-          keepRepo.getByLibrary(libFreedom.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
+          keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq()
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
         }
       }
     }
 
-    "create library from tag" in {
+    "copy keeps between libraries from tag" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
@@ -778,12 +814,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val site2 = "http://www.freedom.org/"
         val site3 = "http://www.mcdonalds.com/"
 
-        val (tag1, tag2, libUSA) = db.readWrite { implicit s =>
+        val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
           val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
-          val libUSA2 = libraryRepo.save(Library(name = "USA2", slug = LibrarySlug("usa2"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA2.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
@@ -793,61 +826,162 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          // 2 keeps in 'Murica', but one is inactive (unkept before)
+          // libMurica has 3 keeps
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint, state = KeepStates.INACTIVE))
-
-          // one keep in 'Science'
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
             uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = libUSA2.id, inDisjointLib = libUSA2.isDisjoint))
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
 
-          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
 
-          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("Murica")))
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag2")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
 
           collectionRepo.count(userCaptain.id.get) === 2
           keepRepo.count === 3
-          keepToCollectionRepo.count === 6
-          (tag1, tag2, libUSA)
+          keepToCollectionRepo.count === 4
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
+          (tag1, tag2, libUSA, keep1, keep2, keep3)
         }
 
         val libraryCommander = inject[LibraryCommander]
-        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("Canada")).isLeft === true
-        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, Hashtag("USA")) //copy 3 keeps to library "USA"
+
+        //copy 1 keep to libUSA - libUSA has no keeps
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
         res1.isRight === true
-        res1.right.get.length === 0 // three successes
+        res1.right.get._1.length === 1 // all successes
+        res1.right.get._2.length === 0 // all successes
         db.readOnlyMaster { implicit s =>
-          keepRepo.count === 6
-          keepToCollectionRepo.count === 9
+          keepRepo.count === 4 // 1 new keep added (it was tagged by tag1 & tag2, so two more ktc's added)
+          keepToCollectionRepo.count === 6
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 2
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 4
         }
 
-        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //copy 3 keeps to library "Murica"
+        // unkeep k1
+        db.readWrite { implicit s =>
+          keepRepo.save(k1.copy(state = KeepStates.INACTIVE))
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+          keepToCollectionRepo.getKeepsForTag(tag2.id.get).length === 3
+        }
+        // There should be 3 active keeps now with 'tag2' try to copy them into libMurica
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
         res2.isRight === true
-        res2.right.get.length === 1 // one failed keep, one keep activated and one keep added (Library "Murica" already has Reddit active Keep)
+        res2.right.get._1.length === 1 // 1 reactivated keep
+        res2.right.get._2.length === 2 // 2 failed keeps
         db.readOnlyMaster { implicit s =>
+          keepRepo.count === 4
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
-          keepRepo.count === 7
-          keepToCollectionRepo.count === 10
+        }
+      }
+    }
+
+    "move keeps between libraries from tag" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val site1 = "http://www.reddit.com/r/murica"
+        val site2 = "http://www.freedom.org/"
+        val site3 = "http://www.mcdonalds.com/"
+
+        val (tag1, tag2, libUSA, k1, k2, k3) = db.readWrite { implicit s =>
+          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          // libMurica has 3 keeps
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get), inDisjointLib = libMurica.isDisjoint))
+
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag2")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+
+          collectionRepo.count(userCaptain.id.get) === 2
+          keepRepo.count === 3
+          keepToCollectionRepo.count === 4
+          keepToCollectionRepo.getByCollection(tag1.id.get).length === 1
+          keepToCollectionRepo.getByCollection(tag2.id.get).length === 3
+          (tag1, tag2, libUSA, keep1, keep2, keep3)
         }
 
-        val res3 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, Hashtag("Murica")) //try again (there should be 4 keeps tagged "Murica" now)
-        res3.isRight === true
-        res3.right.get.length === 4 // all 4 should fail since library already has all 3 URIs
+        val libraryCommander = inject[LibraryCommander]
+
+        //move 1 keep to libUSA - libUSA has no keeps
+        val res1 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag1"))
+        res1.right.get._1.length === 1 // all successes
+        res1.right.get._2.length === 0
         db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 1
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 2
+        }
+
+        //move 1 keep to libUSA - libUSA has no keeps
+        val res2 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
+        res2.right.get._1.length === 1 // all successes
+        res2.right.get._2.length === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
           keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
-          keepRepo.count === 7
-          keepToCollectionRepo.count === 10
+        }
+
+        // move duplicate keeps to its own library
+        val res3 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag1"))
+        res3.right.get._1.length === 0
+        res3.right.get._2.length === 1 // already kept
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
+        }
+
+        // move in bulk
+        val res4 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libUSA.id.get, Hashtag("tag2"))
+        res4.right.get._1.length === 3
+        res4.right.get._2.length === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 3
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 0
+        }
+
+        // keep URI in libMurica to test for duplicates -> now 4 keeps with 'tag2'
+        libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, Seq(k2), None)
+
+        val res5 = libraryCommander.moveKeepsFromCollectionToLibrary(userCaptain.id.get, libMurica.id.get, Hashtag("tag2"))
+        res5.right.get._1.length === 2
+        res5.right.get._2.length === 2 // already kept
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libUSA.id.get, 0, 10).length === 0
+          keepRepo.getByLibrary(libMurica.id.get, 0, 10).length === 3
         }
       }
     }

@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
@@ -14,6 +14,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
+import com.keepit.social.BasicUser
+import com.keepit.common.json
 
 case class Library(
     id: Option[Id[Library]] = None,
@@ -48,6 +50,20 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
+  val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
+  val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"
+
+  def getDisplayName(name: String, kind: LibraryKind): String = kind match {
+    case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN_DISPLAY_NAME
+    case LibraryKind.SYSTEM_SECRET => SYSTEM_SECRET_DISPLAY_NAME
+    case _ => name
+  }
+
+  // is_primary: trueOrNull in db
+  def applyFromDbRow(id: Option[Id[Library]], createdAt: DateTime, updatedAt: DateTime, name: String, ownerId: Id[User], visibility: LibraryVisibility, description: Option[String], slug: LibrarySlug, state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind, universalLink: String, memberCount: Int, lastKept: Option[DateTime]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount, lastKept)
+  }
+
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
@@ -68,21 +84,29 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime]
   )(Library.apply, unlift(Library.unapply))
 
-  val maxNameLength = 50
   def isValidName(name: String): Boolean = {
-    (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
+    name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
-  def formatLibraryPath(ownerUsername: Option[Username], ownerExternalId: ExternalId[User], slug: LibrarySlug): String = {
-    val usernameString = if (ownerUsername.isEmpty) ownerExternalId.id else ownerUsername.get.value
+  def formatLibraryPath(ownerUsername: Username, ownerExternalId: ExternalId[User], slug: LibrarySlug): String = {
+    val usernameString = ownerUsername.value
     s"/$usernameString/${slug.value}"
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 }
 
+case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
+  override val version = 5
+  val namespace = "library_metadata_by_id"
+  def toKey(): String = id.id.toString
+}
+
+class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 3
+  override val version = 4
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -97,13 +121,13 @@ object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
 
-  val maxSlugLength = 50
+  val MaxLength = 50
   def isValidSlug(slug: String): Boolean = {
-    slug != "" && !slug.contains(' ') && slug.length < maxSlugLength
+    slug != "" && !slug.contains(' ') && slug.length <= MaxLength
   }
 
   def generateFromName(name: String): String = {
-    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "").replaceAll("^-", "") // taken from generateSlug() in  manageLibrary.js
+    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "-").replaceAll("^-", "").take(MaxLength).replaceAll("-$", "") // taken from generateSlug() in  manageLibrary.js
   }
 }
 
@@ -129,10 +153,8 @@ object LibraryVisibility {
 sealed abstract class LibraryKind(val value: String)
 
 object LibraryKind {
-  trait SystemGenerated extends LibraryKind
-
-  case object SYSTEM_MAIN extends LibraryKind("system_main") with SystemGenerated
-  case object SYSTEM_SECRET extends LibraryKind("system_secret") with SystemGenerated
+  case object SYSTEM_MAIN extends LibraryKind("system_main")
+  case object SYSTEM_SECRET extends LibraryKind("system_secret")
   case object USER_CREATED extends LibraryKind("user_created")
 
   implicit def format[T]: Format[LibraryKind] =
@@ -157,4 +179,16 @@ case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[
 
 object LibraryView {
   implicit val format = Json.format[LibraryView]
+}
+
+case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility) {
+  def isSecret = (visibility == LibraryVisibility.SECRET)
+}
+
+object BasicLibrary {
+
+  def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+    BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility)
+  }
 }

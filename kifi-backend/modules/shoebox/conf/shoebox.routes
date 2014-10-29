@@ -115,6 +115,7 @@ POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
+POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
 # Note: /ext/user/friends is deprecated. 3.2.4 and later use /ext/contacts/search instead and do not cache friends.
@@ -137,7 +138,7 @@ POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryContro
 DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
-GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
+GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
@@ -235,7 +236,9 @@ GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
-GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, count: Int ?= 10)
+GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 
 
 
@@ -243,23 +246,35 @@ GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.M
 # Website
 ##########################################
 
-GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
-POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
-GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-GET     /about                      @com.keepit.controllers.website.HomeController.about
+GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /blog                       @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
+GET     /blog/                      @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
+GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")
+GET     /about/                     @com.keepit.controllers.website.HomeController.moved(uri = "/about")
+GET     /about/mission              @com.keepit.controllers.website.HomeController.moved(uri = "/about")
+GET     /about/culture              @com.keepit.controllers.website.HomeController.moved(uri = "/about")
+GET     /about/investors            @com.keepit.controllers.website.HomeController.moved(uri = "/about")
+GET     /about/team                 @com.keepit.controllers.website.HomeController.route(path = "about/team")
+GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
+GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
-GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
+GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
+GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
-GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
+
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
+
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
+
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
+POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
+
 GET     /get-the-kifi-extension-on-your-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "the other one is wrong")
 GET     /get-the-kifi-extension-on-you-iphone @com.keepit.controllers.website.HomeController.getKifiExtensionIPhone(s: String ?= "this is wrong")
 
@@ -297,6 +312,8 @@ POST    /site/keeps/private         @com.keepit.controllers.website.KeepsControl
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
 
+POST    /site/tags/:tag             @com.keepit.controllers.website.KeepsController.tagKeeps(tag: String)
+
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
@@ -324,13 +341,18 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
-GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, count: Int ?= 10)
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
 GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
-GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: String, n: Option[Int] ?= None)
-POST    /site/libraries/:id/importTag @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
+
+POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
@@ -389,10 +411,6 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
-
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
-
 
 ##########################################
 # Email-Link API
@@ -515,8 +533,7 @@ GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.
 
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
-POST    /admin/users/autoSetUsernames   @com.keepit.controllers.admin.AdminUserController.autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean ?= true)
-POST    /admin/users/updateUsersWithNoUserName   @com.keepit.controllers.admin.AdminUserController.updateUsersWithNoUserName(readOnly: Boolean ?= true)
+POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
@@ -548,7 +565,6 @@ POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
 POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideRestrictions: Boolean ?= false)
-DELETE  /admin/user/:id/username    @com.keepit.controllers.admin.AdminUserController.removeUsername(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -593,7 +609,7 @@ GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchCon
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
 POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSearchController.blindTestVoted
-GET    /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
+GET     /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
 GET     /admin/search/compare     @com.keepit.controllers.admin.AdminSearchController.searchComparisonPage
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
@@ -610,6 +626,7 @@ POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
 POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+POST    /admin/slider/setSiteShowLibraryIntro @com.keepit.controllers.admin.SliderAdminController.setSiteShowLibraryIntro()
 
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
@@ -619,6 +636,7 @@ POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminL
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepImageController.loadPrevImageForKeep(startUserId: Long, endUserId: Long)
+POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
@@ -770,12 +788,9 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
-
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.savePageInfo
-GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.getImageInfo(id:Id[ImageInfo])
 POST     /internal/shoebox/database/saveImageInfo     @com.keepit.controllers.internal.ShoeboxScraperController.saveImageInfo
 POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.saveNormalizedURI
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
@@ -794,7 +809,6 @@ POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers
 POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
 GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
-GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
@@ -809,6 +823,7 @@ GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.int
 POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getUriSummary()
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
+POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
@@ -819,20 +834,8 @@ POST    /internal/shoebox/user/addInteractions            @com.keepit.controller
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 
 # Angular assets
-GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/public/ng/dist", file)
-GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/public/ng/img", file)
-
-##########################################
-# Marketing site
-##########################################
-GET     /about/*file               @com.keepit.controllers.website.AboutAssets.at(path="/public/about_us", file)
-
-# Redirects for the old marketing site
-GET     /index.html                @com.keepit.controllers.website.AboutAssets.at(path="/", file="index.html")
-GET     /team.html                 @com.keepit.controllers.website.AboutAssets.at(path="/", file="team.html")
-GET     /culture.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="culture.html")
-GET     /investors.html            @com.keepit.controllers.website.AboutAssets.at(path="/", file="investors.html")
-GET     /join_us.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="join_us.html")
+GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
+GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
 
 ->  / common.Routes
 

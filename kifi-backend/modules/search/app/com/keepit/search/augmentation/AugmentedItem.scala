@@ -1,18 +1,16 @@
 package com.keepit.search.augmentation
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ Hashtag, NormalizedURI, Library, User }
+import com.keepit.model.{ NormalizedURI, Library, User }
 import com.keepit.search.{ Searcher }
-import java.text.Normalizer
 import com.keepit.search.graph.library.LibraryIndexable
-import play.api.libs.json.{ JsBoolean, Json, JsObject }
 import scala.collection.mutable.{ ListBuffer }
 import com.keepit.common.Collection
 
-class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) {
+class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) {
   def uri: Id[NormalizedURI] = item.uri
   def keep = primaryKeep
-  def isSecret(librarySearcher: Searcher) = myKeeps.nonEmpty && myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _))
+  def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _)))
 
   // Keeps
   private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
@@ -24,6 +22,8 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
   // Libraries
 
   lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _) => (libraryId, keeperId) }
+
+  def librariesTotal = keeps.length + otherPublishedKeeps + otherDiscoverableKeeps
 
   // Keepers
 
@@ -38,7 +38,21 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
   private lazy val myTags = myKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_)))
   private lazy val moreTags = moreKeeps.flatMap(_.tags.toSeq.sortBy(-scores.byTag(_))).toSeq
 
-  def tags = Collection.dedupBy(myTags ++ primaryTags ++ moreTags)(AugmentedItem.normalizeTag)
+  def tags = Collection.dedupBy(myTags ++ primaryTags.filterNot(_.isSensitive) ++ moreTags.filterNot(_.isSensitive))(_.normalized)
+
+  def toLimitedAugmentationInfo(maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
+
+    val keepersShown = relatedKeepers.take(maxKeepersShown)
+    val keepersOmitted = relatedKeepers.size - keepersShown.size
+
+    val librariesShown = libraries.take(maxLibrariesShown)
+    val librariesOmitted = libraries.size - librariesShown.size
+
+    val tagsShown = tags.take(maxTagsShown)
+    val tagsOmitted = tags.size - tagsShown.size
+
+    LimitedAugmentationInfo(keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
+  }
 }
 
 object AugmentedItem {
@@ -63,53 +77,7 @@ object AugmentedItem {
     (myKeeps.toList, moreKeeps.toList)
   }
 
-  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
-  @inline private[AugmentedItem] def normalizeTag(tag: Hashtag): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(tag.tag.trim, Normalizer.Form.NFD), "").toLowerCase
-
-  def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: AugmentationInfo) = {
+  def apply(userId: Id[User], allFriends: Set[Id[User]], allLibraries: Set[Id[Library]], scores: AugmentationScores)(item: AugmentableItem, info: FullAugmentationInfo) = {
     new AugmentedItem(userId, allFriends, allLibraries, scores)(item, info)
-  }
-
-  def writesAugmentationFields(librarySearcher: Searcher,
-    userId: Id[User],
-    maxKeepersShown: Int,
-    maxLibrariesShown: Int,
-    maxTagsShown: Int,
-    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Seq[Id[User]], Seq[Id[Library]]) = {
-    val allKeepersShown = augmentedItems.map(_.relatedKeepers.take(maxKeepersShown))
-    val allLibrariesShown = augmentedItems.map(_.libraries.take(maxLibrariesShown))
-
-    val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
-    val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
-
-    val libraryIds = allLibrariesShown.flatMap(_.map(_._1)).distinct
-    val libraryIndexById = libraryIds.zipWithIndex.toMap
-
-    val augmentationFields = augmentedItems.zipWithIndex.map {
-      case (augmentedItem, itemIndex) =>
-        val secret = augmentedItem.isSecret(librarySearcher)
-
-        val keepersShown = allKeepersShown(itemIndex).map(userIndexById(_))
-        val keepersOmitted = augmentedItem.relatedKeepers.size - keepersShown.size
-        val keepersTotal = augmentedItem.keepersTotal
-
-        val librariesShown = allLibrariesShown(itemIndex).flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
-        val librariesOmitted = augmentedItem.libraries.size - librariesShown.size / 2
-
-        val tagsShown = augmentedItem.tags.take(maxTagsShown)
-        val tagsOmitted = augmentedItem.tags.size - tagsShown.size
-
-        Json.obj(
-          "secret" -> JsBoolean(secret),
-          "keepers" -> keepersShown,
-          "keepersOmitted" -> keepersOmitted,
-          "keepersTotal" -> keepersTotal,
-          "libraries" -> librariesShown,
-          "librariesOmitted" -> librariesOmitted,
-          "tags" -> tagsShown,
-          "tagsOmitted" -> tagsOmitted
-        )
-    }
-    (augmentationFields, userIds, libraryIds)
   }
 }

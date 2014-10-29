@@ -1,12 +1,12 @@
 <ul class="kf-nav-group" ng-if="!librariesEnabled">
-  <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/recommendations') }">
-    <a class="kf-nav-link" href="/recommendations">
+  <li class="kf-nav-item kf-nav-recos" ng-class="{ active: isActive('/') }">
+    <a class="kf-nav-link" href="/">
       <span class="sprite sprite-clover-small"></span>
       <span class="kf-nav-name pre-libraries-style">Recommendations</span>
     </a>
   </li>
-  <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/') }">
-    <a class="kf-nav-link" href="/">
+  <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/keeps') }">
+    <a class="kf-nav-link" href="/keeps">
       <span class="sprite sprite-cards-small"></span>
       <span class="kf-nav-name pre-libraries-style">Keeps Library</span>
       <span class="kf-nav-count" ng-class="{ empty: !counts.keepCount }">{{counts.keepCount}}</span>
@@ -15,20 +15,26 @@
 </ul>
 
 <div class="kf-nav-group" ng-if="librariesEnabled">
-  <div class="kf-nav-lib-recos" ng-class="{ active: isActive('/recommendations') }">
-    <a class="kf-nav-link" href="/recommendations">
+  <div class="kf-nav-lib-recos" ng-class="{ active: isActive('/') }">
+    <a class="kf-nav-link" href="/">
       <span class="reco-icon svg-reco-icon"></span>
       <span class="kf-nav-name">Recommendations</span>
     </a>
   </div>
 
-  <div ng-show="mainLib.numKeeps >= 0">
+  <div>
+    <div kf-callout class="kf-callout-bubble-right" ng-if="showCallout()">
+        <div>Your main and private libraries hold all of your existing keeps. You can create additional libraries if you wish.</div>
+        <div class="kf-callout-bubble-action">
+          <div class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</div>
+        </div>
+    </div>
     <ul class="kf-nav-lib-system">
-      <li class="kf-nav-lib-item" ng-class="{ active: isActive('mainLib.url') }">
+      <li class="kf-nav-lib-item" ng-class="{ active: isActive(mainLib.url) }">
         <a class="kf-nav-link" ng-href="{{mainLib.url}}">
           <div class="library-icon svg-main-library-icon"></div>
           <div class="kf-nav-lib-info">
-            <div class="kf-nav-lib-name">{{mainLib.name}}</div>
+            <div class="kf-nav-lib-name">My Main Library</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !mainLib.numKeeps }">
               <ng-pluralize count="mainLib.numKeeps"
                       when="{'0': '',
@@ -39,11 +45,11 @@
           </div>
         </a>
       </li>
-      <li class="kf-nav-lib-item" ng-class="{ active: isActive('secretLib.url') }">
+      <li class="kf-nav-lib-item" ng-class="{ active: isActive(secretLib.url) }">
         <a class="kf-nav-link" ng-href="{{secretLib.url}}">
           <div class="library-icon svg-secret-library-icon"></div>
           <div class="kf-nav-lib-info">
-            <div class="kf-nav-lib-name">{{secretLib.name}}</div>
+            <div class="kf-nav-lib-name">My Private Library</div>
             <div class="kf-nav-lib-text" ng-class="{ empty: !secretLib.numKeeps }">
               <ng-pluralize count="secretLib.numKeeps"
                       when="{'0': '',
@@ -69,7 +75,7 @@
       </div>
 
       <div class="kf-sort-libs">
-        <div class="kf-sort-libs-button" ng-class="{'on': sortingMenu.show }" ng-click="toggleDropdown()">
+        <div class="kf-sort-libs-button" ng-class="{'on': sortingMenu.show }">
           <div class="kf-sort-img sprite sprite-arrow-gray-down"></div>
         </div>
 
@@ -96,51 +102,55 @@
     <div class="kf-scrollable-libs" antiscroll="{ autoHide: false }">
       <ul class="kf-nav-lib-users">
         <li ng-repeat="library in userLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
-          <a class="kf-nav-link" ng-href="{{library.url}}">
-            <div class="library-icon-holder">
-              <div class="library-icon svg-private-library-icon" ng-if="library.visibility=='secret'"></div>
-              <div class="library-icon svg-public-library-icon" ng-if="library.visibility=='published'"></div>
+          <div class="kf-nav-link-box">
+            <a class="kf-nav-link" ng-href="{{library.url}}">
+              <div class="library-icon-holder">
+                <div class="library-icon svg-private-library-icon" ng-if="library.visibility=='secret'"></div>
+                <div class="library-icon svg-public-library-icon" ng-if="library.visibility=='published'"></div>
 
-              <!-- TODO: remove this when discoverable libraries have been converted to public libraries in the db. -->
-              <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
+                <!-- TODO: remove this when discoverable libraries have been converted to public libraries in the db. -->
+                <div class="library-icon svg-yellow-card-with-globe" ng-if="library.visibility=='discoverable'"></div>
 
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
-            </div>
-            <div class="kf-nav-lib-info">
-              <div class="kf-nav-lib-name">{{library.firstLine}}</div>
-              <div class="kf-nav-lib-name">{{library.secondLine}}</div>
-              <div class="kf-nav-lib-text">
-                <ng-pluralize count="library.numKeeps"
-                              when="{'0': '',
-                                     'one': '1 keep',
-                                     'other': '{} keeps'}"></ng-pluralize>
-                <ng-pluralize count="library.numFollowers"
-                              when="{'0': '',
-                                     'one': ' 1 follower',
-                                     'other':' {} followers'}"></ng-pluralize>
+                <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
               </div>
-            </div>
+              <div class="kf-nav-lib-info">
+                <div class="kf-nav-lib-name">{{library.firstLine}}</div>
+                <div class="kf-nav-lib-name">{{library.secondLine}}</div>
+                <div class="kf-nav-lib-text">
+                  <ng-pluralize count="library.numKeeps"
+                                when="{'0': '',
+                                       'one': '1 keep',
+                                       'other': '{} keeps'}"></ng-pluralize>
+                  <ng-pluralize count="library.numFollowers"
+                                when="{'0': '',
+                                       'one': ' 1 follower',
+                                       'other':' {} followers'}"></ng-pluralize>
+                </div>
+              </div>
+            </a>
             <div kf-tooltip position="right" padding="3">
-              <div kf-library-mini-card library-id="library.id"></div>
+              <div kf-library-mini-card library="library"></div>
             </div>
-          </a>
-
+          </div>
         </li>
         <li ng-repeat="library in invitedLibsToShow" class="kf-nav-lib-item" ng-class="{ active: isActive(library.url) }">
-          <a class="kf-nav-link" ng-href="{{library.url}}">
-            <div class="library-icon-holder">
-              <div class="library-icon svg-library-card"></div>
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
-            </div>
-            <div class="kf-nav-lib-info">
-              <div class="kf-nav-lib-name">{{library.firstLine}}</div>
-              <div class="kf-nav-lib-name">{{library.secondLine}}</div>
-              <div class="kf-nav-lib-text">invitation pending</div>
-            </div>
+          <div class="kf-nav-link-box">
+            <a class="kf-nav-link" ng-href="{{library.url}}">
+              <div class="library-icon-holder">
+                <div class="library-icon svg-library-card"></div>
+                <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+              </div>
+              <div class="kf-nav-lib-info">
+                <div class="kf-nav-lib-name">{{library.firstLine}}</div>
+                <div class="kf-nav-lib-name">{{library.secondLine}}</div>
+                <div class="kf-nav-lib-text">invitation pending</div>
+              </div>
+            </a>
             <div kf-tooltip position="right" padding="3">
-              <div kf-library-mini-card library-id="library.id"></div>
+              <div kf-library-mini-card library="library" invite="true"></div>
             </div>
-          </a>
+          </div>
+
         </li>
       </ul>
     </div>

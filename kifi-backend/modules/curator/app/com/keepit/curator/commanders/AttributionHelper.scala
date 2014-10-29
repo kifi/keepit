@@ -6,9 +6,10 @@ import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
 import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.Collection
 
 import scala.concurrent.Future
-import com.keepit.search.augmentation.{ RestrictedKeepInfo, ItemAugmentationRequest, AugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
 
 class SeedAttributionHelper @Inject() (
     db: Database,
@@ -62,11 +63,11 @@ class SeedAttributionHelper @Inject() (
         if (uriId2Idx.size == 0) {
           Future.successful(ret)
         } else {
-          val request = ItemAugmentationRequest.uniform(userId, uriId2Idx.keys.toSeq.map { uriId => AugmentableItem(uriId) }: _*)
-          search.augmentation(request).map { resp =>
-            resp.infos.foreach {
-              case (item, info) =>
-                val idx = uriId2Idx(item.uri)
+          val uriIds = uriId2Idx.keys.toSeq
+          search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, uriIds.map(AugmentableItem(_))).map { infos =>
+            (uriIds zip infos).foreach {
+              case (uriId, info) =>
+                val idx = uriId2Idx(uriId)
                 val attr = toUserAttribution(info)
                 val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
                 if (n > 0) ret(idx) = Some(attr)
@@ -97,13 +98,9 @@ class SeedAttributionHelper @Inject() (
     }
   }
 
-  def toUserAttribution(info: AugmentationInfo): UserAttribution = {
-    val users = info.keeps.flatMap(_.keptBy).distinct
-    val user2Lib = info.keeps.flatMap {
-      case RestrictedKeepInfo(_, Some(libId), Some(userId), _) => Some((userId, libId))
-      case _ => None
-    }.toMap
-    val others = info.otherDiscoverableKeeps + info.otherPublishedKeeps
-    UserAttribution(users, others, Some(user2Lib))
+  def toUserAttribution(info: LimitedAugmentationInfo): UserAttribution = {
+    val others = info.keepersTotal - info.keepers.size - info.keepersOmitted
+    val userToLib = Collection.dedupBy(info.libraries)(_._2).map(_.swap).toMap // a user could have kept this page in several libraries, retain the first (most relevant) one.
+    UserAttribution(info.keepers, others, Some(userToLib))
   }
 }

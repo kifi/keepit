@@ -93,5 +93,6 @@ GET         /internal/search/cache/warmResultClick        @com.keepit.controller
 
 GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
 POST        /internal/search/augmentation   @com.keepit.controllers.search.SearchController.augmentation()
+POST        /internal/search/augment   @com.keepit.controllers.search.SearchController.augment()
 
 ->          /        common.Routes

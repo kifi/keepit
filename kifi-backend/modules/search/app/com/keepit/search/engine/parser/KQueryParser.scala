@@ -11,7 +11,7 @@ import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.query._
 import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.DurationInt
 
 class KQueryParser(
@@ -21,8 +21,7 @@ class KQueryParser(
     altStemmingAnalyzer: Option[Analyzer],
     config: SearchConfig,
     phraseDetector: PhraseDetector,
-    phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
-    monitoredAwait: MonitoredAwait) { qp =>
+    phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]]) { qp =>
 
   private[this] val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
     override val altAnalyzer = qp.altAnalyzer
@@ -48,7 +47,7 @@ class KQueryParser(
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
 
-          val phrases = monitoredAwait.result(detectPhrases(queryText, parser.lang), 3 seconds, "phrase detection")
+          val phrases = detectPhrases(queryText, parser.lang)
           val proxQ = new KProximityQuery
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, 1f)) // disable phrase scoring for title. penalty could be too big
@@ -85,13 +84,10 @@ class KQueryParser(
     }
   }
 
-  def svTerms: Seq[Term] = {
-    parser.textQueries.flatMap { _.stems.map { t => new Term("sv", t.text) } }
-  }
-
-  private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
-    phraseDetectionConsolidator((queryText, lang)) { _ =>
+  private def detectPhrases(queryText: CharSequence, lang: Lang): Set[(Int, Int)] = {
+    val future = phraseDetectionConsolidator((queryText, lang)) { _ =>
       Future.successful { phraseDetector.detectAll(phStemmedTerms) }
     }
+    Await.result(future, 100 millisecond)
   }
 }

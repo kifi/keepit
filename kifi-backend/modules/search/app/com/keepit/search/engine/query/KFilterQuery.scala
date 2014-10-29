@@ -6,13 +6,15 @@ import org.apache.lucene.util.{ Bits, ToStringUtils }
 
 import scala.collection.mutable.ArrayBuffer
 
-abstract class KFilterQuery extends Query {
+abstract class KFilterQuery extends Query with ProjectableQuery {
 
   def label: String
 
   protected def label(operator: String, operand: String) = """%s:"%s"""".format(operator, operand)
 
   val subQuery: Query
+
+  def project(fields: Set[String]): Query = this
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     val underlying = subQuery.createWeight(searcher)

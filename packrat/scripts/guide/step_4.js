@@ -11,9 +11,9 @@ guide.step4 = guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
-    {sel: '.kf-sidebar-nav,.kf-sidebar-tag-list', pad: [-5, -5, 30, 0], maxHeight: 246},
-    {sel: '.kf-query', pad: [6, 8], maxWidth: 320},
-    {sel: '.kf-header-right>*', pad: [-6, 24], anchor: 'tr'}
+    {sel: '.kf-nav-lib-system', pad: [0, -20, 56, 20]},
+    {sel: '.kf-query-lib-container', pad: [6, 8, 8]},
+    {sel: '.kf-header-right>*', pad: [-6, 6, -6, 12], anchor: 'tr'}
   ];
   var arcs = [
     {dx: -63, dy: -40, from: {angle: 180, gap: 36, along: [0, .55], spacing: 7}, to: {angle: 100, gap: 20, along: [.95, 1]}},
@@ -22,9 +22,9 @@ guide.step4 = guide.step4 || function () {
   ];
   return {show: show, remove: removeAll};
 
-  function show($guide, __, ___, allowEsc) {
+  function show($guide) {
     if (!$stage) {
-      var show2Bound = show2.bind(null, $guide, allowEsc);
+      var show2Bound = show2.bind(null, $guide);
       var $html = $('html');
       if ($html.hasClass('kf-sidebar-active')) {
         show2Bound();
@@ -40,17 +40,14 @@ guide.step4 = guide.step4 || function () {
     }
   }
 
-  function show2($guide, allowEsc) {
+  function show2($guide) {
     $('html').off('transitionend.guideStep4');
     $stage = $(render('html/guide/step_4', me)).appendTo('body');
     cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
-    $steps = $guide.appendTo('body')
-      .one('click', '.kifi-guide-x', hide);
+    $steps = $guide.appendTo('body');
     $steps.layout().data().updateProgress(.2);
     $feats = $stage.find('.kifi-guide-feature');
-    if (allowEsc) {
-      $(document).data('esc').add(hide);
-    }
+    $(document).data('esc').add(hide);
     arrows = [];
     clearTimeout(timeout);
     timeout = setTimeout(cutHole, 600);

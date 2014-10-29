@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$location', '$routeParams', 'keepDecoratorService', 'libraryService',
-  'modalService', 'profileService', 'util',
+  'modalService', 'profileService', 'util', '$window',
   function ($scope, $rootScope, $location, $routeParams, keepDecoratorService, libraryService,
-            modalService, profileService, util) {
+            modalService, profileService, util, $window) {
     //
     // Internal data.
     //
@@ -30,6 +30,9 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
 
+    $scope.userIsOwner = function () {
+      return $scope.library && $scope.library.owner.id === profileService.me.id;
+    };
 
     //
     // Scope methods.
@@ -85,15 +88,30 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
-
     //
     // Watches and listeners.
     //
-    $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if (libSlug === $scope.librarySlug) {
+    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
+      if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
+          (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+        var idx = _.findIndex($scope.keeps, { url: keep.url });
+        if (idx > -1) {
+          $scope.keeps.splice(idx, 1);
+        }
+      } else if (libSlug === $scope.librarySlug) {
         $scope.keeps.unshift(keep);
       }
     });
+    $scope.$on('$destroy', deregisterKeepAdded);
+
+    var deregisterCurrentLibrary = $rootScope.$on('getCurrentLibrary', function (e, args) {
+      args.callback($scope.library);
+    });
+    $scope.$on('$destroy', deregisterCurrentLibrary);
+
+    var setTitle = function (lib) {
+      $window.document.title = lib.name + ' by ' + lib.owner.firstName + ' ' + lib.owner.lastName + ' • Kifi' ;
+    };
 
 
     //
@@ -110,6 +128,7 @@ angular.module('kifi')
 
       if (lib) {
         $scope.page = 'library';
+        setTitle(lib);
         util.replaceObjectInPlace($scope.library, lib);
         prePopulated = true;
       }
@@ -131,26 +150,46 @@ angular.module('kifi')
           var keep = new keepDecoratorService.Keep(rawKeep);
           keep.buildKeep(keep);
           keep.makeKept();
-
           $scope.keeps.push(keep);
         });
 
         $scope.hasMore = $scope.keeps.length < $scope.library.numKeeps;
         $scope.loading = false;
         $scope.page = 'library';
+        setTitle(library);
       }, function onError(resp) {
         if (resp.data && resp.data.error) {
-          if (resp.data.error && authToken) {
-            $scope.page = 'login';
-          } else {
-            $scope.page = 'permission_denied';
+          $scope.loading = false;
+          $scope.page = 'permission_denied';
+          if (resp.data.error) {
+            if (resp.data.error === 'no_library_found') {
+              $scope.page = 'not_found';
+            } else if (authToken) {
+              $scope.page = 'login';
+            }
           }
         }
       });
     };
 
-    init();
+    $scope.callAddKeep = function () {
+      $rootScope.$emit('triggerAddKeep', $scope.library);
+    };
+    $scope.callImportBookmarks = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+    };
+    $scope.callImportBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+    };
+    $scope.callTriggerInstall = function () {
+      $rootScope.$emit('triggerExtensionInstall');
+    };
 
+    var deregisterLogin = $rootScope.$on('userLoggedInStateChange', init.bind(this, true));
+    $scope.$on('$destroy', deregisterLogin);
+
+    init(true);
+    $rootScope.$emit('libraryUrl', $scope.library);
 
     $scope.submitPassPhrase = function () {
       libraryService.authIntoLibrary($scope.username, $scope.librarySlug, authToken, $scope.passphrase.value.toLowerCase()).then(function () {

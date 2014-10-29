@@ -15,6 +15,7 @@
           <th>Id</th>
           <th>Owner</th>
           <th>Name</th>
+          <th>URL</th>
           <th>Slug</th>
           <th># Keeps</th>
           <th># Members</th>
@@ -30,6 +31,7 @@
           <td><span class="badge">@libStat.library.id.get</span></td>
           <td>@adminHelper.userDisplay(libStat.owner)</td>
           <td>@adminHelper.libraryDisplay(libStat.library)</td>
+          <td><a href="https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}">https://www.kifi.com/@{libStat.owner.username.value}/@{libStat.library.slug.value}</a></td>
           <td>@libStat.library.slug.value</td>
           <td>@libStat.numKeeps</td>
           <td>@libStat.numMembers</td>

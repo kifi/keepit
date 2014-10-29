@@ -25,6 +25,7 @@ import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
 class SliderAdminController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
+  clock: Clock,
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   domainTagRepo: DomainTagRepo,
@@ -32,7 +33,9 @@ class SliderAdminController @Inject() (
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
-  kifInstallationStore: KifInstallationStore,
+  userRepo: UserRepo,
+  kifiInstallationStore: KifInstallationStore,
+  userValueRepo: UserValueRepo,
   domainTagImporter: DomainTagImporter,
   heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
@@ -184,7 +187,7 @@ class SliderAdminController @Inject() (
   }
 
   def getVersionForm = AdminUserPage { implicit request =>
-    val details = kifInstallationStore.getRaw()
+    val details = kifiInstallationStore.getRaw()
 
     val installations = db.readOnlyMaster { implicit session =>
       kifiInstallationRepo.getLatestActiveExtensionVersions(20)
@@ -193,30 +196,45 @@ class SliderAdminController @Inject() (
   }
 
   def killVersion(ver: String) = AdminUserAction { implicit request =>
-    val details = kifInstallationStore.getRaw()
+    val details = kifiInstallationStore.getRaw()
     val newDetails = details.copy(killed = details.killed :+ KifiExtVersion(ver))
-    kifInstallationStore.set(newDetails)
+    kifiInstallationStore.set(newDetails)
     Ok("0")
   }
 
   def unkillVersion(ver: String) = AdminUserAction { implicit request =>
-    val details = kifInstallationStore.getRaw()
+    val details = kifiInstallationStore.getRaw()
     val version = KifiExtVersion(ver)
     val newDetails = details.copy(killed = details.killed.filterNot(_.compare(version) == 0))
-    kifInstallationStore.set(newDetails)
+    kifiInstallationStore.set(newDetails)
     Ok("0")
   }
 
   def goldenVersion(ver: String) = AdminUserAction { implicit request =>
-    val details = kifInstallationStore.getRaw()
+    val details = kifiInstallationStore.getRaw()
     val newDetails = details.copy(gold = KifiExtVersion(ver))
-    kifInstallationStore.set(newDetails)
+    kifiInstallationStore.set(newDetails)
     Ok("0")
   }
 
   def broadcastLatestVersion(ver: String) = AdminUserAction { implicit request =>
     eliza.sendToAllUsers(Json.arr("version", ver))
     Ok(Json.obj("version" -> ver))
+  }
+
+  // for run when we launch libraries (10/2014)
+  def setSiteShowLibraryIntro() = AdminUserAction { implicit request =>
+    val userIds = db.readOnlyReplica { implicit session =>
+      userRepo.getRecentActiveUsers(clock.now.minusYears(4)) filter { userId =>
+        userValueRepo.getUserValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO).isEmpty
+      }
+    }
+    db.readWrite { implicit s =>
+      userIds foreach { userId =>
+        userValueRepo.setValue(userId, UserValueName.SITE_SHOW_LIBRARY_INTRO, true)
+      }
+    }
+    Ok(Json.arr(userIds))
   }
 }
 

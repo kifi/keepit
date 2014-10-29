@@ -3,16 +3,23 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoText', [
-  'profileService',
-  function (profileService) {
+  'profileService', 'libraryService',
+  function (profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoText.tpl.html',
       scope: {
-        keep: '='
+        keep: '=',
+        deprecated: '='
       },
       link: function (scope) {
+        var keep = scope.keep;
+
+        scope.librariesEnabled = libraryService.isAllowed();
+
+        // TODO(josh) remove this after we remove the deprecated keep card
+        scope.useDeprecated = typeof scope.deprecated === 'boolean' && scope.deprecated;
 
         scope.me = profileService.me;
 
@@ -23,26 +30,48 @@ angular.module('kifi')
           scope.helprankEnabled = profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('helprank') > -1;
         });
 
-        scope.hasKeepers = function (keep) {
+        function librariesTotal() {
+          return keep.librariesTotal || (keep.libraries ? keep.libraries.length : 0);
+        }
+
+        scope.hasKeepers = function () {
           return keep.keepers && (keep.keepers.length > 0);
         };
 
-        scope.hasOthers = function (keep) {
+        scope.hasOthers = function () {
           return keep.others > 0;
         };
 
-        scope.getFriendText = function (keep) {
-          var num = keep.keepers ? keep.keepers.length : 0;
-          var text = (num === 1) ? '1 friend' : num + ' friends';
-          return (!keep.isMyBookmark) ? text : 'and ' + text;
+        scope.hasLibraries = function () {
+          return scope.librariesEnabled && librariesTotal() > 0;
         };
 
-        scope.getOthersText = function (keep) {
+        scope.getFriendText = function () {
+          var num = keep.keepers ? keep.keepers.length : 0;
+          var text = (num === 1) ? '1 friend' : num + ' friends';
+          if (scope.useDeprecated && keep.isMyBookmark) {
+            return 'and ' + text;
+          }
+          return text;
+        };
+
+        scope.getOthersText = function () {
           var num = keep.others ? keep.others : 0;
           var text = (num === 1) ? '1 other' : num + ' others';
-          return (keep.isMyBookmark || keep.keepers.length > 0) ? 'and ' + text : text;
+          if (scope.useDeprecated && (scope.hasKeepers() || keep.isMyBookmark)) {
+            return 'and ' + text;
+          }
+          return text;
+        };
+
+        scope.getLibrariesText = function () {
+          var num = librariesTotal();
+          var text = (num === 1) ? '1 library' : num + ' libraries';
+          return text;
         };
       }
     };
   }
-]);
+])
+
+;

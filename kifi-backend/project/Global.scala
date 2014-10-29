@@ -127,7 +127,8 @@ object PlayGlobal {
     "com.keepit.common.db.{ExternalId, Id, State}",
     "com.keepit.model._",
     "com.keepit.social._",
-    "com.keepit.search._"
+    "com.keepit.search._",
+    "com.keepit.common.mail._"
   )
 
   val settings = Seq(

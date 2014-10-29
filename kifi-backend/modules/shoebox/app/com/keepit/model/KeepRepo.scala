@@ -61,6 +61,7 @@ class KeepRepoImpl @Inject() (
     val clock: Clock,
     val countCache: KeepCountCache,
     keepUriUserCache: KeepUriUserCache,
+    libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache,
     latestKeepUriCache: LatestKeepUriCache,
     latestKeepUrlCache: LatestKeepUrlCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
@@ -149,7 +150,10 @@ class KeepRepoImpl @Inject() (
   }
 
   override def deleteCache(keep: Keep)(implicit session: RSession): Unit = {
-    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    keep.libraryId foreach { id =>
+      countByLibraryCache.remove(CountByLibraryKey(id))
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
+    }
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
     latestKeepUriCache.remove(LatestKeepUriKey(keep.uriId))
@@ -157,7 +161,10 @@ class KeepRepoImpl @Inject() (
   }
 
   override def invalidateCache(keep: Keep)(implicit session: RSession): Unit = {
-    keep.libraryId foreach { id => countByLibraryCache.remove(CountByLibraryKey(id)) }
+    keep.libraryId foreach { id =>
+      countByLibraryCache.remove(CountByLibraryKey(id))
+      libraryMetadataCache.remove(LibraryMetadataKey(id))
+    }
     if (keep.state == KeepStates.INACTIVE) {
       deleteCache(keep)
     } else {
@@ -335,7 +342,7 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
 
     val sql = sql"""select source, count(*) from bookmark b
-      where b.state = '#${KeepStates.ACTIVE}' and updated_at between ${from} and ${to}
+      where b.state = '#${KeepStates.ACTIVE}' and created_at between ${from} and ${to}
       group by b.source;"""
     sql.as[(KeepSource, Int)].list
   }
@@ -404,7 +411,7 @@ class KeepRepoImpl @Inject() (
     import StaticQuery.interpolation
     val sqlQuery = sql"""select k.created_at, k.title, k.url, group_concat(c.name)
       from bookmark k left join keep_to_collection kc
-      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId}
+      on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId} and k.state = '#${KeepStates.ACTIVE}'
       group by url order by k.id desc"""
     sqlQuery.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }

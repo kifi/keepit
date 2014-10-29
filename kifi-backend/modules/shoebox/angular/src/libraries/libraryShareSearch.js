@@ -44,9 +44,11 @@ angular.module('kifi')
           clearSelection();
           scope.search.name = '';
           scope.share.message = '';
+          scope.email = 'Send to any email';
           $document.on('click', onClick);
           show = true;
           shareMenu.show();
+          contactList.scrollTop(0);
 
           if (!scope.manageLibInvite) {
             // When we test this conditional, Angular thinks that we're trying to
@@ -86,6 +88,7 @@ angular.module('kifi')
         }
 
         function emphasizeMatchedPrefix (text, prefix) {
+          prefix = prefix || '';
           if (util.startsWithCaseInsensitive(text, prefix)) {
             return '<b>' + text.substr(0, prefix.length) + '</b>' + text.substr(prefix.length);
           }
@@ -114,25 +117,27 @@ angular.module('kifi')
           }
 
           scope.showSpinner = true;
-          libraryService.getLibraryShareContacts(opt_query).then(function (contacts) {
+          libraryService.getLibraryShareContacts(scope.library.id, opt_query).then(function (contacts) {
             var newResults;
 
             if (contacts && contacts.length) {
-              newResults = _.clone(contacts);
+              // Clone deeply; otherwise, the data augmentation we do on individual contacts
+              // will be cached as part of the contacts cached by Clutch.
+              newResults = _.clone(contacts, true);
 
               newResults.forEach(function (result) {
                 if (result.id) {
                   result.image = friendService.getPictureUrlForUser(result);
-                  result.isFollowing = isFollowingLibrary(result);
+                  result.isFollowing = !!result.membership;
+                  result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
-                if (opt_query) {
-                  if (result.name) {
-                    result.name = emphasizeMatchedNames(result.name, opt_query);
-                  }
-                  if (result.email) {
-                    result.email = emphasizeMatchedPrefix(result.email, opt_query);
-                  }
+                if (result.name) {
+                  result.name = emphasizeMatchedNames(result.name, opt_query);
+                }
+
+                if (result.email) {
+                  result.emailFormatted = emphasizeMatchedPrefix(result.email, opt_query);
                 }
               });
 
@@ -144,19 +149,20 @@ angular.module('kifi')
               }
 
               if (contacts.length < 5) {
-                newResults.push({ custom: 'email' });
+                newResults.push({ custom: 'email', hideButton: true });
               }
 
             } else {
               newResults = [
-                { custom: 'email' },
+                { custom: 'email', hideButton: true },
                 { custom: 'importGmail', actionable: true}
               ];
 
-              if (opt_query && util.validateEmail(opt_query)) {  // Valid email? Select.
+              if (opt_query && util.validateEmail(opt_query)) {
+                // Valid email? Select and show button.
                 resultIndex = 0;
                 newResults[resultIndex].selected = true;
-                newResults[resultIndex].actionable = true;
+                newResults[resultIndex].hideButton = false;
               }
             }
 
@@ -184,11 +190,6 @@ angular.module('kifi')
           return libraryService.shareLibrary(scope.library.id, opts);
         }
 
-        function isFollowingLibrary(user) {
-          return _.some(scope.library.followers, function (follower) {
-            return follower.id === user.id;
-          });
-        }
 
 
         // TODO(yiping): make a directive for displaying a list of items where up and down

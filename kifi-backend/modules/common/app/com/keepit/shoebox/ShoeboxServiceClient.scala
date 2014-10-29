@@ -34,6 +34,7 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.json.TupleFormat
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -97,7 +98,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
-  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
@@ -119,6 +119,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibrary(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]): Future[Set[Id[User]]]
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -621,20 +622,6 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.updateURIRestriction(), payload).map { r => }
   }
 
-  def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String,
-    deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = {
-    implicit val userIdFormat = Id.format[User]
-    val payload = Json.obj(
-      "threadItems" -> threadItems,
-      "otherParticipants" -> otherParticipants.toSeq,
-      "userId" -> userId,
-      "title" -> title,
-      "deepLocator" -> deepLocator.value,
-      "notificationUpdatedAt" -> notificationUpdatedAt
-    )
-    call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
-  }
-
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
     val tracer = new StackTrace()
     val timeout = if (request.waiting) superExtraLongTimeoutJustForEmbedly else longTimeout
@@ -662,7 +649,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }
@@ -758,4 +745,12 @@ class ShoeboxServiceClientImpl @Inject() (
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) =
     call(Shoebox.internal.getMutualFriends(user1Id, user2Id)).map(_.json.as[Set[Id[User]]])
 
+  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {
+      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
+        r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
+      }
+    }
+  }
 }

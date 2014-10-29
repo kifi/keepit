@@ -13,24 +13,18 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.RequestHeader
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.{ Writes, Json, JsObject }
-import com.keepit.search.graph.library.{ LibraryIndexable }
+import play.api.libs.json.{ Json, JsObject }
+import com.keepit.search.graph.library.{ LibraryRecord, LibraryIndexable }
 
 import scala.util.{ Failure, Success }
-import com.keepit.common.json
 import com.keepit.search.augmentation._
-
-case class BasicLibrary(id: PublicId[Library], name: String, isSecret: Boolean)
-object BasicLibrary {
-  implicit val writes = Writes[BasicLibrary] { library =>
-    json.minify(Json.obj("id" -> library.id, "name" -> library.name, "secret" -> library.isSecret))
-  }
-}
+import com.keepit.social.BasicUser
 
 object SearchControllerUtil {
   val nonUser = Id[User](-1L)
@@ -95,19 +89,59 @@ trait SearchControllerUtil {
       Nil).json
   }
 
-  def augment(augmentationCommander: AugmentationCommander, userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
+  def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: KifiPlainResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)
-    augmentationCommander.getAugmentedItems(augmentationRequest).map { augmentedItems => items.map(augmentedItems(_)) }
+    augmentationCommander.getAugmentedItems(augmentationRequest).imap { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  def getBasicLibraries(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibrary] = {
+  def writesAugmentationFields(
+    userId: Id[User],
+    maxKeepersShown: Int,
+    maxLibrariesShown: Int,
+    maxTagsShown: Int,
+    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Seq[Id[User]], Seq[Id[Library]]) = {
+
+    val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+    val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
+    val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
+
+    val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
+    val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
+
+    val libraryIds = allLibrariesShown.flatMap(_.map(_._1)).distinct
+    val libraryIndexById = libraryIds.zipWithIndex.toMap
+
+    val augmentationFields = limitedAugmentationInfos.map { limitedInfo =>
+
+      val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
+      val librariesIndices = limitedInfo.libraries.flatMap { case (libraryId, keeperId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId)) }
+
+      Json.obj(
+        "keepers" -> keepersIndices,
+        "keepersOmitted" -> limitedInfo.keepersOmitted,
+        "keepersTotal" -> limitedInfo.keepersTotal,
+        "libraries" -> librariesIndices,
+        "librariesOmitted" -> limitedInfo.librariesOmitted,
+        "librariesTotal" -> limitedInfo.librariesTotal,
+        "tags" -> limitedInfo.tags,
+        "tagsOmitted" -> limitedInfo.tagsOmitted
+      )
+    }
+    (augmentationFields, userIds, libraryIds)
+  }
+
+  def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
     libraryIds.map { libId =>
-      val name = LibraryIndexable.getRecord(librarySearcher, libId).get.name
-      libId -> BasicLibrary(Library.publicId(libId), name, LibraryIndexable.isSecret(librarySearcher, libId))
+      libId -> (LibraryIndexable.getRecord(librarySearcher, libId).get, LibraryIndexable.getVisibility(librarySearcher, libId).get)
     }.toMap
+  }
+
+  def makeBasicLibrary(library: LibraryRecord, visibility: LibraryVisibility, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = Library.formatLibraryPath(owner.username, owner.externalId, library.slug)
+    BasicLibrary(Library.publicId(library.id), library.name, path, visibility)
   }
 
   def getUserAndExperiments(request: MaybeUserRequest[_]): (Id[User], Set[ExperimentType]) = {

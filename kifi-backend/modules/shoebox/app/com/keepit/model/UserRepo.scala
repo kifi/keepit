@@ -5,6 +5,7 @@ import com.keepit.commanders.UsernameOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.{ zones, Clock }
 import com.keepit.social._
@@ -17,6 +18,7 @@ import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
 import Q.interpolation
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User] {
@@ -35,7 +37,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
-  def getUsersWithNoUsername(batchSize: Int)(implicit session: RSession): Seq[User]
+  def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -44,6 +46,7 @@ class UserRepoImpl @Inject() (
   val clock: Clock,
   val externalIdCache: UserExternalIdCache,
   val idCache: UserIdCache,
+  airbreak: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
   heimdal: HeimdalServiceClient,
   expRepoProvider: Provider[UserExperimentRepoImpl])
@@ -64,9 +67,9 @@ class UserRepoImpl @Inject() (
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def username = column[Username]("username", O.Nullable)
-    def normalizedUsername = column[String]("normalized_username", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?, normalizedUsername.?) <> ((User.apply _).tupled, User.unapply)
+    def username = column[Username]("username", O.NotNull)
+    def normalizedUsername = column[String]("normalized_username", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username, normalizedUsername) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -78,6 +81,12 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = sequence.incrementAndGet())
+    user.id foreach { id =>
+      val currentUser = get(id)
+      if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
+        airbreak.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
+      }
+    }
     super.save(toSave)
   }
 
@@ -193,11 +202,6 @@ class UserRepoImpl @Inject() (
     (for (f <- rows if f.state === UserStates.ACTIVE) yield f.id).list
   }
 
-  // using this only for migration period, will delete afterwards
-  def getUsersWithNoUsername(batchSize: Int)(implicit session: RSession): Seq[User] = {
-    (for (f <- rows if f.username isNull) yield f).take(batchSize).list
-  }
-
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User] = super.getBySequenceNumber(seq, fetchSize)
 
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User] = {
@@ -224,4 +228,7 @@ class UserRepoImpl @Inject() (
     for (f <- rows if f.normalizedUsername is normalizedUsername) yield f
   }
 
+  def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {
+    sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
+  }
 }

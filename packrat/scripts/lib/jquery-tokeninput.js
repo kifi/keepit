@@ -20,6 +20,7 @@
     tokenLimit: Infinity,
     preventDuplicates: false,
     formatToken: formatItem,
+    allowFreeTagging: false,
 
     // Callbacks
     onBlur: null,
@@ -110,6 +111,10 @@
       this.data('tokenInput').remove(item);
       return this;
     },
+    replace: function (item, newItem) {
+      this.data('tokenInput').replace(item, newItem);
+      return this;
+    },
     get: function () {
       return this.data('tokenInput').getTokens();
     },
@@ -172,14 +177,17 @@
         $tokenList.addClass(classes.listFocused);
       })
       .blur(function () {
-        var val = this.value;
-        if (val !== val.trim()) {
-          val = this.value = val.trim();
-        }
         if (selectedDropdownItem && settings.onBlur && settings.onBlur.call($hiddenInput, $.data(selectedDropdownItem, 'tokenInput')) !== false) {
           handleItemChosen(selectedDropdownItem);
+        } else {
+          var val = this.value;
+          if (val && settings.allowFreeTagging) {
+            addFreeTags();
+          } else if (val !== val.trim()) {
+            this.value = val.trim();
+          }
+          hideDropdown();
         }
-        hideDropdown();
         $tokenList.removeClass(classes.listFocused);
       })
       .on('input', handleQueryChange)
@@ -223,8 +231,7 @@
 
           case KEY.BACKSPACE:
             if (selectedToken) {
-              deleteToken($(selectedToken));
-              $hiddenInput.change();
+              deleteToken(selectedToken);
               return false;
             } else if (this.selectionStart === 0 && this.selectionEnd === 0) {
               $prevToken = $inputToken.prev();
@@ -245,6 +252,8 @@
           case KEY.COMMA:
             if ($(selectedDropdownItem).hasClass(classes.dropdownItemToken)) {
               handleItemChosen(selectedDropdownItem);
+            } else if (this.value && settings.allowFreeTagging) {
+              addFreeTags();
             }
             return false;
 
@@ -254,8 +263,12 @@
               handleItemChosen(selectedDropdownItem);
               return false;
             } else if (this.value) {
-              this.value = '';
-              handleQueryChange();
+              if (settings.allowFreeTagging) {
+                addFreeTags();
+              } else {
+                this.value = '';
+                handleQueryChange();
+              }
               return false;
             }
             break;
@@ -388,11 +401,17 @@
     //
 
     this.clear = function () {
-      $tokenList.children('li').each(function() {
-        if ($(this).children("input").length === 0) {
-          deleteToken($(this));
-        }
-      });
+      $tokenList.children('.' + classes.token).remove();
+      tokens.length = 0;
+      selectedToken = null;
+      selectedTokenIndex = 0;
+      updateHiddenInput();
+      $tokenInput.val('').show();
+      if (settings.placeholder) {
+        $tokenInput.attr('placeholder', settings.placeholder);
+        resizeInput(true);  // grow the input to show as much of the placeholder as possible
+      }
+      focusAsync($tokenInput);
     };
 
     this.add = function (item) {
@@ -400,19 +419,22 @@
     };
 
     this.remove = function (item) {
-      $tokenList.children('li').each(function() {
-        if ($(this).children("input").length === 0) {
-          var currToken = $(this).data('tokenInput');
-          var match = true;
-          for (var prop in item) {
-            if (item[prop] !== currToken[prop]) {
-              match = false;
-              break;
-            }
-          }
-          if (match) {
-            deleteToken($(this));
-          }
+      var val = item[settings.tokenValue];
+      $tokenList.children('.' + classes.token).each(function () {
+        if ($.data(this, 'tokenInput')[settings.tokenValue] === val) {
+          deleteToken(this);
+        }
+      });
+    };
+
+    this.replace = function (oldItem, newItem) {
+      var oldVal = oldItem[settings.tokenValue];
+      $tokenList.children('.' + classes.token).each(function (i) {
+        var item = $.data(this, 'tokenInput');
+        if (item[settings.tokenValue] === oldVal) {
+          $(this).replaceWith(createToken(newItem));
+          tokens[i] = newItem;
+          return false;
         }
       });
     };
@@ -468,6 +490,16 @@
       }
     }
 
+    function addFreeTags() {
+      $tokenInput.val().split(settings.tokenDelimiter).map($.trim).filter(function (s) { return s; }).forEach(function (val) {
+        var item = {};
+        item[settings.tokenValue] = val;
+        addToken(item, true);
+      });
+      $tokenInput.val('');
+      handleQueryChange();
+    }
+
     function resizeInput(force) {
       var text = $tokenInput.val();
       if (force === true || measuredText !== text) {
@@ -481,32 +513,34 @@
     function handleItemChosen(el) {
       var item = $.data(el, 'tokenInput');
       if (!settings.onSelect || settings.onSelect.call($hiddenInput, item, el) !== false) {
-        addToken(item);
-        $hiddenInput.change();
+        addToken(item, true);
       }
     }
 
-    // addToken helper
-    function insertToken(item) {
+    function createToken(item) {
       var $token = $(settings.formatToken(item))
         .addClass(classes.token)
-        .insertBefore($inputToken)
         .data('tokenInput', item);
 
-      // The 'delete token' button
       $('<span>×</span>')
         .addClass(classes.tokenX)
         .appendTo($token)
         .click(onClickTokenX);
 
-      tokens.splice(selectedTokenIndex++, 0, item);
+      return $token;
+    }
 
+    function insertToken(item) {
+      var $token = createToken(item)
+        .insertBefore($inputToken);
+      tokens.splice($token.index(), 0, item);
       updateHiddenInput();
+      $tokenInput.removeAttr('placeholder');  // hidden after user has added a token
       checkTokenLimit();
     }
 
-    // Add a token to the token list based on user input
-    function addToken(item) {
+    // Add a token to the token list
+    function addToken(item, notify) {
       // See if the token already exists and select it if we don't want duplicates
       if (tokens.length > 0 && settings.preventDuplicates) {
         var foundToken;
@@ -526,24 +560,15 @@
         }
       }
 
-      // Squeeze $tokenInput so we force no unnecessary line break
-      $tokenInput.width(1);
+      $tokenInput.val('').width(1);  // .width(1) to avoid forcing an unnecessary line break
 
-      // Insert the new tokens
       if (tokens.length < settings.tokenLimit) {
         insertToken(item);
-        $tokenInput.removeAttr('placeholder');  // hidden after user has added a token
-        checkTokenLimit();
       }
 
-      // Clear input box
-      $tokenInput.val('');
-
-      // Don't show the help dropdown, they've got the idea
       hideDropdown();
 
-      // Execute the onAdd callback if defined
-      if ($.isFunction(settings.onAdd)) {
+      if (notify && $.isFunction(settings.onAdd)) {
         settings.onAdd.call($hiddenInput, item);
       }
     }
@@ -592,14 +617,14 @@
 
     function onClickTokenX(event) {
       if (!settings.disabled) {
-        deleteToken($(this).parent());
-        $hiddenInput.change();
+        deleteToken(this.parentNode, true);
         return false;
       }
     }
 
     // Delete a token from the token list
-    function deleteToken($token) {
+    function deleteToken(tokenEl, notify) {
+      var $token = $(tokenEl);
       var item = $token.data('tokenInput');
 
       var index = $token.prevAll().length;
@@ -626,7 +651,7 @@
       $tokenInput.val('').show();
       focusAsync($tokenInput);
 
-      if ($.isFunction(settings.onDelete)) {
+      if (notify !== false && $.isFunction(settings.onDelete)) {
         settings.onDelete.call($hiddenInput, item);
       }
     }
@@ -721,10 +746,6 @@
 
     function getCurrentQuery() {
       return $tokenInput.val().trim();
-    }
-
-    function getId(o) {
-      return o.id;
     }
   };
 

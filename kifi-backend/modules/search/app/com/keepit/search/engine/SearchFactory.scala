@@ -69,9 +69,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
-    )
+      phraseDetectionReqConsolidator)
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
@@ -83,6 +81,8 @@ class SearchFactory @Inject() (
           case LibraryContext.NotAuthorized(libId) => addLibraryFilter(engBuilder, libId)
           case _ =>
         }
+
+        val librarySearcher = libraryIndexer.getSearcher
 
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
@@ -99,6 +99,7 @@ class SearchFactory @Inject() (
             engBuilder,
             articleSearcher,
             keepSearcher,
+            librarySearcher,
             friendIdsFuture,
             libraryIdsFuture,
             clickBoostsFuture,
@@ -171,9 +172,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
-    )
+      phraseDetectionReqConsolidator)
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
@@ -230,8 +229,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionReqConsolidator,
-      monitoredAwait
+      phraseDetectionReqConsolidator
     )
 
     parser.parse(queryString) match {

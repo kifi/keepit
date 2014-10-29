@@ -25,8 +25,7 @@ angular.module('kifi')
         $scope.libraries = _.filter(libraryService.librarySummaries, function(lib) {
           return lib.access !== 'read_only';
         });
-        $scope.selection = $scope.selection || {};
-        $scope.selection.library = _.find($scope.libraries, { 'name': 'Main Library' });
+        $scope.librarySelection = {};
         $scope.libSelectTopOffset = 220;
       });
     }
@@ -113,6 +112,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarksLibraryModal.tpl.html',
           scope: $scope
         });
+        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarksModal.tpl.html',
@@ -133,6 +133,7 @@ angular.module('kifi')
           template: 'common/modal/importBookmarkFileLibraryModal.tpl.html',
           scope: $scope
         });
+        $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
       } else {
         modalService.open({
           template: 'common/modal/importBookmarkFileModal.tpl.html',
@@ -141,7 +142,7 @@ angular.module('kifi')
       }
     }
 
-    $rootScope.$on('showGlobalModal', function (e, modal) {
+    var deregisterGlobalModal = $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
@@ -151,6 +152,7 @@ angular.module('kifi')
           break;
       }
     });
+    $scope.$on('$destroy', deregisterGlobalModal);
 
     $scope.importBookmarksToLibrary = function (library) {
       $scope.forceClose = true;

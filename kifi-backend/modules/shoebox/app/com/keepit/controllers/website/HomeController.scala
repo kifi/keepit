@@ -9,7 +9,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.controllers.core.AuthController
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
@@ -23,7 +22,7 @@ import play.api.mvc._
 import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
 
-import scala.concurrent.Future
+import KifiSession._
 
 class HomeController @Inject() (
   db: Database,
@@ -59,6 +58,15 @@ class HomeController @Inject() (
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
+  def home = MaybeUserAction { implicit request =>
+    request match {
+      case r: NonUserRequest[_] =>
+        MarketingSiteRouter.marketingSite()
+      case userRequest: UserRequest[_] =>
+        AngularDistAssets.angularApp()
+    }
+  }
+
   def version = Action {
     Ok(fortyTwoServices.currentVersion.toString)
   }
@@ -69,156 +77,29 @@ class HomeController @Inject() (
     }
   }
 
-  def about = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        aboutHandler(isLoggedIn = true)
-      case _ =>
-        aboutHandler(isLoggedIn = false)
-    }
+  def route(path: String) = Action {
+    MarketingSiteRouter.marketingSite(path)
   }
 
-  private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (!agent.screenCanFitWebApp) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else None
-    }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
-  }
-
-  def termsOfService = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        termsHandler(isLoggedIn = true)
-      case _ =>
-        termsHandler(isLoggedIn = false)
-    }
-  }
-
-  private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        None
-      } else if (!agent.screenCanFitWebApp) {
-        Some(true)
-      } else {
-        Some(false)
-      }
-    }.getOrElse(Some(false)).map { hideHeader =>
-      Ok(views.html.marketing.terms(isLoggedIn, hideHeader))
-    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-  }
-
-  def privacyPolicy = MaybeUserAction { implicit request =>
-    request match {
-      case ur: UserRequest[_] =>
-        privacyHandler(isLoggedIn = true)
-      case _ =>
-        privacyHandler(isLoggedIn = false)
-    }
-  }
-  private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): Result = {
-    request.headers.get(USER_AGENT).map { agentString =>
-      val agent = UserAgent(agentString)
-      if (agent.isOldIE) {
-        None
-      } else if (!agent.screenCanFitWebApp) {
-        Some(true)
-      } else {
-        Some(false)
-      }
-    }.getOrElse(Some(false)).map { hideHeader =>
-      Ok(views.html.marketing.privacy(isLoggedIn, hideHeader))
-    }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+  def moved(uri: String) = Action {
+    MovedPermanently(uri)
   }
 
   def iPhoneAppStoreRedirect = MaybeUserAction { implicit request =>
     iPhoneAppStoreRedirectWithTracking
   }
   def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): Result = {
-    val context = new HeimdalContextBuilder()
-    context.addRequestInfo(request)
-    context += ("type", "landing")
-    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    val uriNoProto = applicationConfig.applicationBaseUrl.replaceFirst("https?:", "") + request.uri
-    Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
-  }
-
-  def mobileLanding = MaybeUserAction { implicit request =>
-    mobileLandingHandler
-  }
-  private def mobileLandingHandler(implicit request: Request[_]): Result = {
-    if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
-      iPhoneAppStoreRedirectWithTracking
-    } else {
-      Ok(views.html.marketing.mobileLanding(""))
+    SafeFuture {
+      val context = new HeimdalContextBuilder()
+      context.addRequestInfo(request)
+      context += ("type", "landing")
+      heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
     }
-  }
-
-  def home = {
-    val htmlAction = MaybeUserAction { implicit request =>
-      request match {
-        case ur: UserRequest[_] => homeAuthed(ur)
-        case _ => homeNotAuthed
-      }
-    }
-    Action.async(htmlAction.parser) { request =>
-      if (request.host.contains("42go")) {
-        Future.successful(MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html"))
-      } else {
-        htmlAction(request)
-      }
-    }
-  }
-
-  private def homeAuthed(implicit request: UserRequest[_]): Result = {
-    val linkWith = request.session.get(AuthController.LinkWithKey)
-    val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent(agent)
-    }
-    if (linkWith.isDefined) {
-      Redirect(com.keepit.controllers.core.routes.AuthController.link(linkWith.get))
-        .withSession(request.session - AuthController.LinkWithKey)
-    } else if (request.user.state == UserStates.INCOMPLETE_SIGNUP) {
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
-      Redirect(routes.HomeController.install())
-    } else if (agentOpt.exists(_.screenCanFitWebApp)) {
-      AngularDistAssets.angularApp()
-    } else {
-      Redirect(routes.HomeController.unsupported())
-    }
+    Ok(views.html.mobile.iPhoneRedirect(request.uri))
   }
 
   def unsupported = Action {
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
-  }
-
-  private def homeNotAuthed(implicit request: MaybeUserRequest[_]): Result = {
-    if (request.identityOpt.isDefined) {
-      // User needs to sign up or (social) finalize
-      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-    } else {
-      // TODO: Redirect to /login if the path is not /
-      // Non-user landing page
-      temporaryReportLandingLoad()
-      val agent: UserAgent = UserAgent(request)
-      if (!agent.screenCanFitWebApp) {
-        val ua = agent.userAgent
-        val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-        if (isIphone) {
-          iPhoneAppStoreRedirectWithTracking
-        } else {
-          Ok(views.html.marketing.mobileLanding(""))
-        }
-      } else {
-        Ok(views.html.marketing.landing())
-      }
-    }
   }
 
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
@@ -235,16 +116,6 @@ class HomeController @Inject() (
     Ok(res.toString)
   }
 
-  def homeWithParam(id: String) = home
-
-  def blog = MaybeUserAction { implicit request =>
-    MovedPermanently("http://blog.kifi.com/")
-  }
-
-  def kifiSiteRedirect(path: String) = Action {
-    MovedPermanently(s"/$path")
-  }
-
   def install = UserAction { implicit request =>
     SafeFuture {
       if (!hasSeenInstall) userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
@@ -258,10 +129,9 @@ class HomeController @Inject() (
     request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (!agent.screenCanFitWebApp) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else if (!agent.canRunExtensionIfUpToDate) {
-        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+
+      if (!agent.canRunExtensionIfUpToDate) {
+        Some(AngularDistAssets.angularApp())
       } else None
     }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
   }
@@ -281,7 +151,7 @@ class HomeController @Inject() (
           error => Status(INTERNAL_SERVER_ERROR)("0"),
           authenticator => {
             Redirect("/profile") // hard coded because reverse router doesn't let us go there. todo: fix
-              .withSession(request.session - SecureSocial.OriginalUrlKey + (KifiSession.FORTYTWO_USER_ID -> newLoginUser.userId.get.toString)) // note: newLoginuser.userId
+              .withSession((request.session - SecureSocial.OriginalUrlKey).setUserId(newLoginUser.userId.get))
               .withCookies(authenticator.toCookie)
           }
         )

@@ -2,10 +2,10 @@ package com.keepit.common.net
 
 import com.keepit.common.strings.UTF8
 import java.net.{ URLEncoder, URLDecoder }
-import scala.collection.mutable.ArrayBuffer
 
 object URIParserUtil {
-  private[this] val controls = "\001\002\003\005\006\007\010\011\012\013\015\016\017\020\021\022\023\025\026\027\030\031\032\033\035\036\037\177"
+  private[this] val controls = "\001\002\003\005\006\007\010\011\012\013\015\016\017\020\021\022\023\025\026\027\030\031\032\033\035\036\037\177" +
+    "\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240"
   private[this] val space = " "
   private[this] val genDelims = ":/?#[]@"
   private[this] val subDelims = "!$&'()*+,;="

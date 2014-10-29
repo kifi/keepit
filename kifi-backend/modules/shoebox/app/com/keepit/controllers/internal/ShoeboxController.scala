@@ -28,6 +28,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success }
+import com.keepit.common.json.TupleFormat
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -333,7 +334,7 @@ class ShoeboxController @Inject() (
 
   def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
     val users = db.readOnlyMaster { implicit s =>
-      var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
+      val userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
       userRepo.getUsers(userIds).map(_._2)
     }
     Ok(Json.toJson(users))
@@ -487,5 +488,13 @@ class ShoeboxController @Inject() (
   def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = Action { request =>
     val mutualFriendIds = userConnectionsCommander.getMutualFriends(user1Id, user2Id)
     Ok(Json.toJson(mutualFriendIds))
+  }
+
+  def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+    val uriIds = request.body.as[Set[Id[NormalizedURI]]]
+    val keepDataByUriId = keepsCommander.getBasicKeeps(userId, uriIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
+    val result = Json.toJson(keepDataByUriId.toSeq)
+    Ok(result)
   }
 }

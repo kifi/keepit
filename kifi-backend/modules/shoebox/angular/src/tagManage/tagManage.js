@@ -6,6 +6,7 @@ angular.module('kifi')
             'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
   function (tagService, $scope, $window, manageTagService, libraryService,
               routeService, $http, $location, modalService, $timeout, $rootScope) {
+    $scope.librariesEnabled = false;
     $scope.libraries = [];
     $scope.selected = {};
 
@@ -64,10 +65,9 @@ angular.module('kifi')
       });
     }
 
+    //
     // Watchers & Listeners
-    $scope.librariesEnabled = false;
-    $scope.libraries = [];
-
+    //
     $scope.$watch(function () {
       return libraryService.isAllowed();
     }, function (newVal) {
@@ -77,9 +77,22 @@ angular.module('kifi')
           $scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
             return lib.access !== 'read_only';
           });
-          $scope.selection = $scope.selection || {};
-          $scope.selection.library = _.find($scope.libraries, { 'kind': 'system_main' });
+          $scope.librarySelection = {};
+          $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
+          $scope.libSelectTopOffset = false;  // This overrides the scope.libSelectTopOffset set by MainCtrl.js
         });
+      }
+    });
+
+    $scope.$watch(function() {
+      return $window.innerWidth;
+    }, function (width) {
+      if (width < 1220) {
+        $scope.copyToLibraryDisplay = 'Copy';
+        $scope.moveToLibraryDisplay = 'Move';
+      } else {
+        $scope.copyToLibraryDisplay = 'Copy to Library';
+        $scope.moveToLibraryDisplay = 'Move to Library';
       }
     });
 
@@ -91,24 +104,6 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryUrl', {});
 
-    $scope.clickAction = function () {
-      var tagName = encodeURIComponent($scope.selectedTag.name);
-      libraryService.copyKeepsFromTagToLibrary($scope.selection.library.id, tagName).then(function () {
-        modalService.open({
-          template: 'tagManage/tagToLibModal.tpl.html',
-          modalData: { library : $scope.selection.library }
-        });
-        libraryService.addToLibraryCount($scope.selection.library.id, $scope.selectedTag.keeps);
-      })['catch'](function () {
-        modalService.open({
-          template: 'common/modal/genericErrorModal.tpl.html'
-        });
-      });
-    };
-
-    $scope.changeSelection = function (tag) {
-      $scope.selectedTag = tag;
-    };
 
     //
     // Filtering Stuff
@@ -162,8 +157,49 @@ angular.module('kifi')
     //
     // Manage Tags
     //
+    $scope.copyToLibraryDisplay = 'Copy To Library';
+    $scope.moveToLibraryDisplay = 'Move To Library';
+    $scope.actionToLibrary = '';
+
+    $scope.changeSelection = function (tag, action) {
+      $scope.selectedTag = tag;
+      $scope.actionToLibrary = action;
+    };
+
+    // click action when selecting a library from widget
+    $scope.clickAction = function () {
+      var tagName = encodeURIComponent($scope.selectedTag.name);
+
+      var tagActionResult;
+      if ($scope.actionToLibrary === 'copy') {
+        tagActionResult = libraryService.copyKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
+          modalService.open({
+            template: 'tagManage/tagToLibModal.tpl.html',
+            modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
+          });
+          // todo (aaron): call addToLibraryCount accordingly (make sure source libraries do NOT lose keep counts)
+          libraryService.fetchLibrarySummaries(true);
+        });
+      } else {
+        tagActionResult = libraryService.moveKeepsFromTagToLibrary($scope.librarySelection.library.id, tagName).then(function () {
+          modalService.open({
+            template: 'tagManage/tagToLibModal.tpl.html',
+            modalData: { library : $scope.librarySelection.library, action: $scope.actionToLibrary }
+          });
+          // todo (aaron): call addToLibraryCount accordingly (make sure source libraries lose keep counts)
+          libraryService.fetchLibrarySummaries(true);
+        });
+      }
+      tagActionResult['catch'](function () {
+        modalService.open({
+          template: 'common/modal/genericErrorModal.tpl.html'
+        });
+      });
+    };
+
     $scope.showRemoveTagModal = function (tag) {
       $scope.changeSelection(tag);
+      $scope.numKeepsInTag = tag.keeps;
       modalService.open({
         template: 'tagManage/deleteTagModal.tpl.html',
         scope: $scope
@@ -179,13 +215,14 @@ angular.module('kifi')
       $scope.tagsToShow.splice(removedIndex, 1);
     };
 
-    $rootScope.$on('undoRemoveTag', function () {
+    var deregisterUndoRemoveTag = $rootScope.$on('undoRemoveTag', function () {
       if (removedIndex > 0) {
         $scope.tagsToShow.splice(removedIndex, 0, removedTag);
         removedIndex = -1;
         removedTag = {};
       }
     });
+    $scope.$on('$destroy', deregisterUndoRemoveTag);
 
   }
 ]);

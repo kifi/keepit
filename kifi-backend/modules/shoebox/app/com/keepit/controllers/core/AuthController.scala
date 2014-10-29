@@ -2,7 +2,6 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
-import com.keepit.common.controller.KifiSession.FORTYTWO_USER_ID
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -11,10 +10,12 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social.{ SocialId, SecureSocialClientIds, SocialNetworkType }
 import com.kifi.macros.json
+import com.keepit.common.controller.KifiSession._
 
 import play.api.Play._
+import play.api.i18n.Messages
 import play.api.libs.json.{ JsValue, JsNumber, Json }
 import play.api.mvc._
 import securesocial.core._
@@ -29,6 +30,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
 import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
+import securesocial.core.providers.utils.RoutesHelper
 
 import scala.concurrent.Future
 
@@ -131,10 +133,11 @@ class AuthController @Inject() (
   // Note: some of the below code is taken from ProviderController in SecureSocial
   // Logout is still handled by SecureSocial directly.
 
-  def loginSocial(provider: String) = ProviderController.authenticate(provider)
-  def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
-    val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
-    authRes.map {
+  def loginSocial(provider: String) = MaybeUserAction { implicit request =>
+    handleAuth(provider)
+  }
+  def logInWithUserPass(link: String) = MaybeUserAction { implicit request =>
+    handleAuth("userpass") match {
       case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
@@ -143,6 +146,51 @@ class AuthController @Inject() (
           Ok(Json.obj("uri" -> res.header.headers.get(LOCATION).get)).withCookies(cookies: _*).withSession(newSession)
         }
       case res => res
+    }
+  }
+
+  private def handleAuth(provider: String)(implicit request: Request[_]): Result = {
+    Registry.providers.get(provider) match { // todo(ray): remove dependency on SecureSocial registry
+      case Some(p) => {
+        try {
+          p.authenticate().fold(
+            result => result,
+            user => completeAuthentication(user, request.session)
+          )
+        } catch {
+          case ex: AccessDeniedException => {
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
+          }
+          case other: Throwable => {
+            log.error("Unable to log user in. An exception was thrown", other)
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
+          }
+        }
+      }
+      case _ => NotFound
+    }
+  }
+
+  private def completeAuthentication(socialUser: Identity, session: Session)(implicit request: RequestHeader): Result = {
+    log.info(s"[completeAuthentication] user=[${socialUser.identityId}] class=${socialUser.getClass} sess=${session.data}")
+    val sess = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
+    Authenticator.create(socialUser) match {
+      case Right(authenticator) => {
+        val (user, sui) = db.readOnlyMaster { implicit s =>
+          val sui = socialRepo.get(SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
+          val user = userRepo.get(sui.userId.get)
+          log.info(s"[completeAuthentication] kifi user=$user; socialUser=${socialUser.identityId}")
+          (user, sui)
+        }
+        val userId = user.id.getOrElse(sui.userId.get)
+        Redirect(ProviderController.toUrl(sess))
+          .withSession(sess.setUserId(userId))
+          .withCookies(authenticator.toCookie)
+      }
+      case Left(error) => {
+        log.error(s"[completeAuthentication] Caught error $error while creating authenticator; cause=${error.getCause}")
+        throw new RuntimeException("Error creating authenticator", error)
+      }
     }
   }
 
@@ -172,7 +220,7 @@ class AuthController @Inject() (
       case Some(info) =>
         val hasher = Registry.hashers.currentHasher
         val session = request.session
-        val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
+        val home = com.keepit.controllers.website.routes.HomeController.home()
         authHelper.checkForExistingUser(info.emailAddress) collect {
           case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
             val identity = sui.credentials.get
@@ -187,7 +235,7 @@ class AuthController @Inject() (
                   authenticator =>
                     Future.successful(
                       Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
-                        .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                        .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
                         .withCookies(authenticator.toCookie)
                     )
                 )
@@ -249,7 +297,7 @@ class AuthController @Inject() (
     authRes(request).map { result =>
       authHelper.authHandler(request, result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
-        result.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
+        result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
       }
     }
   }
@@ -299,8 +347,6 @@ class AuthController @Inject() (
           log.info(s"trying to log in via $agent. orig string: $agentString")
           if (agent.isOldIE) {
             Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-          } else if (!agent.screenCanFitWebApp) {
-            Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
           } else None
         }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
     }
@@ -323,27 +369,17 @@ class AuthController @Inject() (
   }
 
   private def doSignupPage(implicit request: MaybeUserRequest[_]): Result = {
-    def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
-      identity.email.flatMap { addr =>
-        db.readOnlyMaster { implicit s =>
-          emailAddressRepo.getByAddressOpt(EmailAddress(addr))
-        }
-      }.isDefined
-    }
-
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent(agent)
     }
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
-    } else if (agentOpt.exists(!_.screenCanFitWebApp)) {
-      Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
     } else {
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
-            Redirect(s"${com.keepit.controllers.website.routes.KifiSiteRouter.home.url}?m=0")
+            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
           } else if (ur.identityOpt.isDefined) {
             val identity = ur.identityOpt.get
             // User exists, is incomplete
@@ -364,7 +400,7 @@ class AuthController @Inject() (
         case request: NonUserRequest[_] =>
           if (request.identityOpt.isDefined) {
             val identity = request.identityOpt.get
-            if (emailAddressMatchesSomeKifiUser(identity)) {
+            if (identity.email.exists(e => authHelper.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               Ok(views.html.auth.connectToAuthenticate(
                 emailAddress = identity.email.get,

@@ -23,8 +23,33 @@ angular.module('kifi')
         //
         scope.username = profileService.me.username;
         scope.userHasEditedSlug = false;
+        scope.emptySlug = true;
         scope.$error = {};
         scope.showFollowers = false;
+
+
+        //
+        // Internal methods.
+        //
+        function getLibraryNameError(name) {
+          function hasInvalidCharacters (myString, invalidChars) {
+            return _.some(invalidChars, function (invalidChar) {
+              return myString.indexOf(invalidChar) !== -1;
+            });
+          }
+
+          if (!name.length) {
+            return 'Please enter a name for your library';
+          } else if (scope.library.name.length < 3) {
+            return 'Please try a longer name';
+          } else if (scope.library.name.length > 50) {
+            return 'Please try a shorter name';
+          } else if (hasInvalidCharacters(scope.library.name, ['/', '\\', '"', '\''])) {
+            return 'Please no slashes or quotes in your library name';
+          }
+
+          return null;
+        }
 
 
         //
@@ -35,8 +60,9 @@ angular.module('kifi')
         };
 
         scope.editSlug = function () {
-          scope.userHasEditedSlug = !!scope.library.slug;
+          scope.emptySlug = !scope.library.slug;
           scope.library.slug = util.generateSlug(scope.library.slug);
+          scope.userHasEditedSlug = true;
         };
 
         scope.saveLibrary = function () {
@@ -44,8 +70,8 @@ angular.module('kifi')
             return;
           }
 
-          if (scope.library.name.length < 3) {
-            scope.$error.name = 'Try a longer name';
+          scope.$error.name = getLibraryNameError(scope.library.name);
+          if (scope.$error.name) {
             return;
           }
 
@@ -63,7 +89,6 @@ angular.module('kifi')
             submitting = false;
 
             libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
               scope.close();
 
               if (!returnAction) {
@@ -128,16 +153,69 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
+        //
+        // Smart Scroll
+        //
+        scope.moreMembers = true;
+        scope.memberList = [];
+        scope.memberScrollDistance = '100%';
+
+        scope.isMemberScrollDisabled = function () {
+          return !(scope.moreMembers);
+        };
+        scope.memberScrollNext = function () {
+          pageMembers();
+        };
+
+        var pageSize = 10;
+        scope.offset = 0;
+        var loading = false;
+        function pageMembers() {
+          if (loading) { return; }
+          if (scope.library.id) {
+            loading = true;
+            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
+              var members = resp.members;
+              loading = false;
+              if (members.length === 0) {
+                scope.moreMembers = false;
+              } else {
+                scope.moreMembers = true;
+                scope.offset += 1;
+                members.forEach(function (member) {
+                  member.picUrl = friendService.getPictureUrlForUser(member);
+                  member.status = setMemberStatus(member);
+                });
+                scope.memberList.push.apply(scope.memberList, members);
+              }
+            });
+          }
+        }
+
+        function setMemberStatus (member) {
+          if (member.lastInvitedAt) {
+            return 'Invitation Pending';
+          } else if (member.membership === 'read_only') {
+            return 'Following';
+          } else {
+            return 'Collaborating';
+          }
+        }
 
         //
         // Watches and listeners.
         //
-        scope.$watch(function () {
-          return scope.library.name;
-        }, function (newVal, oldVal) {
+        scope.$watch('library.name', function (newVal, oldVal) {
           if (newVal !== oldVal) {
-            scope.userHasEditedSlug = !!scope.library.name;
-            scope.library.slug = util.generateSlug(newVal);
+            // Clear the error popover when the user changes the name field.
+            scope.$error.name = null;
+
+            // Update the slug to reflect the library's name only if we're not modifying an
+            // existing library and the user has not edited the slug yet.
+            if (scope.library.name && !scope.userHasEditedSlug && !scope.modifyingExistingLibrary) {
+              scope.library.slug = util.generateSlug(newVal);
+              scope.emptySlug = false;
+            }
           }
         });
 
@@ -147,9 +225,12 @@ angular.module('kifi')
         //
         if (scope.modalData) {
           scope.library = _.cloneDeep(scope.modalData.library);
+          scope.library.followers.forEach(function (follower) {
+            follower.status = 'Following';
+          });
           returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
-          scope.userHasEditedSlug = true;
+          scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
         } else {
           scope.library = {
@@ -157,8 +238,8 @@ angular.module('kifi')
             'description': '',
             'slug': '',
 
-            // By default, the create library form selects the "discoverable" visibility for a new library.
-            'visibility': 'discoverable'
+            // By default, the create library form selects the "published" visibility for a new library.
+            'visibility': 'published'
           };
           scope.modalTitle = 'Create a library';
         }

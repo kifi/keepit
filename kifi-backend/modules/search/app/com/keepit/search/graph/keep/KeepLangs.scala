@@ -4,12 +4,18 @@ import com.keepit.common.strings._
 import com.keepit.search.Searcher
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.util.BytesRef
 import scala.collection.mutable
 import scala.math.floor
 
 class KeepLangs(searcher: Searcher) {
 
-  private[this] val langFreq = new mutable.HashMap[String, Int]()
+  // we use int arrays as int value holders in the following hash map
+  // we use BytesRef instead of String. BytesRef is comparable.
+  private[this] val langFreq = new mutable.HashMap[BytesRef, Array[Int]]() {
+    override def default(key: BytesRef): Array[Int] = new Array[Int](1) // == Array(0)
+  }
+
   private[this] var keepCount = 0
 
   def processLibraries(libIds: Set[Long]): Unit = {
@@ -22,10 +28,14 @@ class KeepLangs(searcher: Searcher) {
           var doc = tp.nextDoc()
           while (doc < NO_MORE_DOCS) {
             keepCount += 1
-            val payload = tp.getPayload()
-            if (payload != null) {
-              val lang = new String(payload.bytes, 0, payload.length, UTF8)
-              langFreq.put(lang, langFreq.getOrElse(lang, 0) + 1)
+            if (tp.freq() > 0) {
+              tp.nextPosition()
+              val payload = tp.getPayload()
+              if (payload != null) {
+                val holder = langFreq(payload)
+                if (holder(0) <= 0) langFreq.put(BytesRef.deepCopyOf(payload), holder)
+                holder(0) += 1
+              }
             }
             doc = tp.nextDoc()
           }
@@ -36,6 +46,9 @@ class KeepLangs(searcher: Searcher) {
 
   def getFrequentLangs(): Seq[(String, Int)] = {
     val threshold = floor(keepCount.toDouble * 0.05) // 5%
-    langFreq.filter { case (_, freq) => freq > threshold }.toSeq.sortBy(p => -p._2).take(8)
+    langFreq.iterator.collect {
+      case (lang, freq) if freq(0) > threshold =>
+        (new String(lang.bytes, 0, lang.length, UTF8), freq(0))
+    }.toSeq.sortBy(-_._2).take(8)
   }
 }

@@ -1,31 +1,29 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/.*$/
+// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/(?!r\/).*$/
 // @require scripts/api.js
 // @asap
 
 (function (v) {
-  document.documentElement.dataset.kifiExt = v;
-  document.dispatchEvent(new CustomEvent('kifi:installed', {version: v}));
+  var origin = window.location.origin;
 
-  var origin = location.origin;
+  document.documentElement.dataset.kifiExt = v;
+  window.postMessage({type: 'kifi_ext_listening', version: v}, origin);
 
   api.port.on({
-    update_keeps: function () {
-      window.postMessage('update_keeps', origin);
-    },
-    update_tags: function () {
-      window.postMessage('update_tags', origin);
+    post_message: function (data) {
+      window.postMessage(data, origin);
     }
   });
 
-  window.addEventListener('message', onMessage);
+  window.addEventListener('message', onMessageEvent);
   api.onEnd.push(function () {
-    window.removeEventListener('message', onMessage);
+    window.removeEventListener('message', onMessageEvent);
+    delete document.documentElement.dataset.kifiExt;
   });
 
-  function onMessage(event) {
+  function onMessageEvent(event) {
     if (event.origin === origin) {
       var data = event.data;
-      log('[onMessage]', data);
+      log('[onMessageEvent]', data);
       switch (data && data.type || data) {
       case 'start_guide':
         api.port.emit('start_guide', data.pages);
@@ -43,6 +41,9 @@
         break;
       case 'import_bookmarks_public':  // deprecated
         api.port.emit('import_bookmarks', 'main');
+        break;
+      case 'open_deep_link':
+        api.port.emit('open_deep_link', {nUri: data.url, locator: data.locator});
         break;
       case 'close_tab':
         api.port.emit('close_tab');

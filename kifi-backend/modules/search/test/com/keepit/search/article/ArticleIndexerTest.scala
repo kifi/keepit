@@ -9,6 +9,7 @@ import com.keepit.model._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
+import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.query.parser._
 import com.keepit.test._
 import org.specs2.mutable._
@@ -27,7 +28,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
   private[this] val analyzer = DefaultAnalyzer.getAnalyzer(en)
   private[this] val stemmingAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(en)
 
-  private class TstQueryParser extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
+  private class TstQueryParser extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
     val lang: Lang = en
     val altAnalyzer: Option[Analyzer] = None
     val altStemmingAnalyzer: Option[Analyzer] = None
@@ -43,7 +44,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     val uriIdArray = new Array[Long](3)
     var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
-    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
+    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"), User(firstName = "Moo", lastName = "Brown", username = Username("test"), normalizedUsername = "test"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
       NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
       NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2", state = SCRAPED),

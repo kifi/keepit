@@ -24,12 +24,9 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, JsString, Json }
+import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
@@ -91,8 +88,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, user2, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
 
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
@@ -104,7 +101,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -127,13 +125,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = None).toString
         path === "/site/keeps/all"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(user2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId, user2.id.get), 3), (Seq(bookmark2.userId), 1))
 
-        val controller = inject[KeepsController]
         inject[FakeUserActionsHelper].setUser(user1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest()
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -151,9 +146,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
               "others":1,
-              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg"}],
+              "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
+              "keepersOmitted": 0,
+              "keepersTotal": 3,
+              "libraries":[],
+              "librariesOmitted": 0,
+              "librariesTotal": 0,
               "collections":[],
               "tags":[],
+              "hashtags":[],
               "summary":{},
               "siteName":"Amazon",
               "libraryId":"lzmfsKLJyou6"},
@@ -163,10 +165,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "url":"http://www.google.com/",
               "isPrivate":false,
               "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
-              "others":-1,
+              "others":0,
+              "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
               "keepers":[],
+              "keepersOmitted": 0,
+              "keepersTotal": 1,
+              "libraries":[],
+              "librariesOmitted": 0,
+              "librariesTotal": 0,
               "collections":[],
               "tags":[],
+              "hashtags":[],
               "summary":{},
               "siteName":"Google",
               "libraryId":"lzmfsKLJyou6"}
@@ -191,8 +200,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val db = inject[Database]
 
         val (user1, bookmark1, bookmark2, bookmark3) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
-          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
+          val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2, username = Username("test"), normalizedUsername = "test"))
 
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           inject[LibraryCommander].internSystemGeneratedLibraries(user2.id.get)
@@ -204,7 +213,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -226,8 +236,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
         inject[FakeUserActionsHelper].setUser(user1)
 
-        val sharingUserInfo = Seq(SharingUserInfo(Set(), 0), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId), 1), (Seq(bookmark2.userId), 1))
 
         val request = FakeRequest("GET", s"/site/keeps/all?after=${bookmark1.externalId.toString}")
         val result = inject[KeepsController].allKeeps(before = None, after = Some(bookmark1.externalId.toString), collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
@@ -246,10 +255,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "url":"http://www.amazon.com/",
                 "isPrivate":false,
                 "createdAt":"2013-02-16T23:59:00.000Z",
-                "others":-1,
+                "others":0,
+                "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                 "keepers":[],
+                "keepersOmitted": 0,
+                "keepersTotal": 1,
+                "libraries":[],
+                "librariesOmitted": 0,
+                "librariesTotal": 0,
                 "collections":[],
                 "tags":[],
+                "hashtags":[],
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"lzmfsKLJyou6"
@@ -269,7 +285,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -279,13 +295,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).toString
         path === "/site/keeps/all?helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3), (Seq(keeps1(0).userId), 1))
 
-        val controller = inject[KeepsController]
         inject[FakeUserActionsHelper].setUser(u1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -302,10 +315,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(1).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 3,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"kifi.com",
                       "clickCount":1,
@@ -317,10 +337,17 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
-                      "others":-1,
+                      "others":0,
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 1,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
                       "clickCount":1,
@@ -343,7 +370,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -353,12 +380,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
         path === s"/site/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
-        val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
-        inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+        inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3))
 
         inject[FakeUserActionsHelper].setUser(u1)
 
-        Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
@@ -375,9 +400,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "isPrivate":${keeps1(0).isPrivate},
                       "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
+                      "keepersOmitted": 0,
+                      "keepersTotal": 3,
+                      "libraries":[],
+                      "librariesOmitted": 0,
+                      "librariesTotal": 0,
                       "collections":[],
                       "tags":[],
+                      "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
                       "clickCount":1,
@@ -391,10 +423,92 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       }
     }
 
+    "allKeeps with helprank & count" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+
+        implicit val context = HeimdalContext.empty
+        val keepRepo = inject[KeepRepo]
+        val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+        val db = inject[Database]
+
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+
+        val keeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByUser(u1.id.get, None, None, 100)
+        }
+        keeps.size === keeps1.size
+
+        val path = com.keepit.controllers.website.routes.KeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click"), count = 2).toString
+        path === s"/site/keeps/all?helprank=click&count=2"
+        inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+
+        inject[FakeUserActionsHelper].setUser(u3)
+
+        val request = FakeRequest("GET", path)
+        val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 2, withPageInfo = false)(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+                                  {"collection":null,
+                                   "before":null,
+                                   "after":null,
+                                   "keeps":[
+                                    {
+                                      "id":"${keeps3(2).externalId.toString}",
+                                      "url":"${keeps3(2).url}",
+                                      "isPrivate":${keeps3(2).isPrivate},
+                                      "createdAt":"${keeps3(2).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(2).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(2).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"Facebook",
+                                      "clickCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    },
+                                    {
+                                      "id":"${keeps3(0).externalId.toString}",
+                                      "url":"${keeps3(0).url}",
+                                      "isPrivate":${keeps3(0).isPrivate},
+                                      "createdAt":"${keeps3(0).createdAt.toStandardTimeString}",
+                                      "others":0,
+                                      "keeps":[{"id":"${keeps3(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(0).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
+                                      "keepers":[],
+                                      "keepersOmitted": 0,
+                                      "keepersTotal": 0,
+                                      "libraries":[],
+                                      "librariesOmitted": 0,
+                                      "librariesTotal": 0,
+                                      "collections":[],
+                                      "tags":[],
+                                      "hashtags":[],
+                                      "summary":{},
+                                      "siteName":"kifi.com",
+                                      "clickCount":1,
+                                      "rekeepCount":1,
+                                      "libraryId":"lzmfsKLJyou6"
+                                    }
+                                  ],
+                                  "helprank":"click"
+                                  }
+                                """)
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
     "allCollections (default sorting)" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = inject[Database].readWrite { implicit session =>
-          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction1"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
             inject[CollectionRepo].save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
@@ -429,7 +543,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (user) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron"))
+          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
@@ -490,7 +604,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "keepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -538,7 +652,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -570,7 +684,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "saveCollection create mode with long name" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
@@ -588,7 +702,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "unkeepBatch" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -608,9 +722,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         status(keepRes) must equalTo(OK)
         contentType(keepRes) must beSome("application/json")
         val keepJsonRes = Json.parse(contentAsString(keepRes))
-        val savedKeeps = (keepJsonRes \ "keeps").as[Seq[KeepInfo]]
-        savedKeeps.length === withCollection.size
-        savedKeeps.forall(k => k.id.nonEmpty) === true
+        val keepIds = (keepJsonRes \ "keeps").as[Seq[JsObject]].map(k => (k \ "id").as[ExternalId[Keep]])
+        keepIds.length === withCollection.size
+        val expectedKeeps = Json.parse(s"""
+          [
+            {"id":"${keepIds(0)}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+            {"id":"${keepIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+            {"id":"${keepIds(2)}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
+          ]
+        """)
+        (keepJsonRes \ "keeps") === expectedKeeps
 
         sourceForTitle("title 11") === KeepSource.site
         sourceForTitle("title 21") === KeepSource.site
@@ -620,7 +741,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         path === "/site/keeps/delete" // remove already taken
 
         implicit val keepFormat = ExternalId.format[Keep]
-        val json = Json.obj("ids" -> JsArray(savedKeeps.take(2) map { k => Json.toJson(k.id.get) }))
+        val json = Json.obj("ids" -> keepIds.take(2))
         val request = FakeRequest("POST", path).withBody(json)
 
         val result = inject[KeepsController].unkeepBatch()(request)
@@ -649,7 +770,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "unkeepMultiple" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
-          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
+          inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val withCollection =
@@ -703,7 +824,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "reorder tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
-          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark"))
+          val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark", username = Username("test2"), normalizedUsername = "test2"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
           val tagA = Collection(userId = user1.id.get, name = Hashtag("tagA"))
@@ -791,7 +912,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2014, 9, 1, 21, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (user) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron"))
+          val user1 = userRepo.save(User(firstName = "Mega", lastName = "Tron", username = Username("test"), normalizedUsername = "test"))
           inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))

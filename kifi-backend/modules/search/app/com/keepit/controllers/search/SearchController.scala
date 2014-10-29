@@ -16,7 +16,9 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.routes.Search
-import com.keepit.search.augmentation.{ ItemAugmentationRequest, AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentableItem, ItemAugmentationRequest, AugmentationCommander }
+import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.controllers.util.SearchControllerUtil
 
 class SearchController @Inject() (
     searchCommander: SearchCommander,
@@ -184,6 +186,22 @@ class SearchController @Inject() (
     augmentationCommander.augmentation(request.body.as[ItemAugmentationRequest]).map { augmentationResponse =>
       val json = Json.toJson(augmentationResponse)
       Ok(json)
+    }
+  }
+
+  def augment() = Action.async(parse.json) { implicit request =>
+    // This should stay in sync with SearchServiceClient.augment
+    val userId = (request.body \ "userId").asOpt[Id[User]]
+    val maxKeepersShown = (request.body \ "maxKeepersShown").as[Int]
+    val maxLibrariesShown = (request.body \ "maxLibrariesShown").as[Int]
+    val maxTagsShown = (request.body \ "maxTagsShown").as[Int]
+    val items = (request.body \ "items").as[Seq[AugmentableItem]]
+
+    val itemAugmentationRequest = ItemAugmentationRequest.uniform(userId getOrElse SearchControllerUtil.nonUser, items: _*)
+    augmentationCommander.getAugmentedItems(itemAugmentationRequest).map { augmentedItems =>
+      val infos = items.map(augmentedItems(_).toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
+      val result = Json.toJson(infos)
+      Ok(result)
     }
   }
 }

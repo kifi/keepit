@@ -1,8 +1,7 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.crypto.{ PublicIdConfiguration }
-import com.keepit.controllers.util.{ BasicLibrary, SearchControllerUtil }
+import com.keepit.controllers.util.{ SearchControllerUtil }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.common.controller._
@@ -16,13 +15,13 @@ import play.api.libs.json._
 import com.keepit.search.graph.library.{ LibraryIndexable, LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
-import com.keepit.social.BasicUser
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.common.db.{ Id }
 import com.keepit.common.core._
 import com.keepit.controllers.website.WebsiteSearchController._
-import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
+import com.keepit.search.augmentation.{ AugmentationCommander }
 import com.keepit.common.json
+import com.keepit.social.BasicUser
 
 class WebsiteSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -79,46 +78,66 @@ class WebsiteSearchController @Inject() (
         Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
       } else {
 
-        val futureUriSummaries = {
-          val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
-          shoeboxClient.getUriSummaries(uriIds)
+        val uriIds = kifiPlainResult.hits.map(hit => Id[NormalizedURI](hit.id))
+        val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+        val futureBasicKeeps = {
+          if (userId == SearchControllerUtil.nonUser) {
+            Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]])
+          } else {
+            shoeboxClient.getBasicKeeps(userId, uriIds.toSet)
+          }
         }
 
-        augment(augmentationCommander, userId, kifiPlainResult).flatMap {
-          case augmentedItems => {
-            val librarySearcher = libraryIndexer.getSearcher
-            val (allSecondaryFields, userIds, libraryIds) = AugmentedItem.writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
-            val futureUsers = shoeboxClient.getBasicUsers(userIds)
+        getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
+          val (allSecondaryFields, userIds, libraryIds) = writesAugmentationFields(userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+          val librarySearcher = libraryIndexer.getSearcher
+          val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, libraryIds.toSet)
 
-            val futureJsHits = futureUriSummaries.map { summaries =>
-              (kifiPlainResult.hits zip allSecondaryFields).map {
-                case (hit, secondaryFields) => {
-                  val primaryFields = Json.obj(
-                    "title" -> hit.title,
-                    "url" -> hit.url,
-                    "score" -> hit.finalScore,
-                    "summary" -> summaries(Id(hit.id))
-                  )
-                  json.minify(primaryFields ++ secondaryFields)
-                }
+          val futureUsers = {
+            val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
+            shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+          }
+
+          val futureJsHits = for {
+            summaries <- futureUriSummaries
+            basicKeeps <- futureBasicKeeps
+          } yield {
+            kifiPlainResult.hits.zipWithIndex.map {
+              case (hit, index) => {
+                val secret = augmentedItems(index).isSecret(librarySearcher)
+                val primaryFields = Json.obj(
+                  "title" -> hit.title,
+                  "url" -> hit.url,
+                  "score" -> hit.finalScore,
+                  "summary" -> summaries(Id(hit.id)),
+                  "secret" -> secret, // todo(Léo): remove secret field
+                  "keeps" -> basicKeeps(Id(hit.id))
+                )
+                val secondaryFields = allSecondaryFields(index)
+                primaryFields ++ secondaryFields
               }
             }
-
-            val libraries = {
-              val libraryById = getBasicLibraries(librarySearcher, libraryIds.toSet)
-              libraryIds.map(libraryById(_))
+          }
+          for {
+            usersById <- futureUsers
+            jsHits <- futureJsHits
+          } yield {
+            val libraries = libraryIds.map { libId =>
+              val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+              val owner = usersById(library.ownerId)
+              makeBasicLibrary(library, visibility, owner)
             }
-
-            for {
-              usersById <- futureUsers
-              jsHits <- futureJsHits
-            } yield (jsHits, userIds.map(usersById(_)), libraries)
+            val users = userIds.map(usersById(_))
+            (jsHits, users, libraries)
           }
         }
       }
 
       futureWebsiteSearchHits.imap {
-        case (hits: Seq[JsObject], users: Seq[BasicUser], libraries: Seq[BasicLibrary]) =>
+        case (hits, users, libraries) =>
+          val librariesJson = libraries.map { library =>
+            Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "secret" -> library.isSecret) //todo(Léo): remove secret field
+          }
           val result = Json.obj(
             "uuid" -> kifiPlainResult.uuid,
             "context" -> IdFilterCompressor.fromSetToBase64(kifiPlainResult.idFilter),
@@ -128,7 +147,7 @@ class WebsiteSearchController @Inject() (
             "friendsTotal" -> kifiPlainResult.friendsTotal,
             "othersTotal" -> kifiPlainResult.othersTotal,
             "hits" -> hits,
-            "libraries" -> libraries,
+            "libraries" -> librariesJson,
             "users" -> users
           )
           Ok(result)

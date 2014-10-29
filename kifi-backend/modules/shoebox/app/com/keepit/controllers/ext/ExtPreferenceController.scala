@@ -36,6 +36,7 @@ class ExtPreferenceController @Inject() (
     enterToSend: Boolean,
     maxResults: Int,
     showExtMsgIntro: Boolean,
+    showLibraryIntro: Boolean,
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
@@ -43,6 +44,7 @@ class ExtPreferenceController @Inject() (
     (__ \ 'enterToSend).write[Boolean] and
     (__ \ 'maxResults).write[Int] and
     (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'showLibraryIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
     (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
   )(unlift(UserPrefs.unapply))
 
@@ -75,6 +77,11 @@ class ExtPreferenceController @Inject() (
   def setShowExtMsgIntro(show: Boolean) = UserAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
     Ok(JsNumber(0))
+  }
+
+  def setShowLibraryIntro(show: Boolean) = UserAction { request =>
+    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showLibraryIntro.name, show))
+    NoContent
   }
 
   def setEmailNotifyPreference(kind: ElectronicMailCategory, send: Boolean) = UserAction { request =>
@@ -144,7 +151,7 @@ class ExtPreferenceController @Inject() (
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
-    val userValsFuture = db.readOnlyMasterAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val userValsFuture = db.readOnlyMasterAsync { implicit s => userValueRepo.getValues(userId, UserValues.ExtUserInitPrefs: _*) }
     val messagingEmailsFuture = db.readOnlyReplicaAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
       userVals <- userValsFuture
@@ -155,6 +162,7 @@ class ExtPreferenceController @Inject() (
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
         showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
+        showLibraryIntro = UserValues.showLibraryIntro.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }

@@ -2,7 +2,7 @@ package com.keepit.heimdal
 
 import org.specs2.mutable.Specification
 import play.api.libs.json._
-import com.keepit.model.{ Collection, User }
+import com.keepit.model.{ Username, Collection, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.search.result.{ BasicSearchHit, KifiSearchHit }
 import com.keepit.social.BasicUser
@@ -10,7 +10,7 @@ import com.keepit.social.BasicUser
 class SearchAnalyticsTest extends Specification {
 
   val tags = Seq(ExternalId[Collection](), ExternalId[Collection](), ExternalId[Collection]())
-  val users = Seq(User(Some(Id(1)), firstName = "", lastName = ""), User(Some(Id(1)), firstName = "", lastName = ""))
+  val users = Seq(User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"), User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"))
 
   "KifiHitContext" should {
     "be deserialized from a KifiSearchHit" in { // old extensions, to be deprecated

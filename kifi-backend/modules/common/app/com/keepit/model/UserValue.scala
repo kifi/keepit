@@ -37,38 +37,42 @@ object UserValueStates extends States[UserValue]
 @json case class UserValueName(name: String)
 
 object UserValueName {
-  val LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
+  val EXT_LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
   val ENTER_TO_SEND = UserValueName("enter_to_send")
-  val MAX_RESULTS = UserValueName("ext_max_results")
-  val SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
+  val EXT_MAX_RESULTS = UserValueName("ext_max_results")
+  val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
+  val EXT_SHOW_LIBRARY_INTRO = UserValueName("ext_show_library_intro")
   val AVAILABLE_INVITES = UserValueName("availableInvites")
   val HAS_SEEN_INSTALL = UserValueName("has_seen_install")
   val WELCOME_EMAIL_SENT = UserValueName("welcomeEmailSent")
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
-  val USER_SEGMENT = UserValueName("userSegment")
-  val EXTENSION_VERSION = UserValueName("extensionVersion")
   val USER_COLLECTION_ORDERING = UserValueName("user_collection_ordering")
   val BOOKMARK_IMPORT_LAST_START = UserValueName("bookmark_import_last_start")
   val BOOKMARK_IMPORT_DONE = UserValueName("bookmark_import_done")
   val BOOKMARK_IMPORT_TOTAL = UserValueName("bookmark_import_total")
   val USER_DESCRIPTION = UserValueName("user_description")
   val PENDING_PRIMARY_EMAIL = UserValueName("pending_primary_email")
-  val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
-  val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining")
+  val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining") // no longer in use
   val CONTACTS_NOTIFIED_ABOUT_JOINING = UserValueName("contactsNotifiedAboutJoining")
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
-  val SITE_LEFT_COL_WIDTH = UserValueName("site_left_col_width")
-  val SITE_WELCOMED = UserValueName("site_welcomed")
-  val ONBOARDING_SEEN = UserValueName("onboarding_seen")
-  val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
-  val NON_USER_KIND = UserValueName("nonUserKind")
+  val SITE_SHOW_LIBRARY_INTRO = UserValueName("site_show_library_intro")
   val RECENT_INTERACTION = UserValueName("recent_interaction")
   val KIFI_CAMPAIGN_ID = UserValueName("kifi_campaign_id")
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
+  val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
+
+  // temp for library callouts for existing user. remove after users know about libraries (Oct 26 2014)
+  // library_callout_shown tag_callout_shown guide_callout_shown
+  val LIBRARY_CALLOUT_SHOWN = UserValueName("library_callout_shown")
+  val TAG_CALLOUT_SHOWN = UserValueName("tag_callout_shown")
+  val GUIDE_CALLOUT_SHOWN = UserValueName("guide_callout_shown")
+
+  val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -127,12 +131,13 @@ object UserValues {
     def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
   }
 
-  val lookHereMode = UserValueBooleanHandler(UserValueName.LOOK_HERE_MODE, true)
+  val lookHereMode = UserValueBooleanHandler(UserValueName.EXT_LOOK_HERE_MODE, true)
   val enterToSend = UserValueBooleanHandler(UserValueName.ENTER_TO_SEND, true)
-  val maxResults = UserValueIntHandler(UserValueName.MAX_RESULTS, 1)
-  val showExtMsgIntro = UserValueBooleanHandler(UserValueName.SHOW_EXT_MSG_INTRO, true)
+  val maxResults = UserValueIntHandler(UserValueName.EXT_MAX_RESULTS, 1)
+  val showExtMsgIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
+  val showLibraryIntro = UserValueBooleanHandler(UserValueName.EXT_SHOW_LIBRARY_INTRO, false)
 
-  val UserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro).map(_.name)
+  val ExtUserInitPrefs: Seq[UserValueName] = Seq(lookHereMode, enterToSend, maxResults, showExtMsgIntro, showLibraryIntro).map(_.name)
 
   val availableInvites = UserValueIntHandler(UserValueName.AVAILABLE_INVITES, 1000)
   val hasSeenInstall = UserValueBooleanHandler(UserValueName.HAS_SEEN_INSTALL, false)

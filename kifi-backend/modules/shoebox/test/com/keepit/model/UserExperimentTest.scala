@@ -17,8 +17,8 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
+          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
+            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
         }
 
         inject[Database].readWrite { implicit session =>
@@ -40,9 +40,9 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, shachaf, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith")),
-            userRepo.save(User(firstName = "Shachaf", lastName = "Smith")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus")))
+          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
+            userRepo.save(User(firstName = "Shachaf", lastName = "Smith", username = Username("test3"), normalizedUsername = "test3")),
+            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
         }
 
         inject[Database].readWrite { implicit session =>
@@ -53,12 +53,12 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
         inject[Database].readWrite { implicit session =>
           val shanees = expRepo.getUserExperiments(shanee.id.get)
-          shanees.size === 1
+          shanees.size === 2
           shanees.head === ExperimentType.ADMIN
           val santas = expRepo.getUserExperiments(santa.id.get)
-          santas.size === 2
+          santas.size === 3
           val shachafs = expRepo.getUserExperiments(shachaf.id.get)
-          shachafs.size === 0
+          shachafs.size === 1
           val admins = expRepo.getByType(ExperimentType.ADMIN)
           admins.size === 2
           val fakes = expRepo.getByType(ExperimentType.FAKE)

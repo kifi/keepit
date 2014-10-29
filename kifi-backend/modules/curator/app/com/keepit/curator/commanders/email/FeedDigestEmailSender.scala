@@ -19,7 +19,7 @@ import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, URISummary, Keep, NormalizedURI }
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ ItemAugmentationResponse, AugmentableItem, ItemAugmentationRequest }
+import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
@@ -248,12 +248,13 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestItems(toUser = userId, recommendations = digestRecos, newLibraryItems = newLibraryItems, isFacebookConnected = isFacebookConnected)
 
+    val htmlBody = views.html.email.feedDigest(emailData)
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
       subject = s"Kifi Digest: ${digestRecos.headOption.getOrElse(newLibraryItems.head).title}",
       to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
-      htmlTemplate = views.html.email.feedDigest(emailData),
+      htmlTemplate = htmlBody,
       textTemplate = Some(views.html.email.feedDigest(emailData)),
       senderUserId = Some(userId),
       fromName = Some(Right("Kifi")),
@@ -264,10 +265,14 @@ class FeedDigestEmailSender @Inject() (
     shoebox.processAndSendMail(emailToSend).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, true))
+          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
           curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationClientType.Email))
         }
         sendAnonymoizedEmailToQa(emailToSend, emailData)
+      } else {
+        val recoIds = digestRecos.map(_.uri.id.get).mkString(",")
+        val libKeepIds = newLibraryItems.map(_.uri.id.get).mkString(",")
+        log.warn(s"sendToUser failed to send digest email to userId=$userId htmlBodySize=${htmlBody.body.size} recos=$recoIds libraryKeeps=$libKeepIds")
       }
       DigestMail(userId = userId, mailSent = sent, recommendations = digestRecos, newKeeps = newLibraryItems)
     }
@@ -278,7 +283,7 @@ class FeedDigestEmailSender @Inject() (
     // with an attempt to maintain the same look and feel, of the original email w/o revealing the real users
 
     // the email template requires real userIds since they used by the EmailTemplateSender to fetch attributes for that user
-    val userIds = Seq(1, 3, 9, 48, 61, 100, 567, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
+    val userIds = Seq(1, 3, 9, 48, 61, 100, 2538, 3466, 7100, 7456).map(i => Id[User](i.toLong)).sortBy(_ => Random.nextInt())
     val myFakeUserId = userIds.head
     val otherUserIds = userIds.tail
 
@@ -359,27 +364,11 @@ class FeedDigestEmailSender @Inject() (
    * this method assumes that all keeps are in library
    */
   private def getLibraryKeepAttributions(userId: Id[User], keeps: Seq[Keep]): Future[Seq[DigestLibraryItemCandidate]] = {
-    val request = ItemAugmentationRequest.uniform(userId, keeps.map { keep => AugmentableItem(keep.uriId, keep.libraryId) }: _*)
-    val keepMap = keeps.map { k => (k.uriId, k.libraryId.get) -> k }.toMap
-    val augmentationsF: Future[ItemAugmentationResponse] = search.augmentation(request)
-    augmentationsF map { augmentations =>
-      val userAttributions = augmentations.infos.map {
-        case (augmentableItem, augmentationInfo) =>
-          augmentableItem.keptIn.flatMap { libId =>
-            Some((augmentableItem.uri, libId) -> seedAttributionHelper.toUserAttribution(augmentationInfo))
-          } orElse {
-            val keepOpt = keeps.find(_.uriId == augmentableItem.uri) // expected to be Some, if None then we have another problem
-            airbrake.notify(s"$augmentableItem unexpected keptIn is None for keep=$keepOpt userId=$userId")
-            None
-          }
-      }.toSeq.filter(_.isDefined).map(_.get).toMap
-
-      keepMap.map {
-        case (key, keep) =>
-          userAttributions.get(key) map { userAttribution =>
-            DigestLibraryItemCandidate(keep, Some(userAttribution))
-          } getOrElse DigestLibraryItemCandidate(keep, None)
-      }.toSeq
+    search.augment(Some(userId), maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
+      (keeps zip infos).map {
+        case (keep, info) =>
+          DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))
+      }
     }
   }
 

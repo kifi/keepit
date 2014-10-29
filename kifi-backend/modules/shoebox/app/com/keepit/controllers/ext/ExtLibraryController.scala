@@ -1,13 +1,13 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepData, KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
+import com.keepit.commanders.{ KeepsCommander, LibraryAddRequest, LibraryCommander, LibraryData, RawBookmarkRepresentation, _ }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController, _ }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
@@ -18,11 +18,11 @@ import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Result
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.json.TupleFormat
-import com.keepit.common.json
 
 class ExtLibraryController @Inject() (
   db: Database,
@@ -113,12 +113,15 @@ class ExtLibraryController @Inject() (
 
           val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source)
           val (tags, image) = if (isNewKeep) {
-            (Seq.empty, None) // optimizing the common case
+            val existingImageUri = db.readOnlyReplica { implicit session =>
+              keepImageCommander.getExistingImageUrlForKeepUri(keep.uriId)
+            }
+            (Seq.empty, existingImageUri) // optimizing the common case
           } else {
             val tags = db.readOnlyReplica { implicit s =>
               collectionRepo.getTagsByKeepId(keep.id.get)
             }
-            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize)
+            val image = keepImageCommander.getBestImageForKeep(keep.id.get, ExtLibraryController.defaultImageSize).map(keepImageCommander.getUrl)
             (tags, image)
           }
 
@@ -130,7 +133,7 @@ class ExtLibraryController @Inject() (
             libraryId = libraryPubId)
           val moarKeepData = MoarKeepData(
             title = keep.title,
-            image = image.map(keepImageCommander.getUrl),
+            image = image,
             tags = tags.map(_.tag).toSeq)
           Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
@@ -223,27 +226,31 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, None, query, limit)
+  def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
+    val futureTagsAndMatches = query.map(_.trim).filter(_.nonEmpty) match {
+      case Some(validQuery) => keepsCommander.searchTags(request.userId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None => {
+        val libraryId = Library.decodePublicId(pubId).get
+        val uriId = db.readOnlyMaster { implicit session => keepRepo.get(keepId).uriId }
+        keepsCommander.suggestTags(request.userId, libraryId, uriId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      }
+    }
+    futureTagsAndMatches.imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
+    }
+  }
 
-  def suggestTags(libraryPubId: PublicId[Library], keepId: ExternalId[Keep], query: String, limit: Option[Int]) = doSuggestTags(libraryPubId, Some(keepId), query, limit)
-
-  private def doSuggestTags(libraryPubId: PublicId[Library], keepId: Option[ExternalId[Keep]], query: String, limit: Option[Int]) = UserAction.async { request =>
+  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = UserAction.async { request =>
     Library.decodePublicId(libraryPubId).toOption map { libraryId =>
       db.readOnlyMaster { implicit session =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } map { _ =>
-        if (query.trim.isEmpty && keepId.isDefined) {
-          val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId.get) }
-          keepsCommander.suggestTags(request.userId, libraryId, keep.uriId, limit).map { suggestedTags =>
-            val result = JsArray(suggestedTags.map { tag => Json.obj("tag" -> tag) })
-            Ok(result)
-          }
-        } else {
-          keepsCommander.searchTags(request.userId, query, limit) map { hits =>
-            implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-            val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
-            Ok(result)
-          }
+        keepsCommander.searchTags(request.userId, query, limit) map { hits =>
+          implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+          val result = JsArray(hits.map { hit => json.minify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
+          Ok(result)
         }
       } getOrElse {
         Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))

@@ -70,7 +70,8 @@ p{ font-weight:300;}
 .hero>.wrap { height: 100%; z-index: 1; box-sizing: border-box; padding: 116px 0 0 14vw; }
 .hero-h1 {
   width: 278px; height: 154px; font-weight: 600; font-size: 2em; text-indent: -99em;
-  background: url(//djty7jcqog9qu.cloudfront.net/assets/site/connecting_pwk.png) center/contain no-repeat;
+  background: url(//djty7jcqog9qu.cloudfront.net/assets/site/connecting_pwk.png) center no-repeat;
+  background-size: contain;
 }
 @media (-webkit-min-device-pixel-ratio: 1.3), (min-resolution: 1.3dppx) {
   .hero-h1 { background-image: url(//djty7jcqog9qu.cloudfront.net/assets/site/connecting_pwk.2x.png); }
@@ -82,7 +83,7 @@ p{ font-weight:300;}
 .hero-btn:hover:active { background-color: #35a4f1; box-shadow: 0 1px #1989d8; }
 
 .video-still { display: inline-block; white-space: nowrap; text-shadow:1px 1px 1px rgba(0,0,0,.4); color:#fff; font-size:16px; font-weight:600; text-align:left; margin-left:14px; padding-right:10px; }
-.video-still:before { content:''; background:url(//djty7jcqog9qu.cloudfront.net/assets/site/video_button.png) center/46px no-repeat; width:46px; height:46px; display:inline-block; vertical-align:middle; margin-right:12px; opacity:0.7; }
+.video-still:before { content:''; background:url(//djty7jcqog9qu.cloudfront.net/assets/site/video_button.png) center no-repeat; background-size: 46px; width:46px; height:46px; display:inline-block; vertical-align:middle; margin-right:12px; opacity:0.7; }
 .video-still:hover:before { opacity:1; }
 
 .slide {
@@ -107,8 +108,8 @@ p{ font-weight:300;}
   opacity: .8;
 }
 
-.home_laptop{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.png) 0/contain no-repeat; width:478px; height:268px; position:absolute; right:139px; top:258px; z-index:3; }
-.home_phone{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.png) 0/contain no-repeat; width:236px; height:414px; position:absolute; right:10px; top:167px; z-index:4; }
+.home_laptop{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.png) 0 no-repeat; background-size: contain; width:478px; height:268px; position:absolute; right:139px; top:258px; z-index:3; }
+.home_phone{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.png) 0 no-repeat; background-size: contain; width:236px; height:414px; position:absolute; right:10px; top:167px; z-index:4; }
 @media (-webkit-min-device-pixel-ratio: 1.3), (min-resolution: 1.3dppx) {
   .home_laptop{ background-image:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.2x.png); }
   .home_phone{ background-image:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.2x.png); }
@@ -183,8 +184,8 @@ p{ font-weight:300;}
  .video-still { margin-left:10px; }
  .video-still:before{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/video_button_mobile.png) no-repeat; height:48px; width:48px; background-size:contain;}
 
- .home_phone{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.tablet.png) 0/contain no-repeat; width:190px; height:334px; top:137px; right:4px;}
- .home_laptop{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.tablet.png) 0/contain no-repeat; width:360px; height:202px; top:223px; right:112px;}
+ .home_phone{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.tablet.png) 0 no-repeat; background-size: contain; width:190px; height:334px; top:137px; right:4px;}
+ .home_laptop{ background:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.tablet.png) 0 no-repeat; background-size: contain; width:360px; height:202px; top:223px; right:112px;}
  @media (-webkit-min-device-pixel-ratio: 1.3), (min-resolution: 1.3dppx) {
   .home_phone{ background-image:url(//djty7jcqog9qu.cloudfront.net/assets/site/phone2.tablet.2x.png); }
   .home_laptop{ background-image:url(//djty7jcqog9qu.cloudfront.net/assets/site/laptop2.tablet.2x.png); }

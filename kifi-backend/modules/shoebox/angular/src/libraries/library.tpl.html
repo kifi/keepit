@@ -1,7 +1,7 @@
 <div>
   <!-- Library page -->
-  <div class="kf-main-library-keeps">
-    <div class="kf-library-card-header" ng-show="!loading">
+  <div class="kf-main-library-keeps" ng-if="page === 'library'">
+    <div class="kf-library-card-header">
       <div kf-library-card
         library="library"
         username="username"
@@ -11,8 +11,22 @@
         recommendation="false"
       ></div>
     </div>
+    <div class="kf-empty-state" ng-if="keeps.length === 0 && userIsOwner()" ng-show="!loading">
+      You don't have any keeps in this Library yet. You can:
+      <ul>
+        <li><a href="javascript:" ng-click="callAddKeep()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>
+        <li><a href="javascript:" ng-click="callImportBookmarks()"><span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser</a></li>
+        <li><a href="javascript:" ng-click="callImportBookmarkFile()"><span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard</a></li>
+        <li kf-max-version><a href="javascript:" ng-click="callTriggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
+      </ul>
+    </div>
+    <div class="kf-empty-state" ng-if="keeps.length === 0 && !userIsOwner()" ng-show="!loading">
+      <p class="public-library-empty-explain">{{library.owner.firstName || 'The curator'}} hasn't added anything to this library yet.</p>
+      <p class="public-library-empty-explain" ng-hide="$root.userLoggedIn">Want to create and share your own libraries? <a href="/signup">Sign up</a> to join the Kifi family.</p>
+    </div>
 
     <div kf-keeps
+      library="library"
       keeps="keeps"
       keeps-loading="loading"
       keeps-has-more="hasMore"
@@ -27,18 +41,29 @@
 
 
   <!-- Permission Denied -->
-  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied'">
-    Permission denied.
+  <div class="kf-main-library-keeps" ng-if="page === 'permission_denied' || page === 'not_found'">
+    <div kf-error-not-found></div>
   </div>
 
 
     <!-- Needs to log in -->
   <div class="kf-main-library-keeps" ng-if="page === 'login'">
-    <p>This is a private library. If you were invited, enter the passphrase sent to you in the invitation email.</p>
-    <div>
-      <input class="" ng-model="passphrase.value" type="text" name="name" placeholder="Passphrase" autocomplete="off" novalidate>
-      <input type="submit" ng-click="submitPassPhrase()" value="Get access">
-      <div>Example: person string wind</div>
+    <div class="kf-lib-passphrase-message">
+      <p class="kf-lib-passphrase-header">This is a private library. To access:</p>
+      <ul class="kf-lib-passphrase-directions">
+        <li>1. Copy the pass phrase from the invitation email</li>
+        <li>2. Paste it below and hit the 'Let me in' button</li>
+      </ul>
+      <br>
+      <span class="kf-lib-passphrase-input-box">
+        <span class="passphrase-lock-icon sprite svg-white-lock"></span>
+        <input class="" ng-model="passphrase.value" type="text" name="name" placeholder="Enter pass phrase here" autocomplete="off" novalidate>
+      </span>
+      <div class="kf-lib-passphrase-button" ng-click="submitPassPhrase()">
+        <span class="passphrase-key-icon sprite svg-white-key"></span>
+        <span class="passphrase-key-text">Let me in</span>
+      </div>
+      <div class="kf-lib-passphrase-example">Example: "hot yellow car"</div>
       <div class="kf-lib-access-error" ng-if="$error.name">
         {{$error.name}}
       </div>

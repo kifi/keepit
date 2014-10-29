@@ -10,16 +10,6 @@
 @headScripts = {
 <script>
 !function (el) {
-  if (el.dataset && el.dataset.kifiExt) {
-    redirect();
-  } else if (el.addEventListener) {
-    document.addEventListener('kifi:installed', redirect);
-  }
-  function redirect() {
-    window.location.href = '@com.keepit.controllers.website.routes.KifiSiteRouter.home';
-  }
-}(document.documentElement);
-!function (el) {
   var isChrome = window.chrome && chrome.webstore && chrome.webstore.install;
   var isFirefox = !isChrome && ('MozBoxSizing' in el.style) || ~navigator.userAgent.indexOf('Firefox');
   var majorVersion = +(navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
@@ -67,9 +57,8 @@
 
 
 @scripts = {
-<script src="/assets/js/install.js"></script>
-<script src="/assets/js/auth-footer.js"></script>
-<script type="text/javascript" src="/assets/js/track-ext.js"></script>
+<script src="/assets/js/install.js" defer async></script>
+<script src="/assets/js/auth-footer.js" defer async></script>
 
 <script>(function() {
 var _fbq = window._fbq || (window._fbq = []);

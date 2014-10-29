@@ -2,17 +2,47 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', ['tagService', 'util',
-  function (tagService, util) {
+.factory('keepDecoratorService', ['tagService', 'util', 'friendService', 'profileService',
+  function (tagService, util, friendService, profileService) {
+    function processLibraries(item) {
+      if (item.libraries && item.libraries.length > 0 && Array.isArray(item.libraries[0])) {
+        var cleanedLibraries = [];
+        var usersWithLibs = {};
+        item.libraries.forEach( function (lib) {
+          lib[0].keeperPic = friendService.getPictureUrlForUser(lib[1]);
+          if (lib[1].id !== profileService.me.id) {
+            usersWithLibs[lib[1].id] = true;
+            cleanedLibraries.push(lib[0]);
+          }
+        });
+
+        item.keepers.forEach(function (keeper) {
+          if (usersWithLibs[keeper.id]) {
+            keeper.hidden = true;
+          }
+        });
+
+        item.libraries = cleanedLibraries;
+      }
+    }
+
+
     function Keep (item, itemType) {
       if (!item) {
         return {};
       }
 
+      processLibraries(item);
+
+      if (profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('libraries') < 0){
+        item.libraries = [];
+      }
+
+      this.keeps = []; // default value in case `item` doesn't have it
       _.assign(this, item);
       this.itemType = itemType;
 
-      // For recommendations, the id field in the recommended page coming from the backend is 
+      // For recommendations, the id field in the recommended page coming from the backend is
       // actually the url id of the page. To disambiguate from a page's keep id,
       // use 'urlId' as the property name for the url id.
       // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
@@ -48,6 +78,16 @@ angular.module('kifi')
         }
       }
 
+      function initializeOthersCount(numTotalKeepers, numFriendKeepers, numOmittedFriendKeepers, numKeptInUserLibraries) {
+        // "others" is the number of Kifi users who kept a keep besides the user and the user's Kifi friends.
+        var others = numTotalKeepers  - numFriendKeepers - numOmittedFriendKeepers;
+        if (numKeptInUserLibraries > 0) {
+          others--;
+        }
+
+        return others;
+      }
+
       // Add new properties to the keep.
       this.titleAttr = this.title || this.url;
       this.titleHtml = this.title || util.formatTitleFromUrl(this.url);
@@ -55,7 +95,8 @@ angular.module('kifi')
         this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
       }
       this.readTime = getKeepReadTime(this.summary);
-      this.showSocial = this.others || (this.keepers && this.keepers.length > 0);
+      this.showSocial = this.keepersTotal || (this.keepers && this.keepers.length > 0) || (this.libraries && this.libraries.length > 0);
+      this.others = initializeOthersCount(this.keepersTotal, this.keepers.length, this.keepersOmitted, this.keeps.length);
     }
 
     // Add properties that are specific to a really kept Keep.
@@ -63,16 +104,18 @@ angular.module('kifi')
       this.id = keptItem.id;
       this.libraryId = keptItem.libraryId;
       this.isPrivate = keptItem.isPrivate;
-      
+
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
       this.tagList = this.tagList || [];
       this.collections = this.collections || [];
 
+      // deprecated: user addHashtag
       this.addTag = function (tag) {
         this.tagList.push(tag);
         this.collections.push(tag.id);
       };
 
+      // deprecated: user removeHashtag
       this.removeTag = function (tagId) {
         var idx1 = _.findIndex(this.tagList, function (tag) {
           return tag.id === tagId;
@@ -83,6 +126,28 @@ angular.module('kifi')
         var idx2 = this.collections.indexOf(tagId);
         if (idx2 > -1) {
           this.collections.splice(idx2, 1);
+          return true;
+        } else {
+          return false;
+        }
+      };
+
+      this.hasHashtag = function (hashtag) {
+        return _.contains(this.hashtags, hashtag);
+      };
+
+      this.addHashtag = function (hashtag) {
+        this.addTag(hashtag); // to maintain backwards compatibility; eventually to be removed
+        this.hashtags.push(hashtag);
+      };
+
+      this.removeHashtag = function (hashtag) {
+        this.removeTag(hashtag); // to maintain backwards compatibility; eventually to be removed
+        var idx = _.findIndex(this.hashtags, function (tag) {
+          return tag === hashtag;
+        });
+        if (idx > -1) {
+          this.hashtags.splice(idx, 1);
           return true;
         } else {
           return false;

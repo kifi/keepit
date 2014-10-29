@@ -1,14 +1,19 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
-import com.keepit.common.controller._
+import com.keepit.commanders.LibraryCommander
 import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.http._
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
-import play.api.mvc.Results._
 import play.api.mvc.{ Result, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import ImplicitHelper._
@@ -17,9 +22,11 @@ import java.net.{ URLEncoder, URLDecoder }
 import scala.concurrent.Future
 
 sealed trait Routeable
-trait AngularRoute extends Routeable
-private case class AngularLoggedIn(preload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends AngularRoute
-private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
+trait AngularRoute extends Routeable {
+  def headerload: Option[String]
+}
+private case class AngularLoggedIn(headerload: Option[String], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends AngularRoute
+private case class Angular(headerload: Option[String], postload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class RedirectRoute(url: String) extends Routeable
 private case object Error404 extends Routeable
 
@@ -53,54 +60,38 @@ class KifiSiteRouter @Inject() (
   def home = app("home")
 
   // When we refactor the authenticator to stop requiring two functions, this can be simplified.
-  def routeRequest[T](request: MaybeUserRequest[T]) = {
+  def routeRequest[T](request: MaybeUserRequest[T]): Result = {
     // Short-circuit for landing pages
+    val userAgentOpt = request.userAgentOpt
     if (request.host.contains("42go")) {
       MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
-      landingPage(request)
+      //should we ever get to this line???
+      Redirect(com.keepit.controllers.website.routes.HomeController.home)
+    } else if (userAgentOpt.exists(_.isMobile) &&
+      request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
+      Ok(views.html.mobile.MobileRedirect(request.uri))
     } else {
       (request, route(request)) match {
         case (_, Error404) =>
           NotFound(views.html.error.notFound(request.path))
         case (r: UserRequest[T], ng: AngularLoggedIn) =>
           // logged in user, logged in only ng. deliver.
-          AngularDistAssets.angularApp(ng.preload.map(s => s(r)))
+          AngularDistAssets.angularApp(ng.headerload, ng.postload.map(s => s(r)))
         case (r: MaybeUserRequest[T], route: RedirectRoute) =>
           Redirect(route.url)
         case (r: NonUserRequest[T], _) if r.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
         case (r: MaybeUserRequest[T], ng: AngularRoute) =>
-          // routing to ng page
-          AngularDistAssets.angularApp()
+          // routing to ng page - could be public pages like public library, user profile and other shared routes with private views
+          AngularDistAssets.angularApp(ng.headerload)
       }
-    }
-  }
-
-  private def landingPage(request: MaybeUserRequest[_]): Result = {
-    request match {
-      case r: NonUserRequest[_] if r.identityOpt.isDefined =>
-        Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-      case _ =>
-        val agent = UserAgent(request)
-        if (!agent.screenCanFitWebApp) {
-          val ua = agent.userAgent
-          val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-          if (isIphone) {
-            homeController.get.iPhoneAppStoreRedirectWithTracking(request)
-          } else {
-            Ok(views.html.marketing.mobileLanding(""))
-          }
-        } else {
-          Ok(views.html.marketing.landing())
-        }
     }
   }
 
   def route(request: MaybeUserRequest[_]): Routeable = {
     val path = Path(request.path)
-
     redirects.get(path.path).map { targetPath =>
       RedirectRoute(targetPath)
     } getOrElse {
@@ -113,7 +104,12 @@ class KifiSiteRouter @Inject() (
 }
 
 @Singleton
-class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
+class AngularRouter @Inject() (
+    userRepo: UserRepo,
+    libraryCommander: LibraryCommander,
+    airbreak: AirbrakeNotifier,
+    libraryRepo: LibraryRepo,
+    libraryMetadataCache: LibraryMetadataCache) {
 
   def route(request: MaybeUserRequest[_], path: Path)(implicit session: RSession): Option[Routeable] = {
     ngStaticPage(request, path) orElse userOrLibrary(request, path)
@@ -129,7 +125,8 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     "kifeeeed" -> Seq(),
     "find" -> Seq(),
     "recommendations" -> Seq(),
-    "tags/manage" -> Seq()
+    "tags/manage" -> Seq(),
+    "keeps" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "friends" -> Seq(),
@@ -146,23 +143,30 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
       val userOpt = userRepo.getByUsername(Username(path.primary))
 
       userOpt.flatMap { user =>
-        if (user.username.isDefined && user.username.get.value != path.primary) {
-          val redir = "/" + (user.username.get.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
+        if (user.username.value != path.primary) {
+          val redir = "/" + (user.username.value +: path.split.drop(1)).map(r => URLEncoder.encode(r, "UTF-8")).mkString("/")
           Some(RedirectRoute(redir))
         } else if (path.split.length == 1) { // user profile page
-          Some(Angular()) // great place to preload request data since we have `user` available
+          Some(Angular(None)) // great place to postload request data since we have `user` available
         } else {
-          val libOpt = libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get))
-          if (libOpt.isDefined) {
-            Some(Angular()) // great place to preload request data since we have `lib` available
-          } else {
-            None
-          }
+          libraryRepo.getBySlugAndUserId(user.id.get, LibrarySlug(path.secondary.get)) map { lib =>
+            Some(Angular(Some(libMetadata(lib)))) // great place to postload request data since we have `lib` available
+          } getOrElse None
         }
       }
     } else {
       None
     }
+  }
+
+  private def libMetadata(library: Library): String = try {
+    libraryMetadataCache.getOrElse(LibraryMetadataKey(library.id.get)) {
+      libraryCommander.libraryMetaTags(library).formatOpenGraph
+    }
+  } catch {
+    case e: Throwable =>
+      airbreak.notify(s"on getting library metadata for $library", e)
+      ""
   }
 
   // Some means to serve Angular. The Seq is possible injected data to include
@@ -171,7 +175,7 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     request match {
       case u: UserRequest[_] =>
         (ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary)).map { dataLoader =>
-          AngularLoggedIn(dataLoader)
+          AngularLoggedIn(None, dataLoader)
         }
       case n: NonUserRequest[_] => None
     }

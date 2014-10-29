@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.search.util.LongArrayBuilder
 import org.apache.lucene.index._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
@@ -36,7 +37,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def findPrimaryIds(term: Term, buf: ArrayBuffer[Long] = new ArrayBuffer[Long]): Seq[Long] = {
+  def findPrimaryIds(term: Term, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idMapper = reader.getIdMapper
       val td = reader.termDocsEnum(term)
@@ -51,7 +52,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     buf
   }
 
-  def findSecondaryIds(term: Term, idField: String, buf: ArrayBuffer[Long] = new ArrayBuffer[Long]): Seq[Long] = {
+  def findSecondaryIds(term: Term, idField: String, buf: LongArrayBuilder = new LongArrayBuilder): LongArrayBuilder = {
     foreachReader { reader =>
       val idValues = reader.getNumericDocValues(idField)
       val td = reader.termDocsEnum(term)

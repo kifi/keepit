@@ -13,7 +13,6 @@ var emailRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,6
 
 var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
-var tabsTagging = []; // [tab]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
 var timeouts = {}; // tabId => timeout identifier
 
@@ -25,15 +24,12 @@ var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
 var contactSearchCache;
 var urlPatterns;
-var tags;
-var tagsById;
-var guidePages;
+var guidePage;
 
 function clearDataCache() {
   log('[clearDataCache]');
   tabsByUrl = {};
   tabsByLocator = {};
-  tabsTagging = [];
   threadReadAt = {};
   for (var tabId in timeouts) {
     api.timers.clearTimeout(timeouts[tabId]);
@@ -46,9 +42,7 @@ function clearDataCache() {
   messageData = {};
   contactSearchCache = null;
   urlPatterns = null;
-  tags = null;
-  tagsById = null;
-  guidePages = null;
+  guidePage = null;
 }
 
 // ===== Error reporting
@@ -105,49 +99,28 @@ function PageData(o) {
 }
 PageData.prototype = {
   update: function (o) {
-    this.kept = o.kept;
-    this.keepId = o.keepId;
-    this.tags = o.tags || [];
+    this.keeps = o.keeps || [];
     this.position = o.position;
     this.neverOnSite = o.neverOnSite;
     this.sensitive = o.sensitive;
     this.shown = o.shown;
     this.keepers = o.keepers || [];
-    this.keeps = o.keeps || 0;
   },
-  otherKeeps: function () {
-    return this.keeps - this.keepers.length - (this.kept === 'public');
+  howKept: function () {
+    var keeps = this.keeps;
+    if (keeps.length) {
+      var mine = keeps.filter(isMine);
+      if (mine.length) {
+        return mine.every(isSecret) ? 'private' : 'public';
+      }
+      return 'other';
+    }
+    return null;
+  },
+  findKeep: function (libraryId) {
+    return this.keeps.filter(libraryIdIs(libraryId))[0] || null;
   }
 };
-
-function indexOfTag(tags, tagId) {
-  for (var i = 0, len = tags.length; i < len; i++) {
-    if (tags[i].id === tagId) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-function addTag(tags, tag) {
-  var index = indexOfTag(tags, tag.id);
-  if (index === -1) {
-    return tags.push(tag);
-  }
-
-  if (tag.name) {
-    tags[index].name = tag.name;
-  }
-  return 0;
-}
-
-function removeTag(tags, tagId) {
-  var index = indexOfTag(tags, tagId);
-  if (index === -1) {
-    return null;
-  }
-  return tags.splice(index, 1)[0];
-}
 
 function insertUpdateChronologically(arr, o, timePropName) {
   var time = o[timePropName];
@@ -294,7 +267,7 @@ function onSocketConnect() {
   getLatestThreads();
 
   // http data refresh
-  getUrlPatterns(getPrefs.bind(null, getTags));
+  getUrlPatterns(getPrefs.bind(null, loadLibraries.bind(null, api.noop)));
 }
 
 function onSocketDisconnect(why, sec) {
@@ -422,9 +395,6 @@ var socketHandlers = {
     log('[socket:lost_friends]', fr);
     contactSearchCache = null;
   },
-  create_tag: onTagChangeFromServer.bind(null, 'create'),
-  rename_tag: onTagChangeFromServer.bind(null, 'rename'),
-  remove_tag: onTagChangeFromServer.bind(null, 'remove'),
   thread_participants: function(threadId, participants) {
     log('[socket:thread_participants]', threadId, participants);
     var thread = threadsById[threadId];
@@ -521,55 +491,6 @@ function emitSettings(tab) {
   }, {queue: 1});
 }
 
-function onAddTagResponse(nUri, result) {
-  log('[onAddTagResponse]', result);
-  if (result.success) {
-    var tag = result.response;
-    if (tags && addTag(tags, tag)) {
-      tagsById[tag.id] = tag;
-    }
-    var d = pageData[nUri];
-    if (d) {
-      addTag(d.tags, tag);
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'add_tag', tag);
-        api.tabs.emit(tab, 'tagged', {tagged: true});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
-}
-
-function onRemoveTagResponse(nUri, tagId, result) {
-  log('[onRemoveTagResponse]', tagId, result);
-  if (result.success) {
-    var d = pageData[nUri];
-    if (d) {
-      removeTag(d.tags, tagId);
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'remove_tag', {id: tagId});
-        api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
-}
-
-function onClearTagsResponse(nUri, result) {
-  log('[onClearTagsResponse]', result);
-  if (result.success) {
-    var d = pageData[nUri];
-    if (d) {
-      d.tags.length = 0;
-      tabsByUrl[nUri].forEach(function (tab) {
-        api.tabs.emit(tab, 'clear_tags');
-        api.tabs.emit(tab, 'tagged', {tagged: false});
-      });
-    }
-    updateKifiAppTabs('update_tags');
-  }
-}
-
 function makeRequest(name, method, url, data, callbacks) {
   log("[" + name + "]", data);
   ajax(method, url, data, function(response) {
@@ -610,91 +531,191 @@ api.port.on({
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
     var d = pageData[tab.nUri];
-    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps()} : {keepers: []});
+    respond(d ? {kept: d.kept, keepers: d.keepers.filter(idIsNot(me.id)), otherKeeps: 0} : {keepers: []});
   },
-  keep: function(data, _, tab) {
+  keep: function (data, respond, tab) {
     log('[keep]', data);
     var d = pageData[tab.nUri];
     if (!d) {
       api.tabs.emit(tab, 'kept', {fail: true});
-    } else if (!d.state) {
-      d.state = 'keeping';
-      ajax('POST', '/ext/keeps', {
-        title: data.title,
+    } else {
+      var libraryId = data.libraryId || mySysLibIds[data.secret ? 1 : 0];
+      ajax('POST', '/ext/libraries/' + libraryId + '/keeps', {
         url: data.url,
+        title: data.title,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private',
         guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
-        delete d.state;
-        d.kept = data.how;
-        d.keepId = keep.id;
-        if (d.kept !== 'private') {
-          d.keeps++;
+        // main and secret are mutually exclusive
+        var i = mySysLibIds.indexOf(libraryId);
+        if (i >= 0) {
+          d.keeps = d.keeps.filter(libraryIdIsNot(mySysLibIds[1 - i]));
         }
-        forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
-          setIcon(tab, data.how);
-        });
-        updateKifiAppTabs('update_keeps');
-      }, function fail() {
-        log('[keep:fail]', data.url);
-        delete d.state;
-        forEachTabAt(tab.url, tab.nUri, function (tab) {
-          api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
-        });
+        var j = d.keeps.findIndex(libraryIdIs(libraryId));
+        if (j >= 0) {
+          d.keeps[j] = keep;
+        } else {
+          d.keeps.push(keep);
+        }
+        respond(keep);
+        updateTabsWithKeptState(tab.url, tab.nUri, d.howKept());
+        notifyKifiAppTabs({type: 'keep', libraryId: libraryId, keepId: keep.id});
+      }, function fail(o) {
+        log('[keep:fail]', data.url, o);
+        respond();
+        // fix tile on active tab
+        api.tabs.emit(tab, 'kept', {kept: d.howKept(), fail: true});
       });
-      forEachTabAt(tab.url, tab.nUri, function (tab) {
-        api.tabs.emit(tab, 'kept', {kept: data.how});
-      });
+      if (!data.libraryId && !d.keeps.length) {
+        // assume success for instant tile flip on active tab
+        api.tabs.emit(tab, 'kept', {kept: libraryId === mySysLibIds[0] ? 'public' : 'private'});
+      }
+      storeRecentLib(libraryId);
     }
   },
-  unkeep: function(_, __, tab) {
+  unkeep: function (data, respond, tab) {
+    log('[unkeep]', data);
     var d = pageData[tab.nUri];
-    log('[unkeep]', d && d.keepId || '', d && d.state || '');
-    if (!d || !d.keepId) {
-      api.tabs.emit(tab, 'kept', {fail: true});
-    } else if (!d.state) {
-      ajax('POST', '/ext/keeps/' + d.keepId + '/unkeep', function done(o) {
-        log('[unkeep:done]', o);
-        if (d.kept !== 'private') {
-          d.keeps = Math.max(0, d.keeps - 1);
-        }
-        delete d.state;
-        delete d.kept;
-        delete d.keepId;
-        forEachTabAt(tab.url, tab.nUri, function (tab) {
-          setIcon(tab, false);
-        });
-        updateKifiAppTabs('update_keeps');
-      }, function fail() {
-        log('[unkeep:fail]', d.keepId);
-        delete d.state;
-        api.tabs.emit(tab, 'kept', {kept: d.kept || null, fail: true});
-      });
-      forEachTabAt(tab.url, tab.nUri, function (tab) {
-        api.tabs.emit(tab, 'kept', {kept: null});
-      });
-    }
-  },
-  set_private: function(data, _, tab) {
-    log("[setPrivate]", data);
-    var how = data.private ? 'private' : 'public';
-    var d = pageData[tab.nUri];
-    ajax('POST', '/bookmarks/update', data, function (o) {
-      log("[setPrivate] response:", o);
-      if (d && d.kept !== how) {
-        d.kept = how;
-        d.keeps = Math.max(0, d.keeps + (how === 'private' ? -1 : 1));
+    ajax('DELETE', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId, function done() {
+      log('[unkeep:done]');
+      respond(true);
+      if (d) {
+        d.keeps = d.keeps.filter(idIsNot(data.keepId));
+        updateTabsWithKeptState(tab.url, tab.nUri, d.howKept());
+      }
+      notifyKifiAppTabs({type: 'unkeep', libraryId: data.libraryId, keepId: data.keepId});
+    }, function fail() {
+      log('[unkeep:fail]', data.keepId);
+      respond();
+      if (d) {
+        api.tabs.emit(tab, 'kept', {kept: d.howKept() || null, fail: true});
       }
     });
-    forEachTabAt(tab.url, tab.nUri, function (tab) {
-      api.tabs.emit(tab, 'kept', {kept: how});
-    });
+    if (d && d.keeps.length === 1) {
+      api.tabs.emit(tab, 'kept', {kept: null});
+    }
   },
-  set_title: function(data, respond) {
-    ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
+  keeps_and_libraries: function (_, respond, tab) {
+    var d = pageData[tab.nUri];
+    loadLibraries(function (libraries) {
+      libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
+      libraries.filter(idIsIn(loadRecentLibs())).forEach(setProp('recent', true));
+      var keeps = d ? d.keeps : [];
+      respond({keeps: keeps, libraries: libraries, showLibraryIntro: prefs && prefs.showLibraryIntro});
+      // preload keep details
+      keeps.forEach(function (keep) {
+        ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
+          extend(keep, details);
+          // TODO: trigger get_keep response if any are waiting
+        });
+      });
+    }, respond);
+  },
+  filter_libraries: function (q, respond) {
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    loadLibraries(function (libraries) {
+      respond(sf.filter(q, libraries, getName).map(function (lib) {
+        lib = clone(lib);
+        lib.nameParts = sf.splitOnMatches(q, lib.name);
+        return lib;
+      }));
+    }, respond);
+  },
+  get_library: function (id, respond) {
+    ajax('GET', '/ext/libraries/' + id, respond, respond.bind(null, null));
+  },
+  create_library: function (data, respond) {
+    ajax('POST', '/ext/libraries', data, function (library) {
+      loadLibraries(function (libraries) {
+        if (!libraries.some(idIs(library.id))) {
+          libraries.push(library);
+          storeLibraries(libraries);
+        }
+      });
+      respond(library);
+      notifyKifiAppTabs({type: 'create_library', libraryId: library.id});
+    }, respond.bind(null, null));
+  },
+  delete_library: function (libraryId, respond, tab) {
+    ajax('DELETE', '/ext/libraries/' + libraryId, function () {
+      loadLibraries(function (libraries) {
+        storeLibraries(libraries.filter(idIsNot(libraryId)));
+      });
+      respond(true);
+      for (var nUri in pageData) {
+        var d = pageData[nUri];
+        var i = d.keeps.findIndex(libraryIdIs(libraryId));
+        if (i >= 0) {
+          d.keeps.splice(i, 1);
+          if (nUri === tab.nUri) {
+            updateTabsWithKeptState(nUri, tab.url, d.howKept());
+          } else {
+            updateTabsWithKeptState(nUri, d.howKept());
+          }
+        }
+      }
+      notifyKifiAppTabs({type: 'delete_library', libraryId: libraryId});
+    }, respond.bind(null, false));
+  },
+  get_keep: function (keepId, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(idIs(keepId));
+      // TODO: wait if details (title, image, tags) are not yet loaded
+      respond(keep);
+    }
+  },
+  save_keep_title: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, {title: data.title}, function () {
+        keep.title = data.title;
+        respond(true);
+      }, respond.bind(null, false));
+    }
+  },
+  save_keep_image: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/image', {image: data.image}, function (resp) {
+        keep.image = resp.image;
+        respond(true);
+      }, respond.bind(null, false));
+    }
+  },
+  suggest_tags: function (data, respond) {
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
+  },
+  tag: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
+        if (keep.tags) {
+          keep.tags.push(resp.tag);
+        } else {
+          keep.tags = [resp.tag];
+        }
+        respond(resp.tag);
+      }, respond.bind(null, false));
+    }
+  },
+  untag: function (data, respond, tab) {
+    var d = pageData[tab.nUri];
+    if (d) {
+      var keep = d.keeps.find(libraryIdIs(data.libraryId));
+      ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
+        var tags = keep.tags || [];
+        for (var i; (i = tags.indexOf(data.tag)) >= 0;) {
+          tags.splice(i, 1);
+        }
+        respond(true);
+      }, respond.bind(null, false));
+    }
   },
   keeper_shown: function(data, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;
@@ -744,26 +765,30 @@ api.port.on({
     tracker.track('user_changed_setting', {category: 'search', type: 'maxResults', value: n});
     if (prefs) prefs.maxResults = n;
   },
-  stop_showing_external_messaging_intro: function(action) {
-    ajax('POST', '/ext/pref/showExtMsgIntro?show=false');
+  terminate_ftue: function (data) {
+    var prefName = {e: 'showExtMsgIntro', l: 'showLibraryIntro'}[data.type];
+    if (!prefName) return;
+    ajax('POST', '/ext/pref/' + prefName + '?show=false');
     api.tabs.each(function (tab) {
-      api.tabs.emit(tab, 'hide_external_messaging_intro');
+      api.tabs.emit(tab, {e: 'hide_ext_msg_intro', l: 'hide_library_intro'}[data.type]);
     });
-    if (prefs) prefs.showExtMsgIntro = false;
+    (prefs || {})[prefName] = false;
     tracker.track('user_was_notified', {
       action: 'click',
-      subaction: action,
+      subaction: data.action,
       channel: 'kifi',
       subchannel: 'tooltip',
-      category: 'extMsgFTUE'
+      category: {e: 'extMsgFTUE', l: 'libFTUE'}[data.type]
     });
   },
-  track_showing_external_messaging_intro: function() {
+  track_ftue: function (type) {
+    var category = {e: 'extMsgFTUE', l: 'libFTUE'}[type];
+    if (!category) return;
     tracker.track('user_was_notified', {
       action: 'open',
       channel: 'kifi',
       subchannel: 'tooltip',
-      category: 'extMsgFTUE'
+      category: category
     });
   },
   log_search_event: function(data) {
@@ -1079,14 +1104,14 @@ api.port.on({
         var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
         if (!data.includeSelf) {
           contacts = contacts.filter(idIsNot(me.id));
-        } else if (!contacts.some(hasId(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
+        } else if (!contacts.some(idIs(me.id)) && (data.q ? sf.filter(data.q, [me], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, me);
         }
-        if (!contacts.some(hasId(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
+        if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
           appendUserResult(contacts, data.n, SUPPORT);
         }
         var results = contacts.map(toContactResult, {sf: sf, q: data.q});
-        if (results.length < data.n && data.q && !data.participants.some(hasId(data.q)) && !results.some(hasEmail(data.q))) {
+        if (results.length < data.n && data.q && !data.participants.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
           results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
         }
         respond(results);
@@ -1140,7 +1165,7 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
-    if (guidePages && /^#guide\/\d\/\d/.test(link.locator)) {
+    if (guidePage && /^#guide\/\d/.test(link.locator)) {
       var step = +link.locator.substr(7, 1);
       switch (step) {
         case 1:
@@ -1148,69 +1173,34 @@ api.port.on({
           tabsByUrl[link.url] = tabsByUrl[link.url] || [];
           break;
         case 2:
-          var page = guidePages[+link.locator.substr(9, 1)];
-          var tagId = link.locator.substr(11);
+          var page = guidePage;
           var query = page.query.replace(/\+/g, ' ');
           var entry = searchPrefetchCache[query] = {
-            response: pimpSearchResponse({
+            response: pimpSearchResponse([{
+              context: 'guide',
               uuid: '00000000-0000-0000-0000-000000000000',
               query: query,
               hits: [{
-                bookmark: {
-                  title: page.title,
-                  url: page.url,
-                  tags: tagId ? [tagId] : [],
-                  matches: page.matches
-                },
-                users: [],
-                count: 1,
-                score: 0,
-                isMyBookmark: true,
-                isPrivate: false
+                keepId: '00000000-0000-0000-0000-000000000000',
+                title: page.title,
+                url: page.url,
+                matches: page.matches
               }],
-              myTotal: 1,
-              friendsTotal: 0,
-              othersTotal: 816,
-              mayHaveMore: false,
-              show: true,
-              context: 'guide'
-            })
+              cutPoint: 1
+            }, {
+              hits: [{
+                keepers: [-1],
+                keepersTotal: 816,
+                libraries: [0, -1]
+              }],
+              libraries: [{id: mySysLibIds[0]}],
+              users: []
+            }])
           };
           entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
           break;
       }
     }
-  },
-  get_tags: function(_, respond, tab) {
-    var d = pageData[tab.nUri],
-      success = d ? true : false,
-      response = null;
-
-    if (success) {
-      response = {all: tags, page: d.tags};
-
-      if (tabsTagging.length) {
-        tabsTagging = tabsTagging.filter(idIsNot(tab.id));
-      }
-      tabsTagging.push(tab);
-    }
-
-    respond({
-      success: success,
-      response: response
-    });
-  },
-  create_and_add_tag: function(name, respond, tab) {
-    makeRequest('create_and_add_tag', 'POST', '/tags/add', {name: name, url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
-  },
-  add_tag: function(tagId, respond, tab) {
-    makeRequest('add_tag', 'POST', '/tags/' + tagId + '/addToKeep', {url: tab.url}, [onAddTagResponse.bind(null, tab.nUri), respond]);
-  },
-  remove_tag: function(tagId, respond, tab) {
-    makeRequest('remove_tag', 'POST', '/tags/' + tagId + '/removeFromKeep', {url: tab.url}, [onRemoveTagResponse.bind(null, tab.nUri, tagId), respond]);
-  },
-  clear_tags: function(tagId, respond, tab) {
-    makeRequest('clear_tags', 'POST', '/tags/clear', {url: tab.url}, [onClearTagsResponse.bind(null, tab.nUri), respond]);
   },
   add_participants: function(data) {
     socket.send(['add_participants_to_thread', data.threadId, data.ids.map(makeObjectsForEmailAddresses)]);
@@ -1255,29 +1245,46 @@ api.port.on({
     }
   },
   start_guide: function (pages, _, tab) {
-    guidePages = pages;
-    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages, x: !experiments || experiments.indexOf('guide_forced') < 0});
+    for (var i = 0; i < pages.length; i++) {
+      var page = pages[i];
+      if (page.image) {
+        page.width = page.image[1] / 2;
+        page.height = page.image[2] / 2;
+        page.image = page.image[0];
+        guidePage = page;
+        break;
+      }
+    }
+    api.tabs.emit(tab, 'guide', {step: 0, page: guidePage});
     unsilence(false);
   },
   track_guide: function (stepParts) {
     tracker.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
   },
-  track_guide_choice: function (pageIdx) {
-    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+  track_guide_choice: function () {
+    tracker.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePage.track});
   },
   resume_guide: function (step, _, tab) {
-    if (guidePages) {
-      api.tabs.emit(tab, 'guide', {
-        step: step,
-        pages: guidePages,
-        page: 0 // TODO: guess based on tab.url
-      });
-    }
+    api.tabs.emit(tab, 'guide', {
+      step: step,
+      page: guidePage || (guidePage = {
+        url: 'http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die',
+        name: ['Steve Jobs:','How to Live','Before You Die'],
+        image: '//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg',
+        noun: 'video',
+        query: 'steve+jobs',
+        title: 'Steve Jobs: How to live before you die | Talk Video | TED.com',
+        matches: {title: [[0,5],[6,4]], url: [[25,5],[31,4]]},
+        track: 'steveJobsSpeech',
+        width: 240,
+        height: 212.5
+      })
+    });
   },
   end_guide: function (stepParts) {
     tracker.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
     if (api.isPackaged()) {
-      guidePages = null;
+      guidePage = null;
     }
   }
 });
@@ -1291,28 +1298,6 @@ function unsilence(tab) {
       api.tabs.emit(tab, 'unsilenced');
     }
   }
-}
-
-function onTagChangeFromServer(op, tag) {
-  if (!tags || !tagsById) return;
-  var tagId = tag.id;
-  switch (op) {
-    case 'create':
-    case 'rename':
-      if (tagId in tagsById) {
-        tagsById[tagId].name = tag.name;
-      } else {
-        tags.push(tag);
-        tagsById[tagId] = tag;
-      }
-      break;
-    case 'remove':
-      tags = tags.filter(idIsNot(tagId));
-      delete tagsById[tagId];
-  }
-  tabsTagging.forEach(function (tab) {
-    api.tabs.emit(tab, 'tag_change', this);
-  }, {op: op, tag: tag});
 }
 
 function standardizeUser(u) {
@@ -1570,9 +1555,7 @@ function awaitDeepLink(link, tabId, retrySec) {
       if (loc.lastIndexOf('#guide/', 0) === 0) {
         api.tabs.emit(tab, 'guide', {
           step: +loc.substr(7, 1),
-          pages: guidePages,
-          page: +loc.substr(9, 1),
-          x: !experiments || experiments.indexOf('guide_forced') < 0
+          page: guidePage
         }, {queue: 1});
       } else if (loc.indexOf('#compose') >= 0) {
         api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});
@@ -1598,12 +1581,12 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-function updateKifiAppTabs(message) {
+function notifyKifiAppTabs(data) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
     if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
-        api.tabs.emit(tab, message);
+        api.tabs.emit(tab, 'post_message', data);
       });
     }
   }
@@ -1700,20 +1683,22 @@ function searchOnServer(request, respond) {
   var params = {
     q: request.query,
     f: request.filter && (request.filter.who !== 'a' ? request.filter.who : null), // f=a disables tail cutting
-    maxHits: 5,
-    lastUUID: request.lastUUID,
-    context: request.context,
-    kifiVersion: api.version,
+    n: 5,
+    u: request.lastUUID,
+    c: request.context,
+    v: api.version,
     w: request.whence};
 
-  ajax('search', 'GET', '/search', params, function (resp) {
-    log('[searchOnServer] %i hits', resp.hits.length);
-    respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
+  ajax('search', 'GET', '/ext/search', params, function (resp) {
+    var o = resp[0];
+    log('[searchOnServer] %i hits, show:', o.hits.length, o.show);
+    respond(pimpSearchResponse(resp, request.filter, o.hits.length < params.n && (params.c || params.f)));
   });
   return true;
 }
 
-function pimpSearchResponse(o, filter, noMore) {
+function pimpSearchResponse(resp, filter, noMore) {
+  var o = resp[0];
   o.filter = filter;
   o.me = me;
   o.prefs = prefs || {maxResults: 1};
@@ -1722,21 +1707,27 @@ function pimpSearchResponse(o, filter, noMore) {
   o.admBaseUri = admBaseUri();
   o.myTotal = o.myTotal || 0;
   o.friendsTotal = o.friendsTotal || 0;
-  o.hits.forEach(pimpSearchHit);
   if (noMore) {
     o.mayHaveMore = false;
   }
+  o.hits.forEach(pimpSearchHit.bind(null, resp[1].hits, resp[1].libraries));
+  o.users = resp[1].users;
+  o.libraries = resp[1].libraries;
   return o;
 }
 
-function pimpSearchHit(hit) {
-  var tagIds = hit.bookmark && hit.bookmark.tags;
-  if (tagIds && tagIds.length && tagsById) {
-    var tags = hit.tags = [];
-    for (var i = 0; i < tagIds.length; i++) {
-      var tag = tagsById[tagIds[i]];
-      if (tag) {
-        tags.push(tag);
+function pimpSearchHit(hits, libs, hit, i) {
+  extend(hit, hits[i]);
+
+  // remove my system libraries
+  var hitLibs = hit.libraries;
+  if (hitLibs) {
+    for (var j = 0; j < hitLibs.length;) {
+      var k = hitLibs[j];
+      if (mySysLibIds.indexOf(libs[k].id) >= 0) {
+        hitLibs.splice(j, 2);
+      } else {
+        j += 2;
       }
     }
   }
@@ -1783,7 +1774,7 @@ function kifify(tab) {
       kififyWithPageData(tab, d);
     }
   } else {
-    ajax('POST', '/ext/pageDetails', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
+    ajax('POST', '/ext/page', {url: url}, gotPageDetailsFor.bind(null, url, tab), function fail(xhr) {
       if (xhr.status === 403) {
         clearSession();
       }
@@ -1809,15 +1800,14 @@ function stashTabByNormUri(tab, uri) {
 
 function kififyWithPageData(tab, d) {
   log('[kififyWithPageData]', tab.id, tab.engaged ? 'already engaged' : '');
-  setIcon(tab, d.kept);
+  setIcon(!!d.howKept(), tab);
   if (silence) return;
 
   var hide = d.neverOnSite || !enabled('keeper') || d.sensitive && enabled('sensitive');
   api.tabs.emit(tab, 'init', {  // harmless if sent to same page more than once
-    kept: d.kept,
+    kept: d.howKept(),
     position: d.position,
-    hide: hide,
-    tags: d.tags
+    hide: hide
   }, {queue: 1});
 
   // consider triggering automatic keeper behavior on page to engage user (only once)
@@ -1918,7 +1908,7 @@ function isUnread(th) {
 }
 
 function paneIsOpen(tabId) {
-  var hasThisTabId = hasId(tabId);
+  var hasThisTabId = idIs(tabId);
   for (var loc in tabsByLocator) {
     if (tabsByLocator[loc].some(hasThisTabId)) {
       return true;
@@ -1926,7 +1916,17 @@ function paneIsOpen(tabId) {
   }
 }
 
-function setIcon(tab, kept) {
+function updateTabsWithKeptState() {
+  var args = Array.prototype.slice.call(arguments);
+  var howKept = args.pop();
+  args.push(function (tab) {
+    setIcon(!!howKept, tab);
+    api.tabs.emit(tab, 'kept', {kept: howKept});
+  });
+  forEachTabAt.apply(null, args);
+}
+
+function setIcon(kept, tab) {
   log('[setIcon] tab:', tab.id, 'kept:', kept);
   api.icon.set(tab, (kept ? 'icons/k_blue' : 'icons/k_dark') + (silence ? '.paused' : '') + '.png');
 }
@@ -1952,14 +1952,6 @@ function postBookmarks(supplyBookmarks, bookmarkSource, libraryId) {
       log('[postBookmarks] resp:', o);
     });
   });
-}
-
-function clone(o) {
-  var c = {};
-  for (var k in o) {
-    c[k] = o[k];
-  }
-  return c;
 }
 
 function whenTabFocused(tab, key, callback) {
@@ -2027,9 +2019,6 @@ api.tabs.on.unload.add(function(tab, historyApi) {
     } else {
       api.errors.push({error: Error('tabsByLocator array undefined'), params: {loc: loc, type: typeof tabs, in: loc in tabsByLocator}});
     }
-  }
-  if (tabsTagging.length) {
-    tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
   clearAutoEngageTimer(tab, 'keepers');
   delete tab.nUri;
@@ -2178,6 +2167,70 @@ function discardDraft(keys) {
   }
 }
 
+function loadLibraries(done, fail) {
+  var libraries = stored('user_id') === me.id && stored('libraries');
+  if (libraries) {
+    try {
+      libraries = JSON.parse(LZ.decompress(libraries));
+    } catch (e) {
+      log('#c00', '[loadLibraries]', e);
+      libraries = null;
+    }
+  }
+  if (libraries) {
+    done(libraries);
+    if (!(+stored('libraries_loaded_at') > Date.now() - 30000)) {
+      ajaxLoadLibraries(done);
+    }
+  } else {
+    ajaxLoadLibraries(done, fail);
+  }
+}
+
+function ajaxLoadLibraries(done, fail) {
+  var loadedAt = Date.now();
+  ajax('GET', '/ext/libraries', function (o) {
+    storeLibraries(o.libraries, loadedAt);
+    done(o.libraries);
+  }, fail);
+}
+
+function storeLibraries(libraries, loadedAt) {
+  libraries = JSON.stringify(libraries);
+  if (libraries === '[]') {
+    unstore('libraries');
+    unstore('libraries_loaded_at');
+  } else if (me) {
+    api.storage[qualify('libraries')] = LZ.compress(libraries);
+    if (loadedAt) {
+      store('libraries_loaded_at', loadedAt);
+      store('user_id', me.id);
+    }
+  }
+}
+
+function loadRecentLibs() {
+  if (stored('user_id') === me.id) {
+    try {
+      return JSON.parse(stored('recent_libraries'));
+    } catch (e) {
+    }
+  }
+  return [];
+}
+
+function storeRecentLib(id) {
+  var ids = loadRecentLibs();
+  for (var i; (i = ids.indexOf(id)) >= 0;) {
+    ids.splice(i, 1);
+  }
+  ids.unshift(id);
+  if (ids.length > 3) {
+    ids.length = 3;
+  }
+  store('recent_libraries', JSON.stringify(ids));
+}
+
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
@@ -2237,11 +2290,14 @@ function appendUserResult(contacts, n, user) {
 function reTest(s) {
   return function (re) {return re.test(s)};
 }
-function hasId(id) {
+function idIs(id) {
   return function (o) {return o.id === id};
 }
 function idIsNot(id) {
   return function (o) {return o.id !== id};
+}
+function idIsIn(ids) {
+  return function (o) {return ids.indexOf(o.id) >= 0; };
 }
 function getId(o) {
   return o.id;
@@ -2249,8 +2305,23 @@ function getId(o) {
 function getName(o) {
   return o.name;
 }
-function hasEmail(email) {
+function emailIs(email) {
   return function (o) {return o.email === email};
+}
+function isMine(o) {
+  return o.mine;
+}
+function isNotMine(o) {
+  return !o.mine;
+}
+function isSecret(o) {
+  return o.secret;
+}
+function libraryIdIs(id) {
+  return function (o) {return o.libraryId === id};
+}
+function libraryIdIsNot(id) {
+  return function (o) {return o.libraryId !== id};
 }
 function getThreadId(n) {
   return n.thread;
@@ -2258,6 +2329,19 @@ function getThreadId(n) {
 function idToThread(id) {
   return threadsById[id];
 }
+function setProp(name, val) {
+  return function (o) { o[name] = val; };
+}
+function extend(o, o1) {
+  for (var k in o1) {
+    o[k] = o1[k];
+  }
+  return o;
+}
+function clone(o) {
+  return extend({}, o);
+}
+
 function makeObjectsForEmailAddresses(id) {
   return id.indexOf('@') < 0 ? id : {kind: 'email', email: id};
 }
@@ -2285,17 +2369,6 @@ var elizaBaseUri = devUriOr.bind(null, apiUri('eliza'));
 
 var webBaseUri = devUriOr.bind(null, 'https://www.kifi.com');
 var admBaseUri = devUriOr.bind(null, 'https://admin.kifi.com');
-
-function getTags() {
-  ajax('GET', '/tags', function gotTags(arr) {
-    log('[gotTags]', arr);
-    tags = arr;
-    tagsById = tags.reduce(function(o, tag) {
-      o[tag.id] = tag;
-      return o;
-    }, {});
-  });
-}
 
 function getPrefs(next) {
   ajax('GET', '/ext/prefs?version=2', function gotPrefs(o) {
@@ -2364,7 +2437,7 @@ function sameOrLikelyRedirected(url1, url2) {
 
 // ===== Session management
 
-var me, prefs, experiments, eip, socket, silence, onLoadingTemp;
+var me, mySysLibIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   var origInstId = stored('installation_id');
@@ -2381,6 +2454,7 @@ function authenticate(callback, retryMs) {
 
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user);
+    mySysLibIds = data.libraryIds;
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(
@@ -2417,7 +2491,10 @@ function authenticate(callback, retryMs) {
 
 function clearSession() {
   if (me) {
-    unstore('drafts-' + me.id);
+    storeDrafts({});
+    storeLibraries([]);
+    unstore('recent_libraries');
+    unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/k_gray.png');
       api.tabs.emit(tab, 'me_change', null);
@@ -2427,7 +2504,7 @@ function clearSession() {
       delete tab.focusCallbacks;
     });
   }
-  me = prefs = experiments = eip = null;
+  me = mySysLibIds = prefs = experiments = eip = null;
   if (socket) {
     socket.close();
     socket = null;
@@ -2457,13 +2534,10 @@ api.errors.wrap(authenticate.bind(null, function() {
     log('[main] fresh install');
     var baseUri = webBaseUri();
     var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
-    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: baseUri});
     if (tab) {
       api.tabs.select(tab.id);
-      api.tabs.navigate(tab.id, baseUri);
-      timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
     } else {
-      api.tabs.open(baseUri, await);
+      api.tabs.open(baseUri);
     }
   }
 }, 3000))();

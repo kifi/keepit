@@ -1,5 +1,6 @@
 package com.keepit.controllers.core
 
+import com.keepit.common.http._
 import com.keepit.commanders.emails.ResetPasswordEmailSender
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.UserAgent
@@ -62,9 +63,24 @@ class AuthHelper @Inject() (
     libraryCommander: LibraryCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    secureSocialClientIds: SecureSocialClientIds,
+    implicit val secureSocialClientIds: SecureSocialClientIds,
     resetPasswordEmailSender: ResetPasswordEmailSender,
     fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
+
+  def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
+    db.readOnlyMaster { implicit s =>
+      emailAddressRepo.getByAddressOpt(addr).isDefined
+    }
+  }
+
+  def connectOptionView(email: EmailAddress, providerId: String) = {
+    log.info(s"[connectOptionView] $email matches some kifi user, but no (social) user exists given $providerId")
+    views.html.auth.connectToAuthenticate(
+      emailAddress = email.address,
+      network = SocialNetworkType(providerId),
+      logInAttempted = true
+    )
+  }
 
   def authHandler(request: Request[_], res: Result)(f: => (Seq[Cookie], Session) => Result) = {
     val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
@@ -94,7 +110,7 @@ class AuthHelper @Inject() (
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
-    val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
+    val home = com.keepit.controllers.website.routes.HomeController.home()
     val res: Result = tupleOpt collect {
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
@@ -109,11 +125,11 @@ class AuthHelper @Inject() (
               }
               if (finalized) {
                 Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String])) // todo(ray): uri not relevant for mobile
-                  .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
                   .withCookies(authenticator.toCookie)
               } else {
                 Ok(Json.obj("success" -> true))
-                  .withSession(session + (FORTYTWO_USER_ID -> sui.userId.get.toString))
+                  .withSession(session.setUserId(sui.userId.get))
                   .withCookies(authenticator.toCookie)
               }
             }
@@ -130,7 +146,7 @@ class AuthHelper @Inject() (
         error => Status(INTERNAL_SERVER_ERROR)("0"),
         authenticator =>
           Ok(Json.obj("success" -> true))
-            .withSession(session + (FORTYTWO_USER_ID -> userId.toString))
+            .withSession(session.setUserId(userId))
             .withCookies(authenticator.toCookie)
       )
     }
@@ -197,7 +213,7 @@ class AuthHelper @Inject() (
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => Ok(Json.obj("uri" -> uri))
         .withCookies(authenticator.toCookie).discardingCookies(DiscardingCookie("inv"))
-        .withSession(request.session + (KifiSession.FORTYTWO_USER_ID -> user.id.get.toString))
+        .withSession(request.session.setUserId(user.id.get))
     )
   }
 
@@ -333,7 +349,7 @@ class AuthHelper @Inject() (
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>
-                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.KifiSiteRouter.home.url))
+                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
                   .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               })
@@ -383,7 +399,9 @@ class AuthHelper @Inject() (
             authenticateUser(address.userId,
               error => throw error,
               authenticator => {
-                val resp = if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
+                val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+                  Ok(views.html.mobile.MobileRedirect("/email/verified"))
+                } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
                   // user has no installations
                   Redirect("/install")
                 } else {
@@ -436,6 +454,8 @@ class AuthHelper @Inject() (
     }
   }
 
+  val signUpUrl = com.keepit.controllers.core.routes.AuthController.signupPage().url
+
   def doAccessTokenSignup(providerName: String, oauth2InfoOrig: OAuth2Info)(implicit request: Request[JsValue]): Future[Result] = {
     Registry.providers.get(providerName) match {
       case None =>
@@ -451,11 +471,15 @@ class AuthHelper @Inject() (
               authCommander.getSocialUserOpt(filledUser.identityId) match {
                 case None =>
                   val saved = UserService.save(UserIdentity(None, filledUser.copy(oAuth2Info = Some(oauth2InfoNew)), allowSignup = false))
-                  log.info(s"[accessTokenSignup($providerName)] created social user: $saved")
+                  val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                    Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                  else
+                    Json.obj("code" -> "continue_signup")
+                  log.info(s"[accessTokenSignup($providerName)] created social user(${saved.identityId}) email=${saved.email}; payload=$payload")
                   Authenticator.create(saved).fold(
                     error => throw error,
                     authenticator =>
-                      Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                      Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
                         .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                         .withCookies(authenticator.toCookie)
                   )
@@ -464,10 +488,15 @@ class AuthHelper @Inject() (
                     socialRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
                   } match {
                     case None => // kifi user does not exist
+                      val payload = if (filledUser.email.exists(e => emailAddressMatchesSomeKifiUser(EmailAddress(e))))
+                        Json.obj("code" -> "connect_option", "uri" -> signUpUrl)
+                      else
+                        Json.obj("code" -> "continue_signup")
+                      log.info(s"[accessTokenSignup($providerName)] no kifi user associated with ${filledUser.identityId} email=${filledUser.email}; payload=$payload")
                       Authenticator.create(identity).fold(
                         error => throw error,
                         authenticator =>
-                          Ok(Json.obj("code" -> "continue_signup", "sessionId" -> authenticator.id))
+                          Ok(payload ++ Json.obj("sessionId" -> authenticator.id))
                             .withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                             .withCookies(authenticator.toCookie)
                       )

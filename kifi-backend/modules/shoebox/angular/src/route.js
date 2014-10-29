@@ -19,8 +19,7 @@ angular.module('kifi')
       templateUrl: 'helprank/helprank.tpl.html',
       controller: 'HelpRankCtrl'
     }).when('/', {
-      templateUrl: 'home/home.tpl.html',
-      controller: 'HomeCtrl'
+      templateUrl: 'recos/recosView.tpl.html'
     }).when('/invite', {
       templateUrl: 'invite/invite.tpl.html'
     }).when('/friends/invite', {
@@ -31,10 +30,14 @@ angular.module('kifi')
     }).when('/kifeeeed', {
       templateUrl: 'recos/adhoc.tpl.html'
     }).when('/recommendations', {
-      templateUrl: 'recos/recosView.tpl.html'
+      redirectTo: '/'
+    }).when('/keeps', {
+      templateUrl: 'home/home.tpl.html',
+      controller: 'HomeCtrl'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
-      controller: 'SearchCtrl'
+      controller: 'SearchCtrl',
+      reloadOnSearch: false
     }).when('/tag/:tagId', {
       templateUrl: 'tagKeeps/tagKeeps.tpl.html',
       controller: 'TagKeepsCtrl'

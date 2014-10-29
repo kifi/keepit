@@ -14,7 +14,7 @@ CREATE TABLE library_invite (
 
     PRIMARY KEY (id),
     CONSTRAINT `library_invite_f_owner` FOREIGN KEY (`owner_id`) REFERENCES `user` (`id`),
-    CONSTRAINT `library_invite_f_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+    /*CONSTRAINT `library_invite_f_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`), mysql only */
     CONSTRAINT `library_invite_f_library` FOREIGN KEY (`library_id`) REFERENCES `library` (`id`)
 );
 

@@ -221,7 +221,7 @@ class KeepInterner @Inject() (
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.
-      keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid) }
+      keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
     (isNewKeep, wasInactiveKeep, internedKeep)

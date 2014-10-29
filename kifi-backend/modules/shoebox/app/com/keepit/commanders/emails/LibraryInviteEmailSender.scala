@@ -26,31 +26,40 @@ class LibraryInviteEmailSender @Inject() (
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def inviteUserToLibrary(invite: LibraryInvite)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
-    val toUserRecipientOpt: Option[Either[Id[User], EmailAddress]] =
+    val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
       if (invite.userId.isDefined) Some(Left(invite.userId.get))
       else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
       else None
 
-    toUserRecipientOpt map { toUserRecipient =>
+    toRecipientOpt map { toRecipient =>
       val (library, libraryInfo) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
         val libOwner = basicUserRepo.load(library.ownerId)
+        val inviter = basicUserRepo.load(invite.inviterId)
         val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps)
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libOwner, numKeeps, Some(inviter))
         (library, libraryInfo)
       }
 
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
-      val fromUserId = invite.ownerId
+      val fromUserId = invite.inviterId
+      val passPhrase = toRecipient match {
+        case Left(_: Id[User]) => None
+        case Right(_: EmailAddress) => Some(invite.passPhrase)
+      }
+      val authToken = invite.authToken
       val emailToSend = EmailToSend(
-        fromName = Some(Left(invite.ownerId)),
+        fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
-        to = toUserRecipient,
+        to = toRecipient,
         category = NotificationCategory.User.LIBRARY_INVITATION,
-        htmlTemplate = views.html.email.libraryInvitation(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase),
-        textTemplate = Some(views.html.email.libraryInvitationText(toUserRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, invite.passPhrase)),
-        templateOptions = Seq(CustomLayout).toMap
+        htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken),
+        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken)),
+        templateOptions = Seq(CustomLayout).toMap,
+        campaign = Some("na"),
+        channel = Some("vf_email"),
+        source = Some("library_invite")
       )
       emailTemplateSender.send(emailToSend) map (Some(_))
     } getOrElse {

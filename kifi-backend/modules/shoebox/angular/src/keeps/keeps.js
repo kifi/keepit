@@ -50,7 +50,7 @@ angular.module('kifi')
       event.dataTransfer.setData('Text', sendData);
       //event.dataTransfer.setData('text/plain', '');
       var draggedKeepsElement = $scope.getDraggedKeepsElement();
-      draggedKeepsElement.find('.kf-keep').css('background', 'rgba(255,255,255,.7)');
+      draggedKeepsElement.find('.kf-keep-deprecated').css('background', 'rgba(255,255,255,.7)');
       event.dataTransfer.setDragImage(draggedKeepsElement[0], mouseX, mouseY);
     };
 
@@ -60,7 +60,7 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeeps', [
+.directive('kfKeepsDeprecated', [
   '$window', '$timeout', 'keepActionService', 'libraryService', 'selectionService', 'tagService', 'undoService',
   function ($window, $timeout, keepActionService, libraryService, selectionService, tagService, undoService) {
 
@@ -78,7 +78,7 @@ angular.module('kifi')
         updateSelectedCount: '&'
       },
       controller: 'KeepsCtrl',
-      templateUrl: 'keeps/keeps.tpl.html',
+      templateUrl: 'keeps/keepsDeprecated.tpl.html',
       link: function (scope, element /*, attrs*/) {
         //
         // Internal data.
@@ -123,9 +123,6 @@ angular.module('kifi')
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();
-
-        // Not used in template right now but will be when we hide bulk privacy changes.
-        scope.librariesEnabled = libraryService.isAllowed();
 
 
         //
@@ -271,4 +268,296 @@ angular.module('kifi')
       }
     };
   }
-]);
+])
+
+.directive('kfKeeps', [
+  '$rootScope', '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'tagService', 'undoService',
+  function ($rootScope, $window, $timeout, keepActionService, libraryService, modalService, selectionService, tagService, undoService) {
+
+    return {
+      restrict: 'A',
+      scope: {
+        library: '=',
+        keeps: '=',
+        keepsLoading: '=',
+        keepsHasMore: '=',
+        keepClick: '=',
+        scrollDisabled: '=',
+        scrollNext: '&',
+        editMode: '=',
+        toggleEdit: '=',
+        updateSelectedCount: '&'
+      },
+      controller: 'KeepsCtrl',
+      templateUrl: 'keeps/keeps.tpl.html',
+      link: function (scope, element /*, attrs*/) {
+        //
+        // Internal data.
+        //
+        var lastSizedAt = $window.innerWidth;
+        scope.availableKeeps = scope.keeps;
+
+        //
+        // Internal methods.
+        //
+        function sizeKeeps() {
+          scope.$broadcast('resizeImage');
+
+          $timeout(function () {
+            scope.keeps.forEach(function (keep) {
+              if (keep.calcSizeCard) {
+                keep.calcSizeCard(keep);
+              }
+            });
+            scope.keeps.forEach(function (keep) {
+              if (keep.sizeCard) {
+                keep.sizeCard();
+              }
+            });
+          });
+        }
+
+        function resizeWindowListener() {
+          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
+            lastSizedAt = $window.innerWidth;
+            sizeKeeps();
+          }
+        }
+
+        function copyToLibrary () {
+          // Copies the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            libraryService.fetchLibrarySummaries(true);
+          });
+        }
+
+        function moveToLibrary () {
+          // Moves the keeps that are selected into the library that is selected.
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
+          var selectedLibrary = scope.librarySelection.library;
+
+          keepActionService.moveToLibrary(_.pluck(selectedKeeps, 'id'), selectedLibrary.id).then(function () {
+            // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
+            //       not good.
+            _.forEach(selectedKeeps, function (selectedKeep) {
+              selectedKeep.makeUnkept();
+            });
+
+            libraryService.fetchLibrarySummaries(true);
+            var currentLibraryId = scope.library.id;
+            libraryService.addToLibraryCount(currentLibraryId, -1 * selectedKeeps.length);
+            scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+            scope.selection.unselectAll();
+          });
+        }
+
+
+        //
+        // Scope data.
+        //
+        scope.scrollDistance = '100%';
+        scope.editingTags = false;
+        scope.addingTag = { enabled: false };
+
+        // 'selection' keeps track of which keeps have been selected.
+        scope.selection = new selectionService.Selection();
+
+
+        //
+        // Scope methods.
+        //
+        scope.keepClickAction = function (event, keep) {
+          if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
+            if (!scope.editMode.enabled) {
+              scope.toggleEdit(true);
+            }
+            scope.editMode.enabled = true;
+            scope.selection.toggleSelect(keep);
+          } else if (event.target.href && scope.keepClick) {
+            scope.keepClick(keep, event);
+          }
+        };
+
+        scope.isMultiChecked = function (keeps) {
+          return scope.selection.getSelectedLength() > 0 && !scope.selection.isSelectedAll(keeps);
+        };
+
+        scope.isUnchecked = function (keeps) {
+          return !scope.selection.isSelectedAll(keeps) && !scope.isMultiChecked(keeps);
+        };
+
+        scope.isShowMore = function () {
+          return !scope.keepsLoading && scope.keepsHasMore;
+        };
+
+        scope.getDraggedKeepsElement = function () {
+          if (scope.data.draggedKeeps.length >= 4) {
+            var ellipsis = element.find('.kf-shadow-keep-ellipsis');
+            var ellipsisCounter = element.find('.kf-shadow-keep-ellipsis-counter');
+            var ellipsisCounterHidden = element.find('.kf-shadow-keep-ellipsis-counter-hidden');
+            ellipsisCounter.css({left: (parseInt(ellipsis.width(), 10) - parseInt(ellipsisCounterHidden.width(), 10)) / 2});
+          }
+          return element.find('.kf-shadow-dragged-keeps');
+        };
+
+        scope.draggedTwo = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 2;
+        };
+
+        scope.draggedThree = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length === 3;
+        };
+
+        scope.draggedMore = function () {
+          return scope.data.draggedKeeps && scope.data.draggedKeeps.length > 3;
+        };
+
+        scope.isScrollDisabled = function () {
+          return scope.scrollDisabled;
+        };
+
+        scope.unkeep = function (keeps) {
+          var selectedKeeps = scope.selection.getSelected(keeps);
+
+          if (scope.librariesEnabled) {
+            var libraryId = scope.library.id;
+
+            keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
+              _.forEach(selectedKeeps, function (selectedKeep) {
+                selectedKeep.makeUnkept();
+                _.without(scope.availableKeeps, selectedKeep);
+              });
+
+              var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
+              undoService.add(selectedKeeps.length + keepsDeletedText, function () {
+                keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
+                  var keepData = { url: keep.url };
+                  if (keep.title) { keepData.title = keep.title; }
+                  return keepData;
+                }), libraryId);
+
+                _.forEach(selectedKeeps, function (selectedKeep) {
+                  selectedKeep.makeKept();
+                });
+
+                scope.availableKeeps = selectedKeeps.concat(scope.availableKeeps);
+                scope.selection.selectAll(selectedKeeps);
+                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
+              });
+
+              libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+              scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
+              scope.selection.unselectAll();
+            });
+          } else {
+            keepActionService.unkeepMany(selectedKeeps).then(function () {
+              _.forEach(selectedKeeps, function (selectedKeep) {
+                selectedKeep.makeUnkept();
+              });
+
+              undoService.add(selectedKeeps.length + ' keeps deleted.', function () {
+                keepActionService.keepMany(selectedKeeps);
+                _.forEach(selectedKeeps, function (selectedKeep) {
+                  selectedKeep.makeKept();
+                });
+              });
+
+              tagService.addToKeepCount(-1 * selectedKeeps.length);
+            });
+          }
+        };
+
+        scope.togglePrivate = function (keeps) {
+          keepActionService.togglePrivateMany(scope.selection.getSelected(keeps));
+        };
+
+        scope.selectionPrivacyState = function (keeps) {
+          if (_.every(scope.selection.getSelected(keeps), 'isPrivate')) {
+            return 'Public';
+          } else {
+            return 'Private';
+          }
+        };
+
+        scope.enableEditTags = function () {
+          scope.editingTags = true;
+        };
+
+        scope.disableEditTags = function () {
+          scope.editingTags = false;
+        };
+
+
+        //
+        // Watches and listeners.
+        //
+        scope.$watch(function () {
+          return libraryService.isAllowed();
+        }, function (newVal) {
+          scope.librariesEnabled = newVal;
+        });
+
+        scope.$watch('keepsLoading', function (newVal) {
+          if (!newVal) {
+            if (scope.librariesEnabled) {
+              libraryService.fetchLibrarySummaries().then(function () {
+                scope.libraries = !scope.library ? [] : _.filter(libraryService.librarySummaries, function (library) {
+                  return library.access !== 'read_only';
+                });
+
+                scope.librarySelection = {};
+                scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
+                scope.excludeLibraries = !scope.library ? [] : [scope.library];
+                scope.clickAction = function (widgetElement) {
+                  if (widgetElement.closest('.copy-to-library').length) {
+                    copyToLibrary();
+                  } else if (widgetElement.closest('.move-to-library').length) {
+                    moveToLibrary();
+                  }
+                };
+              });
+            }
+          }
+        });
+
+        scope.$watch(function () {
+          return scope.selection.getSelected(scope.keeps).length;
+        }, function (numSelected) {
+          scope.disableEditTags();
+          scope.updateSelectedCount({ numSelected: numSelected });
+        });
+
+        scope.$watch(function () {
+          return scope.editMode.enabled;
+        }, function(enabled) {
+          if (!enabled) {
+            scope.selection.unselectAll();
+          }
+        });
+
+        $rootScope.$on('librarySummariesChanged', function () {
+          if (scope.librariesEnabled) {
+            scope.libraries = _.filter(libraryService.librarySummaries, function (lib) {
+              return lib.access !== 'read_only';
+            });
+          }
+        });
+
+        var lazyResizeListener = _.debounce(resizeWindowListener, 250);
+        $window.addEventListener('resize', lazyResizeListener);
+
+        scope.$on('$destroy', function () {
+          $window.removeEventListener('resize', lazyResizeListener);
+          scope.editMode.enabled = false;
+        });
+      }
+    };
+  }
+])
+
+;

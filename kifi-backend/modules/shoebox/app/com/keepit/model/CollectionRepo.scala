@@ -27,7 +27,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
   def getTagsByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[Hashtag]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int, excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Seq[Collection]
@@ -73,6 +73,10 @@ class CollectionRepoImpl @Inject() (
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
     userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
+
+    val keepToCollections = keepToCollectionRepo.getByCollection(model.id.get)
+    keepToCollections.foreach(keepToCollectionRepo.deleteCache)
+
     model.id map { id =>
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
     }
@@ -140,7 +144,7 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean = false)(implicit session: RWSession): Collection = {
+  def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection = {
     val collection = get(collectionId)
     session.onTransactionSuccess { typeahead.delete(collection.userId) }
     if (isNewKeep) {

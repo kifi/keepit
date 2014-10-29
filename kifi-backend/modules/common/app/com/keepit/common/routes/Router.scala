@@ -126,7 +126,6 @@ object Shoebox extends Service {
     def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
     def savePageInfo() = ServiceRoute(POST, "/internal/shoebox/database/savePageInfo")
-    def getImageInfo(id: Id[ImageInfo]) = ServiceRoute(GET, "/internal/shoebox/database/getImageInfo", Param("id", id))
     def saveImageInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveImageInfo")
     def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))
     def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
@@ -148,7 +147,6 @@ object Shoebox extends Service {
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def isSensitiveURI() = ServiceRoute(POST, "/internal/shoebox/database/isSensitiveURI")
     def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
-    def sendUnreadMessages() = ServiceRoute(POST, "/internal/shoebox/email/sendUnreadMessages")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def updateScreenshots(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/screenshots/update", Param("id", id))
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
@@ -172,6 +170,7 @@ object Shoebox extends Service {
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/libraries/canView")
     def newKeepsInLibrary(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibrary", Param("userId", userId), Param("max", max))
     def getMutualFriends(user1Id: Id[User], user2Id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getMutualFriends", Param("user1Id", user1Id), Param("user2Id", user2Id))
+    def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
   }
 }
 
@@ -208,6 +207,7 @@ object Search extends Service {
     def getFeeds(userId: Id[User], limit: Int) = ServiceRoute(GET, "/internal/search/feed", Param("userId", userId), Param("limit", limit))
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
     def augmentation() = ServiceRoute(POST, "/internal/search/augmentation")
+    def augment() = ServiceRoute(POST, "/internal/search/augment")
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
     def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")

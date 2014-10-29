@@ -69,15 +69,19 @@ class MobileLibraryController @Inject() (
       val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
         (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
-      val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
+      val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps, None)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
       Json.toJson(info).as[JsObject] ++ memInfo
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (inviteOwner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(invite.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
-      val info = LibraryInfo.fromLibraryAndOwner(lib, inviteOwner, numKeeps)
+      val (libOwner, inviter, numKeeps) = db.readOnlyMaster { implicit s =>
+        (basicUserRepo.load(lib.ownerId),
+          basicUserRepo.load(invite.inviterId),
+          keepRepo.getCountByLibrary(lib.id.get))
+      }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, libOwner, numKeeps, Some(inviter))
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
@@ -96,7 +100,7 @@ class MobileLibraryController @Inject() (
             BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) =>
             val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps, None)))
         }
     }
   }
@@ -125,20 +129,16 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, count: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
-      case Failure(ex) =>
-        Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
+    else Library.decodePublicId(pubId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(libraryId) =>
-        val limit = Math.min(count, 30)
-        val numKeepsF = libraryCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepsCommander.decorateKeepsIntoKeepInfos(request.userIdOpt, keeps)
-          numKeeps <- numKeepsF
         } yield {
-          Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(limit, keepInfos.length), "offset" -> offset, "numKeeps" -> numKeeps))
+          Ok(Json.obj("keeps" -> keepInfos))
         }
     }
   }

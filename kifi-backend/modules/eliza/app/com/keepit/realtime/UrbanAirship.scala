@@ -2,6 +2,8 @@ package com.keepit.realtime
 
 import java.util.concurrent.TimeoutException
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
 import scala.concurrent.{ Future, future }
 
 import org.joda.time.{ Days, DateTime }
@@ -10,7 +12,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.{ NonOKResponseException, HttpClient, DirectUrl }
+import com.keepit.common.net.{ ClientResponse, NonOKResponseException, HttpClient, DirectUrl }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
@@ -112,6 +114,7 @@ class UrbanAirshipImpl @Inject() (
     client: HttpClient,
     config: UrbanAirshipConfig,
     deviceRepo: DeviceRepo,
+    airbreak: AirbrakeNotifier,
     db: Database,
     clock: Clock) extends UrbanAirship with Logging {
 
@@ -184,7 +187,7 @@ class UrbanAirshipImpl @Inject() (
     } else Future.successful(device)
   }
 
-  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Future[ClientResponse] = {
     val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
@@ -221,7 +224,7 @@ class UrbanAirshipImpl @Inject() (
     )
   }
 
-  private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+  private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Future[ClientResponse] = {
     val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
@@ -268,9 +271,22 @@ class UrbanAirshipImpl @Inject() (
     log.info(s"Sending notification to device: ${device.token}")
     device.deviceType match {
       case DeviceType.IOS =>
-        postIOS(firstMessage, device, notification)
+        checkResponse(postIOS(firstMessage, device, notification), device, notification)
       case DeviceType.Android =>
-        postAndroid(firstMessage, device, notification)
+        checkResponse(postAndroid(firstMessage, device, notification), device, notification)
     }
   }
+
+  private def checkResponse(res: Future[ClientResponse], device: Device, notification: PushNotification): Unit = {
+    res.onSuccess {
+      case clientRes =>
+        log.info(s"successfuly sent notification ${notification.id} to $device: ${clientRes.body}")
+    }
+    res.onFailure {
+      case error =>
+        log.info(s"failed sending notification ${notification.id} to $device", error)
+        airbreak.notify(s"failed sending notification ${notification.id} to $device", error)
+    }
+  }
+
 }

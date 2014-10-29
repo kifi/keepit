@@ -22,10 +22,25 @@ angular.module('kifi')
 
     $scope.isFocused = false;
     $scope.library = {};
-    $scope.search = { text: '', showName: true};
+    $scope.search = { text: '', showName: false };
     $scope.stayInLibraryPath = '';
 
-    $rootScope.$on('libraryUrl', function (e, library) {
+    // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+    var calloutName = 'tag_callout_shown';
+    $scope.showCallout = function () {
+      return profileService.prefs.site_intial_show_library_intro && !profileService.prefs[calloutName];
+    };
+    $scope.closeCallout = function () {
+      var save = { 'site_show_library_intro': false };
+      save[calloutName] = true;
+      profileService.prefs[calloutName] = true;
+      profileService.savePrefs(save);
+    };
+
+    //
+    // Watchers & Listeners
+    //
+    var deregisterLibraryChip = $rootScope.$on('libraryUrl', function (e, library) {
       $scope.library = library;
       $scope.search.text = '';
       if ($scope.library.id) {
@@ -35,7 +50,19 @@ angular.module('kifi')
         $scope.clearLibraryName();
       }
     });
+    $scope.$on('$destroy', deregisterLibraryChip);
 
+    $scope.$on('$routeUpdate', function (event, current) {
+      if (current.params.q) {
+        $scope.search.text = current.params.q;
+      }
+    });
+
+
+    var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
+      $scope.addKeeps();
+    });
+    $scope.$on('$destroy', deregisterAddKeep);
 
     $scope.focusInput = function () {
       $scope.isFocused = true;
@@ -49,7 +76,7 @@ angular.module('kifi')
       $scope.stayInLibraryPath = '';
     };
 
-    var query = $routeParams.q || '';
+    $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       if ($scope.search.text === '') {
         if ($scope.stayInLibraryPath !== '') {
@@ -59,12 +86,17 @@ angular.module('kifi')
         }
         $scope.clearInput();
       } else {
-        query = $scope.search.text;
         $timeout(function() {
-          $location.url('/find?q=' + query + '&f=' + 'm');
-        }, 0);
+          if ($location.path() !== '/find') {
+            $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+          } else {
+            $location.search('q', $scope.search.text); // this keeps any existing URL params
+          }
+        });
       }
-    }, 200);
+    }, 100, {
+      'leading': true
+    });
 
     $scope.clearInput = function () {
       if ($scope.stayInLibraryPath !== '') {

@@ -25,6 +25,7 @@ class SeedIngestionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
+    libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
     db: Database) extends Logging {
 
@@ -33,6 +34,7 @@ class SeedIngestionCommander @Inject() (
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
   val MIN_KEEPS_FOR_RECOS = 20
+  val MIN_LIBS_FOR_RECOS = 1
 
   def usersToIngestGraphDataFor(): Seq[Id[User]] = getUsersWithSufficientData().toSeq
 
@@ -170,7 +172,7 @@ class SeedIngestionCommander @Inject() (
     }.filter {
       case (userId, keepCount) =>
         keepCount > MIN_KEEPS_FOR_RECOS
-    }.map(_._1).toSet
+    }.map(_._1).toSet ++ db.readOnlyReplica { implicit session => libMembershipRepo.getUsersFollowingALibrary() }
   }
 
   def forceIngestGraphData(userId: Id[User]): Future[Unit] = {

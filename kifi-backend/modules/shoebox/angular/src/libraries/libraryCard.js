@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLibraryCard', [
-  '$FB', '$location', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService', 'profileService', 'platformService',
-  function ($FB, $location, $rootScope, $window, env, friendService, libraryService, modalService, profileService, platformService) {
+  '$FB', '$location', '$q', '$rootScope', '$window', 'env', 'friendService', 'libraryService', 'modalService',
+  'profileService', 'platformService', 'signupService', '$twitter',
+  function ($FB, $location, $q, $rootScope, $window, env, friendService, libraryService, modalService,
+    profileService, platformService, signupService, $twitter) {
     return {
       restrict: 'A',
       replace: true,
@@ -21,11 +23,30 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.facebookAppId = $FB.appId();
+        scope.isUserLoggedOut = $rootScope.userLoggedIn === false;
         scope.clippedDescription = false;
         scope.followersToShow = 0;
         scope.numAdditionalFollowers = 0;
         scope.editKeepsText = 'Edit Keeps';
+
+        var magicImages = {
+          'l7SZ3gr3kUQJ': '//djty7jcqog9qu.cloudfront.net/special-libs/l7SZ3gr3kUQJ.png',
+          'l4APrlM5wzaM': '//djty7jcqog9qu.cloudfront.net/special-libs/l4APrlM5wzaM.png',
+          'l2iJXRO7vtoa': '//djty7jcqog9qu.cloudfront.net/special-libs/l2iJXRO7vtoa.png',
+          'l292wb07mhuB': '//djty7jcqog9qu.cloudfront.net/special-libs/l292wb07mhuB.png',
+          'lGcw3PhnD9Wo': '//djty7jcqog9qu.cloudfront.net/special-libs/lGcw3PhnD9Wo.png',
+          'l3ai2ejn5t9L': '//djty7jcqog9qu.cloudfront.net/special-libs/l3ai2ejn5t9L.png',
+          'lzgAqPcczp5J': '//djty7jcqog9qu.cloudfront.net/special-libs/lzgAqPcczp5J.png',
+          'l14bTasWaiYK': '//djty7jcqog9qu.cloudfront.net/special-libs/l14bTasWaiYK.png',
+          'l5ooCseWZXla': '//djty7jcqog9qu.cloudfront.net/special-libs/l5ooCseWZXla.png',
+          'lFiSQapwp732': '//djty7jcqog9qu.cloudfront.net/special-libs/lFiSQapwp732.png',
+          'lGWrqQb9JsbJ': '//djty7jcqog9qu.cloudfront.net/special-libs/lGWrqQb9JsbJ.png',
+          'lCaeGbBOh5YT': '//djty7jcqog9qu.cloudfront.net/special-libs/lCaeGbBOh5YT.png',
+          'lEc2xD0eNU9f': '//djty7jcqog9qu.cloudfront.net/special-libs/lEc2xD0eNU9f.png',
+          'l8SVuYHq9Qo5': '//djty7jcqog9qu.cloudfront.net/special-libs/l8SVuYHq9Qo5.jpg',
+          'l5jqAsWp5j8Y': '//djty7jcqog9qu.cloudfront.net/special-libs/l5jqAsWp5j8Y.jpg'
+        };
+        scope.magicImage = magicImages[scope.library.id];
 
 
         //
@@ -83,7 +104,9 @@ angular.module('kifi')
           }
 
           var maxLength = 150;
-          if (scope.library.description && scope.library.description.length > maxLength) {
+          scope.library.formattedDescription = '<p>' + angular.element('<div>').text(scope.library.description).text().replace(/\n+/, '<p>');
+
+          if (scope.library.description && scope.library.description.length > maxLength && !scope.isUserLoggedOut) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
             var clipLastIndex = maxLength;
             var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
@@ -97,13 +120,54 @@ angular.module('kifi')
 
           scope.library.shareUrl = env.origin + scope.library.url;
           scope.library.shareText = 'Check out this Kifi library about ' + scope.library.name + '!';
-          $rootScope.$emit('libraryUrl', scope.library);
+
+          // Figure out whether this library is a library that the user has been invited to.
+          // If so, display an invite header.
+          var promise = null;
+          if (libraryService.invitedSummaries) {
+            promise = $q.when(libraryService.invitedSummaries);
+          } else {
+            promise = libraryService.fetchLibrarySummaries(true).then(function () {
+              return libraryService.invitedSummaries;
+            });
+          }
+
+          promise.then(function (invitedSummaries) {
+            var maybeLib = _.find(invitedSummaries, { 'id' : scope.library.id });
+            if (maybeLib) {
+              scope.library.invite = {
+                inviterName: maybeLib.inviter.firstName + ' ' + maybeLib.inviter.lastName,
+                actedOn: false
+              };
+            }
+          });
         }
+
+        function preloadSocial () {
+          if (!$FB.failedToLoad && !$FB.loaded) {
+            $FB.init();
+          }
+          if (!$twitter.failedToLoad && !$twitter.loaded) {
+            $twitter.load();
+          }
+        }
+        scope.$evalAsync(preloadSocial);
 
 
         //
         // Scope methods.
         //
+        scope.acceptInvitation = function (library) {
+          scope.followLibrary(library);
+        };
+
+        scope.ignoreInvitation = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+            libraryService.declineToJoinLibrary(library.id);
+          }
+        };
+
         scope.showLongDescription = function () {
           scope.clippedDescription = false;
         };
@@ -116,17 +180,17 @@ angular.module('kifi')
           return library.owner && library.owner.id === profileService.me.id;
         };
 
-        scope.followerIsMe = function (follower) {
-          return follower.id === profileService.me.id;
-        };
-
         scope.canBeShared = function (library) {
           // Only user created (i.e. not Main or Secret) libraries can be shared.
           // Of the user created libraries, public libraries can be shared by any Kifi user;
           // discoverable/secret libraries can be shared only by the library owner.
-          return scope.isUserLibrary(library) &&
+          return !scope.isUserLoggedOut && scope.isUserLibrary(library) &&
                  (library.visibility === 'published' ||
                   scope.isMyLibrary(library));
+        };
+
+        scope.isPublic = function (library) {
+          return library.visibility === 'published';
         };
 
         scope.shareFB = function () {
@@ -142,20 +206,29 @@ angular.module('kifi')
         };
 
         scope.alreadyFollowingLibrary = function (library) {
-          return (library.access && (library.access === 'read_only')) || _.some(library.followers, { id: profileService.me.id });
+          return (library.access && (library.access === 'read_only')) ||
+            (_.some(libraryService.librarySummaries, { id: library.id }) && !scope.isMyLibrary(library));
         };
 
         scope.followLibrary = function (library) {
+          if (library.invite) {
+            library.invite.actedOn = true;
+          }
+
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore($location.absUrl());
             return;
+          } else if ($rootScope.userLoggedIn === false) {
+            return signupService.register({libraryId: scope.library.id});
           }
 
           libraryService.joinLibrary(library.id).then(function (result) {
             if (result === 'already_joined') {
-              // TODO(yiping): make a better error message. One idea is to update
-              // the current generic error modal to take in a message parameter.
-              $window.alert('You are already following this library!');
+              scope.genericErrorMessage = 'You are already following this library!';
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html',
+                scope: scope
+              });
               return;
             }
 
@@ -166,23 +239,13 @@ angular.module('kifi')
               pictureName: profileService.me.pictureName
             });
 
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-              augmentData();
-              adjustFollowerPicsSize();
-            });
+            augmentData();
+            adjustFollowerPicsSize();
           });
         };
 
         scope.unfollowLibrary = function (library) {
-          libraryService.leaveLibrary(library.id).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function () {
-              $rootScope.$emit('librarySummariesChanged');
-
-              // Note: no need to augmentData for unfollowed library.
-              adjustFollowerPicsSize();
-            });
-          });
+          libraryService.leaveLibrary(library.id);
         };
 
         scope.manageLibrary = function () {
@@ -225,11 +288,14 @@ angular.module('kifi')
           }
         });
 
-        $rootScope.$on('libraryUpdated', function (e, library) {
-          _.assign(scope.library, library);
-          augmentData();
-          adjustFollowerPicsSize();
+        var deregisterLibraryUpdated = $rootScope.$on('libraryUpdated', function (e, library) {
+          if (library.id === scope.library.id) {
+            _.assign(scope.library, library);
+            augmentData();
+            adjustFollowerPicsSize();
+          }
         });
+        scope.$on('$destroy', deregisterLibraryUpdated);
 
         // Update how many follower pics are shown when the window is resized.
         var adjustFollowerPicsSizeOnResize = _.debounce(adjustFollowerPicsSize, 200);

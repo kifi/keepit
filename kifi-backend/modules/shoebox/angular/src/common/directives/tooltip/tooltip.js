@@ -52,6 +52,19 @@ angular.module('kifi')
             case 'right':
               setCssPos(parentPos.top - 0.5*el.outerHeight() + 0.5*container.outerHeight(), parentPos.left + container.outerWidth());
               break;
+            case 'top-right':
+              setCssPos(parentPos.top - el.outerHeight(), parentPos.left + container.outerWidth());
+              break;
+            case 'top-left':
+              setCssPos(parentPos.top - el.outerHeight(), parentPos.left - el.outerWidth());
+              break;
+            case 'bottom-right':
+              setCssPos(parentPos.top + container.outerHeight(), parentPos.left + container.outerWidth());
+              break;
+            case 'bottom-left':
+              setCssPos(parentPos.top + container.outerHeight(), parentPos.left - el.outerWidth());
+              break;
+
           }
         }
 
@@ -59,7 +72,7 @@ angular.module('kifi')
         function ensureCorrectPositioning() {
           var pos = attrs.position;
 
-          var poss = _.filter(['top', 'right', 'bottom', 'left'], function (p) {
+          var poss = _.filter(['top', 'right', 'bottom', 'left', 'top-right', 'top-left', 'bottom-right', 'bottom-left'], function (p) {
             return p!==pos;
           });
           poss.push(pos);
@@ -81,8 +94,8 @@ angular.module('kifi')
           visible = true;
           $timeout(function (){
             el.css({ //WARNING HACK (causing the element to be layed out so I can get the size correctly in the next event. Better ideas appreciated.)
-              top: '42px',
-              left: '42px'
+              top: '-542px',
+              left: '-542px'
             });
             $timeout(ensureCorrectPositioning);
           });
@@ -94,15 +107,17 @@ angular.module('kifi')
 
         container.on('mouseenter', onMouseEnter);
         container.on('mouseleave', onMouseLeave);
-        $w.on('scroll', trackScroll);
+
+        var debouncedScroll = _.debounce(trackScroll, 50);
+        $w.on('scroll', debouncedScroll);
 
         scope.$on('$destroy', function () {
           container.off('mouseenter', ensureCorrectPositioning);
           container.off('mouseleave', onMouseLeave);
-          $w.off('scroll', trackScroll);
+          $w.off('scroll', debouncedScroll);
         });
 
-        scope.showing = function() {
+        scope.showing = function () {
           return visible;
         };
 

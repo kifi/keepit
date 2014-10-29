@@ -36,7 +36,7 @@ object DBSession {
     val sessionId = TrackingId.get
     val isReadOnly = masterSlave != Master
     def runningTime(): Long = System.currentTimeMillis - startTime
-    def timeCheck(): Unit = {
+    private def timeCheck(): Unit = {
       val t = runningTime()
       if (t > 5000) { // tweak
         val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long: $t ms"

@@ -12,6 +12,8 @@ import com.keepit.model._
 import play.api.mvc.AnyContent
 import views.html
 
+import scala.collection.mutable.ArrayBuffer
+
 case class LibraryStatistic(
   library: Library,
   owner: User,
@@ -38,6 +40,37 @@ class AdminLibraryController @Inject() (
     userRepo: UserRepo,
     db: Database,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
+
+  def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
+    db.readWrite { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      if (lib.ownerId != fromUserId) throw new Exception(s"orig user $fromUserId is not matching current library owner $lib")
+      val newOwnerLib = lib.copy(ownerId = toUserId)
+      libraryRepo.save(newOwnerLib)
+      val currentOwnership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, fromUserId).getOrElse(throw new Exception(s"no ownership to lib $lib for user $fromUserId"))
+      libraryMembershipRepo.save(currentOwnership.copy(access = LibraryAccess.READ_ONLY))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, toUserId) match {
+        case None =>
+          libraryMembershipRepo.save(LibraryMembership(userId = toUserId, libraryId = libraryId, access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
+        case Some(newOwnership) =>
+          libraryMembershipRepo.save(newOwnership.copy(access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
+      }
+      var page = 0
+      val pageSize = 100
+      var hasMore = true
+      val keeps = ArrayBuffer[Keep]()
+      while (hasMore) {
+        val from = page * pageSize
+        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, None) map { keep =>
+          keepRepo.save(keep.copy(userId = toUserId))
+        }
+        hasMore = chunk.size >= pageSize
+        keeps.appendAll(chunk)
+        page += 1
+      }
+      Ok(s"keep count = ${keeps.size} for library: $newOwnerLib")
+    }
+  }
 
   def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30

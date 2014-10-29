@@ -12,12 +12,13 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val u1 = new User(firstName = "Aaron", lastName = "H", createdAt = t1)
-    val u2 = new User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2))
+    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test")
+    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test")
 
     db.readWrite { implicit s =>
       val user1 = userRepo.save(u1)
       val user2 = userRepo.save(u2)
+
       val l1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET,
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = l1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
@@ -31,7 +32,13 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("C"), memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = l3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-      (l1, l2, l3, user1, user2)
+      val s1 = libraryRepo.save(Library(name = "Main Library", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("main"), memberCount = 1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = s1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+      val s2 = libraryRepo.save(Library(name = "Secret Library", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_SECRET, slug = LibrarySlug("secret"), memberCount = 1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = s2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+      (l1, l2, l3, s1, s2, user1, user2)
     }
   }
 
@@ -40,18 +47,18 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         val all = db.readOnlyMaster(implicit session => libraryRepo.all)
-        all.map(_.name) === Seq("lib1A", "lib1B", "lib2")
-        all.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.DISCOVERABLE, LibraryVisibility.PUBLISHED)
-        all.map(_.slug.value) === Seq("A", "B", "C")
+        all.map(_.name) === Seq("lib1A", "lib1B", "lib2", Library.SYSTEM_MAIN_DISPLAY_NAME, Library.SYSTEM_SECRET_DISPLAY_NAME)
+        all.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.DISCOVERABLE, LibraryVisibility.PUBLISHED, LibraryVisibility.DISCOVERABLE, LibraryVisibility.SECRET)
+        all.map(_.slug.value) === Seq("A", "B", "C", "main", "secret")
       }
     }
 
     "find a user's libraries" in {
       withDb() { implicit injector =>
-        val (l1, l2, l3, user1, user2) = setup()
+        val (l1, l2, l3, _, _, user1, user2) = setup()
         db.readOnlyMaster { implicit session =>
           val user1Lib = libraryRepo.getByUser(user1.id.get)
-          user1Lib.length === 2
+          user1Lib.length === 4
           user1Lib.head._1.access === LibraryAccess.OWNER
           user1Lib.head._2.id === l1.id
           val user2lib = libraryRepo.getByUser(user2.id.get)
@@ -63,26 +70,41 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       }
     }
     "validate library names" in {
-      val name1 = "asdf1234"
-      val name2 = "q@#$%^&*().,/][:;\"~`--___+= "
-      val name3 = ""
-      Library.isValidName(name1) === true
-      Library.isValidName(name2) === false
-      Library.isValidName(name3) === false
+      Library.isValidName("asdf1234") === true
+      Library.isValidName("q@#$%^&*().,/][:;\"~`--___+= ") === false
+      Library.isValidName("") === false
     }
 
     "validate library slugs" in {
-      val str1 = "asdf1234"
-      val str2 = "asdf+qwer"
-      val str3 = "asdf 1234"
-      val str4 = ""
-      LibrarySlug.isValidSlug(str1) === true
-      LibrarySlug.isValidSlug(str2) === true
-      LibrarySlug.isValidSlug(str3) === false
-      LibrarySlug.isValidSlug(str4) === false
-
-      val slug1 = LibrarySlug(str1)
-      slug1.value === str1
+      LibrarySlug.isValidSlug("asdf1234") === true
+      LibrarySlug.isValidSlug("asdf+qwer") === true
+      LibrarySlug.isValidSlug("asdf 1234") === false
+      LibrarySlug.isValidSlug("") === false
     }
+
+    "generate valid library slugs" in {
+      val slug1 = LibrarySlug.generateFromName("-- Foo, Bar & Baz! --")
+      slug1 === "foo-bar-baz"
+      LibrarySlug.isValidSlug(slug1) === true
+      val slug2 = LibrarySlug.generateFromName("A Super Long Library Name That Surely Never Would Be Actually Chosen")
+      slug2 === "a-super-long-library-name-that-surely-never-would"
+      LibrarySlug.isValidSlug(slug2) === true
+    }
+
+    "reflect latest display naming scheme" in {
+      withDb() { implicit injector =>
+        setup()
+        val all = db.readOnlyMaster { implicit session => libraryRepo.all() }
+        val Some(r1) = all.collectFirst { case lib if lib.kind == LibraryKind.SYSTEM_MAIN => lib }
+        println(s"r1=$r1")
+        r1.kind === LibraryKind.SYSTEM_MAIN
+        r1.name === Library.SYSTEM_MAIN_DISPLAY_NAME
+
+        val Some(r2) = all.collectFirst { case lib if lib.kind == LibraryKind.SYSTEM_SECRET => lib }
+        r2.kind === LibraryKind.SYSTEM_SECRET
+        r2.name === Library.SYSTEM_SECRET_DISPLAY_NAME
+      }
+    }
+
   }
 }

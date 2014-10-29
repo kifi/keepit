@@ -2,7 +2,7 @@ package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
 import com.keepit.model.view.LibraryMembershipView
-import com.keepit.model.{ LibraryVisibility, User, LibraryMembership, Library }
+import com.keepit.model._
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, FieldDecoder }
 import com.keepit.search.{ Searcher, LangDetector }
 
@@ -17,6 +17,9 @@ object LibraryFields {
   val allUsersField = "a"
   val recordField = "rec"
 
+  val textSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
+  val nameSearchFields = Set(nameField, nameStemmedField)
+
   object Visibility {
     val SECRET = 0
     val DISCOVERABLE = 1
@@ -27,6 +30,12 @@ object LibraryFields {
       case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
       case LibraryVisibility.PUBLISHED => PUBLISHED
     }
+
+    @inline def fromNumericCode(visibility: Long) = {
+      if (visibility == SECRET) LibraryVisibility.SECRET
+      else if (visibility == DISCOVERABLE) LibraryVisibility.DISCOVERABLE
+      else LibraryVisibility.PUBLISHED
+    }
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -35,6 +44,10 @@ object LibraryFields {
 object LibraryIndexable {
   def isSecret(librarySearcher: Searcher, libraryId: Id[Library]): Boolean = {
     librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).exists(_ == LibraryFields.Visibility.SECRET)
+  }
+
+  def getVisibility(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryVisibility] = {
+    librarySearcher.getLongDocValue(LibraryFields.visibilityField, libraryId.id).map(LibraryFields.Visibility.fromNumericCode(_))
   }
 
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
@@ -62,9 +75,13 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     import LibraryFields._
     val doc = super.buildDocument
 
-    val nameLang = LangDetector.detect(library.name)
-    doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
-    doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+    library.kind match {
+      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET => // do not index the name of main/private libraries
+      case LibraryKind.USER_CREATED =>
+        val nameLang = LangDetector.detect(library.name)
+        doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
+        doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+    }
 
     library.description.foreach { description =>
       val descriptionLang = LangDetector.detect(description)

@@ -6,20 +6,10 @@
     float: left
     margin-right: 8px
     width: 35px
-    height: 37px
+    height: 34px
 
   .kf-main-title
     position: relative
-    &::after
-      content: 'beta';
-      position: absolute;
-      bottom: -8px;
-      right: -30px;
-      padding: 2px 40px 0;
-      background: radial-gradient(#fff 30%, rgba(255,255,255,0) 80%);
-      font: 11px Helvetica,Arial,sans-serif;
-      text-align: center;
-      color: #c00;
 
   &::after
     content: ''
@@ -127,6 +117,39 @@
   h4
     font-weight: bold
 
+.kf-reco-cta
+  background-color: #5ab86d
+  position: relative
+  margin-bottom: 40px
+  border-radius: 4px
+
+.kf-reco-cta-text
+  display: inline-block
+  color: white
+  letter-spacing: 0.5px
+  line-height: 150%
+  width: 40%
+  font-size: 20px
+  padding: 25px 0px 25px 25px
+
+.kf-reco-cta-image
+  display: inline-block
+  width: 28%
+  padding: 5% 10%
+  float: right
+
+.kf-reco-cta::after
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  height: 0;
+  width: 0;
+  border: solid;
+  margin-left: -16px;
+  border-width: 16px 20px 0;
+  border-color: #5ab86d transparent transparent;
+
 .kf-reco-top
   padding: 20px 20px 0px
 
@@ -141,7 +164,7 @@
   border-top-left-radius: 3px
   border-top-right-radius: 3px
   background-color: #fff
-  font-size: 14px
+  font-size: 13px
   font-weight: 400
   color: #9d9d9d
   span
@@ -156,7 +179,7 @@
   padding: 15px 0 15px
   width: 90%
   box-shadow: defaultBoxShadow
-  font-size: 16px
+  font-size: 13px
   text-align: center
 
   &.kf-reco-multiple-reasons
@@ -164,8 +187,13 @@
 
 .kf-reco-reason
   margin: 0 auto
-  width: 58%
+  width: calc(100% - 120px);
   line-height: 1.5em
+  height: 19px
+  overflow: hidden
+
+  a
+    color: linkBlueColor
 
   time
     white-space: nowrap
@@ -183,14 +211,14 @@
 
 .kf-reason-bullet
   padding: 0 1px
-  font-size: 28px
+  font-size: 19px
   color: #ddd
 
   &.kf-dark-reason-bullet
     color: #bbb
 
 .kf-reco
-  .kf-keep
+  .kf-keep-deprecated
     border-top: none
 
 // Icons
@@ -200,6 +228,22 @@
   margin: -8px 0 0 10px
   width: 18px
   height: 18px
+
+.kf-reco-recommended
+  .kf-reco-top
+    padding-top: 10px
+  .kf-keep
+    border-top: 0
+  .kf-reco-icon
+    margin-top: 0
+  .kf-reco-dropdown-menu-container .kf-dropdown-menu
+    top: 18px
+  .kf-keep-contents
+    padding-top: 10px
+
+.kf-reco-top-title
+  font-size: 14px
+  line-height: 27px
 
 .kf-reco-icon:hover
   cursor: pointer
@@ -310,3 +354,12 @@
 
   label
     margin-left: 5px
+
+
+.kf-reco-loading-logo
+  width: 50px
+  height: 50px
+  margin: 20px auto
+  opacity: 0.5
+  animation: jump-spin 2s linear infinite
+  transform: translate(-50%, -50%) rotate(0deg)

@@ -8,32 +8,27 @@ angular.module('kifi')
     var librarySummaries = [],
         invitedSummaries = [];
 
+
+    //
+    // Clutches.
+    //
     var userLibrarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
         var libs = res.data.libraries || [];
         var invites = res.data.invited || [];
 
-        var lines;
         libs.forEach(function(lib) {
-          lines = shortenLibName(lib.name);
-          lib.firstLine = lines[0];
-          lib.secondLine = lines[1];
-          if (lib.owner) {
-            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
-          }
+          augmentLibrarySummary(lib);
           lib.isMine = lib.owner.id === profileService.me.id;
         });
 
         invites.forEach(function(lib) {
-          lines = shortenLibName(lib.name);
-          lib.firstLine = lines[0];
-          lib.secondLine = lines[1];
-          if (lib.owner) {
-            lib.owner.image = friendService.getPictureUrlForUser(lib.owner);
-          }
+          augmentLibrarySummary(lib);
         });
+
         util.replaceArrayInPlace(librarySummaries, libs);
         util.replaceArrayInPlace(invitedSummaries, invites);
+
         return res.data;
       });
     });
@@ -79,17 +74,21 @@ angular.module('kifi')
     });
 
     // TODO(yiping): figure out whether this service belongs so specifically within libraryService.
-    var contactSearchService = new Clutch(function (opt_query) {
-      return $http.get(routeService.contactSearch(opt_query)).then(function (res) {
-        return res.data;
+    var contactSearchService = new Clutch(function (libId, opt_query) {
+      return $http.get(routeService.libraryShareSuggest(libId, opt_query)).then(function (res) {
+        return res.data.members;
       });
     });
 
-    var maxLength = 25;
 
+    //
+    // Internal helper methods.
+    //
     function shortenLibName(fullName) {
+      var maxLength = 25;
       var firstLine = fullName;
       var secondLine = '';
+
       if (fullName.length > maxLength) {
         var full = false;
         var line = '';
@@ -115,6 +114,19 @@ angular.module('kifi')
       return [firstLine, secondLine];
     }
 
+    function augmentLibrarySummary(library) {
+      if (library.owner) {
+        library.owner.image = friendService.getPictureUrlForUser(library.owner);
+      }
+      var lines = shortenLibName(library.name);
+      library.firstLine = lines[0];
+      library.secondLine = lines[1];
+    }
+
+
+    //
+    // API methods.
+    //
     var api = {
       librarySummaries: librarySummaries,
       invitedSummaries: invitedSummaries,
@@ -123,11 +135,20 @@ angular.module('kifi')
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
       },
 
+      isSystemLibrary: function (libraryId) {
+        return _.some(librarySummaries, function (libSum) {
+          return (libSum.kind === 'system_main' || libSum.kind === 'system_secret') && libSum.id === libraryId;
+        });
+      },
+
       fetchLibrarySummaries: function (invalidateCache) {
         if (invalidateCache) {
           userLibrarySummariesService.expire();
         }
-        return userLibrarySummariesService.get();
+        return userLibrarySummariesService.get().then(function (response) {
+          $rootScope.$emit('librarySummariesChanged');
+          return response;
+        });
       },
 
       getLibraryById: function (libraryId, invalidateCache) {
@@ -142,16 +163,6 @@ angular.module('kifi')
           librarySummaryService.expire(libraryId);
         }
         return librarySummaryService.get(libraryId);
-      },
-
-      getLibraryByPath: function (path) { // path is of the form /username/library-slug
-        var split = path.split('/').filter(function (a) { return a.length !== 0; });
-        var username = split[0];
-        var slug = split[1];
-        if (!username || !slug) {
-          return $q.reject({'error': 'invalid_path'});
-        }
-        return libraryByUserSlugService.get(username, slug);
       },
 
       getLibraryByUserSlug: function (username, slug, authToken, invalidateCache) {
@@ -220,8 +231,8 @@ angular.module('kifi')
         return $http.post(routeService.modifyLibrary(opts.id), opts);
       },
 
-      getLibraryShareContacts: function (opt_query) {
-        return contactSearchService.get(opt_query);
+      getLibraryShareContacts: function (libId, opt_query) {
+        return contactSearchService.get(libId, opt_query || '');
       },
 
       shareLibrary: function (libraryId, opts) {
@@ -241,10 +252,14 @@ angular.module('kifi')
 
         if (!alreadyJoined) {
           return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
-            librarySummaries.push(response.data);
+            var library = response.data;
+            augmentLibrarySummary(library);
+
+            librarySummaries.push(library);
             _.remove(invitedSummaries, { id: libraryId });
+
             $rootScope.$emit('librarySummariesChanged');
-            $rootScope.$emit('libraryUpdated', response.data);
+            $rootScope.$emit('libraryUpdated', library);
           });
         }
 
@@ -265,6 +280,13 @@ angular.module('kifi')
         });
       },
 
+      declineToJoinLibrary: function (libraryId) {
+        return $http.post(routeService.declineToJoinLibrary(libraryId)).then(function () {
+          _.remove(invitedSummaries, { id: libraryId });
+          $rootScope.$emit('librarySummariesChanged');
+        });
+      },
+
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
           _.remove(librarySummaries, function (library) {
@@ -281,6 +303,18 @@ angular.module('kifi')
 
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      moveKeepsFromTagToLibrary: function (libraryId, tagName) {
+        return $http.post(routeService.moveKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      getMoreMembers: function (libraryId, pageSize, offset) {
+        return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
           return resp.data;
         });
       }

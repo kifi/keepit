@@ -1,9 +1,11 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
+import com.keepit.common.cache._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
-import com.keepit.common.logging.{ LogPrefix, Logging }
-import java.net.URLEncoder
+import com.keepit.common.logging.{ AccessLog, LogPrefix, Logging }
+import java.net.{ URLDecoder, URLEncoder }
+import com.kifi.macros.json
 import play.api.mvc._
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits._
@@ -19,17 +21,14 @@ import com.keepit.model.{ ABookInfo, User, OAuth2Token }
 import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.Failure
-import scala.util.Success
+import scala.concurrent.duration.Duration
+import scala.util.{ Try, Failure, Success }
 import play.api.libs.ws.WSResponse
+import Logging._
 
 case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
 
 case class OAuth2CommonConfig(approvalPrompt: String)
-
-object OAuth2 {
-  val STATE_TOKEN_KEY = "stateToken"
-}
 
 object OAuth2Providers { // TODO: wire-in (securesocial) config
   val GOOGLE = OAuth2Config(
@@ -86,13 +85,16 @@ case class OAuth2AccessTokenResponse(
     )
 }
 
-case class StateToken(token: String, redirectUrl: Option[String])
-object StateToken {
-  implicit val formatStateToken: Format[StateToken] = (
-    (__ \ 'token).format[String] and
-    (__ \ 'redirectUrl).formatNullable[String]
-  )(StateToken.apply, unlift(StateToken.unapply))
+@json case class StateToken(token: String, redirectUrl: Option[String])
+
+case class StateTokenKey(userId: Id[User]) extends Key[StateToken] {
+  override val version = 1
+  val namespace = "oauth2_state_token"
+  def toKey(): String = userId.id.toString
 }
+
+class StateTokenCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[StateTokenKey, StateToken](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object OAuth2AccessTokenResponse {
 
@@ -114,11 +116,10 @@ object OAuth2Controller {
   }
 }
 
-import Logging._
-import OAuth2._
 class OAuth2Controller @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
+    stateTokenCache: StateTokenCache,
     abookServiceClient: ABookServiceClient,
     val userActionsHelper: UserActionsHelper,
     oauth2CommonConfig: OAuth2CommonConfig) extends UserActions with ShoeboxServiceController with Logging {
@@ -132,7 +133,7 @@ class OAuth2Controller @Inject() (
     stateTokenOpt match {
       case None =>
         log.warnP(s"state token is not provided; body=${request.body} headers=${request.headers}")
-        Redirect("/").withSession(request.session - STATE_TOKEN_KEY)
+        Redirect("/")
       case Some(stateToken) =>
         val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
         val params = Map(
@@ -147,33 +148,35 @@ class OAuth2Controller @Inject() (
         )
         val url = authUrl + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
         log.infoP(s"REDIRECT to: $url with params: $params")
-        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(request.session + (STATE_TOKEN_KEY -> stateToken))
+        Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2))))
     }
   }
 
   // redirect/GET
   def callback(provider: String) = UserAction.async { implicit request =>
     implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
-    log.infoP(s"headers=${request.headers} session=${request.session}")
-    val redirectHome = Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withSession(request.session - STATE_TOKEN_KEY)
-    val redirectInvite = Redirect("/invite").withSession(request.session - STATE_TOKEN_KEY) // todo: make configurable
+    log.infoP(s"headers=${request.headers} session=${request.session.data}")
+    val redirectHome = Redirect(com.keepit.controllers.website.routes.HomeController.home)
+    val redirectInvite = Redirect("/invite")
 
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val stateOpt = request.queryString.get("state").flatMap(_.headOption)
     val codeOpt = request.queryString.get("code").flatMap(_.headOption)
-    val stateOptFromSession = request.session.get("stateToken") orElse Some("")
-    log.infoP(s"code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
-    val stateTokenOpt = stateOpt flatMap { Json.parse(_).asOpt[StateToken] }
-    val stateTokenOptFromSession = stateOptFromSession flatMap { Json.parse(_).asOpt[StateToken] }
+    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
+    val cachedTokenOpt = stateTokenCache.get(StateTokenKey(request.userId))
+    log.infoP(s"code=$codeOpt state=$stateOpt cached=$cachedTokenOpt state==cached is ${stateOpt.exists(_ == cachedTokenOpt.get.token)}")
 
-    if (stateTokenOpt.isEmpty || stateTokenOptFromSession.isEmpty || stateTokenOpt.get.token != stateTokenOptFromSession.get.token) {
-      log.warnP(s"invalid state token: callback-state=$stateOpt session-stateToken=$stateOptFromSession headers=${request.headers}")
+    if (stateOpt.isEmpty || cachedTokenOpt.isEmpty) {
+      log.warnP(s"invalid state token: callback-state=$stateOpt cached=$cachedTokenOpt")
       resolve(redirectInvite)
     } else if (codeOpt.isEmpty) {
       log.warnP(s"code is empty; consent might not have been granted") // for server app
       resolve(redirectInvite)
     } else {
+      if (stateOpt.get != cachedTokenOpt.get.token) { // todo: make this a real guard
+        airbrake.notify(s"state token mismatch state=$stateOpt cached=$cachedTokenOpt")
+      }
       val redirectUri = routes.OAuth2Controller.callback(provider).absoluteURL(Play.isProd)
       val params = Map(
         "code" -> codeOpt.get,
@@ -182,7 +185,7 @@ class OAuth2Controller @Inject() (
         "redirect_uri" -> redirectUri,
         "grant_type" -> "authorization_code"
       )
-      val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
+      val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2))))
       log.infoP(s"POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
       val tokenRespOptF = call.map { resp: WSResponse =>
@@ -222,17 +225,17 @@ class OAuth2Controller @Inject() (
             provider match {
               case "google" => {
                 val resF = abookServiceClient.importContacts(request.userId, tokenResp.toOAuth2Token(request.userId))
-                val redirectUrlOpt = stateTokenOpt flatMap (_.redirectUrl)
+                val redirectUrlOpt = cachedTokenOpt flatMap (_.redirectUrl)
                 resF map { trRes =>
                   trRes match {
                     case Failure(t) =>
                       airbrake.notify(s"$prefix Caught exception $t while importing contacts", t)
                       val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsFailure(redirectUrlOpt)
-                      Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
+                      Redirect(route)
                     case Success(abookInfo) =>
                       log.infoP(s"abook imported: $abookInfo")
                       val route = com.keepit.controllers.website.routes.ContactsImportController.importContactsSuccess(redirectUrlOpt, abookInfo.numContacts)
-                      Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
+                      Redirect(route)
                   }
                 }
               }
@@ -243,7 +246,7 @@ class OAuth2Controller @Inject() (
                   friendsF.map { friendsResp =>
                     val friends = friendsResp.json
                     log.infoP("friends:\n${Json.prettyPrint(friends)}")
-                    Ok(friends).withSession(request.session - STATE_TOKEN_KEY)
+                    Ok(friends)
                   }
                 } else redirectHomeF
               }
@@ -279,7 +282,7 @@ class OAuth2Controller @Inject() (
 
   private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: UserRequest[_]): Future[Result] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
-    val redirectInvite = Redirect("/friends/invite/email").withSession(request.session - STATE_TOKEN_KEY)
+    val redirectInvite = Redirect("/friends/invite/email")
     log.infoP(s"userId=${request.userId}")
     val userId = request.userId
     val tokenRespOptF = abookServiceClient.getOAuth2Token(userId, abookId) flatMap { tokenOpt =>
@@ -336,10 +339,22 @@ class OAuth2Controller @Inject() (
   }
 
   def importContacts(provider: Option[String], approvalPromptOpt: Option[String], redirectUrl: Option[String] = None) = UserPage { implicit request =>
-    val stateToken = Json.toJson(StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)).toString()
-    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
+    val stateToken = StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)
+    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
+    stateTokenCache.set(StateTokenKey(request.userId), stateToken)
+    val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken.token), approvalPromptOpt)
     log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")
-    Redirect(route).withSession(request.session - STATE_TOKEN_KEY)
+    Redirect(route)
   }
 
+}
+
+object OAuth2Helper extends Logging {
+  def getStateToken(tk: String): Option[StateToken] = {
+    val decoded = URLDecoder.decode(tk, "UTF-8")
+    log.infoP(s"tk=$tk decoded=$decoded")
+    Try {
+      Json.parse(decoded).asOpt[StateToken]
+    } getOrElse None
+  }
 }

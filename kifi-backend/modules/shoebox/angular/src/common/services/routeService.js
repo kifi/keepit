@@ -55,12 +55,31 @@ angular.module('kifi')
         return route('/keeps/' + keepId);
       },
       removeKeeps: route('/keeps/remove'),
+
+      ////////////////////////////
+      // Tags                   //
+      ////////////////////////////
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
       pageTags: route('/collections/page'),
+
       searchTags: function (query, limit) {
         return route('/collections/search') + '?query=' + query + '&limit=' + limit;
       },
+
+      suggestTags: function (libraryId, keepId, query) {
+        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest?q=' + query;
+      },
+      tagKeep: function (libraryId, keepId, tag) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+      },
+      tagKeeps: function (tag) {
+        return route('/tags/' + tag);
+      },
+      untagKeep: function (libraryId, keepId, tag) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + tag);
+      },
+
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
@@ -69,8 +88,8 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
-      contactSearch: function (opt_query) {
-        return route('/user/contacts/search' + (opt_query ? '?query=' + opt_query : ''));
+      libraryShareSuggest: function (libId, opt_query) {
+        return route('/libraries/' + libId + '/members/suggest?n=10' + (opt_query ? '&q=' + opt_query : ''));
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
@@ -80,7 +99,7 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      search: searchRoute('/site/search'),
+      search: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -111,12 +130,27 @@ angular.module('kifi')
       addKeepsToLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps');
       },
+      copyKeepsToLibrary: function () {
+        return route('/libraries/copy');
+      },
+      moveKeepsToLibrary: function () {
+        return route('/libraries/move');
+      },
       removeKeepFromLibrary: function (libraryId, keepId) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId);
       },
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+
+      ////////////////////////////
+      // User registration      //
+      ////////////////////////////
+      socialSignup: function (provider) {
+        return env.navBase + '/auth/token-signup/' + provider;
+      },
+      socialFinalize: env.navBase + '/auth/token-finalize',
+      emailSignup: env.navBase + '/auth/email-signup',
 
       ////////////////////////////
       // Libraries              //
@@ -147,6 +181,9 @@ angular.module('kifi')
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
       },
+      declineToJoinLibrary: function (libraryId) {
+        return route('/libraries/' + libraryId + '/decline');
+      },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
       },
@@ -155,6 +192,12 @@ angular.module('kifi')
       },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag?tag=' + tagName);
+      },
+      moveKeepsFromTagToLibrary: function(libraryId, tagName) {
+        return route('/libraries/' + libraryId + '/moveTag?tag=' + tagName);
+      },
+      getMoreLibraryMembers: function(libraryId, pageSize, offset) {
+        return route('/libraries/' + libraryId + '/members?limit=' + pageSize + '&offset=' + (offset * pageSize));
       }
     };
   }

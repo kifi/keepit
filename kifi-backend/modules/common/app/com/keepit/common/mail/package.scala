@@ -6,6 +6,19 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ Library, User }
 import play.twirl.api.Html
 
+object KifiMobileAppLinkFlag {
+  val key = "kma"
+  val value = "1"
+  val arg = s"$key=$value"
+  def apply(url: String): String = if (url.contains(arg)) {
+    url
+  } else if (url.contains("?")) {
+    url + "&" + arg
+  } else {
+    url + "?" + arg
+  }
+}
+
 package object template {
   object tags {
     val firstName = TagLabel("firstName")
@@ -17,8 +30,10 @@ package object template {
     val unsubscribeUserUrl = TagLabel("unsubscribeUserUrl")
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
+    val kcid = TagLabel("kcid")
     val campaign = TagLabel("campaign")
-    val parentCategory = TagLabel("parentCategory")
+    val channel = TagLabel("channel")
+    val source = TagLabel("source")
     val title = TagLabel("title")
     val baseUrl = TagLabel("baseUrl")
     val trackingParam = TagLabel("trackingParam")
@@ -60,17 +75,23 @@ package object template {
     def trackingParam(content: String, auxData: Option[HeimdalContext] = None) =
       Tag2(tags.trackingParam, content, auxData).toHtml
 
+    val kcid = Tag0(tags.kcid).toHtml
+    private val kcidTagStr = kcid.body
+
     val campaign = Tag0(tags.campaign).toHtml
     private val campaignTagStr = campaign.body
 
-    val parentCategory = Tag0(tags.parentCategory).toHtml
-    private val parentCategoryTagStr = parentCategory.body
+    val channel = Tag0(tags.channel).toHtml
+    private val channelTagStr = channel.body
+
+    val source = Tag0(tags.source).toHtml
+    private val sourceTagStr = source.body
 
     def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 
-    def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content)
+    def findMoreFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?", content)
+    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?friend=${userExternalId(id)}&", content, openInAppIfMobile = true)
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -80,32 +101,32 @@ package object template {
     def connectLinkedInUrl(content: String) = connectNetworkUrl("linkedin", content)
 
     def inviteContactUrl(id: Id[User], content: String) =
-      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", content)
+      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", content, openInAppIfMobile = true)
 
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index)
+      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index, openInAppIfMobile = true)
 
     // wrap a url (String) in HTML (so tags aren't escaped)
-    def htmlUrl(url: String, content: String): Html =
-      Html(appendTrackingParams(url = url, content = content))
+    def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
+      Html(appendTrackingParams(url = url, content = content, openInAppIfMobile = openInAppIfMobile))
 
     // url param must end with a ? or &
-    private def appendTrackingParams(url: String, content: String, campaign: String = campaignTagStr,
-      medium: String = "email", source: String = parentCategoryTagStr): String = {
+    private def appendTrackingParams(url: String, content: String, openInAppIfMobile: Boolean): String = {
       val lastUrlChar = url(url.size - 1)
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
-      s"${url}utm_source=$source&utm_medium=$medium&utm_campaign=$campaign&utm_content=$content" +
-        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}"
+      val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
+      s"${url}utm_source=$sourceTagStr&utm_medium=$channelTagStr&utm_campaign=$campaignTagStr&utm_content=$content&kcid=$kcidTagStr" +
+        s"&${EmailTrackingParam.paramName}=${trackingParam(content)}&$openInAppIfMobileDirective"
     }
 
-    def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content)
+    def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
 
     val kifiAddress = "883 N Shoreline Blvd, Mountain View, CA 94043, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
     val kifiFooterUrl = kifiUrl("footerKifiLink")
-    val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy")
-    val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter")
-    val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook")
+    val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)
+    val kifiTwitterUrl = htmlUrl("https://twitter.com/kifi?", "footerTwitter", openInAppIfMobile = false)
+    val kifiFacebookUrl = htmlUrl("https://www.facebook.com/kifi42?", "footerFacebook", openInAppIfMobile = false)
 
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"

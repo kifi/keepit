@@ -25,8 +25,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, shardedCollectionIndexer, indexer, userGraphIndexer, _, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
-        graph.update()
+        val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
         indexer.update() === uris.size
         Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate()), Duration(60, SECONDS))
 
@@ -83,7 +82,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
                 "id":"${myBookmarkExternalId}",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg","username":"test1"}]
             }
           """),
           Json.parse(s"""
@@ -99,7 +98,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
                 "url":"http://www.keepit.com/article1",
                 "matches":{"url":[[11,6]]}
               },
-              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg"}]
+              "basicUsers":[{"id":"${users(1).externalId}","firstName":"foo1","lastName":"","pictureName":"0.jpg","username":"test1"}]
             }
           """)
         )

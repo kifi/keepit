@@ -7,7 +7,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.db.Id
 import com.keepit.common.net.{ ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
-import com.keepit.model.{ Collection, NormalizedURI, User }
+import com.keepit.model.{ BasicLibrary, Collection, NormalizedURI, User }
 import com.keepit.search.user.UserSearchResult
 import com.keepit.search.user.UserSearchRequest
 import com.keepit.search.spellcheck.ScoredSuggest
@@ -21,7 +21,7 @@ import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 import scala.collection.mutable.ListBuffer
-import com.keepit.search.augmentation.{ ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
+import com.keepit.search.augmentation.{ LimitedAugmentationInfo, ItemAugmentationResponse, ItemAugmentationRequest, AugmentableItem }
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -67,6 +67,8 @@ trait SearchServiceClient extends ServiceClient {
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse]
+
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -234,9 +236,9 @@ class SearchServiceClientImpl(
 
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
     val url = Search.internal.indexInfoList()
-    serviceCluster.allServices.map(new ServiceUri(_, protocol, port, url.url)).map {
-      case u: ServiceUri =>
-        callUrl(url, u, JsNull).map { r => (u.serviceInstance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
+    serviceCluster.allMembers.collect {
+      case instance if instance.isHealthy =>
+        callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
   }
 
@@ -259,6 +261,15 @@ class SearchServiceClientImpl(
 
   def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = {
     call(Search.internal.augmentation(), Json.toJson(request)).map(_.json.as[ItemAugmentationResponse])
+  }
+
+  def augment(userId: Option[Id[User]], maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
+    if (items.isEmpty) Future.successful(Seq.empty[LimitedAugmentationInfo])
+    else {
+      // This should stay in sync with SearchController.augment
+      val payload = Json.obj("userId" -> userId, "maxKeepersShown" -> maxKeepersShown, "maxLibrariesShown" -> maxLibrariesShown, "maxTagsShown" -> maxTagsShown, "items" -> items)
+      call(Search.internal.augment(), payload).map(_.json.as[Seq[LimitedAugmentationInfo]])
+    }
   }
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse] = {

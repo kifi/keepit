@@ -58,7 +58,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
@@ -89,7 +89,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
               firstName = "Joe",
               lastName = "Smith",
               pictureName = "asdf",
-              username = Some(Username("joe")))),
+              username = Username("joe"))),
+            libraries = Seq.empty,
             others = 12,
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),
@@ -110,6 +111,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
              "title":"bar",
              "url":"http://bar.com",
              "keepers":[{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"}],
+             "libraries": [],
              "others":12,
              "siteName":"fafa",
              "summary":{"title":"Yo!"}},
@@ -122,7 +124,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topPublicRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C"))
+          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())
@@ -153,7 +155,8 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
               firstName = "Joe",
               lastName = "Smith",
               pictureName = "asdf",
-              username = Some(Username("joe")))),
+              username = Username("joe"))),
+            libraries = Seq.empty,
             others = 12,
             siteName = Some("fafa"),
             summary = URISummary(title = Some("Yo!"))),
@@ -174,6 +177,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
              "title":"bar",
              "url":"http://bar.com",
              "keepers":[{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"}],
+             "libraries": [],
              "others":12,
              "siteName":"fafa",
              "summary":{"title":"Yo!"}},

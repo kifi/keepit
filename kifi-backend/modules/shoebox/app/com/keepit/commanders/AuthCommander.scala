@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.controller.KifiSession
 
 import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
@@ -35,6 +36,7 @@ import securesocial.core._
 import securesocial.core.providers.utils.GravatarHelper
 
 import scala.util.{ Failure, Success, Try }
+import KifiSession._
 
 case class EmailPassword(email: EmailAddress, password: Array[Char])
 object EmailPassword {
@@ -308,23 +310,24 @@ class AuthCommander @Inject() (
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
     log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
-    UserService.find(identityId) flatMap { identity =>
-      db.readOnlyMaster(attempts = 2) { implicit s =>
-        socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
-      } map { su => (su.userId, identity) }
-    } map {
-      case (userId, identity) =>
-        log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userId")
-        val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
-        Authenticator.create(identity) fold (
-          error => throw error,
-          authenticator =>
-            Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
-              .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-              .withCookies(authenticator.toCookie)
-        )
-    } getOrElse {
-      log.info(s"[loginWithTrustedSocialIdentity($identityId})] no kifi user")
+    // more fine-grained error handling required
+    val resOpt = for {
+      identity <- UserService.find(identityId)
+      sui <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) }
+      userId <- sui.userId
+    } yield {
+      log.info(s"[loginWithTrustedSocialIdentity($identityId)] kifi user $userId")
+      val newSession = Events.fire(new LoginEvent(identity)).getOrElse(request.session)
+      Authenticator.create(identity) fold (
+        error => throw error,
+        authenticator =>
+          Ok(Json.obj("code" -> "user_logged_in", "sessionId" -> authenticator.id))
+            .withSession((newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey).setUserId(userId))
+            .withCookies(authenticator.toCookie)
+      )
+    }
+    resOpt getOrElse {
+      log.info(s"[loginWithTrustedSocialIdentity($identityId})] user not found")
       NotFound(Json.obj("error" -> "user_not_found"))
     }
   }

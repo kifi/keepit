@@ -10,17 +10,15 @@ guide.step0 = guide.step0 || function () {
   var eventsToBlock = ['mousewheel','wheel'];
   return {show: show, remove: removeAll};
 
-  function show($guide, pages, __, allowEsc) {
+  function show($guide, page) {
     if (!$stage) {
-      $stage = $(render('html/guide/step_0', {me: me, pages: pages})).appendTo('body').layout().addClass('kifi-open');
+      $stage = $(render('html/guide/step_0', {me: me, page: page})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
       $stage.find('.kifi-guide-pages')
         .on('click', '.kifi-guide-0-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
-      if (allowEsc) {
-        $(document).data('esc').add(hide);
-      }
+      $(document).data('esc').add(hide);
       api.port.emit('track_guide', [0, 0]);
       eventsToBlock.forEach(function (type) {
         window.addEventListener(type, blockEvent, true);
@@ -61,9 +59,8 @@ guide.step0 = guide.step0 || function () {
   function onClickSite(e) {
     if (e.which === 1) {
       var url = this.href;
-      var siteIdx = $(this).index('.kifi-guide-site-a');
-      api.port.emit('await_deep_link', {locator: '#guide/1/' + siteIdx, url: url});
-      api.port.emit('track_guide_choice', siteIdx);
+      api.port.emit('await_deep_link', {locator: '#guide/1', url: url});
+      api.port.emit('track_guide_choice');
       window.location.href = url;
     }
   }

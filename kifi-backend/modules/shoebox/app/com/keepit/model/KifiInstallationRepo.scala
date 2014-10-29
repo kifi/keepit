@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
   def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)]
+  def getExtensionUserIdsUpdatedSince(when: DateTime)(implicit session: RSession): Set[Id[User]]
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
 }
@@ -59,6 +60,11 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
       case (versionStr, max, count) =>
         (KifiExtVersion(versionStr), max, count)
     }.sortWith((a, b) => a._1 > b._1)
+  }
+
+  def getExtensionUserIdsUpdatedSince(when: DateTime)(implicit session: RSession): Set[Id[User]] = {
+    (for (k <- rows if k.platform === KifiInstallationPlatform.Extension.name && k.state =!= KifiInstallationStates.INACTIVE && k.updatedAt >= when) yield k.userId).list.toSet
+    // select count(distinct user_id) from kifi_installation where platform = 'extension' and updated_at >= '2014-06-01';
   }
 
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation] =

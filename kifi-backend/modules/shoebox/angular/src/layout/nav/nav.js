@@ -27,7 +27,7 @@ angular.module('kifi')
         scope.secretLib = {};
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
-        scope.sortingMenu = { show : false, option : 'last_kept' };
+        scope.sortingMenu = { show : false, option : '' };
 
         scope.counts = {
           friendsCount: friendService.totalFriends(),
@@ -54,11 +54,23 @@ angular.module('kifi')
           var newList = sortLibraries(allUserLibs, libraryService.invitedSummaries);
           scope.userLibsToShow = newList[0];
           scope.invitedLibsToShow  = newList[1];
-
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.invitedSummaries, fuseOptions);
+
           scope.$broadcast('refreshScroll');
         }
+
+        // Temp callout method. Remove after most users know about libraries. (Oct 26 2014)
+        var calloutName = 'library_callout_shown';
+        scope.showCallout = function () {
+          return profileService.prefs.site_intial_show_library_intro && !profileService.prefs[calloutName];
+        };
+        scope.closeCallout = function () {
+          var save = { 'site_show_library_intro': false };
+          save[calloutName] = true;
+          profileService.prefs[calloutName] = true;
+          profileService.savePrefs(save);
+        };
 
 
         //
@@ -87,7 +99,14 @@ angular.module('kifi')
           }
         });
 
-        $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        var deregisterLibrarySummaries = $rootScope.$on('librarySummariesChanged', updateNavLibs);
+        scope.$on('$destroy', deregisterLibrarySummaries);
+
+        var deregisterChangedLibrary = $rootScope.$on('changedLibrarySorting', function() {
+          scope.sortingMenu.option = profileService.prefs.library_sorting_pref || 'last_kept';
+          updateNavLibs();
+        });
+        scope.$on('$destroy', deregisterChangedLibrary);
 
         scope.$watch(function () {
           return friendService.requests.length;
@@ -106,8 +125,13 @@ angular.module('kifi')
         scope.$watch(function () {
             return scope.sortingMenu.option;
           }, function () {
-          scope.changeList();
-          scope.turnDropdownOff();
+          if (scope.sortingMenu.option) {
+            scope.changeList();
+            scope.turnDropdownOff();
+            if (scope.sortingMenu.option !== profileService.prefs.library_sorting_pref) {
+              profileService.savePrefs( { library_sorting_pref: scope.sortingMenu.option });
+            }
+          }
         });
 
         // on resizing window -> trigger new turn -> reset library list height
@@ -159,12 +183,15 @@ angular.module('kifi')
         };
 
         scope.blurFilter = function () {
-          scope.isFilterFocused = false;
+          if (scope.filter.name === '') {
+            scope.isFilterFocused = false;
+          }
         };
 
         scope.clearFilter = function () {
           scope.filter.name = '';
           scope.onFilterChange();
+          scope.blurFilter();
         };
 
         scope.onFilterChange = function () {
@@ -258,14 +285,19 @@ angular.module('kifi')
         };
         scope.turnDropdownOn = function () {
           scope.sortingMenu.show = true;
-          $document.on('mousedown', onClick);
         };
         scope.turnDropdownOff = function () {
           scope.sortingMenu.show = false;
-          $document.off('mousedown', onClick);
         };
 
         function onClick(event) {
+          if (angular.element(event.target).closest('.kf-sort-libs-button').length) {
+            scope.$apply( function() {
+              scope.toggleDropdown();
+            });
+            return;
+          }
+
           // click anywhere else that's not dropdown menu
           if (!angular.element(event.target).closest('.dropdown-menu-content').length) {
             scope.$apply( function() {
@@ -274,11 +306,13 @@ angular.module('kifi')
             return;
           }
         }
+        $document.on('mousedown', onClick);
 
         // Cleaner upper
         scope.$on('$destroy', function() {
           $document.off('mousedown', onClick);
         });
+
       }
     };
   }

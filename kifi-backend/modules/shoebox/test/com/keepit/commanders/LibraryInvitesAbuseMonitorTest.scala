@@ -11,8 +11,8 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
-      val u1 = userRepo.save(User(firstName = "Aaron", lastName = "H"))
-      val u2 = userRepo.save(User(firstName = "Baron", lastName = "H"))
+      val u1 = userRepo.save(User(firstName = "Aaron", lastName = "H", username = Username("test1"), normalizedUsername = "test1"))
+      val u2 = userRepo.save(User(firstName = "Baron", lastName = "H", username = Username("test2"), normalizedUsername = "test2"))
       val lib = libraryRepo.save(Library(name = "Lib", ownerId = u1.id.get, slug = LibrarySlug("lib"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = u1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
       val email = EmailAddress("daron@gmail.com")
@@ -39,7 +39,7 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
         val (user1, user2, _, lib) = setup
         db.readWrite { implicit s =>
           for (i <- 1 to 41)
-            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY))
+            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY))
         }
         monitor.inspect(user1.id.get, user2.id, None, lib.id.get, 10) must throwA[AbuseMonitorException]
       }
@@ -52,7 +52,7 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
         val (user1, user2, _, lib) = setup
         db.readWrite { implicit s =>
           for (i <- 1 to 11)
-            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY))
+            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY))
         }
         airbrake.errorCount() === 0
         monitor.inspect(user1.id.get, user2.id, None, lib.id.get, 10) //should not throw an exception
@@ -67,7 +67,7 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
         val (user1, _, email, lib) = setup
         db.readWrite { implicit s =>
           for (i <- 1 to 41)
-            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = user1.id.get, emailAddress = Some(email), access = LibraryAccess.READ_ONLY))
+            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = user1.id.get, emailAddress = Some(email), access = LibraryAccess.READ_ONLY))
         }
         monitor.inspect(user1.id.get, None, Some(email), lib.id.get, 10) must throwA[AbuseMonitorException]
       }
@@ -80,7 +80,7 @@ class LibraryInvitesAbuseMonitorTest extends Specification with ShoeboxTestInjec
         val (user1, _, email, lib) = setup
         db.readWrite { implicit s =>
           for (i <- 1 to 11)
-            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, ownerId = user1.id.get, emailAddress = Some(email), access = LibraryAccess.READ_ONLY))
+            libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = user1.id.get, emailAddress = Some(email), access = LibraryAccess.READ_ONLY))
         }
         airbrake.errorCount() === 0
         monitor.inspect(user1.id.get, None, Some(email), lib.id.get, 10) //should not throw an exception

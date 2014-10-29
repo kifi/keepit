@@ -145,7 +145,7 @@ angular.module('kifi')
       });
     }
 
-    function keepToLibrary(keepUrls, libraryId) {
+    function keepToLibrary(keepInfos, libraryId) {
       $analytics.eventTrack('user_clicked_page', {
         // TODO(yiping): should we have a different action
         // for keeping to library?
@@ -154,16 +154,66 @@ angular.module('kifi')
       });
 
       var data = {
-        keeps: keepUrls.map(function (keepUrl) {
-          return {
-            url: sanitizeUrl(keepUrl)
-          };
+        keeps: keepInfos.map(function(keep) {
+          var keepData = { url: keep.url };
+          if (keep.title) { keepData.title = keep.title; }
+          return keepData;
         })
       };
 
       $log.log('keepActionService.keepToLibrary()', data);
 
       var url = routeService.addKeepsToLibrary(libraryId);
+      return $http.post(url, data, {}).then(function (res) {
+        _.uniq(res.data.keeps, function (keep) {
+          return keep.url;
+        });
+
+        return res.data;
+      });
+    }
+
+    function copyToLibrary(keepIds, libraryId) {
+      $analytics.eventTrack('user_clicked_page', {
+        // TODO(yiping): should we have a different action
+        // for keeping to library?
+        'action': 'keep',
+        'path': $location.path()
+      });
+
+      var data = {
+        to: libraryId,
+        keeps: keepIds
+      };
+
+      $log.log('keepActionService.copyToLibrary()', data);
+
+      var url = routeService.copyKeepsToLibrary();
+      return $http.post(url, data, {}).then(function (res) {
+        _.uniq(res.data.keeps, function (keep) {
+          return keep.url;
+        });
+
+        return res.data;
+      });
+    }
+
+    function moveToLibrary(keepIds, libraryId) {
+      $analytics.eventTrack('user_clicked_page', {
+        // TODO(yiping): should we have a different action
+        // for keeping to library?
+        'action': 'keep',
+        'path': $location.path()
+      });
+
+      var data = {
+        to: libraryId,
+        keeps: keepIds
+      };
+
+      $log.log('keepActionService.moveToLibrary()', data);
+
+      var url = routeService.moveKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -253,6 +303,8 @@ angular.module('kifi')
       keepMany: keepMany,
       keepUrl: keepUrl,
       keepToLibrary: keepToLibrary,
+      copyToLibrary: copyToLibrary,
+      moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
       togglePrivateOne: togglePrivateOne,
       togglePrivateMany: togglePrivateMany,

@@ -2,80 +2,93 @@
 
 angular.module('kifi')
 
-.directive('kfLibraryMiniCard', ['libraryService', 'profileService', 'friendService', '$window', '$location',
-  function (libraryService, profileService, friendService, $window, $location) {
+.directive('kfLibraryMiniCard', [
+  '$rootScope', '$route', 'libraryService', 'profileService', 'friendService', 'modalService', '$location',
+  function ($rootScope, $route, libraryService, profileService, friendService, modalService, $location) {
     return {
       restrict: 'A',
       replace: true,
       scope: {
-        libraryId: '='
+        refLibrary: '&library',
+        invite: '='
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope/*, element, attrs*/) {
-        if (scope.libraryId == null) {
-          return;
-        }
-        libraryService.getLibrarySummaryById(scope.libraryId).then(function (lib) {
-          scope.curatorName = function () {
-            return lib.library.owner.firstName + ' ' + lib.library.owner.lastName;
-          };
-          scope.curatorImage = function () {
-            return friendService.getPictureUrlForUser(lib.library.owner);
-          };
-          scope.numKeeps = function () {
-            return lib.library.numKeeps;
-          };
-          scope.numFollowers = function () {
-            return lib.library.numFollowers;
-          };
-          scope.libraryName = function () {
-            return lib.library.name;
-          };
-          scope.visibility = function () {
-            return lib.library.visibility;
-          };
-          scope.isMine = function () {
-            return lib.membership === 'owner';
-          };
-          scope.following = function () {
-            return lib.membership === 'read_only';
-          };
 
-          function followLibrary() {
-            libraryService.joinLibrary(scope.libraryId).then(function (result) {
-              if (result === 'already_joined') {
-                $window.alert('You are already following this library!');
-                return;
-              }
-            });
-          }
-
-          function unfollowLibrary() {
-            libraryService.leaveLibrary(scope.libraryId);
-          }
-
-          scope.toggleFollow = function () {
-            if (scope.isMine()) {
-              $window.alert('You cannot follow your own Libraries!');
+        scope.library = _.cloneDeep(scope.refLibrary());
+        //
+        // Internal helper methods.
+        //
+        function followLibrary() {
+          libraryService.joinLibrary(scope.library.id).then(function (result) {
+            if (result === 'already_joined') {
+              scope.genericErrorMessage = 'You are already following this library!';
+              modalService.open({
+                template: 'common/modal/genericErrorModal.tpl.html',
+                scope: scope
+              });
               return;
+            } else {
+              if ($location.path() === scope.library.url) {
+                $route.reload();
+              } else {
+                $location.path(scope.library.url);
+              }
             }
+          });
+        }
 
-            if (scope.following()) {
-              unfollowLibrary();
-            } else  {
-              followLibrary();
-            }
-          };
-
-          scope.view = function () {
-            $location.path('/' + lib.library.owner.username + '/' + lib.library.slug);
-          };
+        function unfollowLibrary() {
+          libraryService.leaveLibrary(scope.library.id).then(function () {
+            $location.path(scope.library.url);
+          });
+        }
 
 
-        });
+        //
+        // Scope methods.
+        //
+        scope.following = function () {
+          return !scope.invite && !scope.library.isMine && scope.library.access === 'read_only';
+        };
 
+        scope.toggleFollow = function () {
+          if (scope.isMine) {
+            scope.genericErrorMessage = 'You cannot follow your own libraries!';
+            modalService.open({
+              template: 'common/modal/genericErrorModal.tpl.html',
+              scope: scope
+            });
+            return;
+          }
+
+          if (scope.following()) {
+            unfollowLibrary();
+          } else  {
+            followLibrary();
+          }
+        };
+
+        scope.view = function () {
+          $location.path(scope.library.url);
+        };
+
+
+        //
+        // On link.
+        //
+
+        // Fetch full library summary if we don't have it already.
+        if (!scope.library.isMine) {
+          libraryService.getLibrarySummaryById(scope.library.id).then(function (data) {
+            _.assign(scope.library, data.library);
+
+            scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
+            scope.library.access = data.membership;
+            scope.library.isMine = scope.library.access === 'owner';
+          });
+        }
       }
-
     };
   }
 ]);

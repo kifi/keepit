@@ -12,7 +12,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Username, User, NormalizedURI }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -64,7 +64,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val input = Json.parse(
           s"""{"clicked": true}""".stripMargin)
 
-        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar"))
+        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
         val request = FakeRequest("POST", route).withBody(input)
 
         val controller = inject[RecommendationsController]

@@ -25,16 +25,16 @@
           <div class="manage-lib-input-wrapper">
             <div class="manage-lib-input-title">
               <span class="manage-lib-heading">Name</span>
-              <span class="manage-lib-error manage-lib-name-error" ng-if="$error.name">{{$error.name}}</span>
             </div>
             <input class="manage-lib-input manage-lib-name-input ng-pristine ng-valid" ng-model="library.name" type="text" name="name" placeholder="Type a name for your library..." autocomplete="off" novalidate>
+            <span ng-show="$error.name" class="manage-lib-name-error">{{$error.name}}</span>
             <span class="manage-lib-slug">kifi.com/{{username}}/
-              <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'slug-edited': userHasEditedSlug }" type="text" name="slug" placeholder="new-library" novalidate>
+              <input ng-change="editSlug()" class="manage-lib-slug-input ng-pristine ng-valid" ng-model="library.slug" ng-class="{ 'non-empty-slug': !emptySlug }" type="text" name="slug" placeholder="new-library" novalidate>
             </span>
           </div>
 
           <div class="manage-lib-input-wrapper">
-            <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description<span class="manage-lib-error" ng-if="$error.description">{{$error.description}}</span></span><!-- for removing space between inline-block --><textarea
+            <span class="manage-lib-heading manage-lib-input-title manage-lib-description-title-input">Description</span><!-- for removing space between inline-block --><textarea
             class="manage-lib-input manage-lib-description-input ng-pristine ng-valid" ng-model="library.description" name="description" placeholder="Add a description..." novalidate></textarea>
           </div>
 
@@ -60,18 +60,24 @@
             <div ng-if="$error.general" class="manage-lib-input-wrapper manage-lib-error">{{$error.general}}</div>
         </div>
 
-        <div class="manage-lib-followers-content">
-          <ul class="manage-lib-followers">
-            <li class="manage-lib-follower manage-lib-owner">
-              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-follower-image">
-              <div class="manage-lib-follower-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
-              <div class="manage-lib-follower-status">Owner</div>
+        <div class="manage-lib-members-content" smart-scroll scroll-distance="memberScrollDistance" scroll-disabled="isMemberScrollDisabled()" scroll-next="memberScrollNext()">
+          <ul class="manage-lib-members">
+            <li class="manage-lib-member manage-lib-owner">
+              <img ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+              <div class="manage-lib-member-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="manage-lib-member-status">Owner</div>
             </li>
 
-            <li class="manage-lib-follower" ng-repeat="follower in library.followers">
-              <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-follower-image">
-              <div class="manage-lib-follower-name">{{follower.firstName}} {{follower.lastName}}</div>
-              <div class="manage-lib-follower-status">Following</div>
+            <li class="manage-lib-member" ng-repeat="member in memberList">
+              <div class="manage-lib-member-user" ng-if="member.id">
+                <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+                <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
+              </div>
+              <div class="manage-lib-member-email" ng-if="member.email">
+                <div class="manage-lib-member-email-image svg-envelope"></div>
+                <div class="manage-lib-member-name">{{member.email}}</div>
+              </div>
+              <div class="manage-lib-member-status" ng-class="{'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
             </li>
           </ul>
         </div>
