@@ -37,15 +37,13 @@ angular.module('kifi')
     //
     // Scope methods.
     //
-    $scope.getNextKeeps = function () {
+    $scope.getNextKeeps = function (offset) {
       if ($scope.loading || !$scope.library || $scope.keeps.length === 0) {
         return;
       }
-
       $scope.loading = true;
-      return libraryService.getKeepsInLibrary($scope.library.id, $scope.keeps.length, authToken).then(function (res) {
+      return libraryService.getKeepsInLibrary($scope.library.id, offset, authToken).then(function (res) {
         var rawKeeps = res.keeps;
-
         rawKeeps.forEach(function (rawKeep) {
           var keep = new keepDecoratorService.Keep(rawKeep);
           keep.buildKeep(keep);
