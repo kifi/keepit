@@ -10,7 +10,7 @@ import com.keepit.model.{ UserValueRepo, UserValueName, User }
 class AndroidAppStoreParamsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
-    airbreak: AirbrakeNotifier,
+    airbrake: AirbrakeNotifier,
     userValueRepo: UserValueRepo) extends ShoeboxServiceController with UserActions {
 
   def processAppStoreParams() = UserAction { request =>
@@ -21,7 +21,7 @@ class AndroidAppStoreParamsController @Inject() (
 
   private def processQuery(userId: Id[User], key: String, param: String): Unit = key match {
     case "kcid" => processKcid(userId, param)
-    case other => airbreak.notify(s"unrecognized key $key with param: $param")
+    case other => airbrake.notify(s"unrecognized key $key with param: $param")
   }
 
   private def processKcid(userId: Id[User], kcid: String): Unit = {
