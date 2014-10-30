@@ -981,7 +981,7 @@ angular.module('kifi')
             var keepToLibrary;
             if (scope.keep && scope.keep.id) {
               keepToLibrary = keepActionService.copyToLibrary([scope.keep.id], scope.librarySelection.library.id).then(function (result) {
-                if (result.successes > 0) {
+                if (result.successes.length > 0) {
                   return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
                 }
               });

@@ -91,6 +91,8 @@ angular.module('kifi')
     //
     var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps) {
       _.each(keeps, function (keep) {
+        // checks if the keep was added to the secret library from main or
+        // vice-versa.  If so, it removes the keep from the current library
         if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
             (libSlug === 'main' && $scope.librarySlug === 'secret')) {
           var idx = _.findIndex($scope.keeps, { url: keep.url });
