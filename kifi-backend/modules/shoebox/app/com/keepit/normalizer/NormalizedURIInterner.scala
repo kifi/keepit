@@ -136,6 +136,9 @@ class NormalizedURIInterner @Inject() (
           val nuri = normalizedURIRepo.get(uri.redirect.get)
           statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.redirected", timer, ALWAYS)
           log.info(s"following a redirection path for $url on uri $nuri")
+          if (uri.normalization == Some(Normalization.MOVED)) {
+            airbrake.notify(s"Permanent redirect may be fishier than we thought from ${uri.id.get}: ${uri.url} to ${nuri.id.get}: ${nuri.url}.")
+          }
           nuri
         case uri =>
           statsd.timing(key = "normalizedURIRepo.getByUriOrPrenormalize.not_redirected", timer, ALWAYS)
