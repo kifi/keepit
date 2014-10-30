@@ -35,7 +35,7 @@ angular.module('kifi')
       return $http.get(routeService.profileUrl).then(function (res) {
         updateMe(res.data);
         updateLoginState(me, me.id !== oldMe.id);
-        return newMe;
+        return me;
       })['catch'](function (err) {
         if (err.status === 403) {
           util.replaceObjectInPlace(me, {
