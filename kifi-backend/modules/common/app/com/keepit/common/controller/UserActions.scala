@@ -8,6 +8,7 @@ import com.keepit.common.core._
 import com.keepit.common.net.URI
 import com.keepit.model.{ ExperimentType, KifiInstallation, User }
 import play.api.Play
+import play.api.libs.iteratee.Iteratee
 import play.api.mvc._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -226,12 +227,6 @@ trait UserActions extends Logging { self: Controller =>
     }
   }
 
-  protected def PageAction[P[_]] = new ActionFunction[P, P] {
-    def invokeBlock[A](request: P[A], block: (P[A]) => Future[Result]): Future[Result] = {
-      block(request) // todo(ray): handle error with redirects
-    }
-  }
-
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
@@ -244,7 +239,22 @@ trait UserActions extends Logging { self: Controller =>
       result.map(maybeAugmentCORS(_))
     }
   }
-  val UserPage = (UserAction andThen PageAction)
+
+  object UserPage extends ActionBuilder[Request] {
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
+      UserAction.invokeBlock(request, block).map {
+        case result if result.header.status == FORBIDDEN =>
+          val nRes = Redirect("/login")
+          // Less than ideal, but we can't currently test this:
+          Play.maybeApplication match {
+            case Some(_) => nRes.withSession(request.session + ("original-url" -> request.uri))
+            case None => nRes
+          }
+        case result =>
+          result
+      }
+    }
+  }
 
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
@@ -258,7 +268,8 @@ trait UserActions extends Logging { self: Controller =>
       result.map(maybeAugmentCORS(_))
     }
   }
-  val MaybeUserPage = (MaybeUserAction andThen PageAction)
+
+  val MaybeUserPage = MaybeUserAction // currently we don't have situations when Forbidden means they need to log in for a MaybeUserPage
 
 }
 
@@ -276,7 +287,7 @@ trait AdminUserActions extends UserActions with ShoeboxServiceController {
   }
 
   val AdminUserAction = (UserAction andThen AdminCheck)
-  val AdminUserPage = (AdminUserAction andThen PageAction)
+  val AdminUserPage = AdminUserAction // not forwarding user when the hit an admin page when not logged in is okay
 
 }
 
