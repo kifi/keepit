@@ -31,10 +31,10 @@ angular.module('kifi')
     }
 
     var meService = new Clutch(function () {
-      var oldMe = me;
+      var oldMeId = me.id;
       return $http.get(routeService.profileUrl).then(function (res) {
         updateMe(res.data);
-        updateLoginState(me, me.id !== oldMe.id);
+        updateLoginState(me, me.id !== oldMeId);
         return me;
       })['catch'](function (err) {
         if (err.status === 403) {
@@ -42,7 +42,7 @@ angular.module('kifi')
             picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
             seqNum: (me.seqNum || 0) + 1
           });
-          updateLoginState(null, me.id !== oldMe.id);
+          updateLoginState(null, me.id !== oldMeId);
         }
       });
     }, {
