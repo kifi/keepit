@@ -155,7 +155,7 @@ angular.module('kifi')
 
       var data = {
         keeps: keepInfos.map(function(keep) {
-          var keepData = { url: keep.url };
+          var keepData = { url: sanitizeUrl(keep.url) };
           if (keep.title) { keepData.title = keep.title; }
           return keepData;
         })
