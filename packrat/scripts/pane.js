@@ -236,7 +236,7 @@ var pane = pane || function () {  // idempotent for Chrome
         e.preventDefault();
         api.port.emit("deauthenticate");
         setTimeout(function () {
-          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/k_gray.png') + '"/> icon above.</kifi>')
+          $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/url_gray.png') + '"/> icon above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, remove);
         }, 150);
       })

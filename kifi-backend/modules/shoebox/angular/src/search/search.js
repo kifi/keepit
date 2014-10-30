@@ -8,26 +8,49 @@ angular.module('kifi')
     //
     // Internal data.
     //
-    var query = $routeParams.q || '';
+    var query;
     var filter = $routeParams.f || 'm';
+    var library = $routeParams.l || '';
+
     var lastResult = null;
     var selectedCount = 0;
 
-
-    //
-    // Scope data.
-    //
     $scope.resultKeeps = [];
-
     $scope.resultTotals = {
       myTotal: 0,
       friendsTotal: 0,
       othersTotal: 0
     };
 
-    $scope.hasMore = true;
-    $scope.scrollDistance = '100%';
-    $scope.loading = false;
+
+    //
+    // Scope data.
+    //
+    function init() {
+      query = $routeParams.q || '';
+      filter = $routeParams.f || 'm';
+      library = $routeParams.l || '';
+      if (!query) { // No query or blank query.
+        $location.path('/');
+      }
+      lastResult = null;
+      selectedCount = 0;
+
+      $scope.hasMore = true;
+      $scope.scrollDistance = '100%';
+      $scope.loading = false;
+
+      $window.document.title = 'Kifi • ' + query;
+
+      searchActionService.reset();
+      $scope.getNextKeeps(true);
+    }
+
+    var newSearch = _.debounce(init, 250, {
+      'leading': true
+    });
+
+    $scope.$on('$routeUpdate', newSearch);
 
 
     //
@@ -48,13 +71,29 @@ angular.module('kifi')
     //
     // Scope methods.
     //
-    $scope.getNextKeeps = function () {
+    $scope.selectedKeepsFilter = function (hits) {
+      return _.flatten(_.pluck(hits, 'keeps'));
+    };
+
+    $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading) {
         return;
       }
 
       $scope.loading = true;
-      searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
+      var searchedQuery = query;
+
+      searchActionService.find(query, filter, library, lastResult && lastResult.context).then (function (result) {
+        if (searchedQuery !== query) { // query was updated
+          return;
+        }
+        if (resetExistingResults) {
+          $scope.resultKeeps.length = 0;
+          $scope.resultTotals.myTotal = 0;
+          $scope.resultTotals.friendsTotal = 0;
+          $scope.resultTotals.othersTotal = 0;
+        }
+
         var hits = result.hits;
 
         hits.forEach(function (hit) {
@@ -79,7 +118,7 @@ angular.module('kifi')
       if ($scope.isEnabled(type)) {
         var count = getFilterCount(type);
         if (count) {
-          return '/find?q=' + query + '&f=' + type;
+          return '/find?q=' + query + '&f=' + type + (library?('&l=' + library):'');
         }
       }
       return '';
@@ -130,6 +169,13 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+    $scope.editOptions = {
+      draggable: false,
+      actions: {
+        copyToLibrary: true
+      }
+    };
+
 
     //
     // Watches and event listeners.
@@ -146,24 +192,7 @@ angular.module('kifi')
       $window.removeEventListener('beforeunload', onUnload);
     });
 
+    init();
 
-    //
-    // On SearchCtrl initialization.
-    //
-    if (!query) {
-      // No query or blank query.
-      $location.path('/');
-    }
-
-    $window.document.title = 'Kifi • ' + query;
-
-    // Populate search bar input with current query and display the search bar.
-    if ($scope.search) {
-      $scope.search.text = query;
-    }
-    $scope.enableSearch();
-
-    searchActionService.reset();
-    $scope.getNextKeeps();
   }
 ]);

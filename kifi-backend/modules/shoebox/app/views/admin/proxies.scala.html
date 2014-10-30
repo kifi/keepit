@@ -1,4 +1,4 @@
-@(proxies: Seq[HttpProxy])
+@(proxies: Seq[HttpProxy])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Proxies", stylesheets = List("admin_data_integrity")) {
 <h3>Proxies</h3>

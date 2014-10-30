@@ -1,4 +1,4 @@
-@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit flash: Flash)
+@(applied: Seq[(NormalizedURI, NormalizedURI, String)], page: Int, appliedCount: Int, pendingCount: Int, pageCount: Int, maxPageSize: Int)(implicit request: com.keepit.common.controller.UserRequest[_], flash: Flash)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">

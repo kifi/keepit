@@ -1,4 +1,4 @@
-@(userId: Id[User], keywords: Seq[(String, Int)])
+@(userId: Id[User], keywords: Seq[(String, Int)])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Keywords Cloud"){
   <div>User Id: @userId</div>

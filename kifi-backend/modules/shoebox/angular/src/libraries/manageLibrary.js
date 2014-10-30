@@ -194,7 +194,7 @@ angular.module('kifi')
 
         function setMemberStatus (member) {
           if (member.lastInvitedAt) {
-            return 'Inivation Pending';
+            return 'Invitation Pending';
           } else if (member.membership === 'read_only') {
             return 'Following';
           } else {
@@ -228,8 +228,6 @@ angular.module('kifi')
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });
-          scope.memberList.push.apply(scope.memberList, scope.library.followers);
-          scope.offset = 1;
           returnAction = scope.modalData.returnAction || null;
           scope.modifyingExistingLibrary = true;
           scope.emptySlug = false;

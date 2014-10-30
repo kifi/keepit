@@ -5,7 +5,7 @@
   socialUsers: Seq[(com.keepit.model.SocialUserInfo, Int)],
   uris: Seq[(com.keepit.model.NormalizedURI, Int)],
   extras: Seq[(String, Int)]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import scala.util.{Success, Failure}
 

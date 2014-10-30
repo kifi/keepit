@@ -14,7 +14,7 @@
     if (rawData.length===0){
       console.log("Error: Can't render zero charts.")
       return;
-    }; 
+    };
     google.load('visualization', '1.1', {'packages':['corechart', 'controls']});
 
     function discoverKeys(rawData, legend){
@@ -35,7 +35,7 @@
           var new_key = legend['' + kv._id] || kv._id;
           newData[new_key] = kv.count;
         });
-        datum.data = newData; 
+        datum.data = newData;
       });
     };
 
@@ -92,7 +92,7 @@
         var dValue = dmetric.data[i].data[dKey] || 0;
         if (dValue>0){
           var newFrame = {
-            time: nmetric.data[i].time, 
+            time: nmetric.data[i].time,
             data: {
               "Fraction" : (nValue/dValue)
             }
@@ -109,11 +109,11 @@
       if (metricKeys.length===0){
         metricKeys.push(metric.legend['null'] || 'null');
       }
-      metric.keys = metricKeys; 
+      metric.keys = metricKeys;
       objectify(metric.data, metric.legend);
       if (metric.keys.length>1 && metric.totalable){
         addTotal(metric);
-        metric.keys.push("total"); 
+        metric.keys.push("total");
       };
       if (options.sum){
         summify(metric);
@@ -127,7 +127,7 @@
       chartContainer.append($('<div>', {id: "chart_" + name + metric.header, style:"height: 85%;", text: "Rendering chart. Hold tight!"}));
       chartContainer.append($('<div>', {id: "selector_" + name + metric.header, style:"height: 15%;"}));
       chartParent.append($('<hr>'));
-    }; 
+    };
 
     function drawAndRedraw(){
       drawChart();
@@ -171,7 +171,7 @@
           'controlType': 'ChartRangeFilter',
           'containerId': "selector_" + name + metric.header,
           'options': {
-            'filterColumnIndex': 0,          
+            'filterColumnIndex': 0,
             'ui': {
               'chartType': "LineChart",
                'chartOptions': {
@@ -205,7 +205,7 @@
 
 
     _.forEach(rawData, function(metric){preprocess(metric)});
-    
+
     if (options.merge){
       rawData = [merge(rawData)];
     }
@@ -242,5 +242,5 @@
     }
   );
 
-  
+
 </script>

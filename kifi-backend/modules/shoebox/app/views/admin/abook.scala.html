@@ -1,4 +1,4 @@
-@(abooks:Seq[ABookInfo], page: Int, abooksCount: Int, pageSize: Int)(implicit flash: Flash)
+@(abooks:Seq[ABookInfo], page: Int, abooksCount: Int, pageSize: Int)(implicit request: com.keepit.common.controller.UserRequest[_], flash: Flash)
 
 @otherPagesRoute(page: Int) = {@com.keepit.controllers.admin.routes.ABookAdminController.abooksView(page)}
 

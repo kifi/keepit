@@ -1,4 +1,4 @@
-@(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo)
+@(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("EC2 instance: " + amazonInstanceInfo.instanceId) {
    <table class="table table-bordered">

@@ -110,7 +110,7 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            return keepActionService.keepToLibrary([url], scope.librarySelection.library.id).then(function (result) {
+            return keepActionService.keepToLibrary([{ url: url }], scope.librarySelection.library.id).then(function (result) {
               if (result.failures && result.failures.length) {
                 scope.resetAndHide();
                 modalService.open({
@@ -146,7 +146,8 @@ angular.module('kifi')
           });
           scope.librarySelection = {};
           scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-          scope.libSelectTopOffset = 110;
+          scope.libSelectDownOffset = 0;
+          scope.libSelectMaxUpOffset = 110;
         }
 
         scope.resetAndHide = function () {

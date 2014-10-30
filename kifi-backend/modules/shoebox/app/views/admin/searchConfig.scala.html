@@ -1,4 +1,4 @@
-@(user: User, configs: Seq[(String, String)])
+@(user: User, configs: Seq[(String, String)])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @paramValue(parameter: String, value: String, description: Option[String]) = {
   <tr> <td>@parameter</td> <td><input type="text" name="@{parameter}" value="@{value}"></td><td>@description.getOrElse("")</td> </tr>

@@ -1,4 +1,14 @@
-$(function () {
+(function () {
+  if ((document.documentElement.dataset || {}).kifiExt) {
+    proceed();
+  } else {
+    window.addEventListener('message', function (e) {
+      if ((e.data || {}).type === 'kifi_ext_listening') {
+        proceed();
+      }
+    });
+  }
+
   var errorCount = 0;
 
   $(document).on('click', '.install-button[href]', function () {
@@ -24,7 +34,7 @@ $(function () {
         }
       })
     } else if ($doc.hasClass('firefox')) {
-      window.location = 'https://www.kifi.com/assets/plugins/kifi.xpi';
+      window.location.href = 'https://www.kifi.com/extensions/firefox/kifi.xpi';
       setTimeout(troubleshootFirefox.bind(null, $a), 8000);
     }
   });
@@ -37,4 +47,8 @@ $(function () {
     restoreInstallLink($a);
     $('.install-ff-help:hidden').slideDown();
   }
-});
+
+  function proceed() {
+    window.location.href = '/';
+  }
+}());

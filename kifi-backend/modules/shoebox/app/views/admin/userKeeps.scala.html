@@ -4,7 +4,7 @@
   bookmarkSearch: Option[String],
   collections: Seq[Collection],
   collectionFilter: Option[Id[Collection]]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <br/>

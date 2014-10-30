@@ -14,7 +14,8 @@ describe('kifi.hashtagService', function () {
       'libraryId': libraryId,
       'id': keepId,
       'url': 'https://www.kifi.com',
-      'hashtags': hashtags
+      'hashtags': hashtags,
+      'keepers': []
     });
     keep.buildKeep(keep);
     keep.makeKept();

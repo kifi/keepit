@@ -107,12 +107,12 @@ class AdminSearchController @Inject() (
     Ok(Json.toJson(rv))
   }
 
-  def blindTestPage() = AdminUserPage { request =>
+  def blindTestPage() = AdminUserPage { implicit request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchBlindTest(configs))
   }
 
-  def searchComparisonPage() = AdminUserPage { request =>
+  def searchComparisonPage() = AdminUserPage { implicit request =>
     val configs = getConfigsForBlindTest
     Ok(html.admin.adminSearchComparison(configs))
   }

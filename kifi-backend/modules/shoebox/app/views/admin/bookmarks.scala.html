@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]), KeywordsSummary)], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)
+@(bookmarksAndUsers: Seq[(User, (Keep, NormalizedURI, Option[ScrapeInfo]), KeywordsSummary)], page: Int, overallCount: Int, pageCount: Int, keeperKeepCount: Option[Int], privateKeeperKeepCount: Int, counts: Seq[(String, Int)], total: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 

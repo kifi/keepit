@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailTrackingParam, EmailTip, EmailToSend }
-import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, LocalPostOffice }
+import com.keepit.common.mail.{ SystemEmailAddress, PostOffice, ElectronicMail, ElectronicMailRepo, LocalPostOffice }
 import com.keepit.heimdal.{ HeimdalServiceClient, UserEventTypes, UserEvent, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
@@ -36,6 +36,13 @@ class EmailTemplateSenderImpl @Inject() (
         case Right(address) => address
       })
 
+      val headers = if (emailToSend.from == SystemEmailAddress.NOTIFICATIONS) {
+        // emails from Notifications should default reply-to support
+        Some(Map(PostOffice.Headers.REPLY_TO -> SystemEmailAddress.SUPPORT.address) ++ emailToSend.extraHeaders.getOrElse(Map.empty))
+      } else {
+        emailToSend.extraHeaders
+      }
+
       val email = ElectronicMail(
         from = emailToSend.from,
         to = toAddresses,
@@ -45,7 +52,7 @@ class EmailTemplateSenderImpl @Inject() (
         textBody = result.textBody,
         fromName = result.fromName,
         category = emailToSend.category,
-        extraHeaders = emailToSend.extraHeaders
+        extraHeaders = headers
       )
 
       db.readWrite(attempts = 3) { implicit rw =>
