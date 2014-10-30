@@ -256,20 +256,15 @@ if (searchUrlRe.test(document.URL)) !function () {
   var observer = new MutationObserver(withMutations);
   function withMutations(mutations) {
     if (isVertical) return;
-    outer:
-    for (var i = 0; i < mutations.length; i++) {
-      for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
-        if (nodes[j].id === "ires") {
-          log("[withMutations] Google results inserted");
-          tGoogleResultsShown = Date.now();
-          if (attachKifiRes(nodes[j]) && !(tKifiResultsShown >= tKifiResultsReceived)) {
-            tKifiResultsShown = tGoogleResultsShown;
-          }
-          if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
-            $(setTimeout.bind(null, search));  // prediction may have changed
-          }
-          break outer;
-        }
+    var ires = document.getElementById('ires');
+    if (ires) {
+      log('[withMutations] Google results inserted');
+      tGoogleResultsShown = Date.now();
+      if (attachKifiRes(ires) && !(tKifiResultsShown >= tKifiResultsReceived)) {
+        tKifiResultsShown = tGoogleResultsShown;
+      }
+      if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
+        $(setTimeout.bind(null, search));  // prediction may have changed
       }
     }
     if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
