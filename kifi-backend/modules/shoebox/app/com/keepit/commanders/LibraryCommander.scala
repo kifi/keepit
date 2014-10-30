@@ -37,6 +37,7 @@ class LibraryCommander @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     userRepo: UserRepo,
@@ -382,6 +383,9 @@ class LibraryCommander @Inject() (
               (collabs, follows)
             }
             val library = db.readWrite { implicit s =>
+              libraryAliasRepo.reclaim(ownerId, validSlug).foreach { formerLibraryId =>
+                log.info(s"Reclaimed user $ownerId's alias $validSlug to library $formerLibraryId")
+              }
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,

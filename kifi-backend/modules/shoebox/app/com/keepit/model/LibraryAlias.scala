@@ -27,6 +27,7 @@ object LibraryAliasStates extends States[LibraryAlias]
 trait LibraryAliasRepo extends Repo[LibraryAlias] {
   def getByOwnerIdAndSlug(ownerId: Id[User], slug: LibrarySlug, excludeState: Option[State[LibraryAlias]] = Some(LibraryAliasStates.INACTIVE))(implicit session: RSession): Option[LibraryAlias]
   def alias(ownerId: Id[User], slug: LibrarySlug, libraryId: Id[Library])(implicit session: RWSession): LibraryAlias
+  def reclaim(ownerId: Id[User], slug: LibrarySlug)(implicit session: RWSession): Option[Id[Library]]
 }
 
 @Singleton
@@ -79,4 +80,11 @@ class LibraryAliasRepoImpl @Inject() (
     }
   }
 
+  def reclaim(ownerId: Id[User], slug: LibrarySlug)(implicit session: RWSession): Option[Id[Library]] = {
+    getByOwnerIdAndSlug(ownerId, slug).collect {
+      case alias if alias.state == LibraryAliasStates.ACTIVE =>
+        save(alias.copy(state = LibraryAliasStates.INACTIVE))
+        alias.libraryId
+    }
+  }
 }
