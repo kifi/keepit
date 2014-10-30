@@ -71,7 +71,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
         }
         sb.append("</tr>\n")
         detail.scoreSum match {
-          case Some(sgtcoreSum) =>
+          case Some(scoreSum) =>
             sb.append("<td> sum </td>")
             scoreSum.foreach { value =>
               if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
