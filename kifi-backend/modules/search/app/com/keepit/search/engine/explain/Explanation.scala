@@ -52,9 +52,10 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       if (count > 0) {
         val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
         detailsWithScores.headOption.foreach { detail =>
-          sb.append(s"<tr> <th rowspan=$nRows> $name </th> <th> </th>\n")
+          sb.append(s"<tr> <th rowspan=$nRows> $name </th>")
           listScore(detail)
           detailsWithScores.tail.foreach { detail =>
+            sb.append("<tr>")
             listScore(detail)
           }
         }
@@ -63,7 +64,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     def listScore(detail: ScoreDetail): Unit = {
       if (detail.scoreMax.exists(_ != 0f)) {
-        sb.append("<tr> <td> max </td>")
+        sb.append("<td> max </td>")
         detail.scoreMax.foreach { value =>
           if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
           else sb.append(s"<td> $value </td>")
@@ -71,7 +72,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
         sb.append("</tr>\n")
         detail.scoreSum match {
           case Some(scoreSum) =>
-            sb.append("<tr> <td> sum </td>")
+            sb.append("<td> sum </td>")
             scoreSum.foreach { value =>
               if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
               else sb.append(s"<td> $value </td>")
@@ -82,7 +83,8 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       }
     }
 
-    sb.append("""<table class="table table-bordered">\n""")
+    sb.append("""<table class="table table-bordered">""")
+    sb.append("\n")
 
     // query labels
     sb.append("<tr> <th> </th> <th> </th>")
