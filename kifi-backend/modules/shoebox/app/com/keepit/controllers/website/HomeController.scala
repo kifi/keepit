@@ -116,7 +116,7 @@ class HomeController @Inject() (
     Ok(res.toString)
   }
 
-  def install = UserAction { implicit request =>
+  def install = UserPage { implicit request =>
     SafeFuture {
       if (!hasSeenInstall) userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
 
