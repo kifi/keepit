@@ -38,6 +38,7 @@ object NotificationCategory {
     val SOCIAL_FRIEND_JOINED = NotificationCategory("social_friend_joined")
 
     val LIBRARY_INVITATION = NotificationCategory("library_invitation")
+    val LIBRARY_FOLLOWED = NotificationCategory("library_followed")
 
     val DIGEST = NotificationCategory("digest")
     val DIGEST_QA = NotificationCategory("digest_qa")
@@ -53,7 +54,7 @@ object NotificationCategory {
     val aboutFriends = Set(CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED)
 
     // Formatting Categories used in the extension
-    val triggered = Set(FRIEND_ACCEPTED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION)
+    val triggered = Set(FRIEND_ACCEPTED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE, SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, LIBRARY_FOLLOWED)
     val global = Set(ANNOUNCEMENT)
     val kifiMessageFormattingCategory = Map.empty ++ triggered.map(_ -> "triggered") ++ global.map(_ -> "global")
   }
