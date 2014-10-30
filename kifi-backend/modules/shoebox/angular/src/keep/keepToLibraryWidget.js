@@ -26,7 +26,18 @@ angular.module('kifi')
        *   libSelectMaxUpOffset - maximum amount to shift up the top of the widget above the element.
        *   libSelectLeftOffset - shift the left edge of the widget this much to the left of the element.
        */
+      scope: {
+        libraries: '=',
+        librarySelection: '=',
+        libSelectDownOffset: '=',
+        libSelectMaxUpOffset: '=',
+        libSelectLeftOffset: '='
+      },
       link: function (scope, element/*, attrs*/) {
+        element.on('click', function () {
+          scope.showWidget();
+        });
+
         //
         // Internal data.
         //
@@ -177,7 +188,7 @@ angular.module('kifi')
             var left = element.offset().left - shiftLeftDistance;
 
             // Shift the widget up or down.
-            var shiftUpDistance ;
+            var shiftUpDistance;
             var widgetHeight = widget.height();
 
             // First, shift the widget down based on the passed in desired shift down distance.
