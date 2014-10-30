@@ -96,7 +96,7 @@ class LibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
@@ -109,8 +109,9 @@ class LibraryController @Inject() (
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
           }
         })
-      case Left((respCode, msg)) =>
-        Future.successful(Status(respCode)(Json.obj("error" -> msg)))
+      case Left((respCode, msg)) => Future.successful {
+        if (respCode == SEE_OTHER) Redirect(msg, respCode) else Status(respCode)(Json.obj("error" -> msg))
+      }
     }
   }
 
@@ -383,7 +384,7 @@ class LibraryController @Inject() (
   }
 
   def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug)) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug), followRedirect = false) match {
       case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
         NoContent // Don't need to check anything, they already have access
       case Right(library) =>
@@ -415,7 +416,7 @@ class LibraryController @Inject() (
           }.getOrElse(BadRequest(Json.obj("error" -> "no_passphrase_provided")))
         }
       case Left((respCode, msg)) =>
-        Status(respCode)(Json.obj("error" -> msg))
+        if (respCode == SEE_OTHER) Redirect(msg, respCode) else Status(respCode)(Json.obj("error" -> msg))
     }
   }
 

@@ -534,7 +534,7 @@ class UserCommander @Inject() (
         } else usernameRepo.getByUsername(username) match {
           case Some(alias) if (!alias.belongTo(userId) && (alias.isLocked || (alias.shouldBeProtected && doProtect))) =>
             log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
-            Left("username_alias_exists")
+            Left("username_exists")
           case _ => {
             if (!readOnly) {
               usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username

@@ -38,7 +38,7 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = true) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }

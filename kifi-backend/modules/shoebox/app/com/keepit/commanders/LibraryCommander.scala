@@ -41,6 +41,7 @@ class LibraryCommander @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     userRepo: UserRepo,
+    usernameRepo: UsernameAliasRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -430,14 +431,14 @@ class LibraryCommander @Inject() (
         if (Library.isValidName(name)) Right(name)
         else Left(LibraryFail("invalid_name"))
       }
-      def validSlug(slug: String): Either[LibraryFail, String] = {
-        if (LibrarySlug.isValidSlug(slug)) Right(slug)
+      def validSlug(slug: String): Either[LibraryFail, LibrarySlug] = {
+        if (LibrarySlug.isValidSlug(slug)) Right(LibrarySlug(slug))
         else Left(LibraryFail("invalid_slug"))
       }
 
       val result = for {
         newName <- validName(name.getOrElse(targetLib.name)).right
-        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right.map(LibrarySlug(_))
+        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
@@ -935,24 +936,51 @@ class LibraryCommander @Inject() (
     (main, secret)
   }
 
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug): Either[(Int, String), Library] = {
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, followRedirect: Boolean = false): Either[(Int, String), Library] = {
+    val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = db.readOnlyMaster { implicit s =>
-      ExternalId.asOpt[User](username).flatMap(userRepo.getOpt).orElse {
-        userRepo.getByUsername(Username(username))
+      ownerIdentifier match {
+        case Left(externalId) => userRepo.getOpt(externalId)
+        case Right(username) => userRepo.getByUsername(username)
       }
     }
     ownerOpt match {
       case None =>
-        Left((BAD_REQUEST, "invalid_username"))
+        ownerIdentifier.right.toOption.flatMap { username =>
+          recoverLibraryAndOwner(Right(username), slug).map {
+            case (library, owner) =>
+              if (followRedirect) Right(library) else Left((SEE_OTHER, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+          }
+        } getOrElse Left((BAD_REQUEST, "invalid_username"))
       case Some(owner) =>
         db.readOnlyMaster { implicit s =>
           libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = slug)
         } match {
           case None =>
-            Left((NOT_FOUND, "no_library_found"))
+            recoverLibraryAndOwner(Left(owner), slug).map {
+              case (library, owner) =>
+                if (followRedirect) Right(library) else Left((SEE_OTHER, Library.formatLibraryPath(owner.username, owner.externalId, library.slug)))
+            } getOrElse Left((NOT_FOUND, "no_library_found"))
           case Some(lib) =>
             Right(lib)
         }
+    }
+  }
+
+  private def recoverLibraryAndOwner(maybeOwner: Either[User, Username], slug: LibrarySlug): Option[(Library, User)] = {
+    db.readOnlyMaster { implicit session =>
+      for {
+        owner <- maybeOwner match {
+          case Left(user) => Some(user)
+          case Right(username) => usernameRepo.getByUsername(username).map(alias => userRepo.get(alias.userId))
+        }
+
+        library <- libraryRepo.getBySlugAndUserId(owner.id.get, slug) orElse {
+          libraryAliasRepo.getByOwnerIdAndSlug(owner.id.get, slug).map(alias => libraryRepo.get(alias.libraryId))
+        } if library.state == LibraryStates.ACTIVE
+      } yield {
+        (library, owner)
+      }
     }
   }
 
