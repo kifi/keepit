@@ -326,4 +326,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def StateTokenCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new StateTokenCache(stats, accessLog, (outerRepo, 2 hours))
 
+  @Provides @Singleton
+  def keepImageCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KeepImageCache(stats, accessLog, (outerRepo, 30 days))
+
 }
