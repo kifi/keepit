@@ -542,7 +542,6 @@ angular.module('kifi')
 
                 scope.librarySelection = {};
                 scope.librarySelection.library = _.find(scope.libraries, { 'kind': 'system_main' });
-                scope.excludeLibraries = !scope.library ? [] : [scope.library];
                 scope.clickAction = function (widgetElement) {
                   if (widgetElement.closest('.copy-to-library').length) {
                     copyToLibrary();

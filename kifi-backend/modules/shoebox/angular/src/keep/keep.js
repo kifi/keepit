@@ -921,7 +921,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.librarySelection = {};
-        scope.keptToLibraries = [];
+        scope.keptToLibraryIds = [];
         scope.libSelectDownOffset = 100;
         scope.libSelectMaxUpOffset = 500;
         scope.libSelectLeftOffset = 190;
@@ -956,7 +956,7 @@ angular.module('kifi')
                 scope.keep.makeUnkept();
               } else {
                 _.remove(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
-                scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+                scope.keptToLibraryIds = _.pluck(scope.keep.keeps, 'libraryId');
               }
 
               libraryService.addToLibraryCount(scope.librarySelection.library.id, -1);
@@ -971,7 +971,7 @@ angular.module('kifi')
               tagService.addToKeepCount(1);
 
               scope.keep.keeps = fullKeep.keeps;
-              scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+              scope.keptToLibraryIds = _.pluck(scope.keep.keeps, 'libraryId');
 
               var keep = new keepDecoratorService.Keep(fullKeep);
               keep.buildKeep(keep);
@@ -1024,7 +1024,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+        scope.keptToLibraryIds = _.pluck(scope.keep.keeps, 'libraryId');
         updateKeepStatus();
       }
     };

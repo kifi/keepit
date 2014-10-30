@@ -15,8 +15,7 @@ angular.module('kifi')
        *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
-       *   keptToLibraries - an array of library ids that are already keeping the keep.
+       *   keptToLibraryIds - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
        *   exitAction() - a function that is called once the widget exits (includes when the widget exits after an action).
@@ -49,8 +48,6 @@ angular.module('kifi')
         scope.search = {};
         scope.showCreate = false;
         scope.newLibrary = {};
-        scope.excludeLibraries = scope.excludeLibraries || [];
-        scope.keptToLibraries = scope.keptToLibraries || [];
 
 
         //
@@ -220,6 +217,7 @@ angular.module('kifi')
           $document.on('mousedown', onClick);
 
           // Initialize state.
+          scope.keptToLibraryIds = scope.keptToLibraryIds || [];
           scope.search = {};
           selectedIndex = 0;
           libraryList = widget.find('.library-select-list');
@@ -227,39 +225,32 @@ angular.module('kifi')
           scope.showCreate = false;
           scope.newLibrary = {};
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
+
+          scope.widgetKeptInLibraries = [];
+          scope.widgetMyLibraries = [];
           scope.widgetRecentLibraries = [];
           scope.widgetOtherLibraries = [];
 
           var libraries = _.filter(libraryService.librarySummaries, { access: 'owner' });
 
-          libraries = _.filter(libraries, function (library) {
-            return !_.find(scope.excludeLibraries, { 'id': library.id });
-          });
-
           // Sort libraries here.
-          var groupedLibraries = _.groupBy(libraries, function (library) {
-            return !!library.keptTo;
-          });
-
-          libraries = _.filter(libraries, function (library) {
-            return !_.find(scope.excludeLibraries, { 'id': library.id });
-          });
-
           libraries.forEach(function (library) {
             library.keptTo = false;
-            if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+
+            if (_.indexOf(scope.keptToLibraryIds, library.id) !== -1) {
               library.keptTo = true;
+              scope.widgetKeptInLibraries.push(library);
+            } else {
+              library.keptTo = false;
+              scope.widgetMyLibraries.push(library);
             }
+
             if (_.indexOf(libraryService.recentLibraries, library.id) !== -1) {
               scope.widgetRecentLibraries.push(library);
             } else {
               scope.widgetOtherLibraries.push(library);
             }
           });
-
-          // TODO(yiping): rename all 'keptTo' to 'keptIn' to be consistent with text in template.
-          scope.widgetKeptInLibraries = groupedLibraries[true] || [];
-          scope.widgetMyLibraries = groupedLibraries[false] || [];
 
           if (scope.widgetKeptInLibraries.length) {
             widgetLibraries = scope.widgetKeptInLibraries.concat(scope.widgetMyLibraries);
@@ -369,7 +360,7 @@ angular.module('kifi')
           library.visibility = library.visibility || 'published';
 
           libraryService.createLibrary(library).then(function () {
-            libraryService.fetchLibrarySummaries(true).then(function (data) {
+            libraryService.fetchLibrarySummaries(true).then(function () {
               scope.$evalAsync(function () {
                 scope.librarySelection.library = _.find(widgetLibraries, { 'name': library.name });
                 if (_.isFunction(scope.clickAction)) {
