@@ -1,6 +1,6 @@
 package com.keepit.search.engine;
 
-public final class Visibility { // use value class?
+public final class Visibility {
   // NOTE: this is stored as the record type in DataBuffer. Only 7 bits are available for record type.
   public static final int RESTRICTED = 0x00;
 
@@ -21,6 +21,8 @@ public final class Visibility { // use value class?
   }
 
   public static String toString(int visibility) {
+    visibility &= (OWNER | MEMBER | NETWORK | OTHERS);
+
     if (visibility == 0) {
       return name(0);
     } else {
