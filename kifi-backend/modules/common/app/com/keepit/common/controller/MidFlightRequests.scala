@@ -1,26 +1,28 @@
 package com.keepit.common.controller
 
-import com.google.common.collect.MapMaker
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.api.mvc.RequestHeader
-import java.util.concurrent.ConcurrentMap
-import scala.collection.JavaConversions._
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.logging.Logging
+import play.api.mvc.RequestHeader
+import scala.collection.JavaConversions._
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentHashMap
 
 //todo(eishay): add alerts/stats on the longest outstanding request and/or average time using the value of the currentRequests map
 @Singleton
 class MidFlightRequests @Inject() (
     airbrake: Provider[AirbrakeNotifier],
     myInstanceInfo: Provider[MyInstanceInfo]) extends Logging {
-  private val currentRequests: ConcurrentMap[RequestHeader, Long] = new MapMaker().concurrencyLevel(4).weakKeys().makeMap()
 
-  def count: Int = currentRequests.size()
+  private[this] val currentRequests: ConcurrentMap[RequestHeader, Long] = new ConcurrentHashMap()
+
+  def count: Int = currentRequests.size
+
   private[this] val lastAlert = new AtomicLong(-1)
 
-  private lazy val MaxMidFlightRequests = {
+  private[this] lazy val MaxMidFlightRequests = {
     val me = myInstanceInfo.get
     val max = me.info.instantTypeInfo.ecu * me.serviceType.loadFactor * 5
     log.info(s"allowing $max mid flight requests before blowing the whistle")
@@ -36,7 +38,7 @@ class MidFlightRequests @Inject() (
     count
   }
 
-  private val TEN_MINUTES = 600000L
+  private[this] val TEN_MINUTES = 600000L
 
   private def alert(count: Long, rh: RequestHeader): Unit = {
     val now = System.currentTimeMillis()

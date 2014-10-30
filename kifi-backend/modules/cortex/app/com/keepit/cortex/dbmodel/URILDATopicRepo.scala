@@ -192,14 +192,25 @@ class URILDATopicRepoImpl @Inject() (
   def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], LDATopicFeature)] = {
     import StaticQuery.interpolation
     import scala.slick.jdbc.GetResult
-    implicit val getFeature = GetResult(r => (r.nextLong(), ldaTopicFeatureMapper.nextValue(r)))
+    implicit val getFeature = GetResult(r => (r.nextLong(), r.nextLong(), ldaTopicFeatureMapper.nextValue(r)))
     val q =
-      sql"""select ck.keep_id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
+      sql"""select ck.keep_id, ck.uri_id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
            where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version}
            and ck.source = 'keeper' and tp.state = 'active' and tp.num_words > ${min_num_words}
            order by ck.kept_at desc limit ${limit}"""
-    q.as[(Long, LDATopicFeature)].list.map { case (keepId, feature) => (Id[Keep](keepId), feature) }
+
+    val dups = q.as[(Long, Long, LDATopicFeature)].list.map { case (keepId, uriId, feature) => (Id[Keep](keepId), Id[NormalizedURI](uriId), feature) }
+    // (user, uri) pairs may not be unique. Dedup and preserve the order.
+    val uriIdSet = mutable.Set.empty[Id[NormalizedURI]]
+    val dedup = dups.flatMap {
+      case (keepId, uriId, feature) =>
+        if (!uriIdSet.contains(uriId)) {
+          uriIdSet.add(uriId)
+          Some((keepId, feature))
+        } else None
+    }
+    dedup
   }
 
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] = {

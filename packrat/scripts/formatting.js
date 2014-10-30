@@ -256,7 +256,7 @@ var formatAuxData = (function () {
   };
 
   function isMe(user) {
-    return user.id === me.id;
+    return user.id === k.me.id;
   }
 
   function bold(html) {

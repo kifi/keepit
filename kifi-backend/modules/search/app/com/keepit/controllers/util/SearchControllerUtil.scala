@@ -135,7 +135,9 @@ trait SearchControllerUtil {
 
   def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
     libraryIds.map { libId =>
-      libId -> (LibraryIndexable.getRecord(librarySearcher, libId).get, LibraryIndexable.getVisibility(librarySearcher, libId).get)
+      val record = LibraryIndexable.getRecord(librarySearcher, libId).get
+      val visibility = LibraryIndexable.getVisibility(librarySearcher, libId).get
+      libId -> (record, visibility)
     }.toMap
   }
 

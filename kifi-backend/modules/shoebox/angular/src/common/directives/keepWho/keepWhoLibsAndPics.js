@@ -21,13 +21,18 @@ angular.module('kifi')
 
         // For keep cards that search results on the search page, add and remove user library attribution
         // on the client side when the user keeps or unkeeps.
-        var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (e, libSlug, keep, library) {
-          if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
-              (scope.keep.url === keep.url) &&
-              (library.kind === 'user_created')) {   // Do not show system libraries as attributions.
-            library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
-            scope.visibleKeepLibraries.push(library);
-          }
+        var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (e, libSlug, keeps, library) {
+          var visibleLibraryIds = _.pluck(scope.visibleKeepLibraries, 'id');
+
+          _.each(keeps, function (keep) {
+            if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
+                scope.keep.url === keep.url &&
+                library.kind === 'user_created' &&     // Do not show system libraries as attributions.
+                !_.contains(visibleLibraryIds, library.id)) {
+              library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
+              scope.visibleKeepLibraries.push(library);
+            }
+          });
         });
         scope.$on('$destroy', deregisterKeepAddedListener);
 

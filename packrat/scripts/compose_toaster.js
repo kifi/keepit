@@ -8,7 +8,7 @@
 // @require scripts/compose.js
 // @require scripts/listen.js
 
-var toaster = (function () {
+k.toaster = k.toaster || (function () {
   'use strict';
   var $toast;
 
@@ -59,7 +59,7 @@ var toaster = (function () {
     api.port.emit('prefs', function (prefs) {
       compose.reflectPrefs(prefs || {});
     });
-    $toast = $(render('html/keeper/compose_toaster', {
+    $toast = $(k.render('html/keeper/compose_toaster', {
       showTo: true,
       draftPlaceholder: 'Write something…',
       draftDefault: 'Check this out.'
@@ -117,7 +117,7 @@ var toaster = (function () {
     }
     $toast = null;
     if (e) e.preventDefault();
-    toaster.onHide.dispatch();
+    k.toaster.onHide.dispatch();
   }
 
   function onHidden(trigger, e) {
@@ -126,7 +126,7 @@ var toaster = (function () {
       var $t = $(this);
       $t.data('compose').destroy();
       $t.remove();
-      toaster.onHidden.dispatch(trigger);
+      k.toaster.onHidden.dispatch(trigger);
     }
   }
 
@@ -139,7 +139,7 @@ var toaster = (function () {
         log('[sendMessage] resp:', resp);
         api.require('scripts/pane.js', function () {
           $t.data('sending', false);
-          pane.show({locator: '/messages/' + resp.threadId});
+          k.pane.show({locator: '/messages/' + resp.threadId});
           if ($toast === $t) {
             hide();
           }
@@ -150,7 +150,7 @@ var toaster = (function () {
 
   function showOlder(threadId) {
     api.require('scripts/pane.js', function () {
-      pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
+      k.pane.show({locator: threadId ? '/messages/' + threadId : '/messages'});
     });
   }
 

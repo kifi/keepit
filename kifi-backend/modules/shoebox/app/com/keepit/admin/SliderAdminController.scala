@@ -1,26 +1,25 @@
 package com.keepit.controllers.admin
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.future
-import scala.concurrent.promise
-import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.store.KifInstallationStore
 import com.keepit.common.time._
-import com.keepit.model._
 import com.keepit.eliza.ElizaServiceClient
-import play.api.libs.json.Json
-import play.api.mvc.Action
-import views.html
 import com.keepit.heimdal.{ SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient }
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsBoolean
-import com.keepit.classify.DomainTag
-import play.api.libs.json.JsObject
-import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
+import com.keepit.model._
+
+import org.joda.time._
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ Json, JsArray, JsBoolean, JsObject }
+import play.api.mvc.Action
+
+import scala.concurrent.{ future, promise }
+
+import views.html
 
 class SliderAdminController @Inject() (
   val userActionsHelper: UserActionsHelper,

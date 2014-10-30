@@ -50,15 +50,13 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       val detailsWithScores = details(name).filter { detail => detail.scoreMax.exists(_ != 0f) }
       val count = detailsWithScores.size
       if (count > 0) {
+        val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
         detailsWithScores.headOption.foreach { detail =>
-          sb.append("<tr>")
-          sb.append(s"<th rowspan=$count> $name </th>\n")
+          sb.append(s"<tr> <th rowspan=$nRows> $name </th>")
           listScore(detail)
-          sb.append("</tr>\n")
           detailsWithScores.tail.foreach { detail =>
             sb.append("<tr>")
             listScore(detail)
-            sb.append("</tr>\n")
           }
         }
       }
@@ -66,22 +64,30 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
 
     def listScore(detail: ScoreDetail): Unit = {
       if (detail.scoreMax.exists(_ != 0f)) {
+        sb.append("<td> max </td>")
+        detail.scoreMax.foreach { value =>
+          if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
+          else sb.append(s"<td> $value </td>")
+        }
+        sb.append("</tr>\n")
         detail.scoreSum match {
           case Some(scoreSum) =>
-            (detail.scoreMax zip scoreSum).foreach { case (max, sum) => sb.append(s"<td> $max : $sum </td>") }
-          case None =>
-            detail.scoreMax.foreach { value =>
+            sb.append("<td> sum </td>")
+            scoreSum.foreach { value =>
               if (value == 0.0f) sb.append(s"<td> &nbsp; </td>")
               else sb.append(s"<td> $value </td>")
             }
+            sb.append("</tr>\n")
+          case None =>
         }
       }
     }
 
-    sb.append(s"""<table class="table table-bordered">\n""")
+    sb.append("""<table class="table table-bordered">""")
+    sb.append("\n")
 
     // query labels
-    sb.append("<tr> <th> </th>")
+    sb.append("<tr> <th> </th> <th> </th>")
     labels.map(StringEscapeUtils.escapeHtml4(_)).foreach { label => sb.append(s"""<th> $label </th>""") }
     sb.append("</tr>\n")
 

@@ -1,7 +1,7 @@
 // @require scripts/guide/step.js
 // @require scripts/html/guide/step_3.js
 
-guide.step3 = guide.step3 || function () {
+k.guide.step3 = k.guide.step3 || function () {
   'use strict';
   var step, observer;
   var steps = [
@@ -64,8 +64,8 @@ guide.step3 = guide.step3 || function () {
 
   function show($guide, page) {
     if (!step) {
-      tile.style.display = '';
-      step = guide.step(steps, {
+      k.tile.style.display = '';
+      step = k.guide.step(steps, {
         $guide: $guide,
         page: page,
         index: 3,
@@ -89,7 +89,7 @@ guide.step3 = guide.step3 || function () {
             step.show(1);
           }
         });
-        observer.observe(tile, {childList: true});
+        observer.observe(k.tile, {childList: true});
         break;
       case 2:
         observer = new MutationObserver(function (records) {

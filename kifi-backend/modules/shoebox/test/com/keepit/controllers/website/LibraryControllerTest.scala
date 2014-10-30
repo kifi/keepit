@@ -789,7 +789,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |{
             | "successes":[
             |   {
-            |     "library":"${pubId1}",
+            |     "library":"${pubId2}",
             |     "numMoved": 2
             |   }
             | ]
@@ -803,7 +803,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val result3 = libraryController.copyKeeps()(request3)
         status(result3) must equalTo(OK)
 
-        (contentAsJson(result3) \ "successes").as[Int] === 0
+        (contentAsJson(result3) \ "successes").as[Seq[JsObject]].length === 0
         (contentAsJson(result3) \\ "error").map(_.as[String]).toSet === Set("dest_permission_denied")
 
         inject[FakeUserActionsHelper].setUser(userB)
@@ -818,7 +818,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
         val jsonRes4 = Json.parse(contentAsString(result4))
-        (jsonRes4 \ "successes").as[Int] === 2
+        val copiedKeeps = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(lib1.id.get, 0, Int.MaxValue)
+        }
+        val success4 = (jsonRes4 \\ "id").map(_.as[ExternalId[Keep]]).toSet === copiedKeeps.map(_.externalId).toSet
         (jsonRes4 \\ "keep").length === 0
 
         // move duplicate active keeps 1 & 2 from Lib1 to Lib2 as user 2 (error: already exists in dst)

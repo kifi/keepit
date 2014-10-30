@@ -98,7 +98,7 @@ angular.module('kifi')
               $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
             }
           } else {
-            $location.search('q', $scope.search.text); // this keeps any existing URL params
+            $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
           }
         });
       }

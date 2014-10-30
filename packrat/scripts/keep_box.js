@@ -15,7 +15,7 @@
 // @require scripts/listen.js
 // @require scripts/title_from_url.js
 
-var keepBox = keepBox || (function () {
+k.keepBox = k.keepBox || (function () {
   'use strict';
 
   if (!Array.prototype.find) {
@@ -73,7 +73,7 @@ var keepBox = keepBox || (function () {
 
   function show($parent, libraries, showIntro) {
     log('[keepBox:show]');
-    $box = $(render('html/keeper/keep_box', partitionLibs(libraries), {
+    $box = $(k.render('html/keeper/keep_box', partitionLibs(libraries), {
       view: 'keep_box_libs',
       keep_box_lib: 'keep_box_lib',
       keep_box_libs_list: 'keep_box_libs_list'
@@ -112,7 +112,7 @@ var keepBox = keepBox || (function () {
       $box.off('transitionend', onShown);
       $box.find('input').first().focus();
       makeScrollable($box);
-      if (showIntro && !window.guide) {
+      if (showIntro && !k.guide) {
         api.require('scripts/libraries_intro.js', api.noop);
       }
     }
@@ -130,14 +130,14 @@ var keepBox = keepBox || (function () {
       .addClass('kifi-down');
     $box = null;
     if (e) e.preventDefault();
-    keepBox.onHide.dispatch();
+    k.keepBox.onHide.dispatch();
   }
 
   function onHidden(trigger, e) {
     if (e.target === this && e.originalEvent.propertyName === 'opacity') {
       log('[keepBox:onHidden]');
       $(this).remove();
-      keepBox.onHidden.dispatch(trigger);
+      k.keepBox.onHidden.dispatch(trigger);
     }
   }
 
@@ -185,10 +185,10 @@ var keepBox = keepBox || (function () {
       data.libraries = data.libraries.filter(idIsNot(lib.id));
       delete data.libraryCreated;
       api.port.emit('delete_library', lib.id);
-      var $view = $(render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
+      var $view = $(k.render('html/keeper/keep_box_new_lib', {name: lib.name, secret: lib.visibility === 'secret'}));
       addCreateLibraryBindings($view);
     } else {
-      $view = $(render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
+      $view = $(k.render('html/keeper/keep_box_libs', partitionLibs(data.libraries), {
         keep_box_lib: 'keep_box_lib',
         keep_box_libs_list: 'keep_box_libs_list'
       }));
@@ -236,13 +236,13 @@ var keepBox = keepBox || (function () {
             if (data.q === q) {
               libs.forEach(setShortcut);
               (libs[0] || {}).highlighted = true;
-              showLibs($(render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
+              showLibs($(k.render('html/keeper/keep_box_libs_list', {query: q, libs: libs.map(addNameHtml)}, {
                 keep_box_lib: 'keep_box_lib'
               })));
             }
           });
         } else {
-          showLibs($(render('html/keeper/keep_box_libs_list', partitionLibs($box.data('libraries')), {
+          showLibs($(k.render('html/keeper/keep_box_libs_list', partitionLibs($box.data('libraries')), {
             keep_box_lib: 'keep_box_lib'
           })));
         }
@@ -430,7 +430,7 @@ var keepBox = keepBox || (function () {
       }
     } else {
       var name = (el.firstElementChild || {}).textContent;
-      var $view = $(render('html/keeper/keep_box_new_lib', {name: name}));
+      var $view = $(k.render('html/keeper/keep_box_new_lib', {name: name}));
       addCreateLibraryBindings($view);
       swipeTo($view);
     }
@@ -520,7 +520,7 @@ var keepBox = keepBox || (function () {
     var keep = library.keep;
     var title = keep.title || formatTitleFromUrl(document.URL);
     var canvases = showImage ? [newKeepCanvas(images[0])] : [];   // TODO: show spinner while this image is loading
-    var $view = $(render('html/keeper/keep_box_keep', {
+    var $view = $(k.render('html/keeper/keep_box_keep', {
       library: library,
       title: title,
       site: document.location.hostname,
@@ -998,7 +998,7 @@ var keepBox = keepBox || (function () {
 
   function setShortcut(lib) {
     if (lib.system) {
-      lib.shortcut = CO_KEY + '-Shift-' + (lib.visibility === 'secret' ? 'Alt-' : '') + 'K';
+      lib.shortcut = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
     }
   }
 

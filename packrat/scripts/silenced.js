@@ -15,13 +15,13 @@ var showSilenced = (function () {
       60: 'hour',
       240: '4 hours',
       720: '12 hours'}[minutes];
-    $box = $(render('html/keeper/silenced', {duration: duration}))
-      .insertAfter(tile)
+    $box = $(k.render('html/keeper/silenced', {duration: duration}))
+      .insertAfter(k.tile)
       .on('click', '.kifi-silenced-x', hide)
       .layout()
       .addClass('kifi-showing');
     document.addEventListener('keydown', onKeyDown, true);
-    window.hideKeeperCallout = hide;
+    k.hideKeeperCallout = hide;
     api.onEnd.push(hide);
     setTimeout(hide, 8000);
   };
@@ -34,7 +34,7 @@ var showSilenced = (function () {
 
   function hide(e) {
     document.removeEventListener('keydown', onKeyDown, true);
-    window.hideKeeperCallout = null;
+    k.hideKeeperCallout = null;
     if ($box) {
       $box.on('transitionend', $.fn.remove.bind($box, null)).removeClass('kifi-showing');
       $box = null;

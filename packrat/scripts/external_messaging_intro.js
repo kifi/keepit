@@ -9,23 +9,23 @@ api.port.emit('prefs', function (prefs) {
     var handlers = {
       hide_ext_msg_intro: hide.bind(null, null)
     };
-    var $intro = $(render('html/keeper/tile_tooltip', {
+    var $intro = $(k.render('html/keeper/tile_tooltip', {
       header: 'Email this page to anyone',
       text: 'Did you know you can share this page in a beautiful way?',
       actions: ['Send a summary of the page to any email address',
         'Recipients can join the discussion by replying via email'],
       tip: 'Make life easier – <a class="kifi-tile-tooltip-import-contacts" href="javascript:">import your Gmail contacts</a>'
     }))
-      .insertAfter(tile)
+      .insertAfter(k.tile)
       .on('click', '.kifi-tile-tooltip-x', onClickX)
       .on('click', '.kifi-tile-tooltip-import-contacts', onClickImport)
       .each(function () {this.offsetHeight})  // force layout
       .addClass('kifi-showing');
     document.addEventListener('keydown', onKeyDown, true);
-    tile.addEventListener('mouseover', hide, true);
+    k.tile.addEventListener('mouseover', hide, true);
     api.port.on(handlers);
     api.onEnd.push(hide);
-    window.hideKeeperCallout = hide;
+    k.hideKeeperCallout = hide;
     api.port.emit('track_ftue', 'e');
   }
 
@@ -46,9 +46,9 @@ api.port.emit('prefs', function (prefs) {
 
   function hide(e, action) {
     document.removeEventListener('keydown', onKeyDown, true);
-    if (tile) tile.removeEventListener('mouseover', hide, true);
+    if (k.tile) k.tile.removeEventListener('mouseover', hide, true);
     api.port.off(handlers);
-    window.hideKeeperCallout = null;
+    k.hideKeeperCallout = null;
     if ($intro) {
       $intro.on('transitionend', $.fn.remove.bind($intro, null)).removeClass('kifi-showing');
       $intro = null;
