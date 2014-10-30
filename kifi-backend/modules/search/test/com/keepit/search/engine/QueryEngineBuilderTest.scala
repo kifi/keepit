@@ -125,7 +125,7 @@ class QueryEngineBuilderTest extends Specification {
 
       Option(builder.build()).map { eng =>
         eng.getTotalSize() === 3
-        eng.getCoreSize() === 1
+        eng.getCoreSize() === 2
       }.getOrElse(throw new Exception("no engine"))
     }
 
@@ -154,7 +154,7 @@ class QueryEngineBuilderTest extends Specification {
 
       Some(builder.build()).map { eng =>
         eng.getTotalSize() === 4
-        eng.getCoreSize() === 2
+        eng.getCoreSize() === 3
       }
       1 === 1
     }
