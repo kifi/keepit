@@ -384,7 +384,7 @@ class LibraryCommander @Inject() (
             }
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug).foreach { formerLibraryId =>
-                log.info(s"Reclaimed user $ownerId's alias $validSlug to library $formerLibraryId")
+                log.info(s"Reclaimed user $ownerId's alias $validSlug to former library $formerLibraryId")
               }
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
@@ -439,7 +439,7 @@ class LibraryCommander @Inject() (
 
       val result = for {
         newName <- validName(name.getOrElse(targetLib.name)).right
-        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
+        newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right.map(LibrarySlug(_))
       } yield {
         val newDescription: Option[String] = description.orElse(targetLib.description)
         val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
@@ -455,7 +455,14 @@ class LibraryCommander @Inject() (
           }
         }
         db.readWrite { implicit s =>
-          libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
+          if (targetLib.slug != newSlug) {
+            val ownerId = targetLib.ownerId
+            libraryAliasRepo.reclaim(ownerId, newSlug).foreach { formerLibraryId =>
+              log.info(s"Reclaimed user $ownerId's alias $newSlug to former library $formerLibraryId")
+            }
+            libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
+          }
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription))
         }
       }
       searchClient.updateLibraryIndex()
