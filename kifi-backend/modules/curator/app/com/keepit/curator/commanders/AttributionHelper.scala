@@ -6,7 +6,7 @@ import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
 import com.keepit.search.{ SearchServiceClient }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.Collection
+import com.keepit.common.CollectionHelpers
 
 import scala.concurrent.Future
 import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
@@ -100,7 +100,7 @@ class SeedAttributionHelper @Inject() (
 
   def toUserAttribution(info: LimitedAugmentationInfo): UserAttribution = {
     val others = info.keepersTotal - info.keepers.size - info.keepersOmitted
-    val userToLib = Collection.dedupBy(info.libraries)(_._2).map(_.swap).toMap // a user could have kept this page in several libraries, retain the first (most relevant) one.
+    val userToLib = CollectionHelpers.dedupBy(info.libraries)(_._2).map(_.swap).toMap // a user could have kept this page in several libraries, retain the first (most relevant) one.
     UserAttribution(info.keepers, others, Some(userToLib))
   }
 }

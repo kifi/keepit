@@ -14,7 +14,7 @@ import SocialNetworks.{ FACEBOOK, LINKEDIN, EMAIL }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import scala.inline
-import com.keepit.common.Collection
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.logging.Logging
 import java.text.Normalizer
 
@@ -175,7 +175,7 @@ class ABookRecommendationCommander @Inject() (
       emailInviteRecommendations <- futureEmailInviteRecommendations
     } yield {
       // Relying on aggregateBy stability, breaks ties by picking Facebook over LinkedIn, and LinkedIn over Email
-      Collection.interleaveBy(facebookInviteRecommendations, linkedInInviteRecommendations, emailInviteRecommendations)(_.score)
+      CollectionHelpers.interleaveBy(facebookInviteRecommendations, linkedInInviteRecommendations, emailInviteRecommendations)(_.score)
     }
   }
 
