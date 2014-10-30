@@ -1,7 +1,7 @@
 // @require scripts/guide/step.js
 // @require scripts/html/guide/step_1.js
 
-guide.step1 = guide.step1 || function () {
+k.guide.step1 = k.guide.step1 || function () {
   'use strict';
   var step, observer;
   var steps = [
@@ -52,8 +52,8 @@ guide.step1 = guide.step1 || function () {
 
   function show($guide, page) {
     if (!step) {
-      tile.style.display = '';
-      step = guide.step(steps, {
+      k.tile.style.display = '';
+      step = k.guide.step(steps, {
         $guide: $guide,
         page: page,
         index: 1,
@@ -77,7 +77,7 @@ guide.step1 = guide.step1 || function () {
             step.show(1);
           }
         });
-        observer.observe(tile, {childList: true});
+        observer.observe(k.tile, {childList: true});
         break;
       case 1:
         observer = new MutationObserver(function (records) {
@@ -94,7 +94,7 @@ guide.step1 = guide.step1 || function () {
             });
           }
         });
-        observer.observe(tile.querySelector('.kifi-keeper'), {childList: true});
+        observer.observe(k.tile.querySelector('.kifi-keeper'), {childList: true});
         break;
       case 2:
         observer = new MutationObserver(function (records) {
@@ -105,7 +105,7 @@ guide.step1 = guide.step1 || function () {
             step.show(3);
           }
         });
-        observer.observe(tile.querySelector('.kifi-keep-box-cart'), {childList: true});
+        observer.observe(k.tile.querySelector('.kifi-keep-box-cart'), {childList: true});
         break;
       case 4:
         api.port.emit('prime_search', 'g');

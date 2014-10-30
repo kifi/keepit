@@ -87,7 +87,7 @@
 	"globals": {
     // Kifi Globals
     "api": true,
-    "me": true,
+    "k": true,
     "pageData": true,
     "log": true,
     "util": true,

@@ -7,7 +7,7 @@
 // @require scripts/guide/curved_arrow.js
 // @require scripts/html/guide/step_4.js
 
-guide.step4 = guide.step4 || function () {
+k.guide.step4 = k.guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
@@ -42,7 +42,7 @@ guide.step4 = guide.step4 || function () {
 
   function show2($guide) {
     $('html').off('transitionend.guideStep4');
-    $stage = $(render('html/guide/step_4', me)).appendTo('body');
+    $stage = $(k.render('html/guide/step_4', k.me)).appendTo('body');
     cutScreen = new CutScreen([], $stage[0], $stage[0].firstChild);
     $steps = $guide.appendTo('body');
     $steps.layout().data().updateProgress(.2);

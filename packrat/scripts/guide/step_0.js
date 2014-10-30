@@ -5,14 +5,14 @@
 // @require scripts/render.js
 // @require scripts/html/guide/step_0.js
 
-guide.step0 = guide.step0 || function () {
+k.guide.step0 = k.guide.step0 || function () {
   var $stage, $steps;
   var eventsToBlock = ['mousewheel','wheel'];
   return {show: show, remove: removeAll};
 
   function show($guide, page) {
     if (!$stage) {
-      $stage = $(render('html/guide/step_0', {me: me, page: page})).appendTo('body').layout().addClass('kifi-open');
+      $stage = $(k.render('html/guide/step_0', {me: k.me, page: page})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
         .on('click', '.kifi-guide-x', hide);
       $stage.find('.kifi-guide-pages')

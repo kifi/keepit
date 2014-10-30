@@ -7,7 +7,7 @@
 
 (function () {
   log('[libraries_intro]');
-  var $2, $1 = keepBox.appendTip(render('html/keeper/libraries_intro_1', me))
+  var $2, $1 = k.keepBox.appendTip(k.render('html/keeper/libraries_intro_1', k.me))
     .layout().addClass('kifi-showing')
     .on('click', '.kifi-li-close', hide);
   api.port.on({hide_library_intro: hide});
@@ -34,7 +34,7 @@
     log('[libraries_intro:onKeepView]')
     $(this).off('transitionend', onKeepView);
     $(view).on('kifi-hide', hide);
-    $2 = $2 || keepBox.appendTip(render('html/keeper/libraries_intro_2'))
+    $2 = $2 || k.keepBox.appendTip(k.render('html/keeper/libraries_intro_2'))
       .layout().addClass('kifi-showing')
       .on('click', '.kifi-li-close', hide);
   }

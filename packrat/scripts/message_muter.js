@@ -14,22 +14,19 @@
  * a user to mute or unmute the current conversation.
  */
 
-var messageMuter = this.messageMuter = (function ($, win) {
+k.messageMuter = k.messageMuter || (function ($, win) {
 	'use strict';
-
-	var kifiUtil = win.kifiUtil;
 
 	var portHandlers = {
 		muted: function (o) {
-			if (o.threadId === (messageMuter && messageMuter.parent.threadId)) {
-				messageMuter.updateMuted(o.muted);
+			if (o.threadId === (k.messageMuter.parent || {}).threadId) {
+				k.messageMuter.updateMuted(o.muted);
 			}
 		}
 	};
 
 	api.onEnd.push(function () {
-		messageMuter.destroy();
-		messageMuter = win.messageMuter = null;
+		k.messageMuter.destroy();
 	});
 
 	return {
@@ -123,15 +120,15 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		},
 
 		requestIsMuted: function () {
-			return kifiUtil.request('is_muted', this.parent.threadId, 'Could not get is_muted');
+			return k.request('is_muted', this.parent.threadId, 'Could not get is_muted');
 		},
 
 		sendMuted: function (muted) {
 			var threadId = this.parent.threadId;
 			if (muted) {
-				return kifiUtil.request('mute_thread', threadId, 'Could not mute');
+				return k.request('mute_thread', threadId, 'Could not mute');
 			}
-			return kifiUtil.request('unmute_thread', threadId, 'Could not unmute');
+			return k.request('unmute_thread', threadId, 'Could not unmute');
 		},
 
 		/**
@@ -151,7 +148,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		 * @return {string} Mute option html
 		 */
 		renderOption: function () {
-			return win.render('html/keeper/message_mute_option', this.getView());
+			return k.render('html/keeper/message_mute_option', this.getView());
 		},
 
 		/**
@@ -160,7 +157,7 @@ var messageMuter = this.messageMuter = (function ($, win) {
 		 * @return {string} muted status box html
 		 */
 		renderContent: function () {
-			return win.render('html/keeper/message_muted', this.getView());
+			return k.render('html/keeper/message_muted', this.getView());
 		},
 
 		/**

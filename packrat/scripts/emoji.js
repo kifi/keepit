@@ -833,8 +833,8 @@ var emoji = (function () {
   };
 
   var decodeMap = {};
-  for (var k in encodeMap) {
-    decodeMap[encodeMap[k]] = k;
+  for (var ch in encodeMap) {
+    decodeMap[encodeMap[ch]] = ch;
   }
 
   var decodeRe = /:[a-z][a-z0-9_]{0,32}:/g;

@@ -1,7 +1,7 @@
 // @require scripts/guide/step.js
 // @require scripts/html/guide/step_2.js
 
-guide.step2 = guide.step2 || function () {
+k.guide.step2 = k.guide.step2 || function () {
   'use strict';
   var step;
   var steps = [
@@ -26,7 +26,7 @@ guide.step2 = guide.step2 || function () {
 
   function show($guide, page) {
     if (!step) {
-      step = guide.step(steps, {
+      step = k.guide.step(steps, {
         $guide: $guide,
         page: page,
         index: 2,
