@@ -52,7 +52,7 @@ class Explanation(val query: Query, val labels: Array[String], val rawScore: Flo
       if (count > 0) {
         val nRows = detailsWithScores.map { detail => if (detail.scoreSum.isDefined) 2 else 1 }.sum
         detailsWithScores.headOption.foreach { detail =>
-          sb.append("<tr> <th rowspan=$nRows> $name </th> <th> </th>\n")
+          sb.append(s"<tr> <th rowspan=$nRows> $name </th> <th> </th>\n")
           listScore(detail)
           detailsWithScores.tail.foreach { detail =>
             listScore(detail)
