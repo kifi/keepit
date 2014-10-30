@@ -1,4 +1,4 @@
-@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.admin.ArticleSearchResultHitMeta])
+@(result: ArticleSearchResult, metas: Seq[com.keepit.controllers.admin.ArticleSearchResultHitMeta])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Article Search Result: " + result.uuid) {
 

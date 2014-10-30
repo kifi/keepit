@@ -250,7 +250,7 @@ class UserConnectionsCommander @Inject() (
         else {
           val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
 
-          if (openFriendRequests.size > 40) {
+          if (openFriendRequests.size > 500) {
             (false, "tooManySent")
           } else if (friendRequestRepo.getBySenderAndRecipient(myUserId, recipient.id.get).isDefined) {
             (true, "alreadySent")

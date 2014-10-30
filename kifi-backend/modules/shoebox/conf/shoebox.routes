@@ -412,10 +412,6 @@ POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImpo
 
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
-
-
 ##########################################
 # Email-Link API
 ##########################################
@@ -611,10 +607,6 @@ POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSe
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
-POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest
-POST    /admin/search/blindTestVoted     @com.keepit.controllers.admin.AdminSearchController.blindTestVoted
-GET     /admin/search/blindTestPage     @com.keepit.controllers.admin.AdminSearchController.blindTestPage
-GET     /admin/search/compare     @com.keepit.controllers.admin.AdminSearchController.searchComparisonPage
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns

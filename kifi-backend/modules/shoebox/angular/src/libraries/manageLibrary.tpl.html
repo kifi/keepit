@@ -69,9 +69,15 @@
             </li>
 
             <li class="manage-lib-member" ng-repeat="member in memberList">
-              <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
-              <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
-              <div class="manage-lib-member-status">{{member.status}}</div>
+              <div class="manage-lib-member-user" ng-if="member.id">
+                <img ng-src="{{member.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="manage-lib-member-image">
+                <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
+              </div>
+              <div class="manage-lib-member-email" ng-if="member.email">
+                <div class="manage-lib-member-email-image svg-envelope"></div>
+                <div class="manage-lib-member-name">{{member.email}}</div>
+              </div>
+              <div class="manage-lib-member-status" ng-class="{'invitee': member.status=='Invitation Pending'}">{{member.status}}</div>
             </li>
           </ul>
         </div>

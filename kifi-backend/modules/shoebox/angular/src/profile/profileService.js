@@ -5,6 +5,7 @@ angular.module('kifi')
 .factory('profileService', [
   '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch', '$rootElement',
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
+    var initialized = false;
 
     var me = {
       picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
@@ -17,20 +18,31 @@ angular.module('kifi')
       fetchMe();
     });
 
-    function updateLoginState(meObj) {
+    function updateLoginState(meObj, broadcast) {
       $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
       $rootScope.userLoggedIn = userLoggedIn = !!meObj;
-      $rootScope.$broadcast('userLoggedInStateChange', meObj);
+
+      // Do not broadcast 'userLoggedInStateChange' on the first call.
+      if (initialized && broadcast) {
+        $rootScope.$broadcast('userLoggedInStateChange', meObj);
+      }
+
+      initialized = true;
     }
 
     var meService = new Clutch(function () {
+      var oldMeId = me.id;
       return $http.get(routeService.profileUrl).then(function (res) {
-        var newMe = updateMe(res.data);
-        updateLoginState(newMe);
-        return newMe;
+        updateMe(res.data);
+        updateLoginState(me, me.id !== oldMeId);
+        return me;
       })['catch'](function (err) {
         if (err.status === 403) {
-          updateLoginState(null);
+          util.replaceObjectInPlace(me, {
+            picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
+            seqNum: (me.seqNum || 0) + 1
+          });
+          updateLoginState(null, me.id !== oldMeId);
         }
       });
     }, {

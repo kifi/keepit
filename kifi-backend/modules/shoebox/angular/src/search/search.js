@@ -3,31 +3,54 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService',
-  function ($scope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
+  '$scope', '$rootScope', '$location', '$routeParams', '$window', 'keepDecoratorService', 'searchActionService',
+  function ($scope, $rootScope, $location, $routeParams, $window, keepDecoratorService, searchActionService) {
     //
     // Internal data.
     //
-    var query = $routeParams.q || '';
+    var query;
     var filter = $routeParams.f || 'm';
+    var library = $routeParams.l || '';
+
     var lastResult = null;
     var selectedCount = 0;
 
-
-    //
-    // Scope data.
-    //
     $scope.resultKeeps = [];
-
     $scope.resultTotals = {
       myTotal: 0,
       friendsTotal: 0,
       othersTotal: 0
     };
 
-    $scope.hasMore = true;
-    $scope.scrollDistance = '100%';
-    $scope.loading = false;
+
+    //
+    // Scope data.
+    //
+    function init() {
+      query = $routeParams.q || '';
+      filter = $routeParams.f || 'm';
+      library = $routeParams.l || '';
+      if (!query) { // No query or blank query.
+        $location.path('/');
+      }
+      lastResult = null;
+      selectedCount = 0;
+
+      $scope.hasMore = true;
+      $scope.scrollDistance = '100%';
+      $scope.loading = false;
+
+      $window.document.title = 'Kifi • ' + query;
+
+      searchActionService.reset();
+      $scope.getNextKeeps(true);
+    }
+
+    var newSearch = _.debounce(init, 250, {
+      'leading': true
+    });
+
+    $scope.$on('$routeUpdate', newSearch);
 
 
     //
@@ -48,13 +71,49 @@ angular.module('kifi')
     //
     // Scope methods.
     //
-    $scope.getNextKeeps = function () {
+
+    /*
+     * returns an array of the user's `keep` objects fetched from the keep
+     * cards that are selected. Each keep card (hit) is basically a URL. Each
+     * hit has a `keeps` array that contains information about all keeps the
+     * user has related to the URL.
+     *
+     * example input:
+     *   [ {url: 'foo.com', keeps: [{id: 1}, {id: 2}]},
+     *     {url: 'bar.com', keeps: [{id: 3}]} ]
+     * example output:
+     *   [ {url: 'foo.com', id: 1},
+     *     {url: 'foo.com', id: 2},
+     *     {url: 'bar.com', id: 3} ]
+     */
+    $scope.selectedKeepsFilter = function (hits) {
+      return _.flatten(_.map(hits, function (hit) {
+        return _.map(hit.keeps, function (keep) {
+          var ret = { 'url': hit.url };
+          return _.merge(ret, keep);
+        });
+      }));
+    };
+
+    $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading) {
         return;
       }
 
       $scope.loading = true;
-      searchActionService.find(query, filter, lastResult && lastResult.context).then (function (result) {
+      var searchedQuery = query;
+
+      searchActionService.find(query, filter, library, lastResult && lastResult.context).then (function (result) {
+        if (searchedQuery !== query) { // query was updated
+          return;
+        }
+        if (resetExistingResults) {
+          $scope.resultKeeps.length = 0;
+          $scope.resultTotals.myTotal = 0;
+          $scope.resultTotals.friendsTotal = 0;
+          $scope.resultTotals.othersTotal = 0;
+        }
+
         var hits = result.hits;
 
         hits.forEach(function (hit) {
@@ -79,7 +138,7 @@ angular.module('kifi')
       if ($scope.isEnabled(type)) {
         var count = getFilterCount(type);
         if (count) {
-          return '/find?q=' + query + '&f=' + type;
+          return '/find?q=' + query + '&f=' + type + (library?('&l=' + library):'');
         }
       }
       return '';
@@ -130,6 +189,13 @@ angular.module('kifi')
       selectedCount = numSelected;
     };
 
+    $scope.editOptions = {
+      draggable: false,
+      actions: {
+        copyToLibrary: true
+      }
+    };
+
 
     //
     // Watches and event listeners.
@@ -146,24 +212,24 @@ angular.module('kifi')
       $window.removeEventListener('beforeunload', onUnload);
     });
 
+    // used for bulk-edit Copy To Library in search, it updates the model to include the new library keep(s)
+    var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (event, slug, keeps, library) {
+      keeps.forEach(function (keep) {
+        var searchKeep = _.find($scope.resultKeeps, { url: keep.url });
+        if (searchKeep && !_.contains(searchKeep.keeps, { id: keep.id })) {
+          searchKeep.keeps.push({
+            id: keep.id,
+            isMine: true,
+            libraryId: library.id,
+            mine: true,
+            visibility: library.visibility
+          });
+        }
+      });
+    });
+    $scope.$on('$destroy', deregisterKeepAddedListener);
 
-    //
-    // On SearchCtrl initialization.
-    //
-    if (!query) {
-      // No query or blank query.
-      $location.path('/');
-    }
+    init();
 
-    $window.document.title = 'Kifi • ' + query;
-
-    // Populate search bar input with current query and display the search bar.
-    if ($scope.search) {
-      $scope.search.text = query;
-    }
-    $scope.enableSearch();
-
-    searchActionService.reset();
-    $scope.getNextKeeps();
   }
 ]);

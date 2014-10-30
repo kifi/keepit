@@ -149,7 +149,7 @@ gulp.task('html2js', function () {
       return 'document.body.innerHTML=\'' + contents + '\';\n';
     } else {
       var baseFilename = relativeFilename.replace(/\.[^/.]+$/, ""); // strip file extension
-      return 'render.cache[\'' + baseFilename + '\']=\'' + contents + '\';\n';
+      return 'k.templates[\'' + baseFilename + '\']=\'' + contents + '\';\n';
     }
   };
 

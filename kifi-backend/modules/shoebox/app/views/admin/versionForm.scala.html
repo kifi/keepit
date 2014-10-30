@@ -1,9 +1,8 @@
-@(versions: Seq[(KifiExtVersion, org.joda.time.DateTime, Int)], details: com.keepit.common.store.KifiInstallationDetails)
+@(versions: Seq[(KifiExtVersion, org.joda.time.DateTime, Int)], details: com.keepit.common.store.KifiInstallationDetails)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import com.keepit.common.store._
 
-@admin("Latest Kifi Extension Version", stylesheets = List("admin_slider")) {
-  <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
+@admin("Latest Kifi Extension Versions", stylesheets = List("admin_slider")) {
 
 <style>
 .gold {
@@ -92,7 +91,8 @@ td.old-version {
 </style>
 
 <div class="row">
-  <table class="kifi-versions table table-bordered span6">
+  <p>An extension will try to force update when it connects if its version is killed or pre-golden.</p>
+  <table class="kifi-versions table table-bordered" style="width:640px">
   <thead>
     <tr>
       <th>Version</th>
@@ -131,10 +131,8 @@ td.old-version {
 </table>
 </div>
 
-
-
-
-    <input name="ver" type="text" class="input-small" autofocus autocomplete="off" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" title="The current latest version (e.g. &quot;2.3.99)&quot;">
+  <form class="kifi-ver-form form-inline" action="@com.keepit.controllers.admin.routes.SliderAdminController.broadcastLatestVersion("X")" method="POST">
+    <input name="ver" type="text" value="@details.gold" class="input-small" autofocus autocomplete="off" pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" title="The current latest version (e.g. &quot;2.3.4)&quot;">
     <button>Broadcast</button>
   </form>
 }

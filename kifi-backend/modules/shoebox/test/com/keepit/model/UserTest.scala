@@ -37,7 +37,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           userRepo.save(user.copy(username = Username("foobar")))
         }
-        inject[FakeAirbrakeNotifier].errorCount() === 1
+        inject[FakeAirbrakeNotifier].errorCount() === 0
       }
     }
     "Use the cache" in {

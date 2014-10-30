@@ -1,4 +1,4 @@
-@(user:User, n:Int, rekeepsByDeg:Seq[(Keep, Int, Int, Seq[Seq[User]])])
+@(user:User, n:Int, rekeepsByDeg:Seq[(Keep, Int, Int, Seq[Seq[User]])])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("My ReKeeps") {
 

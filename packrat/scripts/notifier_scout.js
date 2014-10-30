@@ -1,7 +1,9 @@
 // @match /^https?:\/\/[^\/]*\/.*$/
 // @require scripts/api.js
 
-var notifierScout = notifierScout || function (doc) {  // idempotent for Chrome
+var k = k && k.kifi ? k : {kifi: true};
+
+k.notifierScout = k.notifierScout || function (doc) {  // idempotent for Chrome
   'use strict';
   if (doc.documentElement.style) { // not XML viewer
     api.port.on({

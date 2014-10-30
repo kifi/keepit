@@ -29,7 +29,7 @@ var notifier = function () {
         if (o.author.kind === "email") {
           var iconElement = '<div class="kifi-notify-email-icon kifi-participant-background-' + o.author.color + '">' + o.author.initial + '</div>'
         } else {
-          var image = cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName;
+          var image = k.cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName;
         }
         add({
           title: title,
@@ -90,7 +90,7 @@ var notifier = function () {
     } else {
       imageHtml = '';
     }
-    var $item = $(render('html/notify_box', {
+    var $item = $(k.render('html/notify_box', {
       formatSnippet: formatMessage.snippet,
       title: params.title,
       subtitle: params.subtitle,

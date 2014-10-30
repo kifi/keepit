@@ -1,6 +1,6 @@
 package com.keepit.search.util.join
 
-class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, joinerManager: JoinerManager) {
+class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, aggregationContextManager: AggregationContextManager) {
 
   @inline
   private[this] def hash(id: Long): Int = ((id ^ (id >>> 16)) % numHashBuckets).toInt
@@ -46,13 +46,13 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, joinerManager: Joine
         val ptr = offset(pos)
         dataBuffer.set(reader, ptr)
         val id = reader.nextLong()
-        val joiner = joinerManager.get(id)
-        joiner.join(reader) // pushing data to the joiner
+        val context = aggregationContextManager.get(id)
+        context.join(reader) // pushing data to the context
 
         pos += 1
       }
       // process all joined data in this group and move on to the next group
-      joinerManager.flush()
+      aggregationContextManager.flush()
       i += 1
     }
   }

@@ -2,12 +2,13 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
-var me;
-var tile = tile || function() {  // idempotent for Chrome
+var k = k && k.kifi ? k : {kifi: true};
+
+k.tile = k.tile || function () {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount;
+  var whenMeKnown = [], tile, tileParent, tileObserver, tileCard, tileCount;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -104,12 +105,12 @@ var tile = tile || function() {  // idempotent for Chrome
         var now = Date.now(), kept;
         if (now - tLastK > 400) {
           tLastK = now;
-          if (me === undefined) {  // not yet initialized
+          if (!('me' in k)) {  // not yet initialized
             whenMeKnown.push(onKeyDown.bind(this, e));
-          } else if (!me) {
+          } else if (!k.me) {
             toggleLoginDialog();
-          } else if (window.keepBox && keepBox.showing()) {
-            keepBox.keep(e.altKey);
+          } else if (k.keepBox && k.keepBox.showing()) {
+            k.keepBox.keep(e.altKey);
           } else if (tile && (kept = tile.dataset.kept) && (kept === 'private') === e.altKey) {
             loadAndDo('keeper', 'showKeepBox');
           } else {
@@ -171,26 +172,24 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
-    if (me === undefined) {  // not yet initialized
+    if (!('me' in k)) {  // not yet initialized
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
       whenMeKnown.push(Function.bind.apply(loadAndDo, args));
-    } else if (!me) {
+    } else if (!k.me) {
       toggleLoginDialog();
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
       api.require('scripts/' + name + '.js', function() {
-        if (window.hideKeeperCallout) {
-          hideKeeperCallout();
-        }
-        var o = window[name];
+        (k.hideKeeperCallout || api.noop)();
+        var o = k[name];
         o[methodName].apply(o, args);
       });
     }
   }
 
   function onMeChange(newMe) {
-    if ((me = newMe)) {
+    if ((k.me = newMe)) {
       attachTile();
     } else {
       cleanUpDom();
@@ -266,14 +265,13 @@ var tile = tile || function() {  // idempotent for Chrome
   }
 
   function paneCall(methodName) {
-    var pane = window.pane;
-    return pane && pane[methodName]();
+    return k.pane && k.pane[methodName]();
   }
 
   api.onEnd.push(function() {
     document.removeEventListener('keydown', onKeyDown, true);
     cleanUpDom();
-    me = tile = tileCard = tileCount = null;
+    k.tile = k.me = tile = tileCard = tileCount = null;
   });
 
   return tile;

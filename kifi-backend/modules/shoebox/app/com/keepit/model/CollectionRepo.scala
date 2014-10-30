@@ -73,6 +73,10 @@ class CollectionRepoImpl @Inject() (
   override def deleteCache(model: Collection)(implicit session: RSession): Unit = {
     userCollectionsCache.remove(UserCollectionsKey(model.userId))
     userCollectionSummariesCache.remove(UserCollectionSummariesKey(model.userId))
+
+    val keepToCollections = keepToCollectionRepo.getByCollection(model.id.get)
+    keepToCollections.foreach(keepToCollectionRepo.deleteCache)
+
     model.id map { id =>
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
     }

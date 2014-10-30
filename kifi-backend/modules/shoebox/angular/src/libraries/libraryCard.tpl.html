@@ -42,30 +42,34 @@
       </div>
 
       <div class="kf-keep-lib-stats-and-followers">
-        <div class="kf-keep-lib-keeps-followers-stats">
-          <span class="kf-keep-lib-stats-heading">Keeps</span>
-          <span class="kf-keep-lib-stats-number">{{library.numKeeps}}</span>
+        <div class="kf-keep-lib-metrics">
+          <div class="kf-keep-lib-keeps-followers-stats">
+            <span class="kf-keep-lib-stats-heading">Keeps</span>
+            <span class="kf-keep-lib-stats-number">{{library.numKeeps}}</span>
+          </div>
+
+          <div ng-if="isUserLibrary(library)" class="kf-keep-lib-keeps-followers-stats">
+            <span class="kf-keep-lib-stats-heading">Followers</span>
+            <span class="kf-keep-lib-stats-number">{{library.numFollowers}}</span>
+          </div>
         </div>
 
-        <div ng-if="isUserLibrary(library)" class="kf-keep-lib-keeps-followers-stats">
-          <span class="kf-keep-lib-stats-heading">Followers</span>
-          <span class="kf-keep-lib-stats-number">{{library.numFollowers}}</span>
-        </div>
-
-        <div class="kf-keep-lib-follower-pics">
-          <span ng-repeat="follower in followersToShow">
-            <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
-              class="kf-keep-lib-user-image"
-              kf-who-tooltip
-              keeper="follower"
-              ng-mouseenter="showTooltip()"
-              ng-mouseleave="hideTooltip()"
-              ng-click="hideTooltip()"
-            >
-          </span>
-        </div>
-        <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers">
-          <span class="kf-keep-lib-additional-followers-text">+ {{numAdditionalFollowers}}</span>
+        <div class="kf-keep-lib-follower-preview">
+          <div class="kf-keep-lib-follower-pics">
+            <span ng-repeat="follower in followersToShow">
+              <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+                class="kf-keep-lib-user-image"
+                kf-who-tooltip
+                keeper="follower"
+                ng-mouseenter="showTooltip()"
+                ng-mouseleave="hideTooltip()"
+                ng-click="hideTooltip()"
+              >
+            </span>
+          </div>
+          <div ng-if="numAdditionalFollowers" class="kf-keep-lib-additional-followers">
+            <span class="kf-keep-lib-additional-followers-text">+ {{numAdditionalFollowers}}</span>
+          </div>
         </div>
       </div>
 
@@ -85,12 +89,12 @@
     <button ng-if="isPublic(library)" class="kf-keep-lib-footer-button library-button-with-icon kf-keep-lib-footer-twitter-button">
       <a class="kf-keep-lib-footer-share-link" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareUrl}}">
         <span class="kf-keep-lib-footer-button-icon svg-twitter"></span>
-        <span lass="kf-keep-lib-footer-share-link-text">Share</span>
+        <span lass="kf-keep-lib-footer-share-link-text">Tweet</span>
       </a>
     </button>
     <button ng-if="isPublic(library)" ng-click="shareFB()" class="kf-keep-lib-footer-button library-button-with-icon">
       <span class="kf-keep-lib-footer-button-icon svg-facebook"></span>
-      <a class="kf-keep-lib-footer-share-link" href="javascript:">Share</a>
+      <a class="kf-keep-lib-footer-share-link" href="javascript:">Post</a>
     </button>
   </div>
 </div>

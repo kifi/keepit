@@ -1,4 +1,4 @@
-@(patterns: Seq[UrlPatternRule], proxies: Seq[HttpProxy])
+@(patterns: Seq[UrlPatternRule], proxies: Seq[HttpProxy])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("Url Pattern Rules", stylesheets = List("admin_data_integrity")) {
 <h3>URLs with specific behavior</h3>

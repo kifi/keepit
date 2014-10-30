@@ -4,7 +4,7 @@
   keepInfos: Seq[(Keep, NormalizedURI, User, Seq[Hashtag])],
   page: Int,
   pageSize: Int
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.controllers.admin.routes
 
 @otherPagesRoute(page: Int) = {

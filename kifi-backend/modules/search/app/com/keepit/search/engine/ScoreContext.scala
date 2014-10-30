@@ -2,7 +2,7 @@ package com.keepit.search.engine
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
+import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, AggregationContext }
 import java.util.Arrays
 
 class ScoreContext(
@@ -83,13 +83,13 @@ class ScoreContextWithDebug(
     scoreArraySize: Int,
     matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector) with Logging with DebugOption {
-  override def set(id: Long): Joiner = {
+  override def set(id: Long): AggregationContext = {
     if (debugTracedIds.contains(id)) debugLog(s"scorectx-set id=$id")
     super.set(id)
   }
   override def computeMatching(minThreshold: Float): Float = {
     val matching = super.computeMatching(minThreshold)
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-matching id=${id} matching=${matching} weights=(${matchWeight.mkString(",")})")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-matching id=${id} matching=${matching} weights=[${matchWeight.mkString(",")}]")
     matching
   }
   override def score(): Float = {
@@ -98,11 +98,11 @@ class ScoreContextWithDebug(
     scr
   }
   override def join(reader: DataBufferReader): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} offset=${reader.recordOffset} recType=${reader.recordType}")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-join id=${id} offset=${reader.recordOffset} visibility=[${Visibility.toString(reader.recordType)}]")
     super.join(reader)
   }
   override def flush(): Unit = {
-    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree vis=$visibility scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")}})")
+    if (debugTracedIds.contains(id)) debugLog(s"scorectx-flush id=$id id2=$secondaryId deg=$degree visibility=[${Visibility.toString(visibility)}] scoreMax=(${scoreMax.mkString(",")}) scoreSum=(${scoreSum.mkString(",")})")
     super.flush()
   }
 }
@@ -142,7 +142,7 @@ class DirectScoreContext(
     scoreArray(idx) = scr
   }
 
-  override def set(id: Long): Joiner = throw new UnsupportedOperationException("DirectScoreContext does not support set")
+  override def set(id: Long): AggregationContext = throw new UnsupportedOperationException("DirectScoreContext does not support set")
 
   override def clear(): Unit = {}
 

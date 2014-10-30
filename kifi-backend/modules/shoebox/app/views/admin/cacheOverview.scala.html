@@ -1,5 +1,6 @@
-@import com.keepit.common.service.ServiceClient
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
 
+@import com.keepit.common.service.ServiceClient
 @import com.keepit.common.service.ServiceType
 
 @admin("Cache Overview", scripts = List("graphite")) {

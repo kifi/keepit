@@ -1,4 +1,4 @@
-@(phrasesOpt: Option[Seq[Phrase]], page: Int, count: Int, numPages: Int)
+@(phrasesOpt: Option[Seq[Phrase]], page: Int, count: Int, numPages: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -52,7 +52,7 @@
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.PhraseController.refreshPhrases" method="POST">
     <button type="submit" class="btn">Sync Lucene</button>
   </form>
-  
+
   @pagination(page, numPages)
 
   @if(phrasesOpt.isDefined) {

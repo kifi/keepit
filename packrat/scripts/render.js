@@ -1,12 +1,14 @@
 // @require scripts/lib/mustache.js
 
-var cdnBase = api.dev ?
+var k = k && k.kifi ? k : {kifi: true};
+
+k.cdnBase = api.dev ?
   "http://dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
   "//djty7jcqog9qu.cloudfront.net";
 
-var render = function() {
+k.render = k.render || function () {
   'use strict';
-  return function(path, params, partials, callback) {  // partials and callback are both optional
+  return function (path, params, partials, callback) {  // partials and callback are both optional
     if (!callback) {
       if (partials) {
         if (typeof partials === 'function') {
@@ -44,25 +46,25 @@ var render = function() {
       var partialsHtml = {};
       if (partials) {
         for (var name in partials) {
-          partialsHtml[name] = render.cache[partialPaths[name]];
+          partialsHtml[name] = k.templates[partialPaths[name]];
         }
       }
       return Mustache.render(
-        render.cache[path],
-        $.extend({cdnBase: cdnBase}, params),
+        k.templates[path],
+        $.extend({cdnBase: k.cdnBase}, params),
         partialsHtml);
     }
   };
 
   function cached(path) {
-    return !!render.cache[path];
+    return !!k.templates[path];
   }
   function notCached(path) {
-    return !render.cache[path];
+    return !k.templates[path];
   }
   function toJsPath(path) {
-    return "scripts/" + path + ".js";
+    return 'scripts/' + path + '.js';
   }
 }();
 
-render.cache = {};
+k.templates = {};

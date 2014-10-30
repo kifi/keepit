@@ -237,7 +237,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def userBookmarkKeywords = AdminUserPage.async { request =>
+  def userBookmarkKeywords = AdminUserPage.async { implicit request =>
     val user = request.userId
     val uris = db.readOnlyReplica { implicit s =>
       keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)

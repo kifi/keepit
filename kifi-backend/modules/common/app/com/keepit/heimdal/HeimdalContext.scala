@@ -148,6 +148,12 @@ class HeimdalContextBuilder {
         this += ("client", "Kifi App")
         this += ("clientVersion", appVersion)
         this += ("clientBuild", appVersion + buildSuffix)
+      case UserAgent.androidAppRe(appName, os, osVersion, device) =>
+        // versions are not available as of now. To be containted in the X-Kifi-client header
+        this += ("device", device)
+        this += ("os", os)
+        this += ("osVersion", osVersion)
+        this += ("client", "android")
       case _ =>
         val agent = UserAgent.parser.parse(userAgent)
         this += ("device", agent.getDeviceCategory.getName)

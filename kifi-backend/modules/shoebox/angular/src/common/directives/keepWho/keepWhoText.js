@@ -39,7 +39,7 @@ angular.module('kifi')
         };
 
         scope.hasOthers = function () {
-          return keep.keepersTotal > 0;
+          return keep.others > 0;
         };
 
         scope.hasLibraries = function () {
@@ -56,7 +56,7 @@ angular.module('kifi')
         };
 
         scope.getOthersText = function () {
-          var num = keep.keepersTotal ? keep.keepersTotal : 0;
+          var num = keep.others ? keep.others : 0;
           var text = (num === 1) ? '1 other' : num + ' others';
           if (scope.useDeprecated && (scope.hasKeepers() || keep.isMyBookmark)) {
             return 'and ' + text;

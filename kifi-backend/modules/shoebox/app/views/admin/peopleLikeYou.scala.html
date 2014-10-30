@@ -1,4 +1,4 @@
-@(users: Seq[User], scores: Seq[Float])
+@(users: Seq[User], scores: Seq[Float])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("People Like You"){
 

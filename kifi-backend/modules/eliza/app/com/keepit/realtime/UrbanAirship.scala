@@ -12,7 +12,7 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.{ NonOKResponseException, HttpClient, DirectUrl }
+import com.keepit.common.net.{ ClientResponse, NonOKResponseException, HttpClient, DirectUrl }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
@@ -187,7 +187,7 @@ class UrbanAirshipImpl @Inject() (
     } else Future.successful(device)
   }
 
-  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+  private def postIOS(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Future[ClientResponse] = {
     val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
@@ -206,7 +206,7 @@ class UrbanAirshipImpl @Inject() (
         "id" -> notification.id.id
       )
     }
-    val res = client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
+    client.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
       { req =>
         {
           case e: TimeoutException =>
@@ -222,19 +222,9 @@ class UrbanAirshipImpl @Inject() (
         }
       }
     )
-    res.onSuccess {
-      case res =>
-        log.info(s"got good response for device = $device: ${res.body}")
-    }
-    res.onFailure {
-      case t =>
-        val message = s"got bad response from urbanairship. First message = $firstMessage device = $device notification = $notification retry = $retry"
-        log.error(message, t)
-        airbreak.notify(message, t)
-    }
   }
 
-  private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Unit = {
+  private def postAndroid(firstMessage: Boolean, device: Device, notification: PushNotification, retry: Boolean = false): Future[ClientResponse] = {
     val client = if (device.isDev) authenticatedClientDev else authenticatedClient
     val json = notification.message.map { message =>
       Json.obj(
@@ -281,9 +271,23 @@ class UrbanAirshipImpl @Inject() (
     log.info(s"Sending notification to device: ${device.token}")
     device.deviceType match {
       case DeviceType.IOS =>
-        postIOS(firstMessage, device, notification)
+        checkResponse(postIOS(firstMessage, device, notification), device, notification)
       case DeviceType.Android =>
-        postAndroid(firstMessage, device, notification)
+        checkResponse(postAndroid(firstMessage, device, notification), device, notification)
     }
   }
+
+  private def checkResponse(res: Future[ClientResponse], device: Device, notification: PushNotification): Unit = {
+    res.onSuccess {
+      case clientRes =>
+        if (clientRes.status != 200) airbreak.notify(s"(on thread success) failure to send notification $notification to device $device: ${clientRes.body}")
+        else log.info(s"successfully sent notification ${notification.id} to $device: ${clientRes.body}")
+    }
+    res.onFailure {
+      case error =>
+        log.info(s"failed sending notification ${notification.id} to $device", error)
+        airbreak.notify(s"failed sending notification ${notification.id} to $device", error)
+    }
+  }
+
 }

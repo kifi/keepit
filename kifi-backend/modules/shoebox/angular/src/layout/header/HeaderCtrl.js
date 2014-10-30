@@ -52,11 +52,12 @@ angular.module('kifi')
     });
     $scope.$on('$destroy', deregisterLibraryChip);
 
-    $scope.$on('$routeChangeSuccess', function (event, current) {
+    $scope.$on('$routeUpdate', function (event, current) {
       if (current.params.q) {
         $scope.search.text = current.params.q;
       }
     });
+
 
     var deregisterAddKeep = $rootScope.$on('triggerAddKeep', function () {
       $scope.addKeeps();
@@ -73,9 +74,12 @@ angular.module('kifi')
     $scope.clearLibraryName = function () {
       $scope.search.showName = false;
       $scope.stayInLibraryPath = '';
+      if ($location.path() === '/find') {
+        $location.search('l', '');
+      }
     };
 
-    var query = $routeParams.q || '';
+    $scope.search.text = $routeParams.q || '';
     $scope.changeSearchInput = _.debounce(function () {
       if ($scope.search.text === '') {
         if ($scope.stayInLibraryPath !== '') {
@@ -85,12 +89,22 @@ angular.module('kifi')
         }
         $scope.clearInput();
       } else {
-        query = $scope.search.text;
         $timeout(function() {
-          $location.url('/find?q=' + query + '&f=' + 'm');
-        }, 0);
+          var libId = $scope.library.id;
+          if ($location.path() !== '/find') {
+            if (libId) {
+              $location.url('/find?q=' + $scope.search.text + '&f=a' + '&l=' + libId);
+            } else {
+              $location.url('/find?q=' + $scope.search.text + '&f=' + 'm');
+            }
+          } else {
+            $location.search('q', $scope.search.text).replace(); // this keeps any existing URL params
+          }
+        });
       }
-    }, 200);
+    }, 100, {
+      'leading': true
+    });
 
     $scope.clearInput = function () {
       if ($scope.stayInLibraryPath !== '') {

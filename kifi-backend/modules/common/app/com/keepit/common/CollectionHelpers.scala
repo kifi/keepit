@@ -2,7 +2,7 @@ package com.keepit.common
 
 import com.keepit.common.core._
 
-object Collection {
+object CollectionHelpers {
   def interleaveBy[R, T](priorityStreams: Stream[R]*)(f: R => T)(implicit ord: Ordering[T]): Stream[R] = {
     priorityStreams.foldLeft(Stream.empty[R]) { case (aggregatedStream, nextStream) => interleaveBy(aggregatedStream, nextStream)(f) }
   }

@@ -24,7 +24,7 @@ angular.module('kifi')
     $scope.keeps = [];
     $scope.library = {};
     $scope.scrollDistance = '100%';
-    $scope.loading = true;
+    $scope.loading = false;
     $scope.hasMore = true;
     $scope.page = null; // This is used to decide which page to show (library, permission denied, login)
     $scope.passphrase = $scope.passphrase || {};
@@ -91,16 +91,18 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
-          (libSlug === 'main' && $scope.librarySlug === 'secret')) {
-        var idx = _.findIndex($scope.keeps, { url: keep.url });
-        if (idx > -1) {
-          $scope.keeps.splice(idx, 1);
+    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps) {
+      _.each(keeps, function (keep) {
+        if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
+            (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+          var idx = _.findIndex($scope.keeps, { url: keep.url });
+          if (idx > -1) {
+            $scope.keeps.splice(idx, 1);
+          }
+        } else if (libSlug === $scope.librarySlug) {
+          $scope.keeps.unshift(keep);
         }
-      } else if (libSlug === $scope.librarySlug) {
-        $scope.keeps.unshift(keep);
-      }
+      });
     });
     $scope.$on('$destroy', deregisterKeepAdded);
 
@@ -136,6 +138,11 @@ angular.module('kifi')
 
 
     var init = function (invalidateCache) {
+      if ($scope.loading) {
+        return;
+      }
+      $scope.loading = true;
+
       // Request for library object also retrieves an initial set of keeps in the library.
       libraryService.getLibraryByUserSlug($scope.username, $scope.librarySlug, authToken, invalidateCache || false).then(function (library) {
         // If library information has already been prepopulated, extend the library object.

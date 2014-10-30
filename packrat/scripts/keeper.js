@@ -17,11 +17,11 @@ $.fn.layout = function () {
   });
 };
 
-var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
+var MOD_KEYS = /^Mac/.test(navigator.platform) ? {c: '⌘', alt: 'Option'} : {c: 'Ctrl', alt: 'Alt'};
 
-var keeper = keeper || function () {  // idempotent for Chrome
+k.keeper = k.keeper || function () {  // idempotent for Chrome
   'use strict';
-  var $slider, lastCreatedAt, extMsgIntroEligible = !tile.dataset.kept;
+  var $slider, lastCreatedAt, extMsgIntroEligible = !k.tile.dataset.kept;
 
   // We detect and handle the Esc key during keydown capture phase to try to beat page.
   // Subsequently loaded code should attach/detach Esc key handlers using
@@ -60,19 +60,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
   api.onEnd.push(function () {
     log('[keeper:onEnd]');
     $slider && $slider.remove();
-    $(tile).remove();
+    $(k.tile).remove();
     $('.kifi-root').remove();
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('click', onClick, true);
   });
 
   function createSlider(locator) {
-    var kept = tile && tile.dataset.kept;
-    var count = +(tile && tile.dataset.count || 0);
+    var kept = k.tile && k.tile.dataset.kept;
+    var count = +(k.tile && k.tile.dataset.count || 0);
     log('[createSlider] kept: %s count: %o', kept || 'no', count);
     lastCreatedAt = Date.now();
 
-    $slider = $(render('html/keeper/keeper', {
+    $slider = $(k.render('html/keeper/keeper', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
       'isPrivate': kept === 'private',
@@ -127,8 +127,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        if (window.keepBox && keepBox.showing()) {
-          keepBox.hide();
+        if (k.keepBox && k.keepBox.showing()) {
+          k.keepBox.hide();
         } else {
           showKeepBox();
         }
@@ -138,7 +138,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
-          render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
+          k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
             cssClass: 'kifi-keepers-hover',
             linkKeepers: true,
             kept: o.kept
@@ -152,8 +152,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
             });
           });
         } else {
-          render('html/keeper/titled_tip', {
-            title: 'Keep (' + CO_KEY + '+Shift+K)',
+          k.render('html/keeper/titled_tip', {
+            title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
             html: 'Keeping this page helps<br/>you easily find it later.'
           }, function (html) {
             configureHover(html, {
@@ -166,14 +166,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     })
-    .hoverfu('.kifi-dock-btn', function(configureHover) {
+    .hoverfu('.kifi-dock-btn', function (configureHover) {
       var $a = $(this);
       var tip = {
-        s: ['Home', 'Open your keeps library<br/>on kifi.com in a new tab.'],
-        i: ['Inbox (' + CO_KEY + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
-        c: ['Send (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
+        s: ['Home', 'Browse and manage your<br/>keeps in a new tab.'],
+        i: ['Inbox (' + MOD_KEYS.c + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
+        c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
-      render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
+      k.render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         configureHover(html, {
           suppressed: isSticky,
           mustHoverFor: 700,
@@ -193,17 +193,17 @@ var keeper = keeper || function () {  // idempotent for Chrome
         e.preventDefault();
         api.port.emit('open_tab', {path: '', source: 'keeper'});
       } else if ($btn.hasClass('kifi-dock-compose')) {
-        if (window.toaster && toaster.showing()) {
-          toaster.hideIfBlank($slider);
+        if (k.toaster && k.toaster.showing()) {
+          k.toaster.hideIfBlank($slider);
         } else {
-          keeper.compose('keeper');
+          k.keeper.compose('keeper');
         }
       } else {
         beginStickyPane();
         api.require('scripts/pane.js', function () {
           api.port.emit('pane?', function (locator) {
             endStickyPane();
-            pane.toggle('keeper', locator);
+            k.pane.toggle('keeper', locator);
           });
         });
       }
@@ -222,7 +222,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
     createSlider();
     $slider.addClass('kifi-hidden kifi-transit')
-      .prependTo(tile)
+      .prependTo(k.tile)
       .layout()
       .on('transitionend', function f(e) {
         if (e.target === this) {
@@ -230,7 +230,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       })
       .removeClass('kifi-hidden');
-    $(tile).on('mousedown click keydown keypress keyup', insulatePageFromEvent);
+    $(k.tile).on('mousedown click keydown keypress keyup', insulatePageFromEvent);
 
     api.port.emit('keeper_shown', withUrls({}));
   }
@@ -250,26 +250,26 @@ var keeper = keeper || function () {  // idempotent for Chrome
       log('[hideSlider]', trigger, 'synchronously');
       hideSlider2();
     }
-    $(tile).off('mousedown click keydown keypress keyup', insulatePageFromEvent);
+    $(k.tile).off('mousedown click keydown keypress keyup', insulatePageFromEvent);
   }
 
   function hideSlider2() {
-    var css = JSON.parse(tile.dataset.pos || 0);
-    if (css && !tile.style.top && !tile.style.bottom) {
+    var css = JSON.parse(k.tile.dataset.pos || 0);
+    if (css && !k.tile.style.top && !k.tile.style.bottom) {
       var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
       css.transition = 'none';
       css.transform = 'translate(0,' + y + 'px)';
-      $(tile).css(css)
+      $(k.tile).css(css)
       .layout().css({transition: '', 'transition-duration': Math.min(1, 32 * Math.log(y)) + 'ms'})
       .find('.kifi-count').css('zoom', 1); // webkit repaint workaround
-      tile['kifi:position']();
-      $(tile).on('transitionend', function end() {
+      k.tile['kifi:position']();
+      $(k.tile).on('transitionend', function end() {
         $(this).off('transitionend', end).css('transition-duration', '');
       });
     }
     $slider.remove(), $slider = null;
 
-    if (extMsgIntroEligible && tile.dataset.kept && !window.guide) {
+    if (extMsgIntroEligible && k.tile.dataset.kept && !k.guide) {
       extMsgIntroEligible = false;
       api.port.emit('prefs', function (prefs) {
         if (prefs.showExtMsgIntro) {
@@ -288,12 +288,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (data.dragStarting) {
         delete data.dragStarting;
         log('[startDrag] installing draggable');
-        data.$dragGlass = $('<div class="kifi-drag-glass kifi-root">').mouseup(stopDrag).appendTo(tile.parentNode);
-        $(tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
+        data.$dragGlass = $('<div class="kifi-drag-glass kifi-root">').mouseup(stopDrag).appendTo(k.tile.parentNode);
+        $(k.tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
           .dispatchEvent(new MouseEvent('mousedown', data.mousedownEvent)); // starts drag
       }
       function stopDrag() {
-        var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
+        var r = k.tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
         var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
         log('[stopDrag] top:', r.top, 'bot:', r.bottom, JSON.stringify(pos));
         $slider.addClass('kifi-dragged').on('transitionend', function end(e) {
@@ -301,11 +301,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
             $slider.removeClass('kifi-dragged').off('transitionend', end);
           }
         });
-        $(tile).draggable('destroy');
+        $(k.tile).draggable('destroy');
         data.$dragGlass.remove();
         delete data.$dragGlass;
-        tile.dataset.pos = JSON.stringify(pos);
-        $(tile).css($.extend({top: 'auto', bottom: 'auto'}, pos));
+        k.tile.dataset.pos = JSON.stringify(pos);
+        $(k.tile).css($.extend({top: 'auto', bottom: 'auto'}, pos));
         api.port.emit('set_keeper_pos', {host: location.hostname, pos: pos});
       }
     });
@@ -315,7 +315,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     return $tip.hoverfu('.kifi-keepers-pic', function (configureHover) {
       var $pic = $(this);
       var friend = keepers.filter(idIs($pic.data('id')))[0];
-      render('html/friend_card', friend, function (html) {
+      k.render('html/friend_card', friend, function (html) {
         configureHover(html, {
           mustHoverFor: 100, hideAfter: 4000, click: 'toggle', parent: $tip,
           position: {my: 'center bottom-13', at: 'center top', of: $pic, collision: 'fit', using: function (pos, o) {
@@ -333,15 +333,15 @@ var keeper = keeper || function () {  // idempotent for Chrome
   }
 
   function showKeepBox() {
-    if (window.keepBox && keepBox.showing()) return;
-    if (window.toaster && toaster.showing()) {
-      toaster.hide();
+    if (k.keepBox && k.keepBox.showing()) return;
+    if (k.toaster && k.toaster.showing()) {
+      k.toaster.hide();
     }
     $slider.find('.kifi-keep-btn').hoverfu('hide');
     beginStickyKeepBox();
 
     var deferreds = [Q.defer(), Q.defer(), Q.defer()];
-    keeper.moveToBottom(function () {
+    k.keeper.moveToBottom(function () {
       deferreds[0].resolve();
     });
     api.require('scripts/keep_box.js', function () {
@@ -351,23 +351,23 @@ var keeper = keeper || function () {  // idempotent for Chrome
       deferreds[2].resolve(data);
     });
     Q.all(deferreds.map(getPromise)).done(function (vals) {
-      if (keepBox.showing()) return;
-      if (window.pane) {
-        pane.shade();
+      if (k.keepBox.showing()) return;
+      if (k.pane) {
+        k.pane.shade();
       }
-      keepBox.show($slider, vals[2]);
-      keepBox.onHide.add(onKeepBoxHide);
-      keepBox.onHidden.add(onKeepBoxHidden);
+      k.keepBox.show($slider, vals[2]);
+      k.keepBox.onHide.add(onKeepBoxHide);
+      k.keepBox.onHidden.add(onKeepBoxHidden);
     });
   }
   function onKeepBoxHide() {
     endStickyKeepBox();
-    if (window.pane) {
-      pane.unshade();
+    if (k.pane) {
+      k.pane.unshade();
     }
   }
   function onKeepBoxHidden(trigger) {
-    keeper.moveBackFromBottom();
+    k.keeper.moveBackFromBottom();
     if ((trigger === 'x' || trigger === 'esc' || trigger === 'action') && $slider && !isClickSticky()) {
       hideSlider('keepBox');
     }
@@ -375,12 +375,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   function onToasterHide() {
     endStickyToaster();
-    if (window.pane) {
-      pane.unshade();
+    if (k.pane) {
+      k.pane.unshade();
     }
   }
   function onToasterHidden(trigger) {
-    keeper.moveBackFromBottom();
+    k.keeper.moveBackFromBottom();
     if ((trigger === 'x' || trigger === 'esc') && $slider && !isClickSticky()) {
       hideSlider('toaster');
     }
@@ -468,7 +468,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
           $btn.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
         }
         if (o.fail && !$btn.hasClass('kifi-shake')) {
-          $btn.one('animationName' in tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($btn, 'kifi-shake'))
+          $btn.one('animationName' in k.tile.style ? 'animationend' : 'webkitAnimationEnd', $.fn.removeClass.bind($btn, 'kifi-shake'))
           .addClass('kifi-shake');
         }
       }
@@ -491,7 +491,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         log('[keeper.show] ignored, already showing');
       } else {
         log('[keeper.show]');
-        $(tile).hoverfu('destroy');
+        $(k.tile).hoverfu('destroy');
         showSlider();
       }
     },
@@ -509,8 +509,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     moveToBottom: function (callback) {
       var dy;
-      if (tile.style.display !== 'none' && (dy = window.innerHeight - tile.getBoundingClientRect().bottom)) {
-        var $tile = $(tile);
+      if (k.tile.style.display !== 'none' && (dy = window.innerHeight - k.tile.getBoundingClientRect().bottom)) {
+        var $tile = $(k.tile);
         if (callback) {
           $tile.on('transitionend', function end(e) {
             if (e.target === this) {
@@ -525,18 +525,18 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     },
     moveBackFromBottom: function () {
-      if (tile && tile.style.display !== 'none') {
-        $(tile).css('transform', '');
+      if (k.tile && k.tile.style.display !== 'none') {
+        $(k.tile).css('transform', '');
       }
     },
     engage: function () {
       if (lastCreatedAt) return;
-      var $tile = $(tile);
+      var $tile = $(k.tile);
         api.port.emit('get_keepers', function (o) {
           if (o.keepers.length && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
-              render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
+              k.render('html/keeper/keepers', setKeepersAndCounts(o.keepers, o.otherKeeps, {
                 cssClass: 'kifi-keepers-promo' + ($tile.find('.kifi-count').length ? ' kifi-above-count' : '')
               }), function (html) {
                 if (lastCreatedAt) return;
@@ -564,19 +564,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
       log('[keeper:compose]', opts.trigger || '');
       if (!$slider) {
         showSlider();
-      } else if (window.keepBox && keepBox.showing()) {
-        keepBox.hide();
+      } else if (k.keepBox && k.keepBox.showing()) {
+        k.keepBox.hide();
       }
       beginStickyToaster();
-      keeper.moveToBottom(function () {
+      k.keeper.moveToBottom(function () {
         api.require('scripts/compose_toaster.js', function () {
-          if (opts.trigger !== 'deepLink' || !toaster.showing()) {  // don't clobber form
-            if (window.pane) {
-              pane.shade();
+          if (opts.trigger !== 'deepLink' || !k.toaster.showing()) {  // don't clobber form
+            if (k.pane) {
+              k.pane.shade();
             }
-            toaster.show($slider, opts.to);
-            toaster.onHide.add(onToasterHide);
-            toaster.onHidden.add(onToasterHidden);
+            k.toaster.show($slider, opts.to);
+            k.toaster.onHide.add(onToasterHide);
+            k.toaster.onHidden.add(onToasterHidden);
           }
         });
       });
@@ -586,14 +586,14 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
         beginStickyPane();
-        if (window.toaster && toaster.showing()) {
-          toaster.hide();
-        } else if (window.keepBox && keepBox.showing()) {
-          keepBox.hide();
+        if (k.toaster && k.toaster.showing()) {
+          k.toaster.hide();
+        } else if (k.keepBox && k.keepBox.showing()) {
+          k.keepBox.hide();
         }
       } else {  // dislodge from pane and prepare for x transition
         var focusedEl = document.activeElement;
-        $slider.prependTo(tile).layout();
+        $slider.prependTo(k.tile).layout();
         if ($slider[0].contains(focusedEl)) {
           focusedEl.focus();
         }

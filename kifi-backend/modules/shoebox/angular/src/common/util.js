@@ -87,7 +87,7 @@ angular.module('util', [])
         return keepUrl.indexOf('.') !== -1;
       },
       generateSlug: function (name) {
-        return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '');
+        return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
       }
     };
   }

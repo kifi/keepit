@@ -1,4 +1,4 @@
-@(data: Seq[com.keepit.controllers.admin.ClusterMemberInfo])
+@(data: Seq[com.keepit.controllers.admin.ClusterMemberInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
 
     @randomColor(hash: String) = {
         <font color="@{

@@ -24,26 +24,22 @@
  * participants of the current message conversation.
  */
 
-/*global cdnBase, Mustache */
-
-var messageParticipants = this.messageParticipants = (function ($, win) {
+k.messageParticipants = k.messageParticipants || (function ($, win) {
 	'use strict';
 
-	var kifiUtil = win.kifiUtil;
 	var OVERFLOW_LENGTH = 8;
 
 	var portHandlers = {
 		participants: function (participants) {
-			messageParticipants.setParticipants(participants);
+			k.messageParticipants.setParticipants(participants);
 		},
 		add_participants: function (users) {
-			messageParticipants.addParticipant.apply(messageParticipants, users);
+			k.messageParticipants.addParticipant.apply(k.messageParticipants, users);
 		}
 	};
 
 	api.onEnd.push(function () {
-		messageParticipants.destroy();
-		messageParticipants = win.messageParticipants = null;
+		k.messageParticipants.destroy();
 	});
 
 	return {
@@ -243,7 +239,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		getView: function () {
 			var participants = this.getParticipants();
 			var other = participants.length === 2 ? participants.filter(function (user) {
-				return user.id !== win.me.id;
+				return user.id !== k.me.id;
 			})[0] : null;
 			return {
 				participantName: other ? this.getFullName(other) : null,
@@ -260,7 +256,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {string} participants html
 		 */
 		renderContent: function () {
-			return win.render('html/keeper/message_participants', this.getView());
+			return k.render('html/keeper/message_participants', this.getView());
 		},
 
 		/**
@@ -269,7 +265,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		 * @return {string} Add participant icon html
 		 */
 		renderButton: function () {
-			return win.render('html/keeper/message_participant_icon', this.getView());
+			return k.render('html/keeper/message_participant_icon', this.getView());
 		},
 
 		/**
@@ -293,9 +289,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		renderAvatar: function (user) {
 			formatParticipant(user);
 			if (user.kind === 'email') {
-				return win.render('html/keeper/message_avatar_email', user);
+				return k.render('html/keeper/message_avatar_email', user);
 			} else {
-				return win.render('html/keeper/message_avatar_user', user);
+				return k.render('html/keeper/message_avatar_user', user);
 			}
 		},
 
@@ -316,9 +312,9 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		renderParticipant: function (user) {
 			formatParticipant(user);
 			if (user.kind === 'email') {
-				return win.render('html/keeper/message_participant_email', user);
+				return k.render('html/keeper/message_participant_email', user);
 			} else {
-				return win.render('html/keeper/message_participant_user', user);
+				return k.render('html/keeper/message_participant_user', user);
 			}
 		},
 
@@ -417,7 +413,7 @@ var messageParticipants = this.messageParticipants = (function ($, win) {
 		},
 
 		sendAddParticipants: function (users) {
-			return kifiUtil.request('add_participants', {
+			return k.request('add_participants', {
 				threadId: this.parent.threadId,
 				ids: users.map(function (u) { return u.id; })
 			}, 'Could not add participants.');

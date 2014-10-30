@@ -1,7 +1,7 @@
 @(uri:NormalizedURI,
   screenshotUrl:Option[String],
   imageInfos:Seq[com.keepit.model.ImageInfo]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("ImageInfos") {
     <h2>Images for URI: @uri.id.get</h2>

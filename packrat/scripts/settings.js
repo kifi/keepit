@@ -2,7 +2,7 @@
 // @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
-panes.settings = function () {
+k.panes.settings = k.panes.settings || function () {
   'use strict';
   var handlers = {settings: update};
   var subordinates = {keeper: 'sensitive', search: 'max-results'};
@@ -86,7 +86,7 @@ panes.settings = function () {
   }
 
   function onClickX() {
-    pane.back();
+    k.pane.back();
   }
 
   function onScroll() {

@@ -116,11 +116,7 @@ class HomeController @Inject() (
     Ok(res.toString)
   }
 
-  def kifiSiteRedirect(path: String) = Action {
-    MovedPermanently(s"/$path")
-  }
-
-  def install = UserAction { implicit request =>
+  def install = UserPage { implicit request =>
     SafeFuture {
       if (!hasSeenInstall) userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
 

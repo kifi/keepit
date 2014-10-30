@@ -1,4 +1,4 @@
-@(numTopics: Int)
+@(numTopics: Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("LDA"){
   <h2>@numTopics topics</h2>

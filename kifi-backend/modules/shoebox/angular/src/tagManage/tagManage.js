@@ -79,7 +79,8 @@ angular.module('kifi')
           });
           $scope.librarySelection = {};
           $scope.librarySelection.library = _.find($scope.libraries, { 'kind': 'system_main' });
-          $scope.libSelectTopOffset = false;  // This overrides the scope.libSelectTopOffset set by MainCtrl.js
+          $scope.libSelectDownOffset = 100;
+          $scope.libSelectMaxUpOffset = 200;
         });
       }
     });
@@ -162,8 +163,13 @@ angular.module('kifi')
     $scope.actionToLibrary = '';
 
     $scope.changeSelection = function (tag, action) {
+      tag.selected = true;
       $scope.selectedTag = tag;
       $scope.actionToLibrary = action;
+    };
+
+    $scope.exitAction = function () {
+      $scope.selectedTag.selected = false;
     };
 
     // click action when selecting a library from widget

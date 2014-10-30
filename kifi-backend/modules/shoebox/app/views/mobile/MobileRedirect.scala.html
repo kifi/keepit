@@ -37,7 +37,11 @@ if (IS_IOS) {
     while (cleanUrl.charAt(0) == "/") {
       cleanUrl = cleanUrl.substring(1);
     }
-    window.location = 'intent://' + cleanUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
+    if (cleanUrl) {
+      window.location = 'intent://' + cleanUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
+    } else {
+      window.location = 'https://play.google.com/store/apps/details?id=com.kifi';
+    }
 }
 </script>
 </body>

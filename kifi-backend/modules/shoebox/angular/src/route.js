@@ -36,7 +36,8 @@ angular.module('kifi')
       controller: 'HomeCtrl'
     }).when('/find', {
       templateUrl: 'search/search.tpl.html',
-      controller: 'SearchCtrl'
+      controller: 'SearchCtrl',
+      reloadOnSearch: false
     }).when('/tag/:tagId', {
       templateUrl: 'tagKeeps/tagKeeps.tpl.html',
       controller: 'TagKeepsCtrl'

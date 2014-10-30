@@ -568,6 +568,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "let users join or decline library invites" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
+
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
 
@@ -580,7 +581,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
         }
+
+        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
+        eliza.inbox.size === 0
+
         libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get.name === libMurica.name // Ironman accepts invite to 'Murica'
+
+        eliza.inbox.size === 1
+        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://kifi.com/captainamerica/murica", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
+
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get.name === libMurica.name // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
         libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
@@ -716,11 +725,40 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         copy5._1.size === 1
         copy5._2.size === 0
 
-        db.readOnlyMaster { implicit s =>
+        val keeps4 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
           keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
           keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("Freedom", "Reddit")
+          val keepsRW = keepRepo.getByLibrary(libRW.id.get, 0, 20)
+          keepsRW.map(_.title.get) === Seq("Freedom", "Reddit")
+          keepsRW
+        }
+
+        // Test Main & Private Library
+        val (mainLib, secretLib) = libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+
+        // Copy from User Created to Main Library
+        libraryCommander.copyKeeps(userIron.id.get, mainLib.id.get, keeps4, None)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 2
+          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(0).uriId, userIron.id.get).nonEmpty === true
+          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(1).uriId, userIron.id.get).nonEmpty === true
+        }
+        // Copy from Main to Private Library
+        libraryCommander.copyKeeps(userIron.id.get, secretLib.id.get, keeps4, None)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
+          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(0).uriId, userIron.id.get).nonEmpty === true
+          keepRepo.getPrimaryInDisjointByUriAndUser(keeps4(1).uriId, userIron.id.get).nonEmpty === true
+        }
+
+        // Copy from Private to User Created Library
+        libraryCommander.copyKeeps(userIron.id.get, libRW.id.get, keeps4, None)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 2
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).length === 2
         }
       }
     }
@@ -796,10 +834,38 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val move6 = libraryCommander.moveKeeps(userIron.id.get, libRW.id.get, keeps3.slice(1, 2)) // move Freedom from libOwn to libRW (Freedom is inactive)
         move6._1.size === 1
         move6._2.size === 0
-        db.readOnlyMaster { implicit s =>
+        val keeps4 = db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(libMurica.id.get, 0, 20).map(_.title.get) === Seq("McDonalds", "Freedom", "Reddit")
           keepRepo.getByLibrary(libOwn.id.get, 0, 20).map(_.title.get) === Seq()
-          keepRepo.getByLibrary(libRW.id.get, 0, 20).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          val keeps4 = keepRepo.getByLibrary(libRW.id.get, 0, 20)
+          keeps4.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keeps4
+        }
+
+        // Test Main & Private Library
+        val (mainLib, secretLib) = libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+
+        // Move from User Created to Main Library
+        libraryCommander.moveKeeps(userIron.id.get, mainLib.id.get, keeps4)
+        val keeps5 = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20)
+        }
+        keeps5.length === 3
+
+        // Move from Main to Secret
+        libraryCommander.moveKeeps(userIron.id.get, secretLib.id.get, keeps5)
+        val keeps6 = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(secretLib.id.get, 0, 20)
+        }
+        keeps6.length === 3
+
+        // Move from Secret to User Created
+        libraryCommander.moveKeeps(userIron.id.get, libRW.id.get, keeps6)
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(mainLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(secretLib.id.get, 0, 20).length === 0
+          keepRepo.getByLibrary(libRW.id.get, 0, 20).length === 3
         }
       }
     }

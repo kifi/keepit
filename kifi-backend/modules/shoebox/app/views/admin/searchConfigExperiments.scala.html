@@ -2,7 +2,7 @@
   defaultParams: Map[String,String],
   kifiVsGoogle: Map[Option[Id[com.keepit.search.SearchConfigExperiment]], String],
   searchesWithKiFiResults: Map[Option[Id[com.keepit.search.SearchConfigExperiment]], String]
-)
+)(implicit request: com.keepit.common.controller.UserRequest[_])
 @import com.keepit.common.db.Id
 @import com.keepit.controllers.admin.routes.AdminSearchConfigController
 
