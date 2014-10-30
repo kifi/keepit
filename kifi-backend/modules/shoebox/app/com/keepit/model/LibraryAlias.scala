@@ -83,6 +83,7 @@ class LibraryAliasRepoImpl @Inject() (
   def reclaim(ownerId: Id[User], slug: LibrarySlug)(implicit session: RWSession): Option[Id[Library]] = {
     getByOwnerIdAndSlug(ownerId, slug).collect {
       case alias if alias.state == LibraryAliasStates.ACTIVE =>
+        log.info(s"Reclaiming user ${alias.ownerId}'s alias from ${alias.slug} to former library ${alias.libraryId}")
         save(alias.copy(state = LibraryAliasStates.INACTIVE))
         alias.libraryId
     }

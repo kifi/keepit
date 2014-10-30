@@ -131,6 +131,7 @@ class UsernameAliasRepoImpl @Inject() (
   private def deactivate(alias: UsernameAlias)(implicit session: RWSession): Option[Id[User]] = {
     if (alias.isLocked) throw LockedUsernameException(alias)
     if (alias.state == ACTIVE) {
+      log.info(s"Reclaiming alias from username ${alias.username} to user ${alias.userId}.")
       save(alias.copy(state = INACTIVE))
       Some(alias.userId)
     } else None

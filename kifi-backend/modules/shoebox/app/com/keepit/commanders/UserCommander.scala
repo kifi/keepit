@@ -247,10 +247,7 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite { implicit session =>
-      val username: Username = usernameCandidates.find { candidate =>
-        userRepo.getByUsername(candidate).isEmpty &&
-          usernameRepo.reclaim(candidate).map(_.foreach(formerOwnerId => log.info(s"Reclaimed username alias $candidate from user $formerOwnerId."))).isSuccess
-      } getOrElse {
+      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
       userRepo.save(
@@ -540,9 +537,7 @@ class UserCommander @Inject() (
             Left("username_alias_exists")
           case _ => {
             if (!readOnly) {
-              usernameRepo.reclaim(username, Some(userId)).get.foreach { formerOwnerId =>
-                log.info(s"Reclaimed username alias $username from user $formerOwnerId.")
-              } // reclaim any existing alias for the new username
+              usernameRepo.reclaim(username, Some(userId)).get // reclaim any existing alias for the new username
               val user = userRepo.get(userId)
               usernameRepo.alias(user.username, userId) // create an alias for the old username
               userRepo.save(user.copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))

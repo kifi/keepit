@@ -383,9 +383,7 @@ class LibraryCommander @Inject() (
               (collabs, follows)
             }
             val library = db.readWrite { implicit s =>
-              libraryAliasRepo.reclaim(ownerId, validSlug).foreach { formerLibraryId =>
-                log.info(s"Reclaimed user $ownerId's alias $validSlug to former library $formerLibraryId")
-              }
+              libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
@@ -457,9 +455,7 @@ class LibraryCommander @Inject() (
         db.readWrite { implicit s =>
           if (targetLib.slug != newSlug) {
             val ownerId = targetLib.ownerId
-            libraryAliasRepo.reclaim(ownerId, newSlug).foreach { formerLibraryId =>
-              log.info(s"Reclaimed user $ownerId's alias $newSlug to former library $formerLibraryId")
-            }
+            libraryAliasRepo.reclaim(ownerId, newSlug)
             libraryAliasRepo.alias(ownerId, targetLib.slug, targetLib.id.get)
           }
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription))
