@@ -91,16 +91,18 @@ angular.module('kifi')
     //
     // Watches and listeners.
     //
-    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keep) {
-      if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
-          (libSlug === 'main' && $scope.librarySlug === 'secret')) {
-        var idx = _.findIndex($scope.keeps, { url: keep.url });
-        if (idx > -1) {
-          $scope.keeps.splice(idx, 1);
+    var deregisterKeepAdded = $rootScope.$on('keepAdded', function (e, libSlug, keeps) {
+      _.each(keeps, function (keep) {
+        if ((libSlug === 'secret' && $scope.librarySlug === 'main') ||
+            (libSlug === 'main' && $scope.librarySlug === 'secret')) {
+          var idx = _.findIndex($scope.keeps, { url: keep.url });
+          if (idx > -1) {
+            $scope.keeps.splice(idx, 1);
+          }
+        } else if (libSlug === $scope.librarySlug) {
+          $scope.keeps.unshift(keep);
         }
-      } else if (libSlug === $scope.librarySlug) {
-        $scope.keeps.unshift(keep);
-      }
+      });
     });
     $scope.$on('$destroy', deregisterKeepAdded);
 

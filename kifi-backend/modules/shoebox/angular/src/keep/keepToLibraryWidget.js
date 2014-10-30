@@ -15,7 +15,7 @@ angular.module('kifi')
        *  librarySelection - an object whose 'library' property will be the selected library.
        *
        *  Optional properties on parent scope:
-       *   excludeLibraries - an array of libraries to exclude from libraries when populating the widget.
+       *   readOnlyLibraries - an array of libraries that the user cannot take action against
        *   keptToLibraries - an array of library ids that are already keeping the keep.
        *   clickAction() - a function that can be called once a library is selected;
        *                   called with the element that this widget is on.
@@ -49,8 +49,6 @@ angular.module('kifi')
         scope.showCreate = false;
         scope.newLibrary = {};
         scope.widgetLibraries = [];
-        scope.excludeLibraries = scope.excludeLibraries || [];
-        scope.keptToLibraries = scope.keptToLibraries || [];
 
 
         //
@@ -139,11 +137,20 @@ angular.module('kifi')
           }
         }
 
+        function mutateReadOnlyLibraries(libraries, readOnlyLibraries) {
+          libraries.forEach(function (library) {
+            library.isReadOnly = !!_.find(readOnlyLibraries, { 'id': library.id });
+          });
+        }
+
 
         //
         // Scope methods.
         //
         scope.showWidget = function () {
+          var readOnlyLibraries = scope.readOnlyLibraries || [];
+          var keptToLibraries = scope.keptToLibraries || [];
+
           // Create widget.
           widget = angular.element($templateCache.get('keep/keepToLibraryWidget.tpl.html'));
           $rootElement.find('html').append(widget);
@@ -229,14 +236,11 @@ angular.module('kifi')
           newLibraryNameInput = widget.find('.keep-to-library-create-name-input');
 
           var libraries = _.filter(libraryService.librarySummaries, { access: 'owner' });
-
-          libraries = _.filter(libraries, function (library) {
-            return !_.find(scope.excludeLibraries, { 'id': library.id });
-          });
+          mutateReadOnlyLibraries(libraries, readOnlyLibraries);
 
           libraries.forEach(function (library) {
             library.keptTo = false;
-            if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+            if (_.indexOf(keptToLibraries, library.id) !== -1) {
               library.keptTo = true;
             }
           });
@@ -347,14 +351,14 @@ angular.module('kifi')
             libraryService.fetchLibrarySummaries(true).then(function (data) {
               scope.$evalAsync(function () {
                 var libraries = _.filter(data.libraries, { access: 'owner' });
+                var readOnlyLibraries = scope.readOnlyLibraries || [];
+                var keptToLibraries = scope.keptToLibraries || [];
 
-                libraries = _.filter(libraries, function (library) {
-                  return !_.find(scope.excludeLibraries, { 'id': library.id });
-                });
+                mutateReadOnlyLibraries(libraries, readOnlyLibraries);
 
                 libraries.forEach(function (library) {
                   library.keptTo = false;
-                  if (_.indexOf(scope.keptToLibraries, library.id) !== -1) {
+                  if (_.indexOf(keptToLibraries, library.id) !== -1) {
                     library.keptTo = true;
                   }
                 });

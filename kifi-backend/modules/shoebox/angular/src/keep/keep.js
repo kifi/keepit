@@ -948,6 +948,11 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.clickAction = function () {
+          if (scope.librarySelection.library.isReadOnly) {
+            // do nothing; library is set as ready only (URL is already kept)
+            return;
+          }
+
           // Unkeep.
           if (scope.librarySelection.library && scope.librarySelection.library.keptTo) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
@@ -976,7 +981,7 @@ angular.module('kifi')
               var keep = new keepDecoratorService.Keep(fullKeep);
               keep.buildKeep(keep);
               keep.makeKept();
-              scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), keep, scope.librarySelection.library);
+              scope.$emit('keepAdded', libraryService.getSlugById(scope.librarySelection.library.id), [keep], scope.librarySelection.library);
             };
 
             var keepToLibrary;
