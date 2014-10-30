@@ -15,9 +15,6 @@
         <div ng-if="librariesEnabled && editOptions().actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
           <span kf-keep-to-library-widget ng-click="showWidget()">Move to library</span>
         </div>
-        <div ng-if="librariesEnabled && editOptions().actions.keepToLibrary" class="kf-keep-selection-option copy-to-library">
-          <span kf-keep-to-library-widget ng-click="showWidget()">Keep to library</span>
-        </div>
 
         <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
         <div ng-if="editOptions().actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
