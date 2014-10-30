@@ -72,7 +72,11 @@ angular.module('kifi')
     // Scope methods.
     //
     $scope.selectedKeepsFilter = function (hits) {
-      return _.flatten(_.pluck(hits, 'keeps'));
+      return _.flatten(_.map(hits, function (hit) {
+        return _.map(hit.keeps, function (keep) {
+          return _.merge(keep, { url: hit.url });
+        });
+      }));
     };
 
     $scope.getNextKeeps = function (resetExistingResults) {
@@ -172,7 +176,7 @@ angular.module('kifi')
     $scope.editOptions = {
       draggable: false,
       actions: {
-        copyToLibrary: true
+        keepToLibrary: true
       }
     };
 
