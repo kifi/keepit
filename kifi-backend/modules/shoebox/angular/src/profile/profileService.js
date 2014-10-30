@@ -18,12 +18,12 @@ angular.module('kifi')
       fetchMe();
     });
 
-    function updateLoginState(meObj) {
+    function updateLoginState(meObj, broadcast) {
       $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
       $rootScope.userLoggedIn = userLoggedIn = !!meObj;
 
       // Do not broadcast 'userLoggedInStateChange' on the first call.
-      if (initialized) {
+      if (initialized && broadcast) {
         $rootScope.$broadcast('userLoggedInStateChange', meObj);
       }
 
@@ -31,13 +31,18 @@ angular.module('kifi')
     }
 
     var meService = new Clutch(function () {
+      var oldMe = me;
       return $http.get(routeService.profileUrl).then(function (res) {
-        var newMe = updateMe(res.data);
-        updateLoginState(newMe);
+        updateMe(res.data);
+        updateLoginState(me, me.id !== oldMe.id);
         return newMe;
       })['catch'](function (err) {
         if (err.status === 403) {
-          updateLoginState(null);
+          util.replaceObjectInPlace(me, {
+            picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
+            seqNum: (me.seqNum || 0) + 1
+          });
+          updateLoginState(null, me.id !== oldMe.id);
         }
       });
     }, {
