@@ -568,6 +568,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "let users join or decline library invites" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
+
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
 
@@ -580,7 +581,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
         }
+
+        val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
+        eliza.inbox.size === 0
+
         libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get.name === libMurica.name // Ironman accepts invite to 'Murica'
+
+        eliza.inbox.size === 1
+        eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://kifi.com/captainamerica/murica", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
+
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get.name === libMurica.name // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
         libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access

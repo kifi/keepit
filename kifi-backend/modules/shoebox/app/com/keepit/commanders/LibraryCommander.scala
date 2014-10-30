@@ -708,6 +708,22 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = {
+    val (follower, owner) = db.readOnlyReplica { implicit session =>
+      userRepo.get(newFollowerId) -> userRepo.get(lib.ownerId)
+    }
+    elizaClient.sendGlobalNotification(
+      userIds = Set(lib.ownerId),
+      title = "New Library Follower",
+      body = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}",
+      linkText = "Go to Library",
+      linkUrl = "https://kifi.com" + Library.formatLibraryPath(owner.username, owner.externalId, lib.slug),
+      imageUrl = s3ImageStore.avatarUrlByUser(follower),
+      sticky = false,
+      category = NotificationCategory.User.LIBRARY_FOLLOWED
+    )
+  }
+
   def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       val lib = libraryRepo.get(libraryId)
@@ -722,6 +738,7 @@ class LibraryCommander @Inject() (
         libraryMembershipRepo.getOpt(userId, libraryId) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+            notifyOwnerOfNewFollower(userId, lib)
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE))
