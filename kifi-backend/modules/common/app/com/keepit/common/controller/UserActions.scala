@@ -242,6 +242,7 @@ trait UserActions extends Logging { self: Controller =>
 
   object UserPage extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]) = {
+      implicit val req = request
       UserAction.invokeBlock(request, block).map {
         case result if result.header.status == FORBIDDEN =>
           val nRes = Redirect("/login")
