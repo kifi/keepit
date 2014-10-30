@@ -948,11 +948,6 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.clickAction = function () {
-          if (scope.librarySelection.library.isReadOnly) {
-            // do nothing; library is set as ready only (URL is already kept)
-            return;
-          }
-
           // Unkeep.
           if (scope.librarySelection.library && scope.librarySelection.library.keptTo) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: scope.librarySelection.library.id });
@@ -976,7 +971,6 @@ angular.module('kifi')
               tagService.addToKeepCount(1);
 
               scope.keep.keeps = fullKeep.keeps;
-              scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
 
               var keep = new keepDecoratorService.Keep(fullKeep);
               keep.buildKeep(keep);
@@ -1025,11 +1019,14 @@ angular.module('kifi')
           }
         });
 
+        scope.$watch('keep.keeps.length', function () {
+          scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
+        });
+
 
         //
         // On link.
         //
-        scope.keptToLibraries = _.pluck(scope.keep.keeps, 'libraryId');
         updateKeepStatus();
       }
     };
