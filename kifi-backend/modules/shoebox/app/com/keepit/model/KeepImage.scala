@@ -1,9 +1,13 @@
 package com.keepit.model
 
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
 import com.keepit.common.db.{ States, State, Model, Id }
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import org.joda.time.DateTime
+
+import scala.concurrent.duration.Duration
 
 case class KeepImage(
     id: Option[Id[KeepImage]] = None,
@@ -45,3 +49,12 @@ object KeepImageSource {
 
 }
 case class ImageHash(hash: String)
+
+case class KeepImageKey(id: Id[Keep]) extends Key[Seq[KeepImage]] {
+  override val version = 0
+  val namespace = "keep_image"
+  def toKey(): String = id.toString
+}
+
+class KeepImageCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KeepImageKey, Seq[KeepImage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

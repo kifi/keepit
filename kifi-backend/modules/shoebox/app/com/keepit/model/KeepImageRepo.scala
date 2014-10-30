@@ -15,7 +15,8 @@ trait KeepImageRepo extends Repo[KeepImage] {
 @Singleton
 class KeepImageRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock)
+  val clock: Clock,
+  keepImageCache: KeepImageCache)
     extends DbRepo[KeepImage] with KeepImageRepo {
 
   import db.Driver.simple._
@@ -45,9 +46,13 @@ class KeepImageRepoImpl @Inject() (
   def table(tag: Tag) = new KeepImageTable(tag)
   initTable()
 
-  override def invalidateCache(model: KeepImage)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: KeepImage)(implicit session: RSession): Unit = {
+    keepImageCache.remove(KeepImageKey(model.keepId))
+  }
 
-  override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {
+    keepImageCache.remove(KeepImageKey(model.keepId))
+  }
 
   private val getForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
     for (r <- rows if r.keepId === keepId && r.state === KeepImageStates.ACTIVE) yield r
@@ -60,7 +65,9 @@ class KeepImageRepoImpl @Inject() (
     for (r <- rows if r.keepId === keepId) yield r
   }
   def getAllForKeepId(keepId: Id[Keep])(implicit session: RSession): Seq[KeepImage] = {
-    getAllForKeepIdCompiled(keepId).list
+    keepImageCache.getOrElse(KeepImageKey(keepId)) {
+      getAllForKeepIdCompiled(keepId).list
+    }
   }
 
   private val getBySourceHashCompiled = Compiled { hash: Column[ImageHash] =>
