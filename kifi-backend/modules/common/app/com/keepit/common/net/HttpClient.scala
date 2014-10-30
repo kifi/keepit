@@ -180,7 +180,7 @@ case class HttpClientImpl(
     val clientResponse = new ClientResponseImpl(request, response, airbrake, fastJsonParser, callTimeouts.maxJsonParseTime.get)
     val status = response.status
     if (status / 100 != validResponseClass) {
-      if (status == Status.SERVICE_UNAVAILABLE) {
+      val error: Option[Exception] = if (status == Status.SERVICE_UNAVAILABLE) {
         request.httpUri match {
           case d: DirectUrl =>
             val msg = s"external service ${d.summary} is not available"
@@ -202,7 +202,8 @@ case class HttpClientImpl(
         }
       } else {
         Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
-      } map { exception =>
+      }
+      error foreach { exception =>
         if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
         else throw exception
       }
