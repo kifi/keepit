@@ -12,17 +12,16 @@
  * related to current message context.
  */
 
-var messageHeader = this.messageHeader = (function ($, win) {
+k.messageHeader = k.messageHeader || (function ($, win) {
 	'use strict';
 
 	api.onEnd.push(function () {
-		messageHeader.destroy();
-		messageHeader = win.messageHeader = null;
+		k.messageHeader.destroy();
 	});
 
 	return {
 		initialized: false,
-		plugins: [win.messageParticipants, win.messageMuter],
+		plugins: [k.messageParticipants, k.messageMuter],
 		status: null,
 		threadId: null,
 		participants: null,
@@ -85,7 +84,7 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		showOptions: function () {
 			this.setStatus('option-expanded', true);
-			win.messageParticipants.hideAddDialog();
+			k.messageParticipants.hideAddDialog();
 		},
 
 		hideOptions: function () {
@@ -93,19 +92,19 @@ var messageHeader = this.messageHeader = (function ($, win) {
 		},
 
 		shadePane: function () {
-			if (win.pane) {
+			if (k.pane) {
 				var $who = this.$el.closest('.kifi-thread-who').css('overflow', 'hidden').addClass('kifi-active');
-				win.pane.shade();
+				k.pane.shade();
 				clearTimeout($who.data('t'));
 			}
 		},
 
 		unshadePane: function () {
-			if (win.pane) {
+			if (k.pane) {
 				var $who = this.$el.closest('.kifi-thread-who').removeClass('kifi-active').data('t', setTimeout(function () {
 					$who.css('overflow', '');
 				}, 300));
-				win.pane.unshade();
+				k.pane.unshade();
 			}
 		},
 
