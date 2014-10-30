@@ -111,6 +111,7 @@ class UserActionsTest extends Specification with CommonTestInjector {
           unsetUser()
           val anyReqF = Controller.usersOnly(FakeRequest())
           status(anyReqF) === SEE_OTHER
+          headers(anyReqF).get("Location") === Some("/login")
 
           setUser()
           val userReqF = Controller.usersOnly(FakeRequest())
