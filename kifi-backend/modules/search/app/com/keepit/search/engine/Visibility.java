@@ -19,4 +19,22 @@ public final class Visibility { // use value class?
     if ((visibility & Visibility.OTHERS) != 0) return "others";
     return "restricted";
   }
+
+  public static String toString(int visibility) {
+    if (visibility == 0) {
+      return name(0);
+    } else {
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; visibility != 0; i++) {
+        if ((visibility & 1) == 1) {
+          sb.append(name(1 << i));
+          visibility >>= 1;
+          if (visibility != 0) sb.append(',');
+        } else {
+          visibility >>= 1;
+        }
+      }
+      return sb.toString();
+    }
+  }
 }
