@@ -247,7 +247,10 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite { implicit session =>
-      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
+      val username: Username = usernameCandidates.find { candidate =>
+        userRepo.getByUsername(candidate).isEmpty &&
+          usernameRepo.reclaim(candidate).map(_.foreach(formerOwnerId => log.info(s"Reclaimed username alias $candidate from user $formerOwnerId."))).isSuccess
+      } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
       userRepo.save(
@@ -535,9 +538,11 @@ class UserCommander @Inject() (
           case Some(alias) if (!alias.belongTo(userId) && (alias.isLocked || (alias.shouldBeProtected && doProtect))) =>
             log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
             Left("username_alias_exists")
-          case availableAliasOpt => {
+          case _ => {
             if (!readOnly) {
-              if (availableAliasOpt.isDefined) { usernameRepo.reclaim(username, Some(userId)) } // reclaim any existing alias for the new username
+              usernameRepo.reclaim(username, Some(userId)).get.foreach { formerOwnerId =>
+                log.info(s"Reclaimed username alias $username from user $formerOwnerId.")
+              } // reclaim any existing alias for the new username
               val user = userRepo.get(userId)
               usernameRepo.alias(user.username, userId) // create an alias for the old username
               userRepo.save(user.copy(username = username, normalizedUsername = UsernameOps.normalize(username.value)))

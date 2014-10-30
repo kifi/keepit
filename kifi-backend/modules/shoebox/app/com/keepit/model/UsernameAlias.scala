@@ -46,7 +46,7 @@ trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
   def alias(username: Username, userId: Id[User], lock: Boolean = false, doProtect: Boolean = true)(implicit session: RWSession): Try[UsernameAlias]
   def unlock(username: Username)(implicit session: RWSession): Boolean
-  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Boolean]
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Option[Id[User]]]
 }
 
 @Singleton
@@ -119,20 +119,21 @@ class UsernameAliasRepoImpl @Inject() (
     }
   }
 
-  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Boolean] = {
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Option[Id[User]]] = {
     getByUsername(username) match {
       case Some(alias) if alias.isLocked => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(LockedUsernameException(alias))
       case Some(alias) if alias.shouldBeProtected && doProtect => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(ProtectedUsernameException(alias))
       case Some(availableAlias) => Success(deactivate(availableAlias))
-      case None => Success(false)
+      case None => Success(None)
     }
   }
 
-  private def deactivate(alias: UsernameAlias)(implicit session: RWSession) = {
+  private def deactivate(alias: UsernameAlias)(implicit session: RWSession): Option[Id[User]] = {
     if (alias.isLocked) throw LockedUsernameException(alias)
-    val wasActive = (alias.state == ACTIVE)
-    if (wasActive) { save(alias.copy(state = INACTIVE)) }
-    wasActive
+    if (alias.state == ACTIVE) {
+      save(alias.copy(state = INACTIVE))
+      Some(alias.userId)
+    } else None
   }
 }
 
