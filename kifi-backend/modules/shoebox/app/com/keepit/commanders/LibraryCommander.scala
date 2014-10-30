@@ -780,7 +780,7 @@ class LibraryCommander @Inject() (
     dstLibraryId: Id[Library],
     keeps: Seq[Keep],
     excludeFromAccess: Set[LibraryAccess],
-    saveKeep: (Keep, RWSession) => Either[LibraryError, Unit]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
+    saveKeep: (Keep, RWSession) => Either[LibraryError, Keep]): (Seq[Keep], Seq[(Keep, LibraryError)]) = {
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     val goodKeeps = collection.mutable.Set[Keep]()
@@ -802,7 +802,7 @@ class LibraryCommander @Inject() (
       }.flatten.foreach { keep =>
         saveKeep(keep, s) match {
           case Left(error) => badKeeps += keep -> error
-          case _ => goodKeeps += keep
+          case Right(successKeep) => goodKeeps += successKeep
         }
       }
       searchClient.updateKeepIndex()
@@ -856,7 +856,7 @@ class LibraryCommander @Inject() (
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       case Some(_) =>
-        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
+        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Keep] = {
           implicit val session = s
 
           val currentKeepOpt = if (toLibrary.isDisjoint)
@@ -869,12 +869,12 @@ class LibraryCommander @Inject() (
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
                 userId = userId, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
               combineTags(k.id.get, newKeep.id.get)
-              Right()
+              Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+              val newKeep = keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 inDisjointLib = toLibrary.isDisjoint, source = withSource.getOrElse(k.source), state = KeepStates.ACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
-              Right()
+              Right(newKeep)
             case Some(existingKeep) =>
               if (existingKeep.inDisjointLib)
                 keepRepo.save(existingKeep.copy(userId = userId, libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
@@ -897,7 +897,7 @@ class LibraryCommander @Inject() (
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
         (Seq.empty[Keep], keeps.map(_ -> LibraryError.DestPermissionDenied))
       case Some(_) =>
-        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Unit] = {
+        def saveKeep(k: Keep, s: RWSession): Either[LibraryError, Keep] = {
           implicit val session = s
 
           val currentKeepOpt = if (toLibrary.isDisjoint)
@@ -907,15 +907,15 @@ class LibraryCommander @Inject() (
 
           currentKeepOpt match {
             case None =>
-              keepRepo.save(k.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+              val movedKeep = keepRepo.save(k.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
-              Right()
+              Right(movedKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
-              keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
+              val movedKeep = keepRepo.save(existingKeep.copy(libraryId = Some(toLibraryId), visibility = toLibrary.visibility,
                 inDisjointLib = toLibrary.isDisjoint, state = KeepStates.ACTIVE))
               keepRepo.save(k.copy(state = KeepStates.INACTIVE))
               combineTags(k.id.get, existingKeep.id.get)
-              Right()
+              Right(movedKeep)
             case Some(existingKeep) =>
               if (toLibraryId != k.libraryId.get) {
                 if (existingKeep.inDisjointLib)
