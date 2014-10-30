@@ -37,7 +37,7 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
         }
 
         val updatedAlias = db.readWrite { implicit session =>
-          usernameAliasRepo.alias(léo, secondUserId, doProtect = false).get // recent username protection is enabled by default
+          usernameAliasRepo.alias(léo, secondUserId, overrideProtection = true).get // recent username protection is enabled by default
         }
 
         updatedAlias.id.get === leoAlias.id.get
@@ -71,7 +71,7 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
       "protect a recent alias by default" in {
         db.readWrite { implicit session =>
           val protectedAlias = usernameAliasRepo.alias(léo, firstUserId).get
-          protectedAlias.shouldBeProtected === true
+          protectedAlias.isProtected === true
           usernameAliasRepo.alias(léo, secondUserId) === Failure(ProtectedUsernameException(protectedAlias))
           usernameAliasRepo.alias(léo, secondUserId, lock = true) === Failure(ProtectedUsernameException(protectedAlias))
         }
@@ -112,7 +112,7 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
           releasedAlias.isLocked === false
           releasedAlias.lastActivatedAt === reservedAlias.lastActivatedAt
 
-          val updatedAlias = usernameAliasRepo.alias(léo, secondUserId, doProtect = false).get // recent username protection is enabled by default
+          val updatedAlias = usernameAliasRepo.alias(léo, secondUserId, overrideProtection = true).get // recent username protection is enabled by default
           updatedAlias.id.get === releasedAlias.id.get
           updatedAlias.userId === secondUserId
           updatedAlias.lastActivatedAt isAfter releasedAlias.lastActivatedAt should beTrue

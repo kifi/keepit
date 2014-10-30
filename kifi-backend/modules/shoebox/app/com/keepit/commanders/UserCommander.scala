@@ -525,15 +525,15 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean = false, readOnly: Boolean = false, doProtect: Boolean = true): Either[String, Username] = {
-    if (overrideRestrictions || UsernameOps.isValid(username.value)) {
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, readOnly: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+    if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
       db.readWrite { implicit session =>
         val existingUser = userRepo.getByUsername(username)
         if (existingUser.isDefined && existingUser.get.id.get != userId) {
           log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
           Left("username_exists")
         } else usernameRepo.getByUsername(username) match {
-          case Some(alias) if (!alias.belongTo(userId) && (alias.isLocked || (alias.shouldBeProtected && doProtect))) =>
+          case Some(alias) if (!alias.belongsTo(userId) && (alias.isLocked || (alias.isProtected && !overrideProtection))) =>
             log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
             Left("username_exists")
           case _ => {

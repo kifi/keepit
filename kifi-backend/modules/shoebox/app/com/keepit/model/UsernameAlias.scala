@@ -29,8 +29,8 @@ case class UsernameAlias(
   def withId(id: Id[UsernameAlias]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isLocked = (state == UsernameAliasStates.LOCKED)
-  def shouldBeProtected = (state == UsernameAliasStates.ACTIVE && (currentDateTime isBefore (lastActivatedAt plusSeconds UsernameAlias.gracePeriod.toSeconds.toInt)))
-  def belongTo(thatUserId: Id[User]) = (userId == thatUserId)
+  def isProtected = (state == UsernameAliasStates.ACTIVE && (currentDateTime isBefore (lastActivatedAt plusSeconds UsernameAlias.gracePeriod.toSeconds.toInt)))
+  def belongsTo(thatUserId: Id[User]) = (userId == thatUserId)
 }
 
 object UsernameAlias {
@@ -44,9 +44,9 @@ object UsernameAliasStates extends States[UsernameAlias] {
 @ImplementedBy(classOf[UsernameAliasRepoImpl])
 trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
-  def alias(username: Username, userId: Id[User], lock: Boolean = false, doProtect: Boolean = true)(implicit session: RWSession): Try[UsernameAlias]
+  def alias(username: Username, userId: Id[User], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[UsernameAlias]
   def unlock(username: Username)(implicit session: RWSession): Boolean
-  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Option[Id[User]]]
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, overrideProtection: Boolean = false)(implicit session: RWSession): Try[Option[Id[User]]]
 }
 
 @Singleton
@@ -97,13 +97,13 @@ class UsernameAliasRepoImpl @Inject() (
     getByNormalizedUsername(normalize(username), excludeState)
   }
 
-  def alias(username: Username, userId: Id[User], lock: Boolean = false, doProtect: Boolean = true)(implicit session: RWSession): Try[UsernameAlias] = {
+  def alias(username: Username, userId: Id[User], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[UsernameAlias] = {
     val requestedAlias = {
       val normalizedUsername = normalize(username)
       val requestedState = if (lock) LOCKED else ACTIVE
       getByNormalizedUsername(normalizedUsername, excludeState = None) match { // locked aliases must be explicitly released
-        case Some(alias) if alias.isLocked => if (alias.belongTo(userId)) Success(alias) else Failure(LockedUsernameException(alias))
-        case Some(alias) if alias.shouldBeProtected && doProtect => if (alias.belongTo(userId)) Success(alias.copy(state = requestedState)) else Failure(ProtectedUsernameException(alias))
+        case Some(alias) if alias.isLocked => if (alias.belongsTo(userId)) Success(alias) else Failure(LockedUsernameException(alias))
+        case Some(alias) if alias.isProtected && !overrideProtection => if (alias.belongsTo(userId)) Success(alias.copy(state = requestedState)) else Failure(ProtectedUsernameException(alias))
         case Some(availableAlias) => Success(availableAlias.copy(state = requestedState, userId = userId))
         case None => Success(UsernameAlias(state = requestedState, username = normalizedUsername, userId = userId))
       }
@@ -119,10 +119,10 @@ class UsernameAliasRepoImpl @Inject() (
     }
   }
 
-  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Option[Id[User]]] = {
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, overrideProtection: Boolean = false)(implicit session: RWSession): Try[Option[Id[User]]] = {
     getByUsername(username) match {
-      case Some(alias) if alias.isLocked => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(LockedUsernameException(alias))
-      case Some(alias) if alias.shouldBeProtected && doProtect => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(ProtectedUsernameException(alias))
+      case Some(alias) if alias.isLocked => if (requestingUserId.exists(alias.belongsTo)) Success(deactivate(alias)) else Failure(LockedUsernameException(alias))
+      case Some(alias) if alias.isProtected && !overrideProtection => if (requestingUserId.exists(alias.belongsTo)) Success(deactivate(alias)) else Failure(ProtectedUsernameException(alias))
       case Some(availableAlias) => Success(deactivate(availableAlias))
       case None => Success(None)
     }
