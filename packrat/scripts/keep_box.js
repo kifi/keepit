@@ -998,7 +998,7 @@ var keepBox = keepBox || (function () {
 
   function setShortcut(lib) {
     if (lib.system) {
-      lib.shortcut = CO_KEY + '-Shift-' + (lib.visibility === 'secret' ? 'Alt-' : '') + 'K';
+      lib.shortcut = MOD_KEYS.c + '-Shift-' + (lib.visibility === 'secret' ? MOD_KEYS.alt + '-' : '') + 'K';
     }
   }
 

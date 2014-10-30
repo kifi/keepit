@@ -17,7 +17,7 @@ $.fn.layout = function () {
   });
 };
 
-var CO_KEY = /^Mac/.test(navigator.platform) ? '⌘' : 'Ctrl';
+var MOD_KEYS = /^Mac/.test(navigator.platform) ? {c: '⌘', alt: 'Option'} : {c: 'Ctrl', alt: 'Alt'};
 
 var keeper = keeper || function () {  // idempotent for Chrome
   'use strict';
@@ -153,7 +153,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
           });
         } else {
           render('html/keeper/titled_tip', {
-            title: 'Keep (' + CO_KEY + '+Shift+K)',
+            title: 'Keep (' + MOD_KEYS.c + '+Shift+K)',
             html: 'Keeping this page helps<br/>you easily find it later.'
           }, function (html) {
             configureHover(html, {
@@ -170,8 +170,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $a = $(this);
       var tip = {
         s: ['Home', 'Browse and manage your<br/>keeps in a new tab.'],
-        i: ['Inbox (' + CO_KEY + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
-        c: ['Send (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
+        i: ['Inbox (' + MOD_KEYS.c + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
+        c: ['Send (' + MOD_KEYS.c + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
         configureHover(html, {

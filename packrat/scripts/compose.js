@@ -10,7 +10,7 @@
 var initCompose = (function() {
   'use strict';
 
-  var KEY_PREFIX = CO_KEY + '-';
+  var KEY_PREFIX = MOD_KEYS.c + '-';
 
   var $forms = $();
   var enterToSend;
