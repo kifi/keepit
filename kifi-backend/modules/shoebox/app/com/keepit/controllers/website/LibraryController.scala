@@ -319,10 +319,11 @@ class LibraryController @Inject() (
               "error" -> error.message
             )
         }
+        val successKeeps = goodKeeps.map(k => Json.obj("id" -> k.externalId, "url" -> k.url))
         if (errors.nonEmpty) {
-          Ok(Json.obj("successes" -> 0, "failures" -> errors)) // complete or partial failure
+          Ok(Json.obj("successes" -> successKeeps, "failures" -> errors)) // complete or partial failure
         } else {
-          Ok(Json.obj("successes" -> goodKeeps.length))
+          Ok(Json.obj("successes" -> successKeeps))
         }
     }
   }
