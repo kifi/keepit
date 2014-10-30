@@ -9,10 +9,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.commanders.UsernameOps
 import com.amazonaws.services.redshift.model.UnauthorizedOperationException
+import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
-case class ReservedUsernameException(alias: UsernameAlias)
-  extends UnauthorizedOperationException(s"Username ${alias.username} is reserved for user ${alias.userId}")
+case class LockedUsernameException(alias: UsernameAlias)
+  extends UnauthorizedOperationException(s"Username ${alias.username} is locked as an alias by user ${alias.userId}")
+
+case class ProtectedUsernameException(alias: UsernameAlias)
+  extends UnauthorizedOperationException(s"Username ${alias.username} is protected as an alias by user ${alias.userId}")
 
 case class UsernameAlias(
     id: Option[Id[UsernameAlias]] = None,
@@ -24,18 +28,25 @@ case class UsernameAlias(
     userId: Id[User]) extends ModelWithState[UsernameAlias] {
   def withId(id: Id[UsernameAlias]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def isReserved = (state == UsernameAliasStates.RESERVED)
+  def isLocked = (state == UsernameAliasStates.LOCKED)
+  def shouldBeProtected = (state == UsernameAliasStates.ACTIVE && (currentDateTime isBefore (lastActivatedAt plusSeconds UsernameAlias.gracePeriod.toSeconds.toInt)))
+  def belongTo(thatUserId: Id[User]) = (userId == thatUserId)
+}
+
+object UsernameAlias {
+  private[UsernameAlias] val gracePeriod = 7 days // an active alias should be protected for this period of time after it was last activated
 }
 
 object UsernameAliasStates extends States[UsernameAlias] {
-  val RESERVED = State[UsernameAlias]("reserved") // while an 'active' alias can be claimed by another user (soft alias), a 'reserved' alias cannot (hard alias)
+  val LOCKED = State[UsernameAlias]("locked") // while an 'active' alias can be claimed by another user after the grace period (best effort), a 'locked' alias must be explicitly unlocked first)
 }
 
 @ImplementedBy(classOf[UsernameAliasRepoImpl])
 trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
-  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): Try[UsernameAlias]
-  def release(username: Username)(implicit session: RWSession): Boolean
+  def alias(username: Username, userId: Id[User], lock: Boolean = false, doProtect: Boolean = true)(implicit session: RWSession): Try[UsernameAlias]
+  def unlock(username: Username)(implicit session: RWSession): Boolean
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Boolean]
 }
 
 @Singleton
@@ -43,6 +54,7 @@ class UsernameAliasRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock) extends DbRepo[UsernameAlias] with UsernameAliasRepo with Logging {
 
+  import UsernameAlias._
   import UsernameAliasStates._
   import db.Driver.simple._
 
@@ -85,12 +97,13 @@ class UsernameAliasRepoImpl @Inject() (
     getByNormalizedUsername(normalize(username), excludeState)
   }
 
-  def alias(username: Username, userId: Id[User], reserve: Boolean = false)(implicit session: RWSession): Try[UsernameAlias] = {
+  def alias(username: Username, userId: Id[User], lock: Boolean = false, doProtect: Boolean = true)(implicit session: RWSession): Try[UsernameAlias] = {
     val requestedAlias = {
       val normalizedUsername = normalize(username)
-      val requestedState = if (reserve) RESERVED else ACTIVE
-      getByNormalizedUsername(normalizedUsername, excludeState = None) match { // reserved aliases must be explicitly released
-        case Some(alias) if alias.isReserved => if (alias.userId == userId) Success(alias) else Failure(ReservedUsernameException(alias))
+      val requestedState = if (lock) LOCKED else ACTIVE
+      getByNormalizedUsername(normalizedUsername, excludeState = None) match { // locked aliases must be explicitly released
+        case Some(alias) if alias.isLocked => if (alias.belongTo(userId)) Success(alias) else Failure(LockedUsernameException(alias))
+        case Some(alias) if alias.shouldBeProtected && doProtect => if (alias.belongTo(userId)) Success(alias.copy(state = requestedState)) else Failure(ProtectedUsernameException(alias))
         case Some(availableAlias) => Success(availableAlias.copy(state = requestedState, userId = userId))
         case None => Success(UsernameAlias(state = requestedState, username = normalizedUsername, userId = userId))
       }
@@ -98,13 +111,28 @@ class UsernameAliasRepoImpl @Inject() (
     requestedAlias.map(alias => save(alias.copy(lastActivatedAt = clock.now)))
   }
 
-  def release(username: Username)(implicit session: RWSession): Boolean = {
+  def unlock(username: Username)(implicit session: RWSession): Boolean = {
     getByUsername(username).exists { alias =>
-      val wasReserved = alias.isReserved
-      if (wasReserved) { save(alias.copy(state = UsernameAliasStates.ACTIVE)) }
-      wasReserved
+      val wasLocked = alias.isLocked
+      if (wasLocked) { save(alias.copy(state = ACTIVE)) }
+      wasLocked
     }
   }
 
+  def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, doProtect: Boolean = true)(implicit session: RWSession): Try[Boolean] = {
+    getByUsername(username) match {
+      case Some(alias) if alias.isLocked => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(LockedUsernameException(alias))
+      case Some(alias) if alias.shouldBeProtected && doProtect => if (requestingUserId.exists(alias.belongTo)) Success(deactivate(alias)) else Failure(ProtectedUsernameException(alias))
+      case Some(availableAlias) => Success(deactivate(availableAlias))
+      case None => Success(false)
+    }
+  }
+
+  private def deactivate(alias: UsernameAlias)(implicit session: RWSession) = {
+    if (alias.isLocked) throw LockedUsernameException(alias)
+    val wasActive = (alias.state == ACTIVE)
+    if (wasActive) { save(alias.copy(state = INACTIVE)) }
+    wasActive
+  }
 }
 

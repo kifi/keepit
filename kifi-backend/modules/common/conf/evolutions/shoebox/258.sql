@@ -12,7 +12,7 @@ CREATE TABLE username_alias (
   user_id bigint(20) NOT NULL,
 
   PRIMARY KEY (id),
-  UNIQUE INDEX username_alias_i_username (username)
+  UNIQUE INDEX username_alias_i_username (username),
   CONSTRAINT username_alias_f_user FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
@@ -26,7 +26,7 @@ CREATE TABLE library_alias (
   library_id bigint(20) NOT NULL,
 
   PRIMARY KEY (id),
-  UNIQUE INDEX library_alias_i_owner_id_slug (owner_id, slug)
+  UNIQUE INDEX library_alias_i_owner_id_slug (owner_id, slug),
   CONSTRAINT library_alias_f_library FOREIGN KEY (library_id) REFERENCES library(id)
 );
 

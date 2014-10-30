@@ -37,7 +37,7 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
         }
 
         val updatedAlias = db.readWrite { implicit session =>
-          usernameAliasRepo.alias(léo, secondUserId).get
+          usernameAliasRepo.alias(léo, secondUserId, doProtect = false).get // recent username protection is enabled by default
         }
 
         updatedAlias.id.get === leoAlias.id.get
@@ -68,42 +68,51 @@ class UsernameAliasTest extends Specification with ShoeboxTestInjector {
 
     withDb() { implicit injector =>
 
-      "reserve an alias" in {
+      "protect a recent alias by default" in {
         db.readWrite { implicit session =>
-          val reservedAlias = usernameAliasRepo.alias(léo, firstUserId, reserve = true).get
-          reservedAlias.userId === firstUserId
-          reservedAlias.isReserved === true
+          val protectedAlias = usernameAliasRepo.alias(léo, firstUserId).get
+          protectedAlias.shouldBeProtected === true
+          usernameAliasRepo.alias(léo, secondUserId) === Failure(ProtectedUsernameException(protectedAlias))
+          usernameAliasRepo.alias(léo, secondUserId, lock = true) === Failure(ProtectedUsernameException(protectedAlias))
         }
       }
 
-      "not release a reserved alias implicitly" in {
+      "lock an alias" in {
         db.readWrite { implicit session =>
-          val reservedAlias = usernameAliasRepo.getByUsername(léo).get
-          checkAlias(reservedAlias, usernameAliasRepo.alias(léo, firstUserId, reserve = false).get)
+          val lockedAlias = usernameAliasRepo.alias(léo, firstUserId, lock = true).get
+          lockedAlias.userId === firstUserId
+          lockedAlias.isLocked === true
         }
       }
 
-      "protect a reserved alias" in {
+      "not release a locked alias implicitly" in {
         db.readWrite { implicit session =>
-          val reservedAlias = usernameAliasRepo.getByUsername(léo).get
-          usernameAliasRepo.alias(léo, secondUserId, reserve = false) === Failure(ReservedUsernameException(reservedAlias))
-          usernameAliasRepo.alias(léo, secondUserId, reserve = true) === Failure(ReservedUsernameException(reservedAlias)) /// a reserved alias must be explicitly released before it can be reserved by someone else
+          val lockedAlias = usernameAliasRepo.getByUsername(léo).get
+          checkAlias(lockedAlias, usernameAliasRepo.alias(léo, firstUserId, lock = false).get)
         }
       }
 
-      "release a reserved alias" in {
+      "protect a locked alias" in {
+        db.readWrite { implicit session =>
+          val lockedAlias = usernameAliasRepo.getByUsername(léo).get
+          usernameAliasRepo.alias(léo, secondUserId, lock = false) === Failure(LockedUsernameException(lockedAlias))
+          usernameAliasRepo.alias(léo, secondUserId, lock = true) === Failure(LockedUsernameException(lockedAlias)) /// a locked alias must be explicitly released before it can be locked by someone else
+        }
+      }
+
+      "release a locked alias" in {
         db.readWrite { implicit session =>
           val reservedAlias = usernameAliasRepo.getByUsername(léo).get
 
-          usernameAliasRepo.release(léo) === true
-          usernameAliasRepo.release(léo) === false
+          usernameAliasRepo.unlock(léo) === true
+          usernameAliasRepo.unlock(léo) === false
 
           val releasedAlias = usernameAliasRepo.getByUsername(léo).get
           releasedAlias.id.get === reservedAlias.id.get
-          releasedAlias.isReserved === false
+          releasedAlias.isLocked === false
           releasedAlias.lastActivatedAt === reservedAlias.lastActivatedAt
 
-          val updatedAlias = usernameAliasRepo.alias(léo, secondUserId).get
+          val updatedAlias = usernameAliasRepo.alias(léo, secondUserId, doProtect = false).get // recent username protection is enabled by default
           updatedAlias.id.get === releasedAlias.id.get
           updatedAlias.userId === secondUserId
           updatedAlias.lastActivatedAt isAfter releasedAlias.lastActivatedAt should beTrue
